@@ -875,6 +875,52 @@ describe("trimEdgeFrames", () => {
     const args = execArgs(2)
     expect(args[args.indexOf("-to") + 1]).toMatch(/^4\.9583/)
   })
+
+  it("preserveAudioTail + end trim: VIDEO-ONLY trim via filter graph, audio kept to the clip's original end", async () => {
+    // Fix 2a (field report 2026-07-25 "voice was cut"): at a matched smart
+    // boundary the trimmed tail VIDEO is duplicated content but its AUDIO is
+    // unique speech — the caller's L-cut graph lingers the real tail, so the
+    // trim must not delete it. 3/24 and 6/24 chosen binary-exact.
+    execFileOnce("24/1\n") // fps probe
+    execFileOnce("10\n") // video stream duration probe
+    execFileOnce("") // ffmpeg trim
+
+    const result = await trimEdgeFrames("/tmp/in.mp4", "/tmp/out.mp4", 3, 6, { preserveAudioTail: true })
+
+    const args = execArgs(2)
+    expect(args).not.toContain("-ss")
+    expect(args).not.toContain("-to")
+    const fc = args[args.indexOf("-filter_complex") + 1]
+    expect(fc).toContain("[0:v]trim=start=0.125:end=9.75,setpts=PTS-STARTPTS[v]")
+    expect(fc).toContain("[0:a]atrim=start=0.125,asetpts=PTS-STARTPTS[a]")
+    expect(args[args.indexOf("-map") + 1]).toBe("[v]")
+    expect(args).toContain("libx264")
+    expect(args[args.indexOf("-preset") + 1]).toBe("fast")
+    expect(args[args.indexOf("-c:a") + 1]).toBe("aac")
+    expect(result).toBe("/tmp/out.mp4")
+  })
+
+  it("preserveAudioTail with NO end trim: the classic -ss path (tail preservation is an end-trim concern)", async () => {
+    execFileOnce("30/1\n")
+    execFileOnce("10.0\n")
+    execFileOnce("")
+
+    await trimEdgeFrames("/tmp/in.mp4", "/tmp/out.mp4", 30, 0, { preserveAudioTail: true })
+
+    const args = execArgs(2)
+    expect(args).not.toContain("-filter_complex")
+    expect(args[args.indexOf("-ss") + 1]).toBe("1")
+  })
+
+  it("preserveAudioTail: the exceeds-duration skip still applies before any encode", async () => {
+    execFileOnce("30/1\n")
+    execFileOnce("1.000\n")
+
+    const result = await trimEdgeFrames("/tmp/in.mp4", "/tmp/out.mp4", 0, 30, { preserveAudioTail: true })
+
+    expect(result).toBe("/tmp/in.mp4")
+    expect(mocks.execFile).toHaveBeenCalledTimes(2)
+  })
 })
 
 // ===========================================================================
