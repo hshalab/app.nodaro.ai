@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => {
   const mockCombineVideos = vi.fn()
   const mockProbeVideoSource = vi.fn()
   const mockExtractTailToFile = vi.fn().mockResolvedValue("/tmp/test-workdir/source.mp4.tail.mp4")
-  const mockExtractFrame = vi.fn().mockResolvedValue({ imagePath: "/tmp/extract-frame-x/frame.jpg" })
+  const mockExtractFrame = vi.fn().mockResolvedValue({ imagePath: "/tmp/extract-frame-x/frame.png" })
   const mockUploadFileToR2 = vi.fn()
 
   const mockCommitJobCredits = vi.fn().mockResolvedValue(undefined)
@@ -182,7 +182,7 @@ beforeEach(() => {
     kieTaskId: "kie-task-9",
   })
   mocks.mockExtractTailToFile.mockResolvedValue("/tmp/test-workdir/source.mp4.tail.mp4")
-  mocks.mockExtractFrame.mockResolvedValue({ imagePath: "/tmp/extract-frame-x/frame.jpg" })
+  mocks.mockExtractFrame.mockResolvedValue({ imagePath: "/tmp/extract-frame-x/frame.png" })
   // First upload = the tail video, second = the last-frame image.
   mocks.mockUploadFileToR2.mockResolvedValueOnce(TAIL_URL).mockResolvedValueOnce(LAST_FRAME_URL)
   mocks.mockCombineVideos.mockResolvedValue({ outputPath: STITCHED_PATH })
@@ -246,7 +246,7 @@ describe("extend-video / seedance-2-extend", () => {
     mocks.mockProbeVideoSource.mockResolvedValue({ width: 1920, height: 1080, durationSeconds: 4.0 })
     mocks.mockImageToVideo.mockResolvedValue({ url: EXTENSION_URL, cost: 0.1, displayCost: 0.12, providerUsed: "kie" })
     mocks.mockUploadFileToR2.mockResolvedValueOnce(TAIL_URL).mockResolvedValueOnce(LAST_FRAME_URL)
-    mocks.mockExtractFrame.mockResolvedValue({ imagePath: "/tmp/extract-frame-x/frame.jpg" })
+    mocks.mockExtractFrame.mockResolvedValue({ imagePath: "/tmp/extract-frame-x/frame.png" })
     mocks.mockExtractTailToFile.mockResolvedValue("/tmp/test-workdir/source.mp4.tail.mp4")
     mocks.mockCombineVideos.mockResolvedValue({ outputPath: STITCHED_PATH })
     await handler()(makeJob({ duration: 1 }) as never, makeCtx() as never)

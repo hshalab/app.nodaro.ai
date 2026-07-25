@@ -75,7 +75,13 @@ export async function extractFrame(options: ExtractFrameOptions): Promise<{ imag
 
   try {
     const inputPath = join(workDir, "input.mp4")
-    const outputPath = join(workDir, "frame.jpg")
+    // PNG, not JPEG: extracted frames are ANCHOR inputs for continuation
+    // models (Seedance extends chain on the previous clip's last frame), so
+    // a lossy encode here compounds with every generation in the chain
+    // (2026-07-26 extend-decay report — the doc page always promised
+    // lossless). Every KIE provider accepts PNG except the ones that force
+    // JPEG themselves (ensureImageForProvider handles those).
+    const outputPath = join(workDir, "frame.png")
 
     console.log(`[extractFrame] Downloading video from ${videoUrl}`)
     await downloadFile(videoUrl, inputPath)
@@ -94,16 +100,16 @@ export async function extractFrame(options: ExtractFrameOptions): Promise<{ imag
       const frameCount = await probeFrameCount(inputPath, fps)
       const wantedIdx = Math.max(0, frameCount - 1 - k)
       args.push("-ss", String(seekForFrameIndex(wantedIdx, fps)), "-i", inputPath)
-      args.push("-vframes", "1", "-q:v", "2", outputPath)
+      args.push("-vframes", "1", outputPath)
     } else if (mode === "timestamp") {
       args.push("-ss", String(timestamp), "-i", inputPath)
-      args.push("-vframes", "1", "-q:v", "2", outputPath)
+      args.push("-vframes", "1", outputPath)
     } else if (mode === "keyframe") {
       // Snap to the nearest keyframe at/after `timestamp`. -skip_frame nokey
       // before -i drops non-keyframes during decoding so the next frame
       // emitted IS a keyframe. Default timestamp = 0 → first keyframe.
       args.push("-ss", String(timestamp), "-skip_frame", "nokey", "-i", inputPath)
-      args.push("-vframes", "1", "-q:v", "2", outputPath)
+      args.push("-vframes", "1", outputPath)
     } else if (mode === "frame-index") {
       // Convert frame index to a time seek so this stays a single ffmpeg
       // call (no full re-decode via select filter). Half-frame-early seek
@@ -113,11 +119,11 @@ export async function extractFrame(options: ExtractFrameOptions): Promise<{ imag
       const idx = Math.max(0, frameIndex ?? 0)
       const fps = await probeFps(inputPath)
       args.push("-ss", String(seekForFrameIndex(idx, fps)), "-i", inputPath)
-      args.push("-vframes", "1", "-q:v", "2", outputPath)
+      args.push("-vframes", "1", outputPath)
     } else {
       // mode === "first"
       args.push("-i", inputPath)
-      args.push("-vframes", "1", "-q:v", "2", outputPath)
+      args.push("-vframes", "1", outputPath)
     }
 
     console.log(`[extractFrame] Running FFmpeg: ffmpeg ${args.join(" ")}`)
@@ -126,20 +132,20 @@ export async function extractFrame(options: ExtractFrameOptions): Promise<{ imag
     } catch (primaryErr) {
       // A seek computed from container metadata can land PAST the actual last
       // frame (nb_frames/fps/duration lie on some encoders). Zero frames then
-      // reach the filtergraph, ffmpeg initializes the mjpeg encoder from the
-      // raw input stream (limited-range yuv420p) instead of the negotiated
-      // filter output, and the encoder open fails with the baffling "Non
-      // full-range YUV is non-standard" — surfaced to the user as a wall of
-      // ffmpeg build-config text (2026-07-20 app reports).
+      // reach the encoder and the open/flush fails with a baffling error
+      // (with the previous mjpeg output it was "Non full-range YUV is
+      // non-standard" — surfaced to the user as a wall of ffmpeg
+      // build-config text, 2026-07-20 app reports; a zero-frame seek fails
+      // the png encoder just the same).
       //
       // Fallback: decode the final second and keep the LAST decodable frame
-      // (`-update 1` overwrites the jpg per frame) — the nearest existing
+      // (`-update 1` overwrites the image per frame) — the nearest existing
       // frame to every past-the-end target. Skipped for mode "first", which
       // performs no seek: a failure there is a broken input, and answering it
       // with the LAST frame would be silently wrong.
       if (mode === "first") throw primaryErr
       console.warn(`[extractFrame] primary seek failed (mode=${mode}) — falling back to the last decodable frame`)
-      const fallbackArgs = ["-y", "-sseof", "-1", "-i", inputPath, "-update", "1", "-q:v", "2", outputPath]
+      const fallbackArgs = ["-y", "-sseof", "-1", "-i", inputPath, "-update", "1", outputPath]
       try {
         await runFfmpeg(fallbackArgs)
       } catch {

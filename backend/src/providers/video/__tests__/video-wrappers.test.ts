@@ -123,7 +123,7 @@ function ffargs(index = 0): string[] {
 describe("extractFrame", () => {
   it("returns the imagePath under the work directory", async () => {
     const result = await extractFrame({ videoUrl: "https://v/x.mp4", mode: "first" })
-    expect(result.imagePath).toBe("/tmp/work/frame.jpg")
+    expect(result.imagePath).toBe("/tmp/work/frame.png")
   })
 
   it("downloads the video before running ffmpeg", async () => {
@@ -207,13 +207,17 @@ describe("extractFrame", () => {
     expect(args[idx + 1]).toBe("0")
   })
 
-  it("always passes -vframes 1 and -q:v 2", async () => {
+  it("always passes -vframes 1 and writes a LOSSLESS PNG (no JPEG quality flag)", async () => {
+    // Anchor frames feed continuation models (Seedance extends) — a JPEG
+    // generation here compounds across every extend in a chain (2026-07-26
+    // extend-decay report). PNG is lossless and accepted by every KIE i2v
+    // provider that doesn't force JPEG itself.
     await extractFrame({ videoUrl: "u", mode: "first" })
     const args = ffargs()
     expect(args).toContain("-vframes")
     expect(args[args.indexOf("-vframes") + 1]).toBe("1")
-    expect(args).toContain("-q:v")
-    expect(args[args.indexOf("-q:v") + 1]).toBe("2")
+    expect(args).not.toContain("-q:v")
+    expect(args[args.length - 1]).toBe("/tmp/work/frame.png")
   })
 
   it("cleans up workDir on download failure", async () => {
