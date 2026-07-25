@@ -54,7 +54,7 @@ const ffmpegCall = (n: number): string[] => (mocks.runFfmpeg.mock.calls[n]?.[0] 
 describe("extractFrame fallback", () => {
   // path.join is platform-dependent — build the expectation the same way the
   // provider does, so the test passes on Windows checkouts too.
-  const FRAME_PATH = join("/tmp/work", "frame.jpg")
+  const FRAME_PATH = join("/tmp/work", "frame.png")
 
   it("happy path stays a single primary call (no fallback side effects)", async () => {
     const result = await extractFrame({ videoUrl: "https://x/v.mp4", mode: "last" })
