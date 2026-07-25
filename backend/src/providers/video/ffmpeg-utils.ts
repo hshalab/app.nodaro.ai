@@ -497,6 +497,18 @@ export async function trimEdgeFrames(
   outputPath: string,
   trimStartFrames: number,
   trimEndFrames: number,
+  opts?: {
+    /** End-trim the VIDEO only, keeping the audio through the clip's
+     *  ORIGINAL end (fix 2a, field report 2026-07-25 "voice was cut"): at a
+     *  matched smart-cut boundary the dropped tail frames are DUPLICATED
+     *  video, but their audio is unique speech — continuation models
+     *  re-render the video overlap yet generate fresh audio (measured:
+     *  next-head audio holds no copy of prev's tail, xcorr |r|≈0.1). The
+     *  caller MUST route such a clip through a filter graph that re-anchors
+     *  audio (combine's L-cut amix); the concat demuxer joins streams
+     *  independently and would drift on the longer audio track. */
+    preserveAudioTail?: boolean
+  },
 ): Promise<string> {
   if (trimStartFrames <= 0 && trimEndFrames <= 0) return inputPath
 
@@ -510,6 +522,18 @@ export async function trimEdgeFrames(
   const endSec = trimEndFrames / fps
 
   if (startSec + endSec >= duration) return inputPath
+
+  if (opts?.preserveAudioTail && trimEndFrames > 0) {
+    await runFfmpeg([
+      "-y", "-i", inputPath,
+      "-filter_complex",
+      `[0:v]trim=start=${startSec}:end=${duration - endSec},setpts=PTS-STARTPTS[v];` +
+        `[0:a]atrim=start=${startSec},asetpts=PTS-STARTPTS[a]`,
+      "-map", "[v]", "-map", "[a]",
+      "-c:v", "libx264", "-preset", "fast", "-c:a", "aac", outputPath,
+    ])
+    return outputPath
+  }
 
   const args = ["-y", "-i", inputPath]
   if (trimStartFrames > 0) args.push("-ss", String(startSec))

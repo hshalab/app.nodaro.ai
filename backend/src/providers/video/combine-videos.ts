@@ -181,6 +181,13 @@ function buildHardCutCrossfadeAudioFilter(
   durations: readonly number[],
   fadeDuration: number,
   curve: string,
+  /** Clips whose file carries its REAL pre-cut audio tail (video-only end
+   *  trim at a matched smart boundary — see trimEdgeFrames'
+   *  preserveAudioTail): the genuine material lingers past the cut, so the
+   *  synthetic atempo stretch is skipped — which also spares that clip the
+   *  up-to-`d` progressive audio lag the stretch causes. Fade timing is
+   *  identical either way. */
+  realTail?: readonly boolean[],
 ): { filter: string; outputLabel: string } {
   const n = durations.length
   const parts: string[] = []
@@ -190,9 +197,11 @@ function buildHardCutCrossfadeAudioFilter(
     const chain: string[] = []
     if (i < n - 1) {
       const dur = durations[i]!
-      const ratio = dur / (dur + fadeDuration)
-      chain.push(`atempo=${ratio.toFixed(6)}`)
-      // Stretched length is dur + fadeDuration; fade out over the last
+      if (!realTail?.[i]) {
+        const ratio = dur / (dur + fadeDuration)
+        chain.push(`atempo=${ratio.toFixed(6)}`)
+      }
+      // (Stretched or real) tail extends past dur; fade out over the last
       // fadeDuration — i.e. the part that lingers past this clip's cut.
       chain.push(`afade=t=out:st=${dur}:d=${fadeDuration}:curve=${curve}`)
     }
@@ -408,10 +417,33 @@ export async function combineVideos(options: CombineOptions): Promise<CombineVid
       }
     }
 
+    // Voice-preserving tail (fix 2a, field report 2026-07-25 "voice was
+    // cut"): at a MATCHED boundary the trimmed prev-tail VIDEO is duplicated
+    // content, but its AUDIO is unique speech — continuation models
+    // re-render the video overlap yet generate fresh audio, so a symmetric
+    // trim deletes real words (measured on the reporting jobs: voice energy
+    // into prev's final 100ms; next's head holds no copy, xcorr |r|≈0.1).
+    // Under the hard-cut L-cut graph the fix is natural: end-trim the VIDEO
+    // only and let the graph linger the REAL tail instead of its synthetic
+    // atempo stretch. Matched boundaries only — fixed/unmatched trims keep
+    // the symmetric cut (manual-mode semantics + characterization goldens
+    // unchanged) — and only on this graph: every other join strategy
+    // (concat fast path, keep, xfade) needs audio bounded to the video cut.
+    const lcutEligible = hardCutVideo && audioMode === "crossfade" && audioCrossfadeSeconds > 0
+    const preserveTail: boolean[] = normalizedPaths.map(() => false)
+    if (lcutEligible && smartCuts) {
+      for (let k = 0; k < normalizedPaths.length - 1; k++) {
+        if (smartCuts[k]?.matched && endTrims[k]! > 0 && (await hasAudioStream(normalizedPaths[k]!))) {
+          preserveTail[k] = true
+        }
+      }
+    }
+
     const inputPaths: string[] = []
     for (let i = 0; i < normalizedPaths.length; i++) {
       const trimmedPath = await trimEdgeFrames(
         normalizedPaths[i], join(workDir, `trimmed_${i}.mp4`), startTrims[i], endTrims[i],
+        { preserveAudioTail: preserveTail[i]! },
       )
       if (trimmedPath === normalizedPaths[i] && (startTrims[i] > 0 || endTrims[i] > 0)) {
         console.log(`[combineVideos] Trim would exceed clip ${i} duration, skipping`)
@@ -516,7 +548,7 @@ export async function combineVideos(options: CombineOptions): Promise<CombineVid
       await fs.writeFile(listPath, listContent)
 
       try {
-        const audioFilter = buildHardCutCrossfadeAudioFilter(durations, safeAudioCrossfade, resolveAudioCrossfadeCurve(audioCrossfadeCurve))
+        const audioFilter = buildHardCutCrossfadeAudioFilter(durations, safeAudioCrossfade, resolveAudioCrossfadeCurve(audioCrossfadeCurve), preserveTail)
         const audioPath = join(workDir, "blended_audio.m4a")
         await runFfmpeg([
           "-y",
@@ -538,6 +570,26 @@ export async function combineVideos(options: CombineOptions): Promise<CombineVid
         // Safety net (probe miss on an exotic container): plain stream-copy
         // concat — preserves existing audio at the cost of the blend.
         console.log("[combineVideos] cut+crossfade failed, falling back to concat (no audio crossfade)")
+        // Preserved-tail clips carry audio past their video cut — correct
+        // for the L-cut graph, but the concat demuxer joins streams
+        // independently, so the over-long track would shift every later
+        // clip's sound. Re-bound those clips' audio to the video length
+        // first (video stream-copied; -t caps the re-encoded audio).
+        if (preserveTail.some(Boolean)) {
+          for (let i = 0; i < inputPaths.length; i++) {
+            if (!preserveTail[i]) continue
+            const boundedPath = join(workDir, `bounded_${i}.mp4`)
+            await runFfmpeg([
+              "-y", "-i", inputPaths[i]!,
+              "-map", "0:v", "-map", "0:a",
+              "-c:v", "copy", "-c:a", "aac",
+              "-t", String(durations[i]!),
+              boundedPath,
+            ])
+            inputPaths[i] = boundedPath
+          }
+          await fs.writeFile(listPath, inputPaths.map((p) => `file '${p.replace(/'/g, "'\\''")}'`).join("\n"))
+        }
         await runFfmpeg(["-y", "-f", "concat", "-safe", "0", "-i", listPath, "-c", "copy", outputPath])
       }
 

@@ -13,7 +13,7 @@ import { join } from "node:path"
 import { promises as fs } from "node:fs"
 import { tmpdir } from "node:os"
 import { randomUUID } from "node:crypto"
-import { runFfmpeg, getVideoDuration, trimEdgeFrames } from "../ffmpeg-utils.js"
+import { runFfmpeg, runFfprobe, getVideoDuration, getVideoStreamDuration, trimEdgeFrames } from "../ffmpeg-utils.js"
 
 // Generates a solid-color silent clip via ffmpeg lavfi (same idiom as the
 // narrated-video assembler's e2e fixture).
@@ -22,6 +22,25 @@ async function makeClip(path: string, seconds: number, fps: number, color: strin
     "-y", "-f", "lavfi", "-i", `color=c=${color}:s=320x240:r=${fps}:d=${seconds}`,
     "-c:v", "libx264", "-pix_fmt", "yuv420p", "-t", String(seconds), path,
   ])
+}
+
+// Same fixture with a sine audio track (for the preserveAudioTail case).
+async function makeClipWithAudio(path: string, seconds: number, fps: number, color: string) {
+  await runFfmpeg([
+    "-y",
+    "-f", "lavfi", "-i", `color=c=${color}:s=320x240:r=${fps}:d=${seconds}`,
+    "-f", "lavfi", "-i", `sine=frequency=440:duration=${seconds}`,
+    "-map", "0:v", "-map", "1:a",
+    "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "-t", String(seconds), path,
+  ])
+}
+
+async function getAudioStreamDuration(path: string): Promise<number> {
+  const out = await runFfprobe([
+    "-v", "error", "-select_streams", "a:0",
+    "-show_entries", "stream=duration", "-of", "csv=p=0", path,
+  ])
+  return parseFloat(out.trim())
 }
 
 describe("trimEdgeFrames (e2e)", () => {
@@ -61,6 +80,27 @@ describe("trimEdgeFrames (e2e)", () => {
     const trimmedDuration = await getVideoDuration(out)
     const expectedDuration = originalDuration - (trimStartFrames + trimEndFrames) / fps
     expect(Math.abs(trimmedDuration - expectedDuration)).toBeLessThan(0.5)
+  }, 60_000)
+
+  it("preserveAudioTail: end-trims the VIDEO only — audio runs to the clip's original end", async () => {
+    // Fix 2a ("voice was cut"): at a matched smart boundary the dropped tail
+    // frames are duplicated video but their audio is unique speech. The
+    // video stream must shorten by frames/fps while the audio keeps its full
+    // length for the L-cut graph to linger.
+    const fps = 24
+    const framesToTrim = 24 // ~1s at 24fps
+    const src = join(dir, `${randomUUID()}.mp4`)
+    await makeClipWithAudio(src, 6, fps, "purple")
+
+    const out = join(dir, `${randomUUID()}.mp4`)
+    const result = await trimEdgeFrames(src, out, 0, framesToTrim, { preserveAudioTail: true })
+
+    expect(result).toBe(out)
+    const videoDur = await getVideoStreamDuration(out)
+    const audioDur = await getAudioStreamDuration(out)
+    expect(Math.abs(videoDur - 5)).toBeLessThan(0.2) // 6s − 24/24fps
+    expect(Math.abs(audioDur - 6)).toBeLessThan(0.2) // untouched tail
+    expect(audioDur - videoDur).toBeGreaterThan(0.7) // the preserved ~1s tail
   }, 60_000)
 
   it("returns the source path unchanged when the trim would exceed the clip's real duration", async () => {

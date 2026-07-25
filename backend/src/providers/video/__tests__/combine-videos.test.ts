@@ -308,11 +308,11 @@ describe("combineVideos — frame trim (delegates to trimEdgeFrames)", () => {
 
     // Clip 0 (first): start protected → effStart=0, effEnd=30.
     expect(mocks.trimEdgeFrames).toHaveBeenNthCalledWith(
-      1, "/tmp/work/normalized_0.mp4", "/tmp/work/trimmed_0.mp4", 0, 30,
+      1, "/tmp/work/normalized_0.mp4", "/tmp/work/trimmed_0.mp4", 0, 30, { preserveAudioTail: false },
     )
     // Clip 1 (last): end protected → effStart=30, effEnd=0.
     expect(mocks.trimEdgeFrames).toHaveBeenNthCalledWith(
-      2, "/tmp/work/normalized_1.mp4", "/tmp/work/trimmed_1.mp4", 30, 0,
+      2, "/tmp/work/normalized_1.mp4", "/tmp/work/trimmed_1.mp4", 30, 0, { preserveAudioTail: false },
     )
   })
 
@@ -328,7 +328,7 @@ describe("combineVideos — frame trim (delegates to trimEdgeFrames)", () => {
 
     // Clip 1 is the middle clip — no boundary protection, both ends forwarded.
     expect(mocks.trimEdgeFrames).toHaveBeenNthCalledWith(
-      2, "/tmp/work/normalized_1.mp4", "/tmp/work/trimmed_1.mp4", 30, 30,
+      2, "/tmp/work/normalized_1.mp4", "/tmp/work/trimmed_1.mp4", 30, 30, { preserveAudioTail: false },
     )
   })
 
@@ -338,7 +338,7 @@ describe("combineVideos — frame trim (delegates to trimEdgeFrames)", () => {
     await combineVideos(defaultOptions({ videoUrls: ["a.mp4"], transition: "cut" }))
 
     expect(mocks.trimEdgeFrames).toHaveBeenCalledWith(
-      "/tmp/work/normalized_0.mp4", "/tmp/work/trimmed_0.mp4", 0, 0,
+      "/tmp/work/normalized_0.mp4", "/tmp/work/trimmed_0.mp4", 0, 0, { preserveAudioTail: false },
     )
     // Pass-through default → no extra ffmpeg call beyond the concat.
     expect(mocks.runFfmpeg).toHaveBeenCalledTimes(1)
@@ -405,10 +405,10 @@ describe("combineVideos — smart cut", () => {
     )
     // Fixed trims (1/2) are ignored — the boundary comes from the matcher.
     expect(mocks.trimEdgeFrames).toHaveBeenNthCalledWith(
-      1, "/tmp/work/normalized_0.mp4", "/tmp/work/trimmed_0.mp4", 0, 3,
+      1, "/tmp/work/normalized_0.mp4", "/tmp/work/trimmed_0.mp4", 0, 3, { preserveAudioTail: false },
     )
     expect(mocks.trimEdgeFrames).toHaveBeenNthCalledWith(
-      2, "/tmp/work/normalized_1.mp4", "/tmp/work/trimmed_1.mp4", 5, 0,
+      2, "/tmp/work/normalized_1.mp4", "/tmp/work/trimmed_1.mp4", 5, 0, { preserveAudioTail: false },
     )
   })
 
@@ -426,7 +426,7 @@ describe("combineVideos — smart cut", () => {
       "/tmp/work/normalized_0.mp4", "/tmp/work/normalized_1.mp4", 12, 12, "preroll-keep-next",
     )
     expect(mocks.trimEdgeFrames).toHaveBeenNthCalledWith(
-      2, "/tmp/work/normalized_1.mp4", "/tmp/work/trimmed_1.mp4", 1, 0,
+      2, "/tmp/work/normalized_1.mp4", "/tmp/work/trimmed_1.mp4", 1, 0, { preserveAudioTail: false },
     )
   })
 
@@ -444,8 +444,8 @@ describe("combineVideos — smart cut", () => {
 
     expect(smartCutMocks.findSmartCutBoundary).not.toHaveBeenCalled()
     // Fixed trims applied (inner boundary only): clip 0 end 2, clip 1 start 1.
-    expect(mocks.trimEdgeFrames).toHaveBeenNthCalledWith(1, "/tmp/work/normalized_0.mp4", "/tmp/work/trimmed_0.mp4", 0, 2)
-    expect(mocks.trimEdgeFrames).toHaveBeenNthCalledWith(2, "/tmp/work/normalized_1.mp4", "/tmp/work/trimmed_1.mp4", 1, 0)
+    expect(mocks.trimEdgeFrames).toHaveBeenNthCalledWith(1, "/tmp/work/normalized_0.mp4", "/tmp/work/trimmed_0.mp4", 0, 2, { preserveAudioTail: false },)
+    expect(mocks.trimEdgeFrames).toHaveBeenNthCalledWith(2, "/tmp/work/normalized_1.mp4", "/tmp/work/trimmed_1.mp4", 1, 0, { preserveAudioTail: false },)
     expect(result.smartCuts).toEqual([
       { boundary: 0, prevClipEndTrimFrames: 2, nextClipStartTrimFrames: 1, psnrDb: null, matched: false, searchedPrevFrames: null, searchedNextFrames: null },
     ])
@@ -465,13 +465,13 @@ describe("combineVideos — smart cut", () => {
 
     expect(smartCutMocks.findSmartCutBoundary).toHaveBeenCalledTimes(2)
     expect(mocks.trimEdgeFrames).toHaveBeenNthCalledWith(
-      1, "/tmp/work/normalized_0.mp4", "/tmp/work/trimmed_0.mp4", 0, 2,
+      1, "/tmp/work/normalized_0.mp4", "/tmp/work/trimmed_0.mp4", 0, 2, { preserveAudioTail: false },
     )
     expect(mocks.trimEdgeFrames).toHaveBeenNthCalledWith(
-      2, "/tmp/work/normalized_1.mp4", "/tmp/work/trimmed_1.mp4", 4, 6,
+      2, "/tmp/work/normalized_1.mp4", "/tmp/work/trimmed_1.mp4", 4, 6, { preserveAudioTail: false },
     )
     expect(mocks.trimEdgeFrames).toHaveBeenNthCalledWith(
-      3, "/tmp/work/normalized_2.mp4", "/tmp/work/trimmed_2.mp4", 1, 0,
+      3, "/tmp/work/normalized_2.mp4", "/tmp/work/trimmed_2.mp4", 1, 0, { preserveAudioTail: false },
     )
   })
 
@@ -492,10 +492,10 @@ describe("combineVideos — smart cut", () => {
     // The matcher's below-threshold values are NOT applied — the user's
     // fixed trims are.
     expect(mocks.trimEdgeFrames).toHaveBeenNthCalledWith(
-      1, "/tmp/work/normalized_0.mp4", "/tmp/work/trimmed_0.mp4", 0, 2,
+      1, "/tmp/work/normalized_0.mp4", "/tmp/work/trimmed_0.mp4", 0, 2, { preserveAudioTail: false },
     )
     expect(mocks.trimEdgeFrames).toHaveBeenNthCalledWith(
-      2, "/tmp/work/normalized_1.mp4", "/tmp/work/trimmed_1.mp4", 1, 0,
+      2, "/tmp/work/normalized_1.mp4", "/tmp/work/trimmed_1.mp4", 1, 0, { preserveAudioTail: false },
     )
     expect(out.smartCuts).toEqual([
       { boundary: 0, prevClipEndTrimFrames: 2, nextClipStartTrimFrames: 1, psnrDb: 12.3, matched: false, searchedPrevFrames: 8, searchedNextFrames: 8 },
@@ -515,10 +515,10 @@ describe("combineVideos — smart cut", () => {
     }))
 
     expect(mocks.trimEdgeFrames).toHaveBeenNthCalledWith(
-      1, "/tmp/work/normalized_0.mp4", "/tmp/work/trimmed_0.mp4", 0, 2,
+      1, "/tmp/work/normalized_0.mp4", "/tmp/work/trimmed_0.mp4", 0, 2, { preserveAudioTail: false },
     )
     expect(mocks.trimEdgeFrames).toHaveBeenNthCalledWith(
-      2, "/tmp/work/normalized_1.mp4", "/tmp/work/trimmed_1.mp4", 1, 0,
+      2, "/tmp/work/normalized_1.mp4", "/tmp/work/trimmed_1.mp4", 1, 0, { preserveAudioTail: false },
     )
   })
 
@@ -547,11 +547,11 @@ describe("combineVideos — smart cut", () => {
       "/tmp/work/normalized_0.mp4", "/tmp/work/normalized_1.mp4", 8, 8, "best-pair",
     )
     // clip 0: outer start 0, boundary-0 matched end 2.
-    expect(mocks.trimEdgeFrames).toHaveBeenNthCalledWith(1, "/tmp/work/normalized_0.mp4", "/tmp/work/trimmed_0.mp4", 0, 2)
+    expect(mocks.trimEdgeFrames).toHaveBeenNthCalledWith(1, "/tmp/work/normalized_0.mp4", "/tmp/work/trimmed_0.mp4", 0, 2, { preserveAudioTail: false },)
     // clip 1: boundary-0 matched start 4, boundary-1 MASKED end 0 (not the fixed 4).
-    expect(mocks.trimEdgeFrames).toHaveBeenNthCalledWith(2, "/tmp/work/normalized_1.mp4", "/tmp/work/trimmed_1.mp4", 4, 0)
+    expect(mocks.trimEdgeFrames).toHaveBeenNthCalledWith(2, "/tmp/work/normalized_1.mp4", "/tmp/work/trimmed_1.mp4", 4, 0, { preserveAudioTail: false },)
     // clip 2: boundary-1 MASKED start 0 (not the fixed 3), outer end 0.
-    expect(mocks.trimEdgeFrames).toHaveBeenNthCalledWith(3, "/tmp/work/normalized_2.mp4", "/tmp/work/trimmed_2.mp4", 0, 0)
+    expect(mocks.trimEdgeFrames).toHaveBeenNthCalledWith(3, "/tmp/work/normalized_2.mp4", "/tmp/work/trimmed_2.mp4", 0, 0, { preserveAudioTail: false },)
     // The masked boundary is reported as an unmatched hard cut with no PSNR.
     expect(out.smartCuts?.[1]).toEqual({
       boundary: 1, prevClipEndTrimFrames: 0, nextClipStartTrimFrames: 0,
@@ -593,6 +593,158 @@ describe("combineVideos — smart cut", () => {
     expect(out.smartCuts).toEqual([
       { boundary: 0, prevClipEndTrimFrames: 2, nextClipStartTrimFrames: 1, psnrDb: null, matched: false, searchedPrevFrames: null, searchedNextFrames: null },
     ])
+  })
+})
+
+// ===========================================================================
+// 2c) Smart cut — voice-preserving tail (fix 2a, field report 2026-07-25
+//     "voice was cut"): at a MATCHED boundary under the hard-cut L-cut graph
+//     the prev clip's end trim is applied to the VIDEO only — the dropped
+//     frames are duplicated video, but their audio is unique speech. The
+//     L-cut then lingers the REAL tail (no atempo stretch needed).
+// ===========================================================================
+
+describe("combineVideos — smart cut voice-preserving tail (cut + crossfade)", () => {
+  /** Dispatch-style ffprobe: audio-presence probes ("a:0") report audio,
+   *  everything else is a resolution probe. Order-independent, so the new
+   *  pre-trim audio probe doesn't disturb queued stubs. */
+  function stubProbesByKind(audioByPath?: (path: string) => boolean) {
+    mocks.runFfprobe.mockImplementation(async (probeArgs: unknown) => {
+      const args = probeArgs as string[]
+      if (args.includes("a:0")) {
+        const path = args[args.length - 1]
+        return (audioByPath ? audioByPath(path) : true) ? "audio\n" : ""
+      }
+      return "1280x720"
+    })
+  }
+
+  it("matched boundary: prev's end trim is VIDEO-ONLY (preserveAudioTail) and its L-cut leg drops the atempo stretch", async () => {
+    stubProbesByKind()
+    smartCutMocks.findSmartCutBoundary.mockResolvedValueOnce({ trimEndFrames: 3, trimStartFrames: 5, psnr: 34.2, matched: true, searchedPrevFrames: 8, searchedNextFrames: 8 })
+
+    await combineVideos(defaultOptions({
+      videoUrls: ["a.mp4", "b.mp4"],
+      transition: "cut",
+      audioMode: "crossfade",
+      transitionDuration: 0.5,
+      smartCut: { enabled: true, framesFromPrev: 8, framesFromNext: 8 },
+    }))
+
+    // Prev side of the matched boundary keeps its audio tail; next side's
+    // head trim stays symmetric (head audio starts ON the seam).
+    expect(mocks.trimEdgeFrames).toHaveBeenNthCalledWith(
+      1, "/tmp/work/normalized_0.mp4", "/tmp/work/trimmed_0.mp4", 0, 3, { preserveAudioTail: true },
+    )
+    expect(mocks.trimEdgeFrames).toHaveBeenNthCalledWith(
+      2, "/tmp/work/normalized_1.mp4", "/tmp/work/trimmed_1.mp4", 5, 0, { preserveAudioTail: false },
+    )
+
+    // L-cut graph: the preserved clip fades its REAL tail out over the
+    // linger window — no atempo (which would also lag its whole clip's
+    // audio by up to d). The incoming clip is unchanged.
+    const audioArgs = ffargs(0)
+    const fc = audioArgs[audioArgs.indexOf("-filter_complex") + 1]
+    expect(fc).toContain("[0:a]afade=t=out:st=5:d=0.5:curve=tri[ca0]")
+    expect(fc).not.toContain("atempo")
+    expect(fc).toContain("[1:a]afade=t=in:st=0:d=0.5:curve=tri,adelay=5000:all=1[ca1]")
+  })
+
+  it("UNMATCHED boundary: symmetric trim + the classic atempo-stretched linger (fixed-trims fallback unchanged)", async () => {
+    stubProbesByKind()
+    smartCutMocks.findSmartCutBoundary.mockResolvedValueOnce({ trimEndFrames: 9, trimStartFrames: 9, psnr: 12.0, matched: false, searchedPrevFrames: 8, searchedNextFrames: 8 })
+
+    await combineVideos(defaultOptions({
+      videoUrls: ["a.mp4", "b.mp4"],
+      transition: "cut",
+      audioMode: "crossfade",
+      transitionDuration: 0.5,
+      trimStartFrames: 1,
+      trimEndFrames: 2,
+      smartCut: { enabled: true, framesFromPrev: 8, framesFromNext: 8 },
+    }))
+
+    expect(mocks.trimEdgeFrames).toHaveBeenNthCalledWith(
+      1, "/tmp/work/normalized_0.mp4", "/tmp/work/trimmed_0.mp4", 0, 2, { preserveAudioTail: false },
+    )
+    const audioArgs = ffargs(0)
+    const fc = audioArgs[audioArgs.indexOf("-filter_complex") + 1]
+    expect(fc).toContain("atempo=0.909091")
+  })
+
+  it("audioMode=keep: matched boundaries still trim BOTH streams (no L-cut graph to re-anchor the tail)", async () => {
+    stubProbesByKind()
+    smartCutMocks.findSmartCutBoundary.mockResolvedValueOnce({ trimEndFrames: 3, trimStartFrames: 1, psnr: 30, matched: true, searchedPrevFrames: 8, searchedNextFrames: 8 })
+
+    await combineVideos(defaultOptions({
+      videoUrls: ["a.mp4", "b.mp4"],
+      transition: "cut",
+      audioMode: "keep",
+      smartCut: { enabled: true, framesFromPrev: 8, framesFromNext: 8 },
+    }))
+
+    expect(mocks.trimEdgeFrames).toHaveBeenNthCalledWith(
+      1, "/tmp/work/normalized_0.mp4", "/tmp/work/trimmed_0.mp4", 0, 3, { preserveAudioTail: false },
+    )
+  })
+
+  it("xfade transition: matched boundaries trim both streams (the blend already masks the seam)", async () => {
+    stubProbesByKind()
+    smartCutMocks.findSmartCutBoundary.mockResolvedValueOnce({ trimEndFrames: 3, trimStartFrames: 1, psnr: 30, matched: true, searchedPrevFrames: 8, searchedNextFrames: 8 })
+
+    await combineVideos(defaultOptions({
+      videoUrls: ["a.mp4", "b.mp4"],
+      transition: "fade",
+      audioMode: "crossfade",
+      transitionDuration: 0.5,
+      smartCut: { enabled: true, framesFromPrev: 8, framesFromNext: 8 },
+    }))
+
+    expect(mocks.trimEdgeFrames).toHaveBeenNthCalledWith(
+      1, "/tmp/work/normalized_0.mp4", "/tmp/work/trimmed_0.mp4", 0, 3, { preserveAudioTail: false },
+    )
+  })
+
+  it("prev clip without audio: no tail to preserve (silent-injection path keeps symmetric trims)", async () => {
+    stubProbesByKind((path) => !path.includes("normalized_0"))
+    smartCutMocks.findSmartCutBoundary.mockResolvedValueOnce({ trimEndFrames: 3, trimStartFrames: 1, psnr: 30, matched: true, searchedPrevFrames: 8, searchedNextFrames: 8 })
+
+    await combineVideos(defaultOptions({
+      videoUrls: ["a.mp4", "b.mp4"],
+      transition: "cut",
+      audioMode: "crossfade",
+      transitionDuration: 0.5,
+      smartCut: { enabled: true, framesFromPrev: 8, framesFromNext: 8 },
+    }))
+
+    expect(mocks.trimEdgeFrames).toHaveBeenNthCalledWith(
+      1, "/tmp/work/normalized_0.mp4", "/tmp/work/trimmed_0.mp4", 0, 3, { preserveAudioTail: false },
+    )
+  })
+
+  it("audio-pass failure with a preserved tail: the fallback re-bounds that clip's audio before the concat (no A/V drift)", async () => {
+    stubProbesByKind()
+    smartCutMocks.findSmartCutBoundary.mockResolvedValueOnce({ trimEndFrames: 3, trimStartFrames: 1, psnr: 34, matched: true, searchedPrevFrames: 8, searchedNextFrames: 8 })
+    // First ffmpeg call (the L-cut audio pass) rejects; everything after succeeds.
+    mocks.runFfmpeg.mockRejectedValueOnce(new Error("amix exploded"))
+
+    await combineVideos(defaultOptions({
+      videoUrls: ["a.mp4", "b.mp4"],
+      transition: "cut",
+      audioMode: "crossfade",
+      transitionDuration: 0.5,
+      smartCut: { enabled: true, framesFromPrev: 8, framesFromNext: 8 },
+    }))
+
+    // A bounding remux caps the preserved clip's audio at its video length…
+    const boundCall = mocks.runFfmpeg.mock.calls.find((c) => (c[0] as string[]).includes("/tmp/work/bounded_0.mp4"))
+    expect(boundCall).toBeDefined()
+    const boundArgs = boundCall![0] as string[]
+    expect(boundArgs[boundArgs.indexOf("-t") + 1]).toBe("5")
+    expect(boundArgs[boundArgs.indexOf("-c:v") + 1]).toBe("copy")
+    // …and the fallback concat filelist references the bounded file.
+    const lastList = mocks.fsWriteFile.mock.calls[mocks.fsWriteFile.mock.calls.length - 1][1] as string
+    expect(lastList).toContain("bounded_0.mp4")
   })
 })
 
