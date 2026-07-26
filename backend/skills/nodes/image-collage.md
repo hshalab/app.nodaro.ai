@@ -1,7 +1,7 @@
 ---
 node_type: image-collage
-generated_at: 2026-07-26T01:17:36.077Z
-generated_from: 14237b47a
+generated_at: 2026-07-26T10:54:26.572Z
+generated_from: 3ca1eb295
 ---
 
 # Image Collage
@@ -25,6 +25,7 @@ generated_from: 14237b47a
 **Optional data fields:**
 - `currentJobProgress?: number`
 - `imageSizeBySource?: Record<string, number>`
+- `imageOrder?: string[]`
 - `executionStatus?: "idle" | "running" | "completed" | "failed"`
 - `errorMessage?: string`
 - `generatedImageUrl?: string`

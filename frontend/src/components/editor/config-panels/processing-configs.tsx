@@ -42,8 +42,6 @@ import type {
 } from "@/types/nodes"
 import type { WorkflowNode } from "@/types/nodes"
 import { ConnectedMediaList, applyMediaOrder, getSourceThumbnail } from "./connected-media-list"
-import { CachedImage } from "@/components/ui/cached-image"
-import { Image as ImageIcon } from "lucide-react"
 import { isVideoUrl } from "@/lib/media-type"
 import { PLATFORM_SPECS, CONTENT_TYPES_BY_PLATFORM, PLATFORM_LABELS, type SocialMediaPlatform } from "@/lib/social-media-specs"
 import { PlatformPreview } from "@/components/nodes/platform-preview"
@@ -1438,67 +1436,70 @@ export function ImageCollageConfig({ data, onUpdate, sources }: ConfigProps<Imag
       </div>
       {sources.length > 0 && (
         <div>
-          <Label>Image Sizes</Label>
-          <div className="flex flex-col gap-1 mt-1">
-            {sources.map((s) => {
-              const thumb = getSourceThumbnail(s)
-              const current = data.imageSizeBySource?.[s.id] ?? 0
+          {/* ONE sortable list for both concerns: drag rows to set the collage
+              order (persisted as imageOrder — the `in` handle's parallel order
+              field, cleared when the handle popover reorders edges), and pick
+              each input's size hint on the row's second line. The collage
+              accepts ANY image producer, so the accepted set is simply every
+              connected source (the handle's accepts-gate already filtered),
+              with a generic generated-image thumbnail fallback for types the
+              default resolver doesn't know (extract-frame, modify-image, …). */}
+          <ConnectedMediaList
+            sources={sources}
+            mediaOrder={data.imageOrder ?? []}
+            onUpdateOrder={(order) => onUpdate({ imageOrder: order })}
+            acceptedTypes={new Set(sources.map((s) => s.type))}
+            mediaType="image"
+            emptyMessage="Connect 2+ image producers to arrange them."
+            thumbnailFor={(s) => {
+              const nd = s.nodeData ?? {}
+              const results = nd.generatedResults as Array<{ url?: string }> | undefined
+              return (
+                getSourceThumbnail(s) ??
+                results?.[(nd.activeResultIndex as number) ?? 0]?.url ??
+                (nd.generatedImageUrl as string | undefined) ??
+                (nd.url as string | undefined)
+              )
+            }}
+            renderRowExtra={(entry) => {
+              const current = data.imageSizeBySource?.[entry.id] ?? 0
               return (
                 <div
-                  key={s.id}
-                  className="flex items-center gap-1.5 px-2 py-1.5 rounded-md bg-muted/50 text-xs"
+                  className="flex rounded-md border border-border overflow-hidden w-fit"
+                  role="radiogroup"
+                  aria-label={`Size for ${entry.label}`}
                 >
-                  {thumb ? (
-                    <CachedImage
-                      src={thumb}
-                      alt={s.label}
-                      className="w-8 h-8 rounded object-cover shrink-0"
-                      thumbnail
-                      thumbnailWidth={64}
-                    />
-                  ) : (
-                    <div className="w-8 h-8 rounded bg-muted flex items-center justify-center shrink-0">
-                      <ImageIcon className="w-3.5 h-3.5 text-muted-foreground/40" />
-                    </div>
-                  )}
-                  <span className="flex-1 min-w-0 truncate" title={s.label}>{s.label}</span>
-                  <div
-                    className="flex rounded-md border border-border overflow-hidden shrink-0"
-                    role="radiogroup"
-                    aria-label={`Size for ${s.label}`}
-                  >
-                    {COLLAGE_SIZE_OPTIONS.map((opt) => (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        role="radio"
-                        aria-checked={current === opt.value}
-                        className={`px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
-                          current === opt.value
-                            ? "bg-[#ff0073] text-white"
-                            : "bg-transparent text-muted-foreground hover:bg-muted"
-                        }`}
-                        onClick={() =>
-                          onUpdate({
-                            imageSizeBySource: {
-                              ...(data.imageSizeBySource ?? {}),
-                              [s.id]: opt.value,
-                            },
-                          })
-                        }
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
+                  {COLLAGE_SIZE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={current === opt.value}
+                      className={`px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
+                        current === opt.value
+                          ? "bg-[#ff0073] text-white"
+                          : "bg-transparent text-muted-foreground hover:bg-muted"
+                      }`}
+                      onClick={() =>
+                        onUpdate({
+                          imageSizeBySource: {
+                            ...(data.imageSizeBySource ?? {}),
+                            [entry.id]: opt.value,
+                          },
+                        })
+                      }
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
                 </div>
               )
-            })}
-          </div>
-          <p className="text-[10px] text-muted-foreground mt-0.5">
+            }}
+          />
+          <p className="text-[10px] text-muted-foreground mt-1">
             {(data.layout ?? "smart") === "grid"
-              ? "Size hints apply to the Smart layout — Grid keeps uniform cells."
-              : "Relative hints: Big ≈ 2× Medium, Small ≈ ½. A List input applies its hint to every image it contributes."}
+              ? "Drag to reorder (reading order). Size hints apply to the Smart layout — Grid keeps uniform cells."
+              : "Drag to reorder (reading order). Sizes are relative hints: Big ≈ 2× Medium, Small ≈ ½. A List input moves as one block and applies its hint to every image it contributes."}
           </p>
         </div>
       )}

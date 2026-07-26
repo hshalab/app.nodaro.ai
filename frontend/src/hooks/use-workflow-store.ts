@@ -776,6 +776,7 @@ function getParallelOrderField(
     case "combine-videos:in":           return "clipOrder"
     case "mix-audio:in":                return "trackOrder"
     case "combine-audio:in":            return "segmentOrder"
+    case "image-collage:in":            return "imageOrder"
     // merge-video-audio is INTENTIONALLY OMITTED. Its `data.trackSettings`
     // is keyed by sourceNodeId (object), not order — the backend
     // (payload-builder.ts) and frontend runtime (execute-node.ts:4401)

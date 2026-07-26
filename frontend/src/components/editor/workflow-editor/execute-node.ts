@@ -5606,16 +5606,33 @@ export function executeNode(
 
   if (node.type === "image-collage") {
     const collageData = node.data as ImageCollageData;
-    const imageUrls = inputs.imageUrls ?? [];
+    let imageUrls = inputs.imageUrls ?? [];
     if (imageUrls.length < 2) {
       toast.error(`Node "${collageData.label}": need at least 2 image inputs`);
       return Promise.reject(new Error("Need at least 2 images"));
+    }
+    let withSourceIds = inputs.imageUrlsWithSourceIds;
+    // User-configured input ordering (config-panel drag list). Unlike
+    // combine-videos' clipOrder .find() lookup, a collage source can
+    // contribute SEVERAL images through one edge (a List) — so each listed
+    // source moves ALL its entries as a contiguous block, and unlisted
+    // sources append in edge order. Mirrors backend payload-builder.ts.
+    const imageOrder = collageData.imageOrder;
+    if (imageOrder?.length && withSourceIds?.length === imageUrls.length) {
+      const listed = new Set(imageOrder);
+      const ordered = [
+        ...imageOrder.flatMap((nodeId) => withSourceIds!.filter((e) => e.nodeId === nodeId)),
+        ...withSourceIds!.filter((e) => !listed.has(e.nodeId)),
+      ];
+      if (ordered.length === imageUrls.length) {
+        withSourceIds = ordered;
+        imageUrls = ordered.map((e) => e.url);
+      }
     }
     // Align the per-SOURCE size hints (imageSizeBySource) to the wire order
     // via the lockstep imageUrlsWithSourceIds. All-auto → omit (no-op).
     // Mirrors backend payload-builder.ts case "image-collage".
     const sizeBySource = collageData.imageSizeBySource;
-    const withSourceIds = inputs.imageUrlsWithSourceIds;
     let imageSizes: number[] | undefined;
     if (sizeBySource && withSourceIds && withSourceIds.length === imageUrls.length) {
       imageSizes = withSourceIds.map((e) => {
