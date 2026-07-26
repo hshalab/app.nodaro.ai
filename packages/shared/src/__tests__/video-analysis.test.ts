@@ -104,6 +104,23 @@ describe("appearance variations (cast-variations spec §4)", () => {
   })
 })
 
+describe("variationFolds (cast-variations §4/§6 — review F5)", () => {
+  const meta = { durationSec: 10, width: 1920, height: 1080, aspectRatio: "16:9" }
+  const doc = {
+    meta,
+    slots: [slot],
+    scenes: [{ ...baseScene, sceneNumber: 1, visualResolved: "a man juggles", slotRefs: ["hero"] }],
+  }
+  it("videoAnalysisResultSchema round-trips variationFolds — strip-mode consumers keep the §6 fold note", () => {
+    const withFolds = { ...doc, variationFolds: [{ slotId: "hero", variationId: "era", label: "Era" }] }
+    expect(videoAnalysisResultSchema.parse(withFolds)).toEqual(withFolds)
+  })
+  it("absent variationFolds stays absent (no [] materialization)", () => {
+    const parsed = videoAnalysisResultSchema.parse(doc)
+    expect("variationFolds" in parsed && parsed.variationFolds !== undefined).toBe(false)
+  })
+})
+
 describe("binding rewrite helpers (merge consumes — spec §4)", () => {
   it("rewriteSceneBindings renames slot keys and per-slot variation values", () => {
     expect(rewriteSceneBindings({ "man-2": "dream", other: "era" }, { "man-2": "hero" }, { hero: { dream: "flashback" } }))
