@@ -128,6 +128,16 @@ export const videoAnalysisResultSchema = z.object({
   }),
   slots: z.array(entitySlotSchema),
   scenes: z.array(analyzedSceneSchema).min(1),
+  /** CAST VARIATIONS (§4 cap handling): looks the analyzer's merge FOLDED into
+   *  the default at VIDEO_ANALYSIS_MAX_VARIATIONS — recorded, never silent. In
+   *  the wire schema so strip-mode consumers (the recast client's validated
+   *  blueprint view) keep it: the §6 "folded into default look" note is the
+   *  user's only pre-pay defense against a wrong split. */
+  variationFolds: z.array(z.object({
+    slotId: z.string(),
+    variationId: z.string(),
+    label: z.string(),
+  })).optional(),
 })
 export type VideoAnalysisResult = z.infer<typeof videoAnalysisResultSchema>
 
