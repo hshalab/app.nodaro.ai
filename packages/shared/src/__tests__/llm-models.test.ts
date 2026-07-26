@@ -410,6 +410,11 @@ describe("LLM_FEATURE_DEFAULTS", () => {
     expect(LLM_FEATURE_DEFAULTS["generate-script"]).toBe("gemini-3.6-flash")
   })
 
+  it('"qa-check" defaults to "gemini-3.6-flash" (economy)', () => {
+    expect(LLM_FEATURE_DEFAULTS["qa-check"]).toBe("gemini-3.6-flash")
+    expect(getLlmTier(LLM_FEATURE_DEFAULTS["qa-check"])).toBe("economy")
+  })
+
   it('"translate" defaults to "gemini-3.6-flash" (economy)', () => {
     expect(LLM_FEATURE_DEFAULTS["translate"]).toBe("gemini-3.6-flash")
   })

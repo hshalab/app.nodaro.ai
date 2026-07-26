@@ -4,7 +4,7 @@
 
 ## Overview
 
-The QA Check node sends upstream text to an LLM (default Gemini Flash) and asks it to score the content from 0.0 to 1.0 against a chosen evaluation type. It returns a numeric score, an `approved` boolean (score ≥ threshold), and a short reason. Use it as an automated quality gate inside workflows — for example, to validate generated scripts or captions before they continue downstream.
+The QA Check node sends upstream text to an LLM (default Gemini 3.6 Flash) and asks it to score the content from 0.0 to 1.0 against a chosen evaluation type. It returns a numeric score, an `approved` boolean (score ≥ threshold), and a short reason. Use it as an automated quality gate inside workflows — for example, to validate generated scripts or captions before they continue downstream.
 
 ## How it works
 
@@ -28,7 +28,7 @@ The QA Check node sends upstream text to an LLM (default Gemini Flash) and asks 
 |-------|------|---------|-------------|
 | Check Type | Select | `content` | Evaluation dimension (content / quality / consistency / safety) |
 | Threshold | Number | `0.7` | Score at or above which `approved` is `true` |
-| Model | Select | Gemini Flash | LLM used for the evaluation |
+| Model | Select | Gemini 3.6 Flash | LLM used for the evaluation |
 
 ## Inputs & Outputs
 
