@@ -221,6 +221,12 @@ export interface ResolvedInputs {
   /** Image URLs accumulated from every upstream image producer, in wire order
    *  (image-collage). Mirrors videoUrls for combine-videos. */
   imageUrls?: string[]
+  /** Image URLs with source node IDs (image-collage) — lets the payload
+   *  builder align the node's per-source size hints (imageSizeBySource) into
+   *  the wire's index-aligned imageSizes array. Mirrors
+   *  videoUrlsWithSourceIds; pushed in lockstep with imageUrls. */
+  imageUrlsWithSourceIds?: Array<{ nodeId: string; url: string }>
+
   audioUrl?: string
   audioUrl2?: string
   audioUrls?: string[]

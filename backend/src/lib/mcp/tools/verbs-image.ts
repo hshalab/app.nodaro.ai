@@ -804,8 +804,9 @@ export function registerImageVerbs({ server, session, fastify }: RegisterOpts): 
     {
       title: "Image Collage",
       description:
-        "Composite multiple images into ONE large 2K/4K image. Each item is either { url } or { asset_id } (a Nodaro job id whose output is an image). " +
+        "Composite multiple images into ONE large 2K/4K image. Each item is either { url } or { asset_id } (a Nodaro job id whose output is an image), plus an optional per-image size hint. " +
         "No image is ever cropped: 'smart' layout justifies images into aspect-balanced rows at their exact aspect ratios (Google-Photos style; the output height floats to fit); 'grid' uses uniform cells with off-ratio images letterboxed in the background color. " +
+        "Per-image `size` hints bias the smart layout's row packing so hinted-big images render larger (hero rows) and hinted-small ones pack denser rows — relative to each other, never cropping. " +
         "Returns a job_id with the composited image.",
       inputSchema: {
         images: z
@@ -813,11 +814,20 @@ export function registerImageVerbs({ server, session, fastify }: RegisterOpts): 
             z.object({
               url: z.string().url().optional(),
               asset_id: z.string().optional(),
+              size: z
+                .number()
+                .int()
+                .min(0)
+                .max(3)
+                .optional()
+                .describe(
+                  "Relative size hint for THIS image: 0 auto/don't care (default), 1 big (~2× linear vs medium), 2 medium, 3 small (~½ linear). Smart layout only — grid cells stay uniform.",
+                ),
             }),
           )
           .min(2)
           .max(30)
-          .describe("2–30 image sources, each { url } or { asset_id }."),
+          .describe("2–30 image sources, each { url } or { asset_id } with an optional size hint."),
         layout: z.enum(["smart", "grid"]).optional().describe("Arrangement algorithm. Default 'smart' (justified rows; output height floats to avoid cropping)."),
         resolution: z.enum(["2K", "4K"]).optional().describe("Output long-edge resolution. Default '4K' (3840px)."),
         aspect_ratio: z
@@ -852,8 +862,12 @@ export function registerImageVerbs({ server, session, fastify }: RegisterOpts): 
         }
         imageUrls.push(url)
       }
+      // Per-image size hints ride each images[] item; the route wants them as
+      // an index-aligned array. All-auto → omit (layout no-op).
+      const imageSizes = args.images.map((item) => item.size ?? 0)
       const payload: Record<string, unknown> = {
         imageUrls,
+        ...(imageSizes.some((s) => s !== 0) ? { imageSizes } : {}),
         ...(args.layout ? { layout: args.layout } : {}),
         ...(args.resolution ? { resolution: args.resolution } : {}),
         ...(args.aspect_ratio ? { aspectRatio: args.aspect_ratio } : {}),

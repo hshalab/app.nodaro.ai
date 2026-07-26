@@ -1142,6 +1142,11 @@ function routeOutput(
   // precede reference-sheet / source-type routing so the accumulation wins.
   if (targetType === "image-collage") {
     inputs.imageUrls = [...(inputs.imageUrls ?? []), output]
+    // Lockstep sibling of imageUrls — the payload builder aligns the node's
+    // per-source size hints (imageSizeBySource) to the wire order through it.
+    // A list source contributes N entries all bearing the list node's id, so
+    // its images share the list's size hint.
+    inputs.imageUrlsWithSourceIds = [...(inputs.imageUrlsWithSourceIds ?? []), { nodeId: src.id, url: output }]
     return
   }
 

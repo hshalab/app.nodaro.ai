@@ -3139,6 +3139,13 @@ export type ImageCollageData = {
   /** Gap between cells + outer margin, px on the output canvas. */
   gap: number
   backgroundColor: string
+  /** Per-input size hints keyed by SOURCE NODE ID: 0 = auto ("don't care"),
+   *  1 = big, 2 = medium, 3 = small. Relative hints for the smart layout's
+   *  row packing (grid stays uniform). Converted to the wire's index-aligned
+   *  `imageSizes` at run time (frontend execute-node.ts + backend
+   *  payload-builder.ts) via imageUrlsWithSourceIds; entries for nodes no
+   *  longer connected are simply ignored. */
+  imageSizeBySource?: Record<string, number>
   fieldMappings: FieldMappings
   executionStatus?: "idle" | "running" | "completed" | "failed"
   errorMessage?: string

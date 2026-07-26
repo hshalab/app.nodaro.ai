@@ -43,6 +43,29 @@ describe("media resource", () => {
     expect(fetchMock.mock.calls[0][0]).toBe("https://api.example.com/v1/trim-audio")
   })
 
+  it("imageCollage() POSTs /v1/image-collage with per-image size hints and returns { jobId }", async () => {
+    const fetchMock = vi.fn().mockReturnValueOnce(mockOk({ jobId: "j4" }))
+    const c = make(fetchMock)
+    const out = await c.media.imageCollage({
+      imageUrls: ["https://x/a.png", "https://x/b.png", "https://x/c.png"],
+      imageSizes: [1, 0, 3],
+      layout: "smart",
+      resolution: "2K",
+      aspectRatio: "16:9",
+    })
+    expect(fetchMock.mock.calls[0][0]).toBe("https://api.example.com/v1/image-collage")
+    const init = fetchMock.mock.calls[0][1] as { method: string; body: string }
+    expect(init.method).toBe("POST")
+    expect(JSON.parse(init.body)).toEqual({
+      imageUrls: ["https://x/a.png", "https://x/b.png", "https://x/c.png"],
+      imageSizes: [1, 0, 3],
+      layout: "smart",
+      resolution: "2K",
+      aspectRatio: "16:9",
+    })
+    expect(out.jobId).toBe("j4")
+  })
+
   it("videoMetadata() POSTs /v1/video-metadata and returns the metadata directly", async () => {
     const fetchMock = vi.fn().mockReturnValueOnce(mockOk({ durationSec: 212, width: 1280, height: 720, title: "Clip", isLive: false }))
     const c = make(fetchMock)

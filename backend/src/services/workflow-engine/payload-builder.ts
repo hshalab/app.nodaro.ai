@@ -4206,11 +4206,33 @@ export function buildPayload(
       const collageImageUrls =
         resolvedInputs.imageUrls || (data.imageUrls as string[] | undefined) || []
       const resolution = (data.resolution as string | undefined) === "4K" ? "4K" : "2K"
+      // Per-image size hints (0 auto / 1 big / 2 medium / 3 small). Editor
+      // workflows key them by SOURCE NODE ID (data.imageSizeBySource) — align
+      // to the accumulated wire order via imageUrlsWithSourceIds (pushed in
+      // lockstep with imageUrls). API-authored workflows may instead carry a
+      // raw index-aligned data.imageSizes array next to data.imageUrls.
+      const clampSize = (v: unknown): number =>
+        typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= 3 ? v : 0
+      const sizeBySource = data.imageSizeBySource as Record<string, number> | undefined
+      const withSourceIds = resolvedInputs.imageUrlsWithSourceIds
+      let collageImageSizes: number[] | undefined
+      if (sizeBySource && withSourceIds && withSourceIds.length === collageImageUrls.length) {
+        collageImageSizes = withSourceIds.map((e) => clampSize(sizeBySource[e.nodeId]))
+      } else if (Array.isArray(data.imageSizes)) {
+        collageImageSizes = (data.imageSizes as unknown[])
+          .slice(0, collageImageUrls.length)
+          .map(clampSize)
+      }
+      // All-auto is a no-op — omit so the layout takes its unhinted path.
+      if (collageImageSizes && collageImageSizes.every((s) => s === 0)) {
+        collageImageSizes = undefined
+      }
       return ffmpegResult(
         "image-collage",
         {
           jobId,
           imageUrls: collageImageUrls,
+          ...(collageImageSizes ? { imageSizes: collageImageSizes } : {}),
           layout: (data.layout as string | undefined) ?? "smart",
           resolution,
           aspectRatio: (data.aspectRatio as string | undefined) ?? "1:1",

@@ -16,6 +16,16 @@ export const imageCollageBody = z.object({
     .min(2, "At least 2 images required")
     .max(30, "At most 30 images"),
   layout: z.enum(["smart", "grid"]).optional().default("smart"),
+  /**
+   * Per-image size hints, index-aligned with `imageUrls`: 0 = auto ("don't
+   * care"), 1 = big, 2 = medium, 3 = small. RELATIVE hints for the smart
+   * layout's row packing (grid cells stay uniform by design). A shorter array
+   * pads with auto; extra entries are ignored.
+   */
+  imageSizes: z
+    .array(z.number().int().min(0).max(3))
+    .max(30, "At most 30 size hints")
+    .optional(),
   resolution: z.enum(["2K", "4K"]).optional().default("4K"),
   // Any "W:H" (1–2 digits each). Parsed generically by resolveCollageCanvas, so
   // new frontend ratios need no route change (no enum to keep in sync).
@@ -69,7 +79,7 @@ export async function imageCollageRoutes(app: FastifyInstance) {
         })
       }
 
-      const { imageUrls, layout, resolution, aspectRatio, gap, backgroundColor, attachToCharacterId, attachToColumn, attachName, attachBoardType } = parsed.data
+      const { imageUrls, imageSizes, layout, resolution, aspectRatio, gap, backgroundColor, attachToCharacterId, attachToColumn, attachName, attachBoardType } = parsed.data
       const userId = req.userId
       if (!userId) {
         return reply.status(401).send({
@@ -105,6 +115,7 @@ export async function imageCollageRoutes(app: FastifyInstance) {
       await videoQueue.add("image-collage", {
         jobId: job.id,
         imageUrls,
+        imageSizes,
         layout,
         resolution,
         aspectRatio,

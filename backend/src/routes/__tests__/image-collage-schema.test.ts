@@ -37,3 +37,34 @@ describe("imageCollageBody attach fields", () => {
     ).toBe(false)
   })
 })
+
+describe("imageCollageBody imageSizes (per-image size hints)", () => {
+  it("accepts hints 0–3 aligned with imageUrls", () => {
+    const parsed = imageCollageBody.safeParse({ ...base, imageSizes: [1, 3] })
+    expect(parsed.success).toBe(true)
+    if (parsed.success) expect(parsed.data.imageSizes).toEqual([1, 3])
+  })
+
+  it("accepts a shorter-than-urls array (missing entries are auto)", () => {
+    expect(imageCollageBody.safeParse({ ...base, imageSizes: [2] }).success).toBe(true)
+  })
+
+  it("is optional", () => {
+    const parsed = imageCollageBody.safeParse(base)
+    expect(parsed.success).toBe(true)
+    if (parsed.success) expect(parsed.data.imageSizes).toBeUndefined()
+  })
+
+  it("rejects out-of-range and non-integer hints", () => {
+    expect(imageCollageBody.safeParse({ ...base, imageSizes: [4, 0] }).success).toBe(false)
+    expect(imageCollageBody.safeParse({ ...base, imageSizes: [-1] }).success).toBe(false)
+    expect(imageCollageBody.safeParse({ ...base, imageSizes: [1.5] }).success).toBe(false)
+    expect(imageCollageBody.safeParse({ ...base, imageSizes: ["big"] }).success).toBe(false)
+  })
+
+  it("rejects more than 30 hints", () => {
+    expect(
+      imageCollageBody.safeParse({ ...base, imageSizes: new Array(31).fill(0) }).success,
+    ).toBe(false)
+  })
+})

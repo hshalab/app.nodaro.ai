@@ -35,6 +35,10 @@ export interface ImageCollageParams {
   readonly gap?: number
   /** Background shown in the gaps, "#RRGGBB". */
   readonly backgroundColor?: string
+  /** Per-image size hints, index-aligned with `imageUrls`: 0 = auto ("don't
+   *  care"), 1 = big, 2 = medium, 3 = small. Relative — smart layout only
+   *  (grid cells are uniform by design). Missing/invalid entries are auto. */
+  readonly imageSizes?: readonly number[]
 }
 
 /** Long edge (px) per resolution. Canvas W/H are derived from the aspect. */
@@ -162,6 +166,14 @@ export async function createImageCollage(params: ImageCollageParams): Promise<st
   const aspectRatio = params.aspectRatio ?? "1:1"
   const gap = Math.max(0, Math.min(200, Math.floor(params.gap ?? 24)))
   const bgColor = toFfmpegColor(params.backgroundColor)
+  // Size hints aligned to imageUrls — pad missing entries with 0 (auto) and
+  // clamp garbage; the layout treats unknown values as auto anyway.
+  const imageSizes = params.imageSizes
+    ? imageUrls.map((_, i) => {
+        const v = params.imageSizes![i]
+        return typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= 3 ? v : 0
+      })
+    : undefined
 
   // Target canvas from resolution × aspect. In smart mode the WIDTH is honoured
   // and the target height only steers the row count; the layout floats the real
@@ -194,7 +206,7 @@ export async function createImageCollage(params: ImageCollageParams): Promise<st
   // Probe dimensions concurrently (ffprobe on local files — cheap, not gated by
   // the ffmpeg semaphore), then compute the layout.
   const dims = await Promise.all(localPaths.map(probeImageSize))
-  const { rects, canvasW, canvasH } = computeCollageLayout(dims, targetW, targetH, { mode: layout, gap })
+  const { rects, canvasW, canvasH } = computeCollageLayout(dims, targetW, targetH, { mode: layout, gap, sizes: imageSizes })
 
   const args = buildCollageFfmpegArgs({ localPaths, rects, canvasW, canvasH, bgColor, outputPath })
   await runFfmpeg(args)

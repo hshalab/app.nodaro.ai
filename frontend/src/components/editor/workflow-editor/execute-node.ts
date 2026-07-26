@@ -5611,11 +5611,25 @@ export function executeNode(
       toast.error(`Node "${collageData.label}": need at least 2 image inputs`);
       return Promise.reject(new Error("Need at least 2 images"));
     }
+    // Align the per-SOURCE size hints (imageSizeBySource) to the wire order
+    // via the lockstep imageUrlsWithSourceIds. All-auto → omit (no-op).
+    // Mirrors backend payload-builder.ts case "image-collage".
+    const sizeBySource = collageData.imageSizeBySource;
+    const withSourceIds = inputs.imageUrlsWithSourceIds;
+    let imageSizes: number[] | undefined;
+    if (sizeBySource && withSourceIds && withSourceIds.length === imageUrls.length) {
+      imageSizes = withSourceIds.map((e) => {
+        const v = sizeBySource[e.nodeId];
+        return typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= 3 ? v : 0;
+      });
+      if (imageSizes.every((s) => s === 0)) imageSizes = undefined;
+    }
     setUserPromptTemplate(undefined);
     return runProcessingNode(
       node.id,
       () =>
         imageCollageApi(imageUrls, {
+          imageSizes,
           layout: collageData.layout,
           resolution: collageData.resolution,
           aspectRatio: collageData.aspectRatio,
