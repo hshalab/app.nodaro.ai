@@ -1,5 +1,18 @@
 # @nodaro/sdk
 
+## 1.9.0
+
+### Minor Changes
+
+- 1b9b784: Add `client.media.imageCollage()` — composite 2–30 images into one 2K/4K collage via `POST /v1/image-collage`, including the new per-image `imageSizes` relative size hints (`0` auto / `1` big / `2` medium / `3` small, index-aligned with `imageUrls`; smart layout only).
+
+### Patch Changes
+
+- Updated dependencies [72858e1]
+- Updated dependencies [ee8061e]
+  - @nodaro/prompts@1.5.0
+  - @nodaro/shared@1.16.0
+
 ## 1.8.0
 
 ### Minor Changes
