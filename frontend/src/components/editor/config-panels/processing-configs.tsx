@@ -41,7 +41,9 @@ import type {
   RemoveAudioData,
 } from "@/types/nodes"
 import type { WorkflowNode } from "@/types/nodes"
-import { ConnectedMediaList, applyMediaOrder } from "./connected-media-list"
+import { ConnectedMediaList, applyMediaOrder, getSourceThumbnail } from "./connected-media-list"
+import { CachedImage } from "@/components/ui/cached-image"
+import { Image as ImageIcon } from "lucide-react"
 import { isVideoUrl } from "@/lib/media-type"
 import { PLATFORM_SPECS, CONTENT_TYPES_BY_PLATFORM, PLATFORM_LABELS, type SocialMediaPlatform } from "@/lib/social-media-specs"
 import { PlatformPreview } from "@/components/nodes/platform-preview"
@@ -1406,7 +1408,15 @@ export function TranscodeVideoConfig({ data, onUpdate }: ConfigProps<TranscodeVi
   )
 }
 
-export function ImageCollageConfig({ data, onUpdate }: ConfigProps<ImageCollageData>) {
+/** Per-image size hint options — wire values 0–3 (see ImageCollageData.imageSizeBySource). */
+const COLLAGE_SIZE_OPTIONS = [
+  { value: 0, label: "Auto" },
+  { value: 1, label: "Big" },
+  { value: 2, label: "Med" },
+  { value: 3, label: "Small" },
+] as const
+
+export function ImageCollageConfig({ data, onUpdate, sources }: ConfigProps<ImageCollageData>) {
   return (
     <div className="flex flex-col gap-3">
       <p className="text-xs text-muted-foreground px-1">
@@ -1426,6 +1436,72 @@ export function ImageCollageConfig({ data, onUpdate }: ConfigProps<ImageCollageD
           </SelectContent>
         </Select>
       </div>
+      {sources.length > 0 && (
+        <div>
+          <Label>Image Sizes</Label>
+          <div className="flex flex-col gap-1 mt-1">
+            {sources.map((s) => {
+              const thumb = getSourceThumbnail(s)
+              const current = data.imageSizeBySource?.[s.id] ?? 0
+              return (
+                <div
+                  key={s.id}
+                  className="flex items-center gap-1.5 px-2 py-1.5 rounded-md bg-muted/50 text-xs"
+                >
+                  {thumb ? (
+                    <CachedImage
+                      src={thumb}
+                      alt={s.label}
+                      className="w-8 h-8 rounded object-cover shrink-0"
+                      thumbnail
+                      thumbnailWidth={64}
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded bg-muted flex items-center justify-center shrink-0">
+                      <ImageIcon className="w-3.5 h-3.5 text-muted-foreground/40" />
+                    </div>
+                  )}
+                  <span className="flex-1 min-w-0 truncate" title={s.label}>{s.label}</span>
+                  <div
+                    className="flex rounded-md border border-border overflow-hidden shrink-0"
+                    role="radiogroup"
+                    aria-label={`Size for ${s.label}`}
+                  >
+                    {COLLAGE_SIZE_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        role="radio"
+                        aria-checked={current === opt.value}
+                        className={`px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
+                          current === opt.value
+                            ? "bg-[#ff0073] text-white"
+                            : "bg-transparent text-muted-foreground hover:bg-muted"
+                        }`}
+                        onClick={() =>
+                          onUpdate({
+                            imageSizeBySource: {
+                              ...(data.imageSizeBySource ?? {}),
+                              [s.id]: opt.value,
+                            },
+                          })
+                        }
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-0.5">
+            {(data.layout ?? "smart") === "grid"
+              ? "Size hints apply to the Smart layout — Grid keeps uniform cells."
+              : "Relative hints: Big ≈ 2× Medium, Small ≈ ½. A List input applies its hint to every image it contributes."}
+          </p>
+        </div>
+      )}
       <div>
         <Label>Aspect Ratio</Label>
         <AspectRatioSelector

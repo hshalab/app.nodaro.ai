@@ -104,6 +104,28 @@ export class MediaResource {
   }
 
   /**
+   * Composite 2–30 images into ONE large 2K/4K collage (`POST /v1/image-collage`).
+   * `layout` `"smart"` (default — justified rows at each image's exact aspect
+   * ratio, no cropping; the output height floats) or `"grid"` (uniform,
+   * letterboxed cells). `imageSizes` is index-aligned with `imageUrls` and
+   * gives per-image RELATIVE size hints for the smart layout: `0` auto
+   * ("don't care", default), `1` big (~2× linear vs medium), `2` medium,
+   * `3` small (~½ linear). All-equal hints change nothing; grid ignores them.
+   * Poll `jobs.get(jobId)` for the finished image.
+   */
+  imageCollage(input: {
+    imageUrls: string[]
+    imageSizes?: Array<0 | 1 | 2 | 3>
+    layout?: "smart" | "grid"
+    resolution?: "2K" | "4K"
+    aspectRatio?: string
+    gap?: number
+    backgroundColor?: string
+  }): Promise<{ jobId: string }> {
+    return this.client.request<{ jobId: string }>("POST", "/v1/image-collage", { body: input })
+  }
+
+  /**
    * Trim a video to a range (`POST /v1/trim-video`). Give the range in whichever
    * unit fits: `startTime`/`endTime` seconds, `trim*Frames`, `trim*Seconds`, or
    * `keepFirst`/`keepLastSeconds`. Poll `jobs.get(jobId)`.

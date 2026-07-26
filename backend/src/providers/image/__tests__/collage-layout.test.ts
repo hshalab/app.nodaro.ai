@@ -208,6 +208,107 @@ describe("computeCollageLayout — grid mode (fixed canvas)", () => {
   })
 })
 
+describe("computeCollageLayout — smart mode with per-image size hints", () => {
+  const T = 2560
+
+  it("no hints ≡ all-auto ≡ all-equal hints (byte-identical back-compat)", () => {
+    for (const n of [2, 4, 7, 12, 20]) {
+      const imgs = seededModerateDims(n, n * 13 + 5)
+      const base = computeCollageLayout(imgs, T, T, { mode: "smart", gap: 12 })
+      const allAuto = computeCollageLayout(imgs, T, T, { mode: "smart", gap: 12, sizes: new Array<number>(n).fill(0) })
+      const allBig = computeCollageLayout(imgs, T, T, { mode: "smart", gap: 12, sizes: new Array<number>(n).fill(1) })
+      const allSmall = computeCollageLayout(imgs, T, T, { mode: "smart", gap: 12, sizes: new Array<number>(n).fill(3) })
+      expect(allAuto).toEqual(base)
+      expect(allBig).toEqual(base)
+      expect(allSmall).toEqual(base)
+    }
+  })
+
+  it("a hinted-big image renders decisively larger than its auto peers (hero row)", () => {
+    const imgs = dims([1000, 1000], [1000, 1000], [1000, 1000], [1000, 1000])
+    const { rects, canvasW, canvasH } = computeCollageLayout(imgs, T, T, {
+      mode: "smart",
+      gap: 10,
+      sizes: [1, 0, 0, 0],
+    })
+    assertInBounds(rects, canvasW, canvasH)
+    // Big targets 2× linear vs medium — the hero split over-delivers (~3×
+    // height / ~9× area here); assert the conservative floor.
+    expect(rects[0]!.h).toBeGreaterThan(rects[1]!.h * 2)
+    const areas = rects.map((r) => r.w * r.h)
+    expect(areas[0]!).toBeGreaterThan(areas[1]! * 4)
+  })
+
+  it("a hinted-big among hinted-smalls dominates, smalls pack a dense row", () => {
+    const imgs = dims(
+      [1000, 1000], [1000, 1000], [1000, 1000],
+      [1000, 1000], [1000, 1000], [1000, 1000],
+    )
+    const { rects, canvasW, canvasH } = computeCollageLayout(imgs, T, T, {
+      mode: "smart",
+      gap: 10,
+      sizes: [1, 3, 3, 3, 3, 3],
+    })
+    assertInBounds(rects, canvasW, canvasH)
+    // Big vs small requests a 4× linear ratio; the hero-over-strip split
+    // realizes ~5× — assert a 3× floor.
+    expect(rects[0]!.h).toBeGreaterThan(rects[1]!.h * 3)
+    // All five smalls share one dense row (equal heights).
+    for (let i = 2; i <= 5; i++) expect(rects[i]!.h).toBe(rects[1]!.h)
+  })
+
+  it("keeps input order, the no-crop invariant, and geometry guarantees under hints", () => {
+    const imgs = seededModerateDims(9, 41)
+    const sizes = [1, 0, 3, 0, 1, 3, 0, 0, 3]
+    const a = computeCollageLayout(imgs, T, T, { mode: "smart", gap: 8, sizes })
+    const b = computeCollageLayout(imgs, T, T, { mode: "smart", gap: 8, sizes })
+    expect(a).toEqual(b) // deterministic
+    const { rects, canvasW, canvasH } = a
+    expect(rects.length).toBe(9)
+    assertInBounds(rects, canvasW, canvasH)
+    expect(canvasW % 2).toBe(0)
+    expect(canvasH % 2).toBe(0)
+    rects.forEach((r, i) => {
+      expect(Number.isInteger(r.x) && Number.isInteger(r.y)).toBe(true)
+      expect(Number.isInteger(r.w) && Number.isInteger(r.h)).toBe(true)
+      // Cells keep their image's exact aspect ratio — hints never crop.
+      const cellAspect = r.w / r.h
+      const imgAspect = clampAspect(imgs[i]!.w, imgs[i]!.h)
+      expect(Math.abs(cellAspect - imgAspect) / imgAspect).toBeLessThan(0.06)
+    })
+    // Reading order is preserved: rects sorted by (y, x) keep index order
+    // within each row and rows in input order.
+    const order = rects
+      .map((r, i) => ({ i, r }))
+      .sort((p, q) => (p.r.y - q.r.y) || (p.r.x - q.r.x))
+      .map((p) => p.i)
+    expect(order).toEqual([...order].sort((x, y) => x - y))
+  })
+
+  it("short / garbage size arrays never break the layout (unknown values are auto)", () => {
+    const imgs = seededDims(5, 9)
+    const base = computeCollageLayout(imgs, T, T, { mode: "smart", gap: 8 })
+    // Garbage values coerce to auto → effectively all-equal → identical.
+    const garbage = computeCollageLayout(imgs, T, T, {
+      mode: "smart",
+      gap: 8,
+      sizes: [7, -1, Number.NaN, 99, 0],
+    })
+    expect(garbage).toEqual(base)
+    // Shorter than images: missing entries are auto; layout still emits n rects.
+    const short = computeCollageLayout(imgs, T, T, { mode: "smart", gap: 8, sizes: [1] })
+    expect(short.rects.length).toBe(5)
+    assertInBounds(short.rects, short.canvasW, short.canvasH)
+  })
+
+  it("grid mode ignores size hints (uniform cells by design)", () => {
+    const imgs = dims([100, 100], [200, 100], [100, 200], [300, 300])
+    const base = computeCollageLayout(imgs, 2000, 2000, { mode: "grid", gap: 20 })
+    const hinted = computeCollageLayout(imgs, 2000, 2000, { mode: "grid", gap: 20, sizes: [1, 3, 0, 2] })
+    expect(hinted).toEqual(base)
+  })
+})
+
 describe("computeCollageLayout — guards", () => {
   it("throws on empty image list", () => {
     expect(() => computeCollageLayout([], 2560, 2560, { mode: "smart" })).toThrow()

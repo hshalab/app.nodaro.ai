@@ -585,6 +585,11 @@ export interface FrontendResolvedInputs {
   videoUrlsWithSourceIds?: Array<{ nodeId: string; url: string }>;
   /** Images accumulated from every upstream image producer (image-collage). */
   imageUrls?: string[];
+  /** Lockstep sibling of imageUrls with the contributing source node id —
+   *  lets execute-node align the collage's per-source size hints
+   *  (imageSizeBySource) into the wire's index-aligned imageSizes array.
+   *  Mirrors videoUrlsWithSourceIds / backend ResolvedInputs. */
+  imageUrlsWithSourceIds?: Array<{ nodeId: string; url: string }>;
   audioUrl?: string;
   audioUrl2?: string;
   audioUrls?: string[];
@@ -1189,8 +1194,16 @@ export function resolveNodeInputs(
         }
         if (node.type === "image-collage") {
           // A List of image URLs (edgeMode "all") spreads into imageUrls[].
+          // Every spread item carries the LIST node's id, so they all share
+          // the list's size hint (imageSizeBySource is keyed by source id).
           for (const item of filteredSrc) {
-            if (item) inputs.imageUrls = [...(inputs.imageUrls ?? []), item];
+            if (item) {
+              inputs.imageUrls = [...(inputs.imageUrls ?? []), item];
+              inputs.imageUrlsWithSourceIds = [
+                ...(inputs.imageUrlsWithSourceIds ?? []),
+                { nodeId: src.id, url: item },
+              ];
+            }
           }
           continue;
         }
@@ -1311,6 +1324,10 @@ export function resolveNodeInputs(
     // source-type routing so the accumulation wins.
     if (node.type === "image-collage") {
       inputs.imageUrls = [...(inputs.imageUrls ?? []), output];
+      inputs.imageUrlsWithSourceIds = [
+        ...(inputs.imageUrlsWithSourceIds ?? []),
+        { nodeId: src.id, url: output },
+      ];
       continue;
     }
 

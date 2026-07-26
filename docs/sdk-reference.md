@@ -2826,6 +2826,29 @@ Copy an external media URL into your Nodaro storage
 (`POST /v1/save-to-storage`) — a server-side fetch, so nothing round-trips
 through the client.
 
+#### `imageCollage(input)`
+
+```ts
+imageCollage(input: {
+  imageUrls: string[]
+  imageSizes?: Array<0 | 1 | 2 | 3>
+  layout?: "smart" | "grid"
+  resolution?: "2K" | "4K"
+  aspectRatio?: string
+  gap?: number
+  backgroundColor?: string
+}): Promise<{ jobId: string }>
+```
+
+Composite 2–30 images into ONE large 2K/4K collage (`POST /v1/image-collage`).
+`layout` is `"smart"` (default — justified rows at each image's exact aspect
+ratio, no cropping; the output height floats) or `"grid"` (uniform,
+letterboxed cells). `imageSizes` is index-aligned with `imageUrls` and gives
+per-image **relative** size hints for the smart layout: `0` auto ("don't
+care", default), `1` big (~2× linear vs medium), `2` medium, `3` small
+(~½ linear). All-equal hints change nothing; grid ignores them. Poll
+`jobs.get(jobId)` for the finished image.
+
 #### `videoMetadata(input)`
 
 ```ts

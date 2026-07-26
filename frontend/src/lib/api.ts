@@ -2979,6 +2979,9 @@ export async function combineVideos(
 export async function imageCollageApi(
   imageUrls: string[],
   opts: {
+    /** Per-image size hints aligned with imageUrls: 0 auto / 1 big / 2 medium
+     *  / 3 small. Relative — smart layout only. */
+    imageSizes?: number[]
     layout?: "smart" | "grid"
     resolution?: "2K" | "4K"
     aspectRatio?: string
@@ -2993,6 +2996,7 @@ export async function imageCollageApi(
   } = {},
 ): Promise<{ jobId: string }> {
   const body: Record<string, unknown> = { imageUrls }
+  if (opts.imageSizes?.length) body.imageSizes = opts.imageSizes
   if (opts.layout) body.layout = opts.layout
   if (opts.resolution) body.resolution = opts.resolution
   if (opts.aspectRatio) body.aspectRatio = opts.aspectRatio

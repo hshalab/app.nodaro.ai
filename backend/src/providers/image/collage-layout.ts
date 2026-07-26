@@ -15,7 +15,12 @@
  *                cell's width∶height equals its image's aspect ratio exactly —
  *                zero crop, zero letterbox. The overall canvas HEIGHT then
  *                floats to whatever the rows sum to (the target aspect only
- *                steers the row count). Preserves input order.
+ *                steers the row count). Preserves input order. Optional
+ *                per-image SIZE HINTS (0 auto / 1 big / 2 medium / 3 small)
+ *                bias the row partition so hinted-big images land in taller
+ *                (less crowded) rows and hinted-small images pack denser rows
+ *                — cells still keep their exact aspect ratios (no crop), and
+ *                hint-free input renders byte-identically to before.
  *   • "grid"   — uniform ceil(√n)-column grid on the FIXED target canvas; every
  *                cell is identical. The last (partial) row is centred. Cells are
  *                letterboxed by the compositor, so no image is cropped here
@@ -44,11 +49,19 @@ export interface Rect {
 
 export type CollageLayoutMode = "smart" | "grid"
 
+/** Per-image size hint: 0 = auto ("don't care"), 1 = big, 2 = medium, 3 = small. */
+export type CollageImageSize = 0 | 1 | 2 | 3
+
 export interface CollageLayoutOpts {
   readonly mode?: CollageLayoutMode
   /** Gap in pixels on the OUTPUT canvas, applied between cells and as the
    *  outer margin. Defaults to 0. */
   readonly gap?: number
+  /** Optional per-image size hints, index-aligned with `images` (missing /
+   *  out-of-range entries are auto). RELATIVE hints — all-equal hints (or
+   *  none) leave the layout byte-identical to the unhinted one. Smart mode
+   *  only; grid cells are uniform by design. */
+  readonly sizes?: readonly number[]
 }
 
 export interface CollageLayoutResult {
@@ -77,6 +90,22 @@ function safeAspect(d: ImageDim): number {
   const a = w / h
   if (!Number.isFinite(a) || a <= 0) return 1
   return Math.min(MAX_ASPECT, Math.max(MIN_ASPECT, a))
+}
+
+/** LINEAR scale factor per size hint: big targets ~2× the edge length of a
+ *  medium image (≈4× area), small ~½ (≈¼ area). Auto behaves like medium. */
+const SIZE_LINEAR_FACTOR: Readonly<Record<number, number>> = {
+  0: 1, // auto / "don't care"
+  1: 2, // big
+  2: 1, // medium (baseline)
+  3: 0.5, // small
+}
+
+/** Resolve one size hint to its linear factor. Anything that isn't a known
+ *  hint (undefined, NaN, out of range) is treated as auto — a hostile/short
+ *  `sizes` array can never break the layout. */
+function sizeFactor(size: number | undefined): number {
+  return (size !== undefined ? SIZE_LINEAR_FACTOR[size] : undefined) ?? 1
 }
 
 /**
@@ -139,18 +168,21 @@ function even(v: number): number {
   return r - (r % 2)
 }
 
-function computeSmart(
-  images: readonly ImageDim[],
+/**
+ * Emit the pixel rects for a given row partition — natural justified row
+ * heights, rect placement, the long-edge safety cap, and even rounding.
+ * Shared by the unweighted and size-hinted smart paths so the geometry
+ * invariants (no-crop cells, full-width rows, bounded canvas) stay
+ * single-sourced.
+ */
+function emitJustifiedRows(
+  rows: readonly number[][],
+  aspects: readonly number[],
   targetW: number,
   targetH: number,
   gap: number,
 ): CollageLayoutResult {
-  const n = images.length
-  const aspects = images.map(safeAspect)
-  // The target aspect only steers HOW MANY rows we open — it does not squash the
-  // result. A wide target ⇒ fewer, taller rows; a tall target ⇒ more rows.
-  const rowCount = chooseRows(n, targetW / targetH)
-  const rows = partitionIntoRows(aspects, rowCount)
+  const n = aspects.length
   const R = rows.length
 
   // NATURAL justified row heights: for a row width-justified to fill the canvas
@@ -216,6 +248,153 @@ function computeSmart(
   return { rects, canvasW: even(canvasW), canvasH: even(canvasH) }
 }
 
+function computeSmart(
+  images: readonly ImageDim[],
+  targetW: number,
+  targetH: number,
+  gap: number,
+  sizes?: readonly number[],
+): CollageLayoutResult {
+  const n = images.length
+  const aspects = images.map(safeAspect)
+  // The target aspect only steers HOW MANY rows we open — it does not squash the
+  // result. A wide target ⇒ fewer, taller rows; a tall target ⇒ more rows.
+  const rowCount = chooseRows(n, targetW / targetH)
+
+  // Size hints are RELATIVE: only when at least two images resolve to
+  // DIFFERENT factors is there anything to express. All-auto / all-equal
+  // hints (and every pre-hints caller) take the original path, so existing
+  // collages render byte-identically.
+  const factors = images.map((_, i) => sizeFactor(sizes?.[i]))
+  const hinted = factors.some((f) => f !== factors[0])
+  if (hinted) {
+    return computeSmartHinted(aspects, factors, rowCount, targetW, targetH, gap)
+  }
+
+  const rows = partitionIntoRows(aspects, rowCount)
+  return emitJustifiedRows(rows, aspects, targetW, targetH, gap)
+}
+
+/**
+ * Partition indices [0..n) into exactly `rowCount` non-empty contiguous rows,
+ * balancing the BUDGET sum per row (budget = aspect × linear size factor).
+ * Uses an adaptive target (remaining budget / remaining rows) and a
+ * balance-point close: a row closes when its sum sits at least as close to
+ * the target as it would after absorbing the next image. Big images inflate
+ * their budget, so they fill a row's quota with fewer companions — and a row
+ * with fewer real aspects justifies TALLER. Same starvation guard as
+ * `partitionIntoRows`.
+ */
+function partitionByBudget(budgets: readonly number[], rowCount: number): number[][] {
+  const n = budgets.length
+  if (rowCount >= n) return budgets.map((_, i) => [i])
+  if (rowCount <= 1) return [budgets.map((_, i) => i)]
+
+  const total = budgets.reduce((s, b) => s + b, 0)
+  const rows: number[][] = []
+  let cur: number[] = []
+  let curSum = 0
+  let assigned = 0
+  let target = total / rowCount
+
+  for (let i = 0; i < n; i++) {
+    cur.push(i)
+    curSum += budgets[i]!
+
+    // The last row always absorbs the tail.
+    if (rows.length >= rowCount - 1) continue
+
+    const unopenedRows = rowCount - rows.length - 1
+    const imagesRemaining = n - (i + 1)
+    const mustClose = imagesRemaining === unopenedRows
+    const nextBudget = budgets[i + 1] ?? 0
+    const closerNow = Math.abs(curSum - target) <= Math.abs(curSum + nextBudget - target)
+    if (mustClose || (imagesRemaining > unopenedRows && closerNow)) {
+      rows.push(cur)
+      assigned += curSum
+      cur = []
+      curSum = 0
+      target = (total - assigned) / (rowCount - rows.length)
+    }
+  }
+  if (cur.length > 0) rows.push(cur)
+  return rows
+}
+
+/**
+ * How faithfully a candidate partition realizes the requested size ratios.
+ * An image's rendered scale is its row's justified height, and its requested
+ * scale is its linear factor — so per image we take
+ * `ln(rowHeight) − ln(factor)` and score the VARIANCE across images
+ * (scale-free: the absolute canvas scale is set by the width; only the
+ * ratios between images matter). Lower is better; 0 means every image is
+ * exactly its requested multiple of every other.
+ */
+function sizeFidelityScore(
+  rows: readonly number[][],
+  aspects: readonly number[],
+  factors: readonly number[],
+  targetW: number,
+  gap: number,
+): number {
+  const devs: number[] = []
+  for (const row of rows) {
+    const availW = targetW - gap * (row.length + 1)
+    const aspectSum = row.reduce((s, idx) => s + aspects[idx]!, 0)
+    const rowH = Math.max(1e-6, availW / Math.max(0.0001, aspectSum))
+    for (const idx of row) devs.push(Math.log(rowH) - Math.log(factors[idx]!))
+  }
+  const mean = devs.reduce((s, d) => s + d, 0) / devs.length
+  return devs.reduce((s, d) => s + (d - mean) * (d - mean), 0) / devs.length
+}
+
+/**
+ * Smart layout with per-image size hints. Within a justified row every cell
+ * shares the row height (that is what makes it crop-free), so relative size
+ * is expressed BETWEEN rows: hinted-big images get rows with fewer
+ * companions (taller), hinted-small images pack denser rows (shorter). We
+ * try the unhinted row count and its neighbours, partition each by weighted
+ * budget, and keep the candidate whose realized row heights best match the
+ * requested factors. Geometry emission is shared with the unhinted path —
+ * the no-crop invariant is untouched.
+ */
+function computeSmartHinted(
+  aspects: readonly number[],
+  factors: readonly number[],
+  baseRowCount: number,
+  targetW: number,
+  targetH: number,
+  gap: number,
+): CollageLayoutResult {
+  const n = aspects.length
+  const budgets = aspects.map((a, i) => a * factors[i]!)
+
+  const candidates = [...new Set([baseRowCount, baseRowCount - 1, baseRowCount + 1])].filter(
+    (r) => r >= 1 && r <= n,
+  )
+
+  // Iteration starts at the unhinted row count, and only a STRICTLY better
+  // score moves away from it — ties keep today's shape.
+  let bestRows: number[][] | undefined
+  let bestScore = Infinity
+  for (const rowCount of candidates) {
+    const rows = partitionByBudget(budgets, rowCount)
+    const score = sizeFidelityScore(rows, aspects, factors, targetW, gap)
+    if (score < bestScore - 1e-9) {
+      bestScore = score
+      bestRows = rows
+    }
+  }
+
+  return emitJustifiedRows(
+    bestRows ?? [aspects.map((_, i) => i)],
+    aspects,
+    targetW,
+    targetH,
+    gap,
+  )
+}
+
 function computeGrid(
   images: readonly ImageDim[],
   canvasW: number,
@@ -269,5 +448,5 @@ export function computeCollageLayout(
   const gap = Math.max(0, Math.floor(opts.gap ?? 0))
   const mode = opts.mode ?? "smart"
   if (mode === "grid") return computeGrid(images, canvasW, canvasH, gap)
-  return computeSmart(images, canvasW, canvasH, gap)
+  return computeSmart(images, canvasW, canvasH, gap, opts.sizes)
 }
