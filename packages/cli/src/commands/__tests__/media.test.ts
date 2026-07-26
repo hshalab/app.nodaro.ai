@@ -10,6 +10,7 @@ const mocks = {
   trimVideo: vi.fn(),
   trimAudio: vi.fn(),
   videoMetadata: vi.fn(),
+  imageCollage: vi.fn(),
   jobsGet: vi.fn(),
 }
 
@@ -22,6 +23,7 @@ vi.mock("../../client.js", () => ({
       trimVideo: mocks.trimVideo,
       trimAudio: mocks.trimAudio,
       videoMetadata: mocks.videoMetadata,
+      imageCollage: mocks.imageCollage,
     },
     jobs: { get: mocks.jobsGet },
   }),
@@ -166,6 +168,61 @@ describe("media trim commands", () => {
       runCmd("media", "trim-audio", "--audio", "https://x/a.mp3", "--format", "flac"),
     ).rejects.toThrow("process.exit(1)")
     expect(vi.mocked(warn)).toHaveBeenCalledWith(expect.stringContaining("--format"))
+  })
+})
+
+describe("media collage command", () => {
+  it("maps images + per-image --sizes and options into the request", async () => {
+    mocks.imageCollage.mockResolvedValueOnce({ jobId: "j5" })
+    await runCmd(
+      "media", "collage", "https://x/a.png", "https://x/b.png", "https://x/c.png",
+      "--sizes", "1,0,3", "--layout", "smart", "--resolution", "2K",
+      "--aspect-ratio", "16:9", "--gap", "12", "--background-color", "#000000", "--json",
+    )
+    expect(mocks.imageCollage).toHaveBeenCalledWith({
+      imageUrls: ["https://x/a.png", "https://x/b.png", "https://x/c.png"],
+      imageSizes: [1, 0, 3],
+      layout: "smart",
+      resolution: "2K",
+      aspectRatio: "16:9",
+      gap: 12,
+      backgroundColor: "#000000",
+    })
+  })
+
+  it("works without --sizes (all auto)", async () => {
+    mocks.imageCollage.mockResolvedValueOnce({ jobId: "j6" })
+    await runCmd("media", "collage", "https://x/a.png", "https://x/b.png", "--json")
+    expect(mocks.imageCollage).toHaveBeenCalledWith({
+      imageUrls: ["https://x/a.png", "https://x/b.png"],
+    })
+  })
+
+  it("errors with fewer than 2 images", async () => {
+    await expect(runCmd("media", "collage", "https://x/a.png")).rejects.toThrow("process.exit(1)")
+    expect(vi.mocked(warn)).toHaveBeenCalledWith(expect.stringContaining("at least 2"))
+    expect(mocks.imageCollage).not.toHaveBeenCalled()
+  })
+
+  it("errors on out-of-range --sizes and on more hints than images", async () => {
+    await expect(
+      runCmd("media", "collage", "https://x/a.png", "https://x/b.png", "--sizes", "1,4"),
+    ).rejects.toThrow("process.exit(1)")
+    expect(vi.mocked(warn)).toHaveBeenCalledWith(expect.stringContaining("--sizes"))
+    await expect(
+      runCmd("media", "collage", "https://x/a.png", "https://x/b.png", "--sizes", "1,0,3"),
+    ).rejects.toThrow("process.exit(1)")
+    expect(mocks.imageCollage).not.toHaveBeenCalled()
+  })
+
+  it("errors on unknown --layout / --resolution", async () => {
+    await expect(
+      runCmd("media", "collage", "https://x/a.png", "https://x/b.png", "--layout", "mosaic"),
+    ).rejects.toThrow("process.exit(1)")
+    await expect(
+      runCmd("media", "collage", "https://x/a.png", "https://x/b.png", "--resolution", "8K"),
+    ).rejects.toThrow("process.exit(1)")
+    expect(mocks.imageCollage).not.toHaveBeenCalled()
   })
 })
 
