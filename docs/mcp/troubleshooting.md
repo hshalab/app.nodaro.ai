@@ -10,7 +10,23 @@ make sure all scopes are granted.
 1. Verify the URL is exactly `https://mcp.nodaro.ai/mcp` (no trailing slash).
 2. Confirm `mcp.nodaro.ai` resolves: `dig mcp.nodaro.ai`
 3. Verify discovery: `curl https://mcp.nodaro.ai/.well-known/oauth-protected-resource`
-   Expected: 200 with JSON.
+   Expected: 200 with JSON. The same host also serves
+   `/.well-known/oauth-authorization-server` (200 with JSON).
+
+## Login never completes / connector URL is wrong {#wrong-url}
+
+The MCP endpoint is served **only** at `https://mcp.nodaro.ai/mcp`. Two
+common misconfigurations fail before the login flow ever reaches the
+server, so nothing appears in any log:
+
+- `https://api.nodaro.ai/mcp` — this domain does not exist; the connector
+  fails at DNS resolution.
+- `https://app.nodaro.ai/mcp` — that path is the MCP *marketing page*, not
+  the endpoint. A `POST` there returns `405` with
+  `{"error":{"code":"wrong_mcp_host", ...}}` pointing at the correct URL.
+
+Connector URLs cannot be edited in place in Claude.ai — delete the broken
+connector and re-add it with `https://mcp.nodaro.ai/mcp`.
 
 ## "Client not allowed" error
 
