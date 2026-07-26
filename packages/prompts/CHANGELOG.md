@@ -1,5 +1,16 @@
 # @nodaro/prompts
 
+## 1.5.0
+
+### Minor Changes
+
+- 72858e1: New "Face Privacy" factory-preset group for generate-image (gpt-image-2, auto aspect): Faceless · 3D Blank Head, Remove Faces, and Transparent Faces — one-click `{image:1}` edits that anonymize people while keeping the rest of the photo untouched.
+
+### Patch Changes
+
+- Updated dependencies [ee8061e]
+  - @nodaro/shared@1.16.0
+
 ## 1.4.0
 
 ### Minor Changes

@@ -1,5 +1,21 @@
 # @nodaro/cli
 
+## 1.6.0
+
+### Minor Changes
+
+- ee974ef: New `nodaro media collage <imageUrls...>` command — composite 2–30 images into one 2K/4K collage via `POST /v1/image-collage`, including `--sizes` per-image relative size hints (0 auto / 1 big / 2 medium / 3 small, aligned by position; smart layout only), plus `--layout`, `--resolution`, `--aspect-ratio`, `--gap`, and `--background-color`.
+
+### Patch Changes
+
+- 731eced: Docs: correct the production `--base-url` example from `https://api.nodaro.ai` (a domain that does not exist) to `https://app.nodaro.ai`. The wrong example has misled users into configuring MCP connectors and CLI profiles against an unresolvable host.
+- Updated dependencies [1b9b784]
+- Updated dependencies [72858e1]
+- Updated dependencies [ee8061e]
+  - @nodaro/sdk@1.9.0
+  - @nodaro/prompts@1.5.0
+  - @nodaro/shared@1.16.0
+
 ## 1.5.0
 
 ### Minor Changes

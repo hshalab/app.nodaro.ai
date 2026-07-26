@@ -3,6 +3,12 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify"
 const MCP_ALLOWED_PATHS: RegExp[] = [
   /^\/mcp(?:\/|$)/,
   /^\/\.well-known\/oauth-protected-resource(?:\/|$)/,
+  // RFC 8414 mirror: the authoritative copy lives on the auth server
+  // (app.nodaro.ai), but some MCP clients probe the RESOURCE host for
+  // authorization-server metadata (legacy MCP discovery treats the MCP
+  // server itself as the auth server). The route is host-agnostic, so
+  // letting it through here serves identical metadata.
+  /^\/\.well-known\/oauth-authorization-server(?:\/|$)/,
   // Upload proxy: prepare_*_upload tools issue tokens addressed to
   // mcp.nodaro.ai/v1/upload-proxy/<token>. LLM code-interpreter
   // sandboxes (Claude.ai etc.) allowlist this domain via OAuth
@@ -37,6 +43,8 @@ function isAllowedOnMcpHost(path: string): boolean {
  *   - `/mcp` (and any subpath, in case the MCP spec adds them)
  *   - `/.well-known/oauth-protected-resource` (RFC 9728 metadata for the
  *     resource server; clients probe this to discover the auth server)
+ *   - `/.well-known/oauth-authorization-server` (RFC 8414 mirror for
+ *     clients that probe the resource host instead of the auth server)
  *
  * Anything else on `mcp.*` returns 404 with a hint pointing at the discovery
  * URL. Hosts that aren't `mcp.*` are unaffected — `app.nodaro.ai` and

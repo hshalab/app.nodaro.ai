@@ -18,7 +18,7 @@ There is **no "target picker" setting**. The node analyzes exactly the analyzabl
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | Analyzing (read-only) | derived | — | The picker nodes currently wired to this node's output — the set that will be analyzed. Not editable; change it by wiring/unwiring pickers. |
-| Model | select | `claude-opus-4.7` | The vision model used for analysis. **Vision models with guaranteed structured output**: Claude Haiku 4.5 / Claude Sonnet 4.6 / Claude Sonnet 5 / Claude Opus 4.7 / Claude Opus 4.8, Gemini 3 Flash / Gemini 3.1 Pro, and GPT-5.4 / GPT-5.5 / GPT-5.6 Luna / GPT-5.6 Terra / GPT-5.6 Sol. See [Why these models](#why-these-models). |
+| Model | select | `claude-opus-4.7` | The vision model used for analysis. **Vision models with guaranteed structured output**: Claude Haiku 4.5 / Claude Sonnet 4.6 / Claude Sonnet 5 / Claude Opus 4.7 / Claude Opus 4.8 / Claude Fable 5, Gemini 3 Flash / Gemini 3.6 Flash / Gemini 3.1 Pro, and GPT-5.4 / GPT-5.5 / GPT-5.6 Luna / GPT-5.6 Terra / GPT-5.6 Sol. See [Why these models](#why-these-models). |
 | Extra guidance | text | `""` | Optional instructions appended to the analyzer's system prompt (e.g. "focus on the foreground subject"). Max 2000 characters. |
 
 ## Inputs & Outputs

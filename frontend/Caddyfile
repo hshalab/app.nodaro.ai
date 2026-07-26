@@ -55,6 +55,23 @@
 		reverse_proxy 127.0.0.1:9000
 	}
 
+	# The MCP endpoint lives on the mcp.* host (Railway routes that domain
+	# straight to the backend port — this listener never sees it). A client
+	# POSTing /mcp on the app domain is a misconfigured MCP connector, and
+	# file_server's bare bodyless 405 gave it no clue why (real incident:
+	# connectors created with app.nodaro.ai/mcp can never work and failed
+	# silently). Keep GET/HEAD — /mcp is the marketing landing page in the
+	# SPA — but answer every other method with a machine-readable pointer
+	# to the real endpoint. Same 405 status as before, now with a body.
+	@mcp_wrong_host {
+		path /mcp /mcp/
+		not method GET HEAD
+	}
+	handle @mcp_wrong_host {
+		header Content-Type "application/json"
+		respond `{"error":{"code":"wrong_mcp_host","message":"The MCP endpoint is not served on this host. Point your MCP client at {$MCP_PUBLIC_URL:https://mcp.nodaro.ai}/mcp"}}` 405
+	}
+
 	# OG meta tags for social sharing bots (Telegram, WhatsApp, Twitter, Facebook, etc.)
 	@social_bot {
 		path /app/*

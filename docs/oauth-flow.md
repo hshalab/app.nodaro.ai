@@ -138,6 +138,12 @@ Each is also served at a `/mcp`-suffixed variant
 (notably Cursor) probe the resource-path form **first** and treat a 404
 there as a hard auth failure.
 
+All four documents resolve on **both** hosts — the auth server
+(`app.nodaro.ai`) and the MCP resource host (`mcp.nodaro.ai`). The
+authoritative authorization-server metadata lives on the auth server, but
+the MCP host mirrors it because some clients (legacy MCP discovery) probe
+the resource host for it and treat a 404 as a failed handshake.
+
 The issuer is `PUBLIC_URL` (default `https://app.nodaro.ai`). The
 authorization-server document advertises:
 

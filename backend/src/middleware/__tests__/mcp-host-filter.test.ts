@@ -7,7 +7,9 @@ async function makeApp() {
   registerMcpHostFilter(app)
   app.all("/mcp", async (_req, reply) => reply.send({ ok: "mcp" }))
   app.get("/.well-known/oauth-protected-resource", async (_req, reply) => reply.send({ ok: "oauth-pr" }))
+  app.get("/.well-known/oauth-protected-resource/mcp", async (_req, reply) => reply.send({ ok: "oauth-pr-mcp" }))
   app.get("/.well-known/oauth-authorization-server", async (_req, reply) => reply.send({ ok: "oauth-as" }))
+  app.get("/.well-known/oauth-authorization-server/mcp", async (_req, reply) => reply.send({ ok: "oauth-as-mcp" }))
   app.get("/v1/credits/balance", async (_req, reply) => reply.send({ ok: "credits" }))
   app.put("/v1/upload-proxy/:token", async (_req, reply) => reply.send({ ok: "upload-proxy" }))
   app.get("/v1/upload-page/:token", async (_req, reply) => reply.send({ ok: "upload-page-get" }))
@@ -72,10 +74,21 @@ describe("mcp host filter", () => {
     expect(res.statusCode).toBe(404)
   })
 
-  it("404s /.well-known/oauth-authorization-server on mcp.nodaro.ai (auth server lives at app.nodaro.ai)", async () => {
+  it("serves /.well-known/oauth-authorization-server on mcp.nodaro.ai (RFC 8414 mirror — some MCP clients probe the resource host)", async () => {
     const app = await makeApp()
     const res = await app.inject({ method: "GET", url: "/.well-known/oauth-authorization-server", headers: { host: "mcp.nodaro.ai" } })
-    expect(res.statusCode).toBe(404)
+    expect(res.statusCode).toBe(200)
+    expect(res.json()).toEqual({ ok: "oauth-as" })
+  })
+
+  it("serves the /mcp-suffixed discovery variants on mcp.nodaro.ai (RFC 9728 §3.1 path-suffixed probes)", async () => {
+    const app = await makeApp()
+    const pr = await app.inject({ method: "GET", url: "/.well-known/oauth-protected-resource/mcp", headers: { host: "mcp.nodaro.ai" } })
+    expect(pr.statusCode).toBe(200)
+    expect(pr.json()).toEqual({ ok: "oauth-pr-mcp" })
+    const as = await app.inject({ method: "GET", url: "/.well-known/oauth-authorization-server/mcp", headers: { host: "mcp.nodaro.ai" } })
+    expect(as.statusCode).toBe(200)
+    expect(as.json()).toEqual({ ok: "oauth-as-mcp" })
   })
 
   it("also filters mcp.next.nodaro.ai (staging)", async () => {

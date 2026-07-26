@@ -69,7 +69,7 @@ nodaro auth logout         # delete the saved profile
 Switch between staging / prod / local instances with `--profile`:
 
 ```bash
-nodaro auth login --profile prod    --base-url https://api.nodaro.ai
+nodaro auth login --profile prod    --base-url https://app.nodaro.ai
 nodaro auth login --profile staging --base-url https://next.nodaro.ai
 nodaro auth login --profile local   --base-url http://localhost:8000
 
@@ -230,7 +230,7 @@ npm install @nodaro/sdk
 import { createClient, StaticTokenAuth } from "@nodaro/sdk"
 
 const nodaro = createClient({
-  baseUrl: "https://api.nodaro.ai",
+  baseUrl: "https://app.nodaro.ai",
   auth: new StaticTokenAuth(process.env.NODARO_TOKEN!),
 })
 
