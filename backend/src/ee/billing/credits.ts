@@ -69,14 +69,15 @@ for (const resolution of Object.keys(CINEMATIC_RATE_USD_PER_SEC) as CinematicRes
 // if a third video+audio model ships.
 //
 // Current values:
-//   gemini-3-flash → bare 3 · 60s 1 · 180s 1 · 360s 2 · 600s 3
-//   gemini-3.1-pro → bare 11 · 60s 2 · 180s 3 · 360s 7 · 600s 11
-//   mixed          → bare 14 · 60s 3 · 180s 4 · 360s 9 · 600s 14
+//   gemini-3-flash   → bare 3 · 60s 1 · 180s 1 · 360s 2 · 600s 3 (legacy fast)
+//   gemini-3.6-flash → bare 9 · 60s 2 · 180s 2 · 360s 5 · 600s 9 (fast tier)
+//   gemini-3.1-pro   → bare 11 · 60s 2 · 180s 3 · 360s 7 · 600s 11
+//   mixed            → bare 14 · 60s 3 · 180s 4 · 360s 9 · 600s 14
 // `mixed` is the shared credit family for BOTH mixed analysis tiers
 // (`mixed` + `mixed-fast` — variants of one engine plan; internals live in
 // the private analysis plugin); videoAnalysisCreditSegment maps the sentinels.
 const VIDEO_ANALYSIS_STATIC: Record<string, number> = {}
-for (const model of ["gemini-3-flash", "gemini-3.1-pro", "mixed"]) {
+for (const model of ["gemini-3-flash", "gemini-3.6-flash", "gemini-3.1-pro", "mixed"]) {
   // Bare per-model id (`video-analysis:<model>`) = the unknown-duration ceiling
   // (600s). buildVideoAnalysisCreditId NEVER produces this id — it always appends
   // a `:<bucket>s` suffix; the bare id exists in STATIC only because MODEL_CATALOG
@@ -237,10 +238,11 @@ export const STATIC_CREDIT_COSTS: Record<string, number> = {
   ...CINEMATIC_STATIC,
   // ── Video Analysis (Gemini vision, duration-bucketed) — PROVISIONAL (Task 18a) ──
   // Node-type bare = estimate fallback ONLY (STATIC_CREDIT_COSTS[node.type] in
-  // estimateWorkflowCredits; never reserved). Pinned to the cheapest model's
-  // 10-min ceiling (gemini-3-flash @ 600s = 3). Per-model bares + 8 duration
-  // composites are read from the shared table above (VIDEO_ANALYSIS_STATIC); see
-  // that block for the PROVISIONAL/Gate-0.5 (18b) reconciliation note.
+  // estimateWorkflowCredits; never reserved). Pinned to the DEFAULT tier
+  // model's 10-min ceiling (gemini-3.1-pro @ 600s = 11). Per-model bares +
+  // per-model duration composites are read from the shared table above
+  // (VIDEO_ANALYSIS_STATIC); see that block for the PROVISIONAL/Gate-0.5 (18b)
+  // reconciliation note.
   "video-analysis": VIDEO_ANALYSIS_BUCKET_CREDITS[buildVideoAnalysisCreditId(DEFAULT_VIDEO_ANALYSIS_MODEL, VIDEO_ANALYSIS_MAX_DURATION_SEC)]!,
   ...VIDEO_ANALYSIS_STATIC,
   "flux-lora-character": 2,      // flux-dev-lora inference via Replicate. Internal-only id selected by payload-builder when a single trained @character is mentioned.

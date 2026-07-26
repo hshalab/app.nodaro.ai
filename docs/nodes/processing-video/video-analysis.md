@@ -194,7 +194,7 @@ charged) — generated and drift-guarded internally, never hand-written.
 
 | Tier | ≤60s | ≤180s | ≤360s | ≤600s |
 |------|------|-------|-------|-------|
-| `fast` (economy) | 1 | 1 | 2 | 3 |
+| `fast` (economy) | 2 | 2 | 5 | 9 |
 | `pro` (default) | 2 | 3 | 7 | 11 |
 | `mixed` / `mixed-fast` | 3 | 4 | 9 | 14 |
 

@@ -24,8 +24,8 @@ import { PIPELINE_PINNABLE_SCRIPT_LLMS } from "../pipeline-types.js"
 // LLM_MODELS data integrity
 // ---------------------------------------------------------------------------
 describe("LLM_MODELS data integrity", () => {
-  it("should have exactly 13 models", () => {
-    expect(LLM_MODELS).toHaveLength(13)
+  it("should have exactly 15 models", () => {
+    expect(LLM_MODELS).toHaveLength(15)
   })
 
   it("each model has all required fields", () => {
@@ -60,14 +60,14 @@ describe("LLM_MODELS data integrity", () => {
     expect(new Set(ids).size).toBe(ids.length)
   })
 
-  it("has 3 economy, 4 standard, 6 premium models", () => {
+  it("has 4 economy, 4 standard, 7 premium models", () => {
     const tierCounts: Record<LlmTier, number> = { economy: 0, standard: 0, premium: 0 }
     for (const model of LLM_MODELS) {
       tierCounts[model.tier]++
     }
-    expect(tierCounts.economy).toBe(3)
+    expect(tierCounts.economy).toBe(4)
     expect(tierCounts.standard).toBe(4)
-    expect(tierCounts.premium).toBe(6)
+    expect(tierCounts.premium).toBe(7)
   })
 
   it("all three kieFormats are represented", () => {
@@ -108,6 +108,7 @@ describe("LLM_MODEL_IDS", () => {
   it("contains all expected model ids", () => {
     const expected = [
       "gemini-3-flash",
+      "gemini-3.6-flash",
       "claude-haiku-4.5",
       "claude-sonnet-4.6",
       "gpt-5.2",
@@ -120,6 +121,7 @@ describe("LLM_MODEL_IDS", () => {
       "gpt-5.6-sol",
       "claude-sonnet-5",
       "claude-opus-4.8",
+      "claude-fable-5",
     ]
     expect(LLM_MODEL_IDS).toEqual(expected)
   })
@@ -387,8 +389,8 @@ describe("LLM_FEATURE_DEFAULTS", () => {
     }
   })
 
-  it('"prompt-helper" defaults to "gemini-3-flash" (economy)', () => {
-    expect(LLM_FEATURE_DEFAULTS["prompt-helper"]).toBe("gemini-3-flash")
+  it('"prompt-helper" defaults to "gemini-3.6-flash" (economy)', () => {
+    expect(LLM_FEATURE_DEFAULTS["prompt-helper"]).toBe("gemini-3.6-flash")
     expect(getLlmTier(LLM_FEATURE_DEFAULTS["prompt-helper"])).toBe("economy")
   })
 
@@ -404,12 +406,12 @@ describe("LLM_FEATURE_DEFAULTS", () => {
     expect(STRUCTURED_VISION_MODELS.map((m) => m.id)).toContain("claude-opus-4.7")
   })
 
-  it('"generate-script" defaults to "gemini-3-flash" (economy)', () => {
-    expect(LLM_FEATURE_DEFAULTS["generate-script"]).toBe("gemini-3-flash")
+  it('"generate-script" defaults to "gemini-3.6-flash" (economy)', () => {
+    expect(LLM_FEATURE_DEFAULTS["generate-script"]).toBe("gemini-3.6-flash")
   })
 
-  it('"translate" defaults to "gemini-3-flash" (economy)', () => {
-    expect(LLM_FEATURE_DEFAULTS["translate"]).toBe("gemini-3-flash")
+  it('"translate" defaults to "gemini-3.6-flash" (economy)', () => {
+    expect(LLM_FEATURE_DEFAULTS["translate"]).toBe("gemini-3.6-flash")
   })
 
   it("composition features default to claude-sonnet-4.6", () => {
@@ -454,9 +456,11 @@ describe("STRUCTURED_VISION_MODELS", () => {
         "claude-opus-4.7",
         "claude-sonnet-4.6",
         "gemini-3-flash",
+        "gemini-3.6-flash",
         "gemini-3.1-pro",
         "claude-sonnet-5",
         "claude-opus-4.8",
+        "claude-fable-5",
         // responses-format GPTs — KIE text.format json_schema live-verified
         // 2026-07-14 (text AND vision inputs).
         "gpt-5.4",
@@ -509,6 +513,14 @@ describe("reasoning effort registry", () => {
     expect(getLlmTier("claude-sonnet-5")).toBe("standard")
     expect(getLlmTier("claude-opus-4.8")).toBe("premium")
     expect(getLlmTier("gpt-5.5")).toBe("premium")
+    expect(getLlmTier("gemini-3.6-flash")).toBe("economy")
+    expect(getLlmTier("claude-fable-5")).toBe("premium")
+  })
+
+  it("gemini-3.6-flash exposes the KIE low/high thinking levels; claude-fable-5 the full Claude ladder", () => {
+    expect(getLlmModel("gemini-3.6-flash")?.reasoningEfforts).toEqual(["low", "high"])
+    expect(getLlmModel("claude-fable-5")?.reasoningEfforts).toEqual(["low", "medium", "high", "xhigh", "max"])
+    expect(getLlmModel("claude-fable-5")?.directFallbackModel).toBe("claude-fable-5")
   })
 })
 
@@ -551,6 +563,9 @@ describe("buildLlmCreditIdentifier effort bump (xhigh/max only)", () => {
     expect(buildLlmCreditIdentifier("llm-chat", "gpt-5.4", "xhigh")).toBe("llm-chat:premium")
     // gpt-5.4 is premium anyway; the real clamp case:
     expect(buildLlmCreditIdentifier("llm-chat", "gemini-3-flash", "max")).toBe("llm-chat:economy")
+    // gemini-3.6-flash tops out at "high" — max clamps to high, never bumps.
+    expect(effectiveReasoningEffort("gemini-3.6-flash", "max")).toBe("high")
+    expect(buildLlmCreditIdentifier("llm-chat", "gemini-3.6-flash", "max")).toBe("llm-chat:economy")
   })
   it("back-compat: no effort arg → identical to today for every model", () => {
     for (const m of LLM_MODELS) {

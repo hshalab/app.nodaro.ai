@@ -7,7 +7,7 @@ import {
 } from "../video-analysis-pricing.js"
 import {
   VIDEO_ANALYSIS_LLM_MODELS, VIDEO_ANALYSIS_TIERS, VIDEO_ANALYSIS_TIER_ORDER,
-  VIDEO_ANALYSIS_MIXED_TIERS,
+  VIDEO_ANALYSIS_MIXED_TIERS, VIDEO_ANALYSIS_LEGACY_MODELS,
   DEFAULT_VIDEO_ANALYSIS_TIER, DEFAULT_VIDEO_ANALYSIS_MODEL, resolveVideoAnalysisModel,
 } from "../llm-models.js"
 
@@ -41,15 +41,28 @@ describe("video-analysis-pricing", () => {
   })
 
   it("model SSOT is capability-derived and Gemini-only today", () => {
-    expect(VIDEO_ANALYSIS_LLM_MODELS).toEqual(["gemini-3-flash", "gemini-3.1-pro"])
+    expect(VIDEO_ANALYSIS_LLM_MODELS).toEqual(["gemini-3-flash", "gemini-3.6-flash", "gemini-3.1-pro"])
   })
 
-  it("tier layer: every model-backed tier maps to a real model AND every model is tier-reachable (no vendor leak)", () => {
+  it("tier layer: every model-backed tier maps to a real model AND every model is tier-reachable or explicitly legacy (no vendor leak)", () => {
     // Adding a video-analysis model without a tier would silently leave it
-    // unreachable / unnamed — this fails until a tier decision is made.
+    // unreachable / unnamed — this fails until an explicit decision is made:
+    // either a tier targets it, or it's acknowledged in
+    // VIDEO_ANALYSIS_LEGACY_MODELS (kept only for stored raw-id configs).
     const tierTargets = Object.values(VIDEO_ANALYSIS_TIERS)
+    const legacy = Object.keys(VIDEO_ANALYSIS_LEGACY_MODELS)
     for (const m of tierTargets) expect(VIDEO_ANALYSIS_LLM_MODELS).toContain(m)
-    for (const m of VIDEO_ANALYSIS_LLM_MODELS) expect(tierTargets).toContain(m)
+    for (const m of VIDEO_ANALYSIS_LLM_MODELS) {
+      expect([...tierTargets, ...legacy], `${m} needs a tier or a legacy entry`).toContain(m)
+    }
+    // Legacy entries are strictly the OTHER side of that decision: a legacy
+    // model is never also a tier target, must still be video-capable, and must
+    // point at a real tier (the tier it used to back — UIs reverse-map via it).
+    for (const [m, tier] of Object.entries(VIDEO_ANALYSIS_LEGACY_MODELS)) {
+      expect(tierTargets).not.toContain(m)
+      expect(VIDEO_ANALYSIS_LLM_MODELS).toContain(m)
+      expect(Object.keys(VIDEO_ANALYSIS_TIERS)).toContain(tier)
+    }
     // TIER_ORDER = model-backed tiers + mixed roll-plan tiers, exactly.
     expect(new Set(VIDEO_ANALYSIS_TIER_ORDER)).toEqual(
       new Set([...Object.keys(VIDEO_ANALYSIS_TIERS), ...VIDEO_ANALYSIS_MIXED_TIERS]),
@@ -59,14 +72,25 @@ describe("video-analysis-pricing", () => {
     for (const t of VIDEO_ANALYSIS_MIXED_TIERS) expect(VIDEO_ANALYSIS_LLM_MODELS).not.toContain(t)
   })
 
+  it("fast tier never prices above pro in any bucket", () => {
+    for (const bucketSec of VIDEO_ANALYSIS_DURATION_BUCKETS) {
+      const fast = VIDEO_ANALYSIS_BUCKET_CREDITS[buildVideoAnalysisCreditId(VIDEO_ANALYSIS_TIERS.fast, bucketSec)]!
+      const pro = VIDEO_ANALYSIS_BUCKET_CREDITS[buildVideoAnalysisCreditId(VIDEO_ANALYSIS_TIERS.pro, bucketSec)]!
+      expect(fast, `fast > pro at ${bucketSec}s`).toBeLessThanOrEqual(pro)
+    }
+  })
+
   it("resolveVideoAnalysisModel: tier → model, mixed → sentinel, raw model passthrough, default pro on empty/unknown", () => {
     expect(DEFAULT_VIDEO_ANALYSIS_TIER).toBe("pro")
     expect(DEFAULT_VIDEO_ANALYSIS_MODEL).toBe("gemini-3.1-pro")
     expect(resolveVideoAnalysisModel("pro")).toBe("gemini-3.1-pro")
-    expect(resolveVideoAnalysisModel("fast")).toBe("gemini-3-flash")
+    expect(resolveVideoAnalysisModel("fast")).toBe("gemini-3.6-flash")
     expect(resolveVideoAnalysisModel("mixed")).toBe("mixed") // roll-plan sentinel passthrough
     expect(resolveVideoAnalysisModel("mixed-fast")).toBe("mixed-fast")
-    expect(resolveVideoAnalysisModel("gemini-3-flash")).toBe("gemini-3-flash") // raw passthrough
+    // Raw passthrough keeps LEGACY stored configs running (and priced) on the
+    // exact model they were saved with — never silently re-tiered.
+    expect(resolveVideoAnalysisModel("gemini-3-flash")).toBe("gemini-3-flash")
+    expect(resolveVideoAnalysisModel("gemini-3.6-flash")).toBe("gemini-3.6-flash")
     expect(resolveVideoAnalysisModel(undefined)).toBe("gemini-3.1-pro") // default → pro
     expect(resolveVideoAnalysisModel("")).toBe("gemini-3.1-pro")
     expect(resolveVideoAnalysisModel("nonsense")).toBe("gemini-3.1-pro") // unknown → default, never throws

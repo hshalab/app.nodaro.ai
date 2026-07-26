@@ -96,13 +96,14 @@ Many video models support **both** `t2v` and `i2v` from the same id — the Gene
 | --- | --- | --- | --- | --- | --- |
 | VEO 1080p Upscale | Google | Everyday | 2 | video-upscale | Upscale VEO output to 1080p. |
 | Runway (via KIE) | Runway | Everyday | 3 | i2v, t2v | Runway Gen-3 routed through KIE. 5/10s at 720p/1080p. |
-| Video Analysis (Fast) | Nodaro | Everyday | 3 | video-analysis | Analyze a video into a structured shot list (scenes, camera, audio) — fast, economy tier. Billed per duration bucket. |
+| Video Analysis (Fast — legacy) | Nodaro | Everyday | 3 | video-analysis | Legacy fast-tier analysis model (pre-2026-07). Kept so stored raw-model configs keep running and pricing unchanged; new fast-tier runs use the current fast model. |
 | Grok Imagine (I2V) | xAI | Everyday | 5 | i2v | Grok image-to-video — stylized motion. Up to 15s. |
 | Bytedance Lite I2V | Bytedance | Everyday | 6 | i2v, t2v | Cheapest Bytedance video tier with end-frame support. |
 | Hailuo 02 Standard | MiniMax | Everyday | 8 | i2v, t2v | Hailuo 02 Standard — economical option with end-frame support. |
 | Hailuo 2.3 Standard | MiniMax | Everyday | 8 | i2v | Cheaper Hailuo 2.3 tier — good baseline quality. |
 | VEO 3.1 Lite | Google | Everyday | 8 | i2v, t2v | VEO 3.1 Lite — most cost-effective VEO tier for high-volume generation. 4/6/8s with audio, supports first+last frame. |
 | Bytedance Pro Fast I2V | Bytedance | Everyday | 9 | i2v | Faster Bytedance Pro variant. |
+| Video Analysis (Fast) | Nodaro | Everyday | 9 | video-analysis | Analyze a video into a structured shot list (scenes, camera, audio) — fast, economy tier. Billed per duration bucket. |
 | Wan 2.2 Turbo | Alibaba | Everyday | 10 | i2v, t2v | Cheap, fast Wan turbo — 5s. Serves both i2v and t2v under one id. |
 | Kling 2.5 Turbo Pro | Kuaishou | Everyday | 11 | i2v, t2v | Faster Kling — good quality at lower cost. Supports end frame. |
 | Video Analysis (Pro) | Nodaro | Everyday | 11 | video-analysis | Analyze a video into a structured shot list (scenes, camera, audio) — higher-fidelity, default tier. Billed per duration bucket. |

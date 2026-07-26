@@ -73,6 +73,24 @@ export const LLM_MODELS: readonly LlmModelDef[] = [
     maxOutputTokens: 8192,
   },
   {
+    id: "gemini-3.6-flash",
+    displayName: "Gemini 3.6 Flash",
+    desc: "Latest fast Gemini, sharper reasoning",
+    tier: "economy",
+    kieFormat: "chat-completions",
+    // KIE serves Gemini 3.6 Flash on the OpenAI-compatible dialect under this
+    // slug (docs.kie.ai/market/gemini/gemini-3-6-flash-openai.md) — same
+    // chat-completions path shape as gemini-3-flash, different slug prefix.
+    kieSlugOrModel: "gemini-3-6-flash-openai",
+    vendor: "google",
+    structuredOutputMode: "kie-response-format",
+    supportsImages: true,
+    maxOutputTokens: 8192,
+    // KIE's 3.6 endpoint accepts `reasoning_effort: low | high` (thinking
+    // level) — exactly the chat-completions wire mapping deriveParams sends.
+    reasoningEfforts: ["low", "high"],
+  },
+  {
     id: "claude-haiku-4.5",
     displayName: "Claude Haiku 4.5",
     desc: "Fast economy, good reasoning",
@@ -240,6 +258,22 @@ export const LLM_MODELS: readonly LlmModelDef[] = [
     supportsTemperature: false,
     preferKie: true,
   },
+  {
+    id: "claude-fable-5",
+    displayName: "Claude Fable 5",
+    desc: "Frontier Claude above Opus, hardest problems",
+    tier: "premium",
+    kieFormat: "messages",
+    kieSlugOrModel: "claude-fable-5",
+    vendor: "anthropic",
+    structuredOutputMode: "anthropic-tool",
+    supportsImages: true,
+    maxOutputTokens: 16384,
+    directFallbackModel: "claude-fable-5",
+    reasoningEfforts: ["low", "medium", "high", "xhigh", "max"],
+    supportsTemperature: false,
+    preferKie: true,
+  },
 ] as const
 
 export const LLM_MODEL_IDS = LLM_MODELS.map((m) => m.id)
@@ -280,8 +314,8 @@ export function motionGraphicsFeature(engine?: string): LlmFeature {
 /** Feature → default model when user hasn't selected one */
 export const LLM_FEATURE_DEFAULTS: Record<LlmFeature, string> = {
   "ai-writer": "claude-sonnet-4.6",
-  "llm-chat": "gemini-3-flash",
-  "prompt-helper": "gemini-3-flash",
+  "llm-chat": "gemini-3.6-flash",
+  "prompt-helper": "gemini-3.6-flash",
   "scene-graph-ai": "claude-sonnet-4.6",
   "after-effects": "claude-sonnet-4.6",
   "motion-graphics": "claude-sonnet-4.6",
@@ -291,8 +325,8 @@ export const LLM_FEATURE_DEFAULTS: Record<LlmFeature, string> = {
   "image-to-text": "claude-sonnet-4.6",
   "describe-to-picker": "claude-opus-4.7",
   "qa-check": "claude-sonnet-4.6",
-  "generate-script": "gemini-3-flash",
-  "translate": "gemini-3-flash",
+  "generate-script": "gemini-3.6-flash",
+  "translate": "gemini-3.6-flash",
   "image-critic": "claude-sonnet-4.6",
 }
 
@@ -307,6 +341,7 @@ export const LLM_FEATURE_DEFAULTS: Record<LlmFeature, string> = {
  */
 export const LLM_MODALITY_CAPS: Record<string, { image: boolean; video: boolean; audio: boolean }> = {
   "gemini-3-flash":    { image: true,  video: true,  audio: true  },
+  "gemini-3.6-flash":  { image: true,  video: true,  audio: true  },
   "gemini-3.1-pro":    { image: true,  video: true,  audio: true  },
   "claude-haiku-4.5":  { image: true,  video: false, audio: false },
   "claude-sonnet-4.6": { image: true,  video: false, audio: false },
@@ -319,6 +354,7 @@ export const LLM_MODALITY_CAPS: Record<string, { image: boolean; video: boolean;
   "gpt-5.6-sol":       { image: true,  video: false, audio: false },
   "claude-sonnet-5":   { image: true,  video: false, audio: false },
   "claude-opus-4.8":   { image: true,  video: false, audio: false },
+  "claude-fable-5":    { image: true,  video: false, audio: false },
 }
 
 /** Capability lookup with safe default — unknown models get image-only. */
@@ -416,8 +452,23 @@ export const VIDEO_ANALYSIS_LLM_MODELS: string[] = LLM_MODELS
  * VIDEO_ANALYSIS_LLM_MODELS member AND every such model is reachable by a tier,
  * so adding a video model forces a tier decision instead of silently leaking.
  */
-export const VIDEO_ANALYSIS_TIERS = { fast: "gemini-3-flash", pro: "gemini-3.1-pro" } as const
+export const VIDEO_ANALYSIS_TIERS = { fast: "gemini-3.6-flash", pro: "gemini-3.1-pro" } as const
 export type VideoAnalysisModelTier = keyof typeof VIDEO_ANALYSIS_TIERS
+/**
+ * Models that PREVIOUSLY backed a tier, mapped to the tier they backed.
+ * They stay video+audio-capable (so they remain in VIDEO_ANALYSIS_LLM_MODELS):
+ * stored raw `llmModel` values keep resolving via the passthrough in
+ * `resolveVideoAnalysisModel` and keep pricing under their own credit family —
+ * but no tier reaches them for NEW runs. UIs use this map to reverse a stored
+ * raw id to the tier the user originally chose (video-configs fail-safe).
+ * The tier guard test requires every video-capable model to be a tier target
+ * OR a key here, so replacing a tier's backing model stays an explicit,
+ * two-sided decision.
+ */
+export const VIDEO_ANALYSIS_LEGACY_MODELS: Record<string, VideoAnalysisModelTier> = {
+  // fast tier's backing model until 2026-07 (superseded by gemini-3.6-flash)
+  "gemini-3-flash": "fast",
+}
 /**
  * MIXED tiers — advanced multi-engine analysis plans whose identifier resolves
  * to an engine-plan SENTINEL consumed by the analysis engine, never to a single

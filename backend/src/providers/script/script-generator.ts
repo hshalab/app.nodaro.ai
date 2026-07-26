@@ -124,7 +124,7 @@ export type ScriptProvider = "gemini" | "claude" | "gpt"
 
 /** Legacy provider names → new LLM model IDs */
 const LEGACY_PROVIDER_MAP: Record<string, string> = {
-  gemini: "gemini-3-flash",
+  gemini: "gemini-3.6-flash",
   claude: "claude-sonnet-4.6",
   gpt: "gpt-5.2",
 }

@@ -36,6 +36,9 @@ interface LlmModelRateUsd {
 /** Per-model USD/M-token provider rates, keyed by the shared LLM_MODEL_IDS enum. */
 const LLM_MODEL_RATES_USD_PER_M: Record<string, LlmModelRateUsd> = {
   "gemini-3-flash":    { inputPricePerM: 0.15,  outputPricePerM: 0.90 },
+  // KIE list price 90/450 KIE-credits per M ($0.005/credit) — ~30% of the
+  // official vendor price (confirmed 2026-07-26). 3× the 3-flash rate.
+  "gemini-3.6-flash":  { inputPricePerM: 0.45,  outputPricePerM: 2.25 },
   "claude-haiku-4.5":  { inputPricePerM: 0.80,  outputPricePerM: 4.00 },
   "claude-sonnet-4.6": { inputPricePerM: 3.00,  outputPricePerM: 15.00 },
   "gpt-5.2":           { inputPricePerM: 2.50,  outputPricePerM: 10.00 },
@@ -52,6 +55,9 @@ const LLM_MODEL_RATES_USD_PER_M: Record<string, LlmModelRateUsd> = {
   // grok-4.5 deferred — add its rate row when the model lands in the registry.
   "claude-sonnet-5":   { inputPricePerM: 0.85,  outputPricePerM: 4.275 },
   "claude-opus-4.8":   { inputPricePerM: 2.00,  outputPricePerM: 10.00 },
+  // KIE list price 800/4000 KIE-credits per M ($0.005/credit) — ~40% of the
+  // official vendor price (confirmed 2026-07-26).
+  "claude-fable-5":    { inputPricePerM: 4.00,  outputPricePerM: 20.00 },
 }
 
 /** Calculate provider cost in USD from token usage and model pricing. */

@@ -46,10 +46,17 @@ export const VIDEO_ANALYSIS_WINDOW = { LEN: WINDOW_LEN, STRIDE: WINDOW_STRIDE, O
  * `docs/nodes/processing-video/video-analysis.md`.
  */
 export const VIDEO_ANALYSIS_BUCKET_CREDITS: Record<string, number> = {
+  // Legacy fast-tier model (pre-2026-07) — kept for stored raw-id configs.
   "video-analysis:gemini-3-flash:60s": 1,
   "video-analysis:gemini-3-flash:180s": 1,
   "video-analysis:gemini-3-flash:360s": 2,
   "video-analysis:gemini-3-flash:600s": 3,
+  // Current fast tier — regenerated from the private formula for its backing
+  // model; higher than the legacy fast schedule but still ≤ pro per bucket.
+  "video-analysis:gemini-3.6-flash:60s": 2,
+  "video-analysis:gemini-3.6-flash:180s": 2,
+  "video-analysis:gemini-3.6-flash:360s": 5,
+  "video-analysis:gemini-3.6-flash:600s": 9,
   "video-analysis:gemini-3.1-pro:60s": 2,
   "video-analysis:gemini-3.1-pro:180s": 3,
   "video-analysis:gemini-3.1-pro:360s": 7,

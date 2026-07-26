@@ -81,11 +81,11 @@ describe("generateScript — model resolution", () => {
     )
   })
 
-  it("maps legacy provider 'gemini' → gemini-3-flash", async () => {
+  it("maps legacy provider 'gemini' → gemini-3.6-flash", async () => {
     await generateScript("p", 3, undefined, undefined, "gemini")
 
     expect(mocks.llmComplete).toHaveBeenCalledWith(
-      expect.objectContaining({ modelId: "gemini-3-flash" }),
+      expect.objectContaining({ modelId: "gemini-3.6-flash" }),
     )
   })
 

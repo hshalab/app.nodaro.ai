@@ -7,7 +7,8 @@
  */
 
 import { supabase } from "../lib/supabase.js"
-import { CATEGORY_DURATION_DEFAULTS } from "@nodaro/shared"
+import { CATEGORY_DURATION_DEFAULTS, LLM_FEATURE_DEFAULTS } from "@nodaro/shared"
+import type { LlmFeature } from "@nodaro/shared"
 
 // ---------------------------------------------------------------------------
 // Node categories that should NOT be tracked (no meaningful duration signal)
@@ -305,10 +306,12 @@ export function buildStatsKey(nodeType: string, inputData: InputData): StatsKey 
     case "generate-script":
     case "translate":
     case "qa-check": {
+      // Fallback tracks the feature's default model (all six case labels are
+      // LlmFeature keys) so stats attribution can't drift when a default moves.
       const model =
         str(inputData.llmModel) ||
         str(inputData.model) ||
-        "gemini-3-flash"
+        LLM_FEATURE_DEFAULTS[nodeType as LlmFeature]
       return {
         model_identifier: model,
         aspect_ratio: "",
