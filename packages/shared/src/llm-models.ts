@@ -324,7 +324,7 @@ export const LLM_FEATURE_DEFAULTS: Record<LlmFeature, string> = {
   "3d-title": "claude-sonnet-4.6",
   "image-to-text": "claude-sonnet-4.6",
   "describe-to-picker": "claude-opus-4.7",
-  "qa-check": "claude-sonnet-4.6",
+  "qa-check": "gemini-3.6-flash",
   "generate-script": "gemini-3.6-flash",
   "translate": "gemini-3.6-flash",
   "image-critic": "claude-sonnet-4.6",
