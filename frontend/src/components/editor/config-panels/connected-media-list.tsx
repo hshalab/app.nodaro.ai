@@ -1,5 +1,6 @@
 "use client"
 
+import type { ReactNode } from "react"
 import { GripVertical, ImageIcon, Film, Music } from "lucide-react"
 import {
   DndContext,
@@ -89,7 +90,7 @@ export function applyMediaOrder<T extends { id: string }>(
 
 // --- Types ---
 
-interface MediaEntry {
+export interface MediaEntry {
   readonly id: string
   readonly label: string
   readonly type: string
@@ -105,6 +106,16 @@ interface ConnectedMediaListProps {
   mediaType?: "image" | "video" | "audio" | "any"
   primaryLabel?: string
   emptyMessage?: string
+  /** Override thumbnail resolution per source (falls back to
+   *  {@link getSourceThumbnail} when omitted or when it returns undefined).
+   *  Lets consumers with wider producer sets (image-collage accepts any
+   *  image producer) supply thumbnails for types the default resolver
+   *  doesn't know. */
+  thumbnailFor?: (source: SourceNodeInfo) => string | undefined
+  /** Optional per-row extra content, rendered on a second line inside the
+   *  row (below the grip/thumbnail/label line). Used by image-collage for
+   *  its per-input size selector so ordering + sizing live in ONE list. */
+  renderRowExtra?: (entry: MediaEntry) => ReactNode
 }
 
 // --- Default accepted types per media kind ---
@@ -216,12 +227,14 @@ function SortableMediaItem({
   isPrimary,
   primaryLabel,
   mediaType,
+  rowExtra,
 }: {
   entry: MediaEntry
   index: number
   isPrimary: boolean
   primaryLabel?: string
   mediaType?: "image" | "video" | "audio" | "any"
+  rowExtra?: ReactNode
 }) {
   const {
     attributes,
@@ -244,58 +257,61 @@ function SortableMediaItem({
       ref={setNodeRef}
       style={style}
       {...attributes}
-      className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md text-xs ${
+      className={`px-2 py-1.5 rounded-md text-xs ${
         isPrimary
           ? "bg-pink-500/10 ring-1 ring-pink-500/30"
           : "bg-muted/50"
       }`}
     >
-      <span
-        {...listeners}
-        className="cursor-grab active:cursor-grabbing shrink-0 touch-none"
-      >
-        <GripVertical className="w-3.5 h-3.5 text-muted-foreground/40" />
-      </span>
-      <span className="text-muted-foreground w-4 text-center shrink-0 font-mono text-[10px]">
-        #{index + 1}
-      </span>
-      {mediaType === "image" && entry.thumbnailUrl ? (
-        <CachedImage
-          src={entry.thumbnailUrl}
-          alt={entry.label}
-          className="w-10 h-10 rounded object-cover shrink-0"
-          thumbnail
-          thumbnailWidth={80}
-        />
-      ) : mediaType === "image" ? (
-        <div className="w-10 h-10 rounded bg-muted flex items-center justify-center shrink-0">
-          <ImageIcon className="w-4 h-4 text-muted-foreground/40" />
-        </div>
-      ) : (
-        <div className="w-8 h-8 rounded bg-muted flex items-center justify-center shrink-0">
-          <MediaIcon mediaType={mediaType} className="w-4 h-4 text-muted-foreground/40" />
-        </div>
-      )}
-      <div className="flex flex-col flex-1 min-w-0">
-        <span className="truncate" title={entry.label}>
-          {entry.label}
+      <div className="flex items-center gap-1.5">
+        <span
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing shrink-0 touch-none"
+        >
+          <GripVertical className="w-3.5 h-3.5 text-muted-foreground/40" />
         </span>
-        {isPrimary && primaryLabel && (
-          <span className="text-[9px] text-pink-500 font-medium">
-            {primaryLabel}
+        <span className="text-muted-foreground w-4 text-center shrink-0 font-mono text-[10px]">
+          #{index + 1}
+        </span>
+        {mediaType === "image" && entry.thumbnailUrl ? (
+          <CachedImage
+            src={entry.thumbnailUrl}
+            alt={entry.label}
+            className="w-10 h-10 rounded object-cover shrink-0"
+            thumbnail
+            thumbnailWidth={80}
+          />
+        ) : mediaType === "image" ? (
+          <div className="w-10 h-10 rounded bg-muted flex items-center justify-center shrink-0">
+            <ImageIcon className="w-4 h-4 text-muted-foreground/40" />
+          </div>
+        ) : (
+          <div className="w-8 h-8 rounded bg-muted flex items-center justify-center shrink-0">
+            <MediaIcon mediaType={mediaType} className="w-4 h-4 text-muted-foreground/40" />
+          </div>
+        )}
+        <div className="flex flex-col flex-1 min-w-0">
+          <span className="truncate" title={entry.label}>
+            {entry.label}
+          </span>
+          {isPrimary && primaryLabel && (
+            <span className="text-[9px] text-pink-500 font-medium">
+              {primaryLabel}
+            </span>
+          )}
+        </div>
+        {entry.targetHandle && (
+          <span className="text-[9px] px-1 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
+            {entry.targetHandle}
           </span>
         )}
-      </div>
-      {entry.targetHandle && (
-        <span className="text-[9px] px-1 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
-          {entry.targetHandle}
+        <span
+          className={`text-[9px] px-1 py-0.5 rounded shrink-0 ${badge.className}`}
+        >
+          {badge.label}
         </span>
-      )}
-      <span
-        className={`text-[9px] px-1 py-0.5 rounded shrink-0 ${badge.className}`}
-      >
-        {badge.label}
-      </span>
+      </div>
+      {rowExtra != null && <div className="mt-1 pl-9">{rowExtra}</div>}
     </div>
   )
 }
@@ -310,6 +326,8 @@ export function ConnectedMediaList({
   mediaType = "any",
   primaryLabel,
   emptyMessage,
+  thumbnailFor,
+  renderRowExtra,
 }: ConnectedMediaListProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -327,7 +345,7 @@ export function ConnectedMediaList({
       id: s.id,
       label: s.label,
       type: s.type,
-      thumbnailUrl: getSourceThumbnail(s),
+      thumbnailUrl: thumbnailFor?.(s) ?? getSourceThumbnail(s),
       targetHandle: s.targetHandle,
     }))
 
@@ -390,6 +408,7 @@ export function ConnectedMediaList({
                   isPrimary={i === 0 && !!primaryLabel}
                   primaryLabel={primaryLabel}
                   mediaType={mediaType}
+                  rowExtra={renderRowExtra?.(entry)}
                 />
               ))}
             </div>
@@ -400,47 +419,52 @@ export function ConnectedMediaList({
           {orderedEntries.map((entry, i) => (
             <div
               key={entry.id}
-              className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md text-xs ${
+              className={`px-2 py-1.5 rounded-md text-xs ${
                 primaryLabel
                   ? "bg-pink-500/10 ring-1 ring-pink-500/30"
                   : "bg-muted/50"
               }`}
             >
-              <span className="text-muted-foreground w-4 text-center shrink-0 font-mono text-[10px]">
-                #{i + 1}
-              </span>
-              {mediaType === "image" && entry.thumbnailUrl ? (
-                <CachedImage
-                  src={entry.thumbnailUrl}
-                  alt={entry.label}
-                  className="w-10 h-10 rounded object-cover shrink-0"
-                  thumbnail
-                  thumbnailWidth={80}
-                />
-              ) : mediaType === "image" ? (
-                <div className="w-10 h-10 rounded bg-muted flex items-center justify-center shrink-0">
-                  <ImageIcon className="w-4 h-4 text-muted-foreground/40" />
-                </div>
-              ) : (
-                <div className="w-8 h-8 rounded bg-muted flex items-center justify-center shrink-0">
-                  <MediaIcon mediaType={mediaType} className="w-4 h-4 text-muted-foreground/40" />
-                </div>
-              )}
-              <div className="flex flex-col flex-1 min-w-0">
-                <span className="truncate" title={entry.label}>
-                  {entry.label}
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted-foreground w-4 text-center shrink-0 font-mono text-[10px]">
+                  #{i + 1}
                 </span>
-                {primaryLabel && (
-                  <span className="text-[9px] text-pink-500 font-medium">
-                    {primaryLabel}
-                  </span>
+                {mediaType === "image" && entry.thumbnailUrl ? (
+                  <CachedImage
+                    src={entry.thumbnailUrl}
+                    alt={entry.label}
+                    className="w-10 h-10 rounded object-cover shrink-0"
+                    thumbnail
+                    thumbnailWidth={80}
+                  />
+                ) : mediaType === "image" ? (
+                  <div className="w-10 h-10 rounded bg-muted flex items-center justify-center shrink-0">
+                    <ImageIcon className="w-4 h-4 text-muted-foreground/40" />
+                  </div>
+                ) : (
+                  <div className="w-8 h-8 rounded bg-muted flex items-center justify-center shrink-0">
+                    <MediaIcon mediaType={mediaType} className="w-4 h-4 text-muted-foreground/40" />
+                  </div>
                 )}
+                <div className="flex flex-col flex-1 min-w-0">
+                  <span className="truncate" title={entry.label}>
+                    {entry.label}
+                  </span>
+                  {primaryLabel && (
+                    <span className="text-[9px] text-pink-500 font-medium">
+                      {primaryLabel}
+                    </span>
+                  )}
+                </div>
+                <span
+                  className={`text-[9px] px-1 py-0.5 rounded shrink-0 ${getTypeBadge(entry.type).className}`}
+                >
+                  {getTypeBadge(entry.type).label}
+                </span>
               </div>
-              <span
-                className={`text-[9px] px-1 py-0.5 rounded shrink-0 ${getTypeBadge(entry.type).className}`}
-              >
-                {getTypeBadge(entry.type).label}
-              </span>
+              {renderRowExtra?.(entry) != null && (
+                <div className="mt-1 pl-6">{renderRowExtra?.(entry)}</div>
+              )}
             </div>
           ))}
         </div>

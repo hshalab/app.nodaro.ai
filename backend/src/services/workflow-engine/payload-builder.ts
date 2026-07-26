@@ -4203,9 +4203,27 @@ export function buildPayload(
     }
 
     case "image-collage": {
-      const collageImageUrls =
+      let collageImageUrls =
         resolvedInputs.imageUrls || (data.imageUrls as string[] | undefined) || []
       const resolution = (data.resolution as string | undefined) === "4K" ? "4K" : "2K"
+      let withSourceIds = resolvedInputs.imageUrlsWithSourceIds
+      // User-configured input ordering (config-panel drag list). Unlike
+      // combine-videos' clipOrder .find() lookup, a collage source can
+      // contribute SEVERAL images through one edge (a List) — so each listed
+      // source moves ALL its entries as a contiguous block, and unlisted
+      // sources append in edge order. Mirrors frontend execute-node.ts.
+      const collageImageOrder = data.imageOrder as string[] | undefined
+      if (collageImageOrder?.length && withSourceIds?.length === collageImageUrls.length) {
+        const listed = new Set(collageImageOrder)
+        const ordered = [
+          ...collageImageOrder.flatMap((nodeId) => withSourceIds!.filter((e) => e.nodeId === nodeId)),
+          ...withSourceIds!.filter((e) => !listed.has(e.nodeId)),
+        ]
+        if (ordered.length === collageImageUrls.length) {
+          withSourceIds = ordered
+          collageImageUrls = ordered.map((e) => e.url)
+        }
+      }
       // Per-image size hints (0 auto / 1 big / 2 medium / 3 small). Editor
       // workflows key them by SOURCE NODE ID (data.imageSizeBySource) — align
       // to the accumulated wire order via imageUrlsWithSourceIds (pushed in
@@ -4214,7 +4232,6 @@ export function buildPayload(
       const clampSize = (v: unknown): number =>
         typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= 3 ? v : 0
       const sizeBySource = data.imageSizeBySource as Record<string, number> | undefined
-      const withSourceIds = resolvedInputs.imageUrlsWithSourceIds
       let collageImageSizes: number[] | undefined
       if (sizeBySource && withSourceIds && withSourceIds.length === collageImageUrls.length) {
         collageImageSizes = withSourceIds.map((e) => clampSize(sizeBySource[e.nodeId]))

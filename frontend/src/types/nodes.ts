@@ -3146,6 +3146,14 @@ export type ImageCollageData = {
    *  payload-builder.ts) via imageUrlsWithSourceIds; entries for nodes no
    *  longer connected are simply ignored. */
   imageSizeBySource?: Record<string, number>
+  /** User-configured input ordering as SOURCE NODE IDs (parallel order field
+   *  for the `in` handle — see getParallelOrderField). Applied at run time on
+   *  top of edge order by execute-node.ts + payload-builder.ts: each listed
+   *  source's images move as a contiguous block (a List keeps its internal
+   *  order); unlisted sources append in edge order. Cleared automatically
+   *  when the handle popover reorders edges (edge order becomes
+   *  authoritative), and ids are stripped on edge delete. */
+  imageOrder?: string[]
   fieldMappings: FieldMappings
   executionStatus?: "idle" | "running" | "completed" | "failed"
   errorMessage?: string
