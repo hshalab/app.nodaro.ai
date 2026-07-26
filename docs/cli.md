@@ -220,13 +220,16 @@ nodaro voice clones list [--json]
 nodaro voice clones create --name <name> --audio <url>|--file <path> [--json]   # clone from an uploaded URL or a local audio file
 nodaro voice clones delete <id> [--json]
 
-# Media — ingestion: social-video import, trim, save-to-storage, metadata probe
+# Media — ingestion + compositing: social-video import, trim, image collage, save-to-storage, metadata probe
 nodaro media download <url> [--max-height <px>] [--section <a-b>] [--watch] [--json]
                                                          # YouTube / TikTok / Instagram / X / Facebook → your storage. --section fetches only
                                                          # that time range (seconds). --watch streams live progress (no job to poll later).
 nodaro media metadata <url> [--json]                     # probe duration/dimensions/title WITHOUT downloading
 nodaro media trim-video --video <url> --start <sec> --end <sec>|--keep-first <sec>|--keep-last <sec> [--watch] [--poll-interval <ms>] [--json]
 nodaro media trim-audio --video <url>|--audio <url> [--start <sec>] [--end <sec>] [--format mp3|wav|aac] [--watch] [--poll-interval <ms>] [--json]
+nodaro media collage <imageUrls...> [--sizes <0-3,...>] [--layout smart|grid] [--resolution 2K|4K] [--aspect-ratio <W:H>] [--gap <px>] [--background-color <hex>] [--watch] [--poll-interval <ms>] [--json]
+                                                         # composite 2–30 images into one large image. --sizes gives per-image RELATIVE size
+                                                         # hints aligned by position (0 auto, 1 big ≈2× linear, 2 medium, 3 small ≈½ — smart layout only).
 nodaro media save <url> [--filename <name>] [--type image|video|audio] [--watch] [--poll-interval <ms>] [--json]
 
 # Audio — the primitives Voice Changer Pro composes, standalone
