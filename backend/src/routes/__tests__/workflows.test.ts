@@ -612,9 +612,9 @@ describe("PATCH /v1/workflows/:id", () => {
     const mockEq1 = vi.fn().mockReturnValue({ eq: mockEq2 })
     const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq1 })
 
-    // fallback current-fetch returns the row's real tokens
+    // fallback current-fetch returns the row's full current record
     const curMaybeSingle = vi.fn().mockResolvedValue({
-      data: { updated_at: "2026-06-12T00:00:00Z", version: 9 },
+      data: { ...DB_WORKFLOW_FULL, updated_at: "2026-06-12T00:00:00Z", version: 9 },
       error: null,
     })
     const curEq2 = vi.fn().mockReturnValue({ maybeSingle: curMaybeSingle })
@@ -637,6 +637,12 @@ describe("PATCH /v1/workflows/:id", () => {
     expect(body.error.code).toBe("workflow_conflict")
     expect(body.error.currentVersion).toBe(9)
     expect(body.error.currentUpdatedAt).toBe("2026-06-12T00:00:00Z")
+    // Full current record rides the 409 so the stale writer merges without a GET.
+    expect(body.error.currentRecord).toMatchObject({
+      ...CAMEL_FULL,
+      updatedAt: "2026-06-12T00:00:00Z",
+      version: 9,
+    })
   })
 
   // ── delta saves (P3 — apply_workflow_delta RPC) ──
@@ -813,7 +819,7 @@ describe("PATCH /v1/workflows/:id", () => {
     const mockUpdate = vi.fn().mockReturnValue({ eq: updateEq1 })
 
     const currentMaybeSingle = vi.fn().mockResolvedValue({
-      data: { updated_at: "2026-01-02T00:00:00Z" },
+      data: { ...DB_WORKFLOW_FULL, updated_at: "2026-01-02T00:00:00Z" },
       error: null,
     })
     const currentEq2 = vi.fn().mockReturnValue({ maybeSingle: currentMaybeSingle })
@@ -843,6 +849,10 @@ describe("PATCH /v1/workflows/:id", () => {
     const body = res.json()
     expect(body.error.code).toBe("workflow_conflict")
     expect(body.error.currentUpdatedAt).toBe("2026-01-02T00:00:00Z")
+    expect(body.error.currentRecord).toMatchObject({
+      ...CAMEL_FULL,
+      updatedAt: "2026-01-02T00:00:00Z",
+    })
     // Verify the optimistic lock filter was chained.
     expect(updateEq3).toHaveBeenCalledWith("updated_at", "2026-01-01T00:00:00Z")
   })

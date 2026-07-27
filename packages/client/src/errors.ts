@@ -56,6 +56,25 @@ export class StorageExceededError extends NodaroError {
 }
 
 /**
+ * Optimistic-concurrency rejection (HTTP 409 `workflow_conflict`): the workflow
+ * was written by another tab/device after the state carried in
+ * `expectedUpdatedAt`/`expectedVersion` was read. `currentRecord` — when the
+ * server includes it — is the full current workflow: merge your changes onto it
+ * and retry with its fresh `updatedAt`, no follow-up GET needed.
+ */
+export class WorkflowConflictError extends NodaroError {
+  constructor(
+    message = "Workflow was updated by another writer",
+    public readonly currentUpdatedAt?: string,
+    public readonly currentVersion?: number,
+    public readonly currentRecord?: Record<string, unknown>,
+  ) {
+    super(message, "workflow_conflict", 409)
+    this.name = "WorkflowConflictError"
+  }
+}
+
+/**
  * A job reached a terminal `failed`/`cancelled` status while being awaited by
  * `nodes.runAndWait` / `nodes.runMany`. Not an HTTP-level error (the polls
  * themselves succeeded), so `status` is 0 — distinguish it by type/`code`.
@@ -109,6 +128,14 @@ export function throwFromResponse(status: number, body: ApiErrorBody): never {
   const code = body.error?.code ?? "internal_error"
   const message = body.error?.message ?? "Request failed"
   if (status === 401) throw new UnauthorizedError(message)
+  if (status === 409 && code === "workflow_conflict") {
+    throw new WorkflowConflictError(
+      message,
+      body.error?.currentUpdatedAt as string | undefined,
+      body.error?.currentVersion as number | undefined,
+      body.error?.currentRecord as Record<string, unknown> | undefined,
+    )
+  }
   if (status === 403 && code === "insufficient_scope") {
     throw new ForbiddenError(message, body.error?.missingScope)
   }

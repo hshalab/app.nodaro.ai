@@ -16,6 +16,7 @@ export {
   RateLimitedError,
   InsufficientCreditsError,
   StorageExceededError,
+  WorkflowConflictError,
   JobFailedError,
   JobTimeoutError,
   JobAbortedError,

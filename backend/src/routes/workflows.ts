@@ -835,7 +835,7 @@ export async function workflowRoutes(app: FastifyInstance) {
       if (body.expectedUpdatedAt || body.expectedVersion !== undefined) {
         const { data: current } = await supabase
           .from("workflows")
-          .select("updated_at, version")
+          .select(WORKFLOW_FULL_COLS)
           .eq("id", params.id)
           .eq("user_id", userId)
           .maybeSingle()
@@ -846,6 +846,10 @@ export async function workflowRoutes(app: FastifyInstance) {
               message: "Workflow was updated by another writer",
               currentUpdatedAt: current.updated_at,
               currentVersion: (current as { version?: number }).version,
+              // Full current record so a stale writer can merge-and-retry
+              // without a follow-up GET (the studio merge-on-409 contract —
+              // fetched only on the conflict path, never on happy saves).
+              currentRecord: toWorkflowFull(current),
             },
           })
         }

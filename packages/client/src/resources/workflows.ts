@@ -52,6 +52,20 @@ export interface UpdateWorkflowInput {
   settings?: Record<string, unknown>
   sourcePrompt?: string
   thumbnailUrl?: string | null
+  /**
+   * Optimistic concurrency: the `updatedAt` your copy of the workflow was
+   * loaded with. When the row has since been written by another tab/device,
+   * the update is rejected with HTTP 409 `workflow_conflict`
+   * (`WorkflowConflictError`) carrying the current record — re-read/merge and
+   * retry instead of last-writer-wins clobbering the other writer's changes.
+   * Omit for the legacy unconditional replace.
+   */
+  expectedUpdatedAt?: string
+  /**
+   * Optimistic concurrency by monotonic version — preferred over
+   * `expectedUpdatedAt` (integer bumped by the DB on every content change).
+   */
+  expectedVersion?: number
 }
 
 export interface RunWorkflowParams {
