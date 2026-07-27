@@ -25,7 +25,7 @@ import { PIPELINE_PINNABLE_SCRIPT_LLMS } from "../pipeline-types.js"
 // ---------------------------------------------------------------------------
 describe("LLM_MODELS data integrity", () => {
   it("should have exactly 15 models", () => {
-    expect(LLM_MODELS).toHaveLength(15)
+    expect(LLM_MODELS).toHaveLength(16)
   })
 
   it("each model has all required fields", () => {
@@ -60,14 +60,14 @@ describe("LLM_MODELS data integrity", () => {
     expect(new Set(ids).size).toBe(ids.length)
   })
 
-  it("has 4 economy, 4 standard, 7 premium models", () => {
+  it("has 4 economy, 4 standard, 8 premium models", () => {
     const tierCounts: Record<LlmTier, number> = { economy: 0, standard: 0, premium: 0 }
     for (const model of LLM_MODELS) {
       tierCounts[model.tier]++
     }
     expect(tierCounts.economy).toBe(4)
     expect(tierCounts.standard).toBe(4)
-    expect(tierCounts.premium).toBe(7)
+    expect(tierCounts.premium).toBe(8)
   })
 
   it("all three kieFormats are represented", () => {
@@ -121,6 +121,7 @@ describe("LLM_MODEL_IDS", () => {
       "gpt-5.6-sol",
       "claude-sonnet-5",
       "claude-opus-4.8",
+      "claude-opus-5",
       "claude-fable-5",
     ]
     expect(LLM_MODEL_IDS).toEqual(expected)
@@ -399,11 +400,11 @@ describe("LLM_FEATURE_DEFAULTS", () => {
     expect(getLlmTier(LLM_FEATURE_DEFAULTS["ai-writer"])).toBe("standard")
   })
 
-  it('"describe-to-picker" defaults to "claude-opus-4.7" (premium vision)', () => {
-    expect(LLM_FEATURE_DEFAULTS["describe-to-picker"]).toBe("claude-opus-4.7")
+  it('"describe-to-picker" defaults to "claude-opus-5" (premium vision)', () => {
+    expect(LLM_FEATURE_DEFAULTS["describe-to-picker"]).toBe("claude-opus-5")
     expect(getLlmTier(LLM_FEATURE_DEFAULTS["describe-to-picker"])).toBe("premium")
     // The default MUST be an accepted analyzer model (vision + structured output).
-    expect(STRUCTURED_VISION_MODELS.map((m) => m.id)).toContain("claude-opus-4.7")
+    expect(STRUCTURED_VISION_MODELS.map((m) => m.id)).toContain("claude-opus-5")
   })
 
   it('"generate-script" defaults to "gemini-3.6-flash" (economy)', () => {
@@ -465,6 +466,7 @@ describe("STRUCTURED_VISION_MODELS", () => {
         "gemini-3.1-pro",
         "claude-sonnet-5",
         "claude-opus-4.8",
+        "claude-opus-5",
         "claude-fable-5",
         // responses-format GPTs — KIE text.format json_schema live-verified
         // 2026-07-14 (text AND vision inputs).

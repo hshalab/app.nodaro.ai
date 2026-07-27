@@ -3614,7 +3614,7 @@ function GenerateVideoProConfigImpl({ data, onUpdate, sources, fieldMappings, on
       {/* Planner model — the LLM that splits the script into segment prompts. */}
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="gvp-planner-model">Planner model</Label>
-        <Select value={data.plannerModel ?? "claude-opus-4.7"} onValueChange={(v) => onUpdate({ plannerModel: v })}>
+        <Select value={data.plannerModel ?? "claude-opus-5"} onValueChange={(v) => onUpdate({ plannerModel: v })}>
           <SelectTrigger id="gvp-planner-model" className="h-9 text-sm">
             <SelectValue />
           </SelectTrigger>
@@ -3627,7 +3627,7 @@ function GenerateVideoProConfigImpl({ data, onUpdate, sources, fieldMappings, on
           </SelectContent>
         </Select>
         <p className="text-[11px] text-muted-foreground">
-          Splits your script into per-segment prompts. Default: Claude Opus 4.7.
+          Splits your script into per-segment prompts. Default: Claude Opus 5.
         </p>
       </div>
 
