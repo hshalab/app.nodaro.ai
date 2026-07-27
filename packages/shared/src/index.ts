@@ -889,5 +889,8 @@ export * from "./video-analysis.js"
 // --- Video-analysis pricing (duration buckets + structural credit formula) ---
 export * from "./video-analysis-pricing.js"
 
+// --- Smart-cut best-pair search windows (shared bound + clamp) ---
+export * from "./smart-cut-windows.js"
+
 export * from "./entity-asset-types.js"
 export * from "./hint-graph-types.js"

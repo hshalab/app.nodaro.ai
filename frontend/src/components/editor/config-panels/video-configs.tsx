@@ -39,7 +39,7 @@ import type {
   VideoAnalysisNodeData,
 } from "@/types/nodes"
 import { GENERATE_VIDEO_PRO_MAX_DURATION_FALLBACK, VIDEO_I2V_MODELS, VIDEO_T2V_MODELS, VIDEO_V2V_MODELS, VIDEO_GEN_MODELS, GVP_PROVIDERS, MOTION_TRANSFER_MODELS, KIE_VIDEO_DURATIONS, KIE_T2V_DURATIONS, VIDEO_DURATION_OPTIONS, VIDEO_FPS_OPTIONS, PROVIDERS_WITH_END_FRAME, KLING3_DURATIONS, VIDEO_RATIOS, SEEDANCE_2_VIDEO_RATIOS, PROVIDERS_WITH_REFERENCES, V2V_DURATION_OPTIONS, V2V_RESOLUTION_OPTIONS, V2V_ALEPH_ASPECT_RATIOS, EXTEND_VIDEO_MODELS, getVideoResolutionOptions, getAspectRatiosForVideoModel, getVideoModelCapabilitiesTooltip } from "./model-options"
-import { isSeedance2Provider, defaultVideoAspectRatio, MODEL_CATALOG, SEEDANCE_2_REF_LIMITS, VIDEO_PROMPT_MAX, getMaxVideoPromptChars, getMaxNegativePromptChars, buildVideoCreditModelIdentifier, characterMentionSlug, characterMentionableAssetArrays, DEFAULT_LABEL_BY_SOURCE, locationMentionSlug, resolveEffectiveSourceType, FRAME_TARGET_HANDLES, VIDEO_ANALYSIS_TIER_ORDER, VIDEO_ANALYSIS_TIER_LABELS, VIDEO_ANALYSIS_TIERS, VIDEO_ANALYSIS_LEGACY_MODELS, DEFAULT_VIDEO_ANALYSIS_TIER, isVideoAnalysisTier, LLM_MODELS } from "@nodaro/shared"
+import { isSeedance2Provider, defaultVideoAspectRatio, MODEL_CATALOG, SEEDANCE_2_REF_LIMITS, VIDEO_PROMPT_MAX, getMaxVideoPromptChars, getMaxNegativePromptChars, buildVideoCreditModelIdentifier, characterMentionSlug, characterMentionableAssetArrays, DEFAULT_LABEL_BY_SOURCE, locationMentionSlug, resolveEffectiveSourceType, FRAME_TARGET_HANDLES, VIDEO_ANALYSIS_TIER_ORDER, VIDEO_ANALYSIS_TIER_LABELS, VIDEO_ANALYSIS_TIERS, VIDEO_ANALYSIS_LEGACY_MODELS, DEFAULT_VIDEO_ANALYSIS_TIER, isVideoAnalysisTier, LLM_MODELS, clampSmartCutWindow, SMART_CUT_WINDOW_MIN, SMART_CUT_WINDOW_MAX, SMART_CUT_WINDOW_DEFAULT } from "@nodaro/shared"
 import type { ReferenceSource, ConnectedReference } from "@nodaro/shared"
 import { resolveSeedance2Inputs } from "@nodaro/prompts"
 import { probeVideoAnalysis } from "@/lib/api"
@@ -3839,7 +3839,7 @@ function GenerateVideoProConfigImpl({ data, onUpdate, sources, fieldMappings, on
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="legacy-8x8">Legacy — 8×8 smart cut (default)</SelectItem>
+            <SelectItem value="legacy-8x8">Best pair — PSNR match the boundary (default)</SelectItem>
             <SelectItem value="preroll-keep-next" disabled={keyframeAnchored}>Pre-roll keep-next — hide the seam in the overlap</SelectItem>
             <SelectItem value="preroll-keep-prev" disabled={keyframeAnchored}>Pre-roll keep-prev — keep the previous segment&apos;s original frames</SelectItem>
           </SelectContent>
@@ -3847,9 +3847,63 @@ function GenerateVideoProConfigImpl({ data, onUpdate, sources, fieldMappings, on
         <p className="text-[11px] text-muted-foreground">
           {keyframeAnchored
             ? "Pre-roll modes need a last-frame boundary — switch Overlap anchor to Last frame (or Off) to enable them; keyframe re-enactments have no pixel replay to detect."
-            : "For last-frame overlap: detect where the continuation re-enacts the previous tail and cut cleanly. Legacy is byte-identical."}
+            : "For last-frame overlap: detect where the continuation re-enacts the previous tail and cut cleanly. Best pair is the default stitch."}
         </p>
       </div>
+
+      {/* BEST-PAIR SEARCH WINDOWS — how far back / forward the PSNR matcher
+          looks for the boundary twin. Only the best-pair mode uses them (the
+          pre-roll modes run their own diagonal search), so they're hidden
+          under a pre-roll selection. Blank = the engine's 8/8 default. */}
+      {(data.smartCutMode ?? "legacy-8x8") === "legacy-8x8" && (
+        <div className="flex flex-col gap-1.5">
+          <Label>Best-pair search window (frames)</Label>
+          <div className="flex items-center gap-2">
+            <div className="flex flex-1 flex-col gap-1">
+              <Label htmlFor="gvp-smartCutFramesPrev" className="text-[11px] font-normal text-muted-foreground">
+                From previous end
+              </Label>
+              <Input
+                id="gvp-smartCutFramesPrev"
+                type="number"
+                min={SMART_CUT_WINDOW_MIN}
+                max={SMART_CUT_WINDOW_MAX}
+                step={1}
+                placeholder={String(SMART_CUT_WINDOW_DEFAULT)}
+                value={data.smartCutFramesPrev ?? ""}
+                onChange={(e) =>
+                  onUpdate({ smartCutFramesPrev: e.target.value === "" ? undefined : clampSmartCutWindow(Number(e.target.value)) })
+                }
+                className="h-9 text-sm"
+              />
+            </div>
+            <div className="flex flex-1 flex-col gap-1">
+              <Label htmlFor="gvp-smartCutFramesNext" className="text-[11px] font-normal text-muted-foreground">
+                From next start
+              </Label>
+              <Input
+                id="gvp-smartCutFramesNext"
+                type="number"
+                min={SMART_CUT_WINDOW_MIN}
+                max={SMART_CUT_WINDOW_MAX}
+                step={1}
+                placeholder={String(SMART_CUT_WINDOW_DEFAULT)}
+                value={data.smartCutFramesNext ?? ""}
+                onChange={(e) =>
+                  onUpdate({ smartCutFramesNext: e.target.value === "" ? undefined : clampSmartCutWindow(Number(e.target.value)) })
+                }
+                className="h-9 text-sm"
+              />
+            </div>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            How many frames the matcher compares at each join — the last N of a segment against the first M of the next.
+            Leave blank for the default ({SMART_CUT_WINDOW_DEFAULT}×{SMART_CUT_WINDOW_DEFAULT}). Widen (up to {SMART_CUT_WINDOW_MAX}×{SMART_CUT_WINDOW_MAX})
+            when a continuation re-enacts more than a third of a second of the previous tail — a match outside the window is never
+            found and the join falls back to fixed trims.
+          </p>
+        </div>
+      )}
 
       {/* SMART-CUT AUDIO — gray-band rescue; only meaningful under a pre-roll mode. */}
       {(data.smartCutMode === "preroll-keep-prev" || data.smartCutMode === "preroll-keep-next") && (
