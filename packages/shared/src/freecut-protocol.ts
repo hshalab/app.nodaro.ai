@@ -27,6 +27,8 @@ export interface FreecutImportFile {
 
 export interface NodaroLoadVideoPayload {
   readonly videoUrl: string
+  /** Display/file name for the primary video ("Shot 1.mp4") — optional; absent = URL-derived name (fork default). */
+  readonly videoName?: string
   readonly videoBuffer?: ArrayBuffer
   readonly projectJson?: unknown
   readonly additionalFiles?: ReadonlyArray<FreecutImportFile>

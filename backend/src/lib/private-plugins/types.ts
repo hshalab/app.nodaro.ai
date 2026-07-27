@@ -597,6 +597,20 @@ export interface PluginJobsToolkit {
  * PromiseLike", referencing this repo's types.ts@241da6f5) — so the two
  * copies are in sync on this member. There is still no automated sync (see
  * the file header); any future edit here must be hand-mirrored there.
+ *
+ * 2026-07-27 — DELIBERATE ASYMMETRY vs the plugin-side copy: the plugin
+ * contract (`nodaro-cloud-plugins` `src/contract.ts`) additionally declares a
+ * standalone `from().select().eq().eq().maybeSingle()` chain — the recast
+ * create route's workflow ownership pre-check (the honest-400 fix for the
+ * `jobs_workflow_id_fkey` 500). That chain is runtime-true here (this file's
+ * `buildToolkit` passes the REAL supabase client, which has the full query
+ * surface) but is NOT declared on this mirror: checking the real client's
+ * generic `select` against any structural `select` signature sends
+ * postgrest-js's type-level select-string parser into unbounded instantiation
+ * and fails the `buildToolkit` return with TS2589 ("excessively deep") —
+ * verified 2026-07-27 with both `string` and literal `"id"` column typings.
+ * So this side stays shaped to what tsc CAN verify (the insert chain), and
+ * the plugin side documents the wider runtime promise.
  */
 export interface PluginSupabaseClient {
   from(table: string): {

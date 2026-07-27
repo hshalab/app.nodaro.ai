@@ -660,6 +660,10 @@ The segmented long-video engine ([Generate Video Pro](./nodes/ai-video/generate-
 
 Both enforce ownership (404 on a foreign job) and 400 on non-pro jobs. Pricing details and worked examples: the node page's [Stopping and continuing a run](./nodes/ai-video/generate-video-pro.md#stopping-and-continuing-a-run).
 
+## 13c. Recast (Cloud edition)
+
+`POST /v1/recast` (regenerate an analyzed source video with your own cast — the engine behind [recast.nodaro.ai](https://recast.nodaro.ai)) **requires `workflowId`**: the uuid of an existing workflow you own, which the recast run attaches to. Omitting it is a `400 workflow_id_required`; an unknown or foreign id is a `404 workflow_not_found`.
+
 ## 14. Pipelines
 
 Story-to-Video pipelines orchestrate multi-stage AI production: script → characters
