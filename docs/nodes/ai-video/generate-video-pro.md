@@ -51,6 +51,16 @@ Generate Video Pro exposes **exactly Generate Video's input handles** — same n
 | Continuation context | Select (2-5s) | 2s | How much of the previous segment each continuation segment sees as its reference. Raise for slow camera moves or music-timed motion; each extra second adds a small per-join cost (see the pricing formula) |
 | Auto-cast from analysis | Checkbox | Off | Experimental — when enabled and the script is a [Video Analysis](../processing-video/video-analysis.md) result whose entities carry reference frames, those frames are added as identity references (after any images you wired yourself, up to the provider's 9-image limit) and each segment prompt is told which reference is which entity. Off by default: generation is text-only unless you opt in |
 
+**Per-look identity.** When the driving analysis separates a subject's
+deliberate [appearance
+looks](../processing-video/video-analysis.md#appearance-looks-variations)
+(dream vs reality, flashback vs present, a disguise) and binds them to scenes,
+generation keys each subject's continuity on the *(entity, look)* pair: every
+look stays visually consistent across its own scenes — same wardrobe, same
+hair — without bleeding into the scenes where the other look is active.
+Consuming apps that support per-look casting (for example Recast) drive this
+automatically; scripts without look bindings behave exactly as before.
+
 ## Providers
 
 Generate Video Pro is scoped to the Seedance 2 family:

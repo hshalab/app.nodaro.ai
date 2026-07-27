@@ -148,6 +148,35 @@ your own entities.
 | `source` | enum | Entity family this slot casts from: `wired-character` / `wired-object` / `wired-location` / `wired-creature`. |
 | `role` | string | The entity's role in the video (e.g. "narrator", "hero product"). |
 | `description` | string | Self-contained visual description used to render the slot when no cast entity is bound. |
+| `variations` | array, optional | The slot's non-default **looks** — see below. Present only on runs that opted into looks and only when at least one exists. |
+
+#### Appearance looks (`variations`)
+
+A slot's `description` is its **default look**. When the same subject
+deliberately presents a materially different look in a different narrative
+context — dream vs reality, flashback vs present, a disguise, a costume change,
+an era jump — the analysis can separate each non-default look into a
+`variations` entry instead of averaging them into one description:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `variationId` | string | Look id (`dream`, `flashback`, `disguise`, `costume`, `transformation`, `era`, or `alt-N`). At most 4 per slot; never `default`. |
+| `label` | string | Short human name for the look (e.g. "Dream self"). |
+| `description` | string | A full standalone casting sheet for this look — it restates the subject's identity and replaces the slot `description` wherever the look is active. |
+| `refImageUrl` | string, optional | A hosted frame from the footage showing this specific look, picked automatically (per-look auto-cast). |
+
+Every scene where a slot wears a non-default look carries the binding in that
+scene's `slotVariations` map (`{"<slotId>": "<variationId>"}`); an unbound scene
+means the default look. Downstream, [Generate Video
+Pro](../ai-video/generate-video-pro.md) keys identity continuity on
+`(slot, look)` so each look stays visually consistent in its own scenes without
+bleeding into the others. When more looks are detected than the per-slot cap
+allows, the extras are folded into the default look and the fold is recorded on
+the result's `variationFolds` so nothing disappears silently.
+
+Looks are an **opt-in on the API request** (`variations: true`); the platform
+node analyzes without them, and consuming apps that support per-look casting
+(for example Recast) opt in on your behalf.
 
 ### `scenes[]`
 
@@ -165,6 +194,7 @@ your own entities.
 | `transitionOut` | enum, optional | Transition into the next scene: `cut` / `fade` / `wipe` / `whip`. |
 | `audio` | array | Concurrent audio layers (empty array `[]` = silence) — see below. |
 | `slotRefs` | string[] | Slot ids referenced by this scene, derived from its `visual` `{slot:x}` tokens. |
+| `slotVariations` | map, optional | `slotId → variationId` for slots wearing a non-default [look](#appearance-looks-variations) in this scene; absent key ⇒ the default look. Present only on runs that opted into looks. |
 
 **`audio`** — an **array of concurrent sound layers**. Real footage stacks sound
 (a music bed under dialogue over ambient sfx), so a scene captures every
