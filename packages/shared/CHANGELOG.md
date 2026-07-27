@@ -1,5 +1,15 @@
 # @nodaro/shared
 
+## 1.17.0
+
+### Minor Changes
+
+- d75e8dd: Add optional `videoName` to `NodaroLoadVideoPayload` — display/file name for the primary clip in the FreeCut `NODARO_LOAD_VIDEO` load payload (e.g. "Shot 1.mp4"). Absent keeps the current URL-derived naming, so existing senders are unaffected. Lets Studio's whole-production "Edit in FreeCut" name the primary clip the same way `additionalFiles` entries already carry names for clips 2..N.
+
+### Patch Changes
+
+- 7b7101a: Default the qa-check feature to Gemini 3.6 Flash (`LLM_FEATURE_DEFAULTS["qa-check"]`), replacing Claude Sonnet 4.6. Explicit `llmModel` selections are unaffected; the default now bills the economy tier id `qa-check:economy` (still 1 credit).
+
 ## 1.16.0
 
 ### Minor Changes
