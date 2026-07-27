@@ -1890,6 +1890,14 @@ export interface GenerateVideoProNodeData {
   smartCutMode?: "legacy-8x8" | "preroll-keep-prev" | "preroll-keep-next"
   /** Ride the audio-resemble channel in the pre-roll cut (gray-band rescue). */
   smartCutAudio?: boolean
+  /** Best-pair search windows: how many frames from the END of the previous
+   *  segment and the START of the next the PSNR matcher compares. Absent =
+   *  the engine's 8/8 default (byte-identical to before these existed).
+   *  Wider windows catch a continuation that re-enacts a longer tail —
+   *  recast pins 24/24 for exactly that. Applies to the best-pair
+   *  ("legacy-8x8") mode; the pre-roll modes run their own diagonal search. */
+  smartCutFramesPrev?: number
+  smartCutFramesNext?: number
   executionStatus?: "idle" | "running" | "completed" | "failed"
   errorMessage?: string
   generatedVideoUrl?: string

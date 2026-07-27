@@ -5,6 +5,7 @@ import {
   CallbackAuth,
   NotFoundError,
   NodaroError,
+  WorkflowConflictError,
 } from "../../index.js"
 
 function mockOk<T>(body: T) {
@@ -43,6 +44,42 @@ describe("workflows resource", () => {
     const body = JSON.parse(init.body)
     expect(body).toEqual({ name: "My Flow" })
     expect(body.projectId).toBeUndefined()
+  })
+
+  it("update passes OCC fields and throws WorkflowConflictError on 409 with the current record", async () => {
+    const fetchMock = vi.fn().mockReturnValueOnce(
+      mockErr(409, {
+        error: {
+          code: "workflow_conflict",
+          message: "Workflow was updated by another writer",
+          currentUpdatedAt: "2026-07-27T10:00:00Z",
+          currentVersion: 9,
+          currentRecord: { id: "wf-1", name: "Fresh", updatedAt: "2026-07-27T10:00:00Z", version: 9 },
+        },
+      }),
+    )
+    const c = createClient({
+      baseUrl: "https://api.example.com",
+      auth: new StaticTokenAuth("t"),
+      fetch: fetchMock,
+    })
+
+    const err = await c.workflows
+      .update("wf-1", { settings: { studio: {} }, expectedUpdatedAt: "2026-07-27T09:00:00Z" })
+      .catch((e: unknown) => e)
+
+    expect(err).toBeInstanceOf(WorkflowConflictError)
+    const conflict = err as WorkflowConflictError
+    expect(conflict.code).toBe("workflow_conflict")
+    expect(conflict.currentUpdatedAt).toBe("2026-07-27T10:00:00Z")
+    expect(conflict.currentVersion).toBe(9)
+    expect(conflict.currentRecord).toMatchObject({ id: "wf-1", name: "Fresh" })
+
+    // The OCC token rode the PATCH body.
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(JSON.parse(init.body as string)).toMatchObject({
+      expectedUpdatedAt: "2026-07-27T09:00:00Z",
+    })
   })
 
   it("get throws NotFoundError on 404", async () => {

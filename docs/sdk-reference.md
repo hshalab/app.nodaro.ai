@@ -262,6 +262,20 @@ HTTP 413. User's storage cap is reached.
 - `limitBytes?: number`
 - **Constructor:** `new StorageExceededError(message?: string, limitBytes?: number)`
 
+### `class WorkflowConflictError extends NodaroError`
+
+HTTP 409 `workflow_conflict`. An optimistic-concurrency update
+(`workflows.update` with `expectedUpdatedAt`/`expectedVersion`) was rejected
+because another writer updated the row first. Merge onto `currentRecord` and
+retry with its fresh token instead of clobbering the other writer.
+
+- `code = "workflow_conflict"`, `status = 409`
+- `currentUpdatedAt?: string` — the row's current `updated_at`
+- `currentVersion?: number` — the row's current `version`
+- `currentRecord?: Record<string, unknown>` — the full current workflow (when
+  the server includes it), so no follow-up GET is needed to merge
+- **Constructor:** `new WorkflowConflictError(message?: string, currentUpdatedAt?: string, currentVersion?: number, currentRecord?: Record<string, unknown>)`
+
 ### `throwFromResponse(status, body)`
 
 Internal helper that maps `(status, JSON body)` to the right error class and
@@ -363,10 +377,29 @@ PATCHes a workflow. Any subset of fields is allowed.
 Optimistic concurrency: pass `expectedVersion` (the integer `version` from a
 prior read — bumped by the database on every content change) to make the
 update conditional; on a mismatch the API returns `409 workflow_conflict`
-with `currentVersion` and `currentUpdatedAt` so you can refetch and retry.
-`expectedUpdatedAt` (string token) remains supported. Transient run-state
-keys on node `data` (`executionStatus`, `currentJobId`, progress counters)
-are stripped server-side and never persist.
+with `currentVersion`, `currentUpdatedAt`, and `currentRecord` — the full
+current workflow — so you can merge your changes onto the fresh record and
+retry without a follow-up GET. The SDK surfaces the 409 as
+`WorkflowConflictError` (fields: `currentUpdatedAt`, `currentVersion`,
+`currentRecord`). `expectedUpdatedAt` (string token) remains supported.
+Transient run-state keys on node `data` (`executionStatus`, `currentJobId`,
+progress counters) are stripped server-side and never persist.
+
+```ts
+import { WorkflowConflictError } from "@nodaro/sdk"
+
+try {
+  await client.workflows.update(id, { settings, expectedUpdatedAt: loadedAt })
+} catch (err) {
+  if (err instanceof WorkflowConflictError && err.currentRecord) {
+    const merged = mergeSettings(err.currentRecord.settings, settings)
+    await client.workflows.update(id, {
+      settings: merged,
+      expectedUpdatedAt: err.currentUpdatedAt,
+    })
+  } else throw err
+}
+```
 
 ```ts
 await client.workflows.update(id, { name: "Renamed", expectedVersion: 7 })
