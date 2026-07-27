@@ -877,6 +877,15 @@ export interface PluginLlmMultimodalRequest {
   /** Nucleus-sampling cutoff — pinned deliberately (1.0 disables it). Mirrors
    *  `LlmRequest.topP`. */
   topP?: number
+  /** Reasoning depth. Present on the text-only `PluginLlmRequest` since the
+   *  toolkit's first version; its absence HERE meant a multimodal caller could
+   *  never request thinking, silently riding the vendor default no matter what
+   *  it passed (video-analysis rolls, measured 2026-07-27: `low` = 0 thinking
+   *  tokens, unset = ~4.1k, `high` = ~4.7k, and slot recall 33% / 40% / 90%).
+   *  Same loose-string rationale as the text variant — `effectiveReasoningEffort`
+   *  ignores anything off the ladder, so an unknown value degrades to the vendor
+   *  default rather than a 400. */
+  reasoningEffort?: string
 }
 
 export interface PluginLlmToolkit {

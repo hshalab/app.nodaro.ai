@@ -689,6 +689,10 @@ export function buildToolkit(): PluginToolkit {
             maxTokens: req.maxTokens,
             temperature: req.temperature,
             topP: req.topP,
+            // Multimodal callers can request thinking depth too. Omitting this
+            // pinned every video-analysis roll to the vendor default no matter
+            // what it passed; `effectiveReasoningEffort` clamps unknown values.
+            reasoningEffort: req.reasoningEffort as LlmReasoningEffort | undefined,
             timeoutMs: req.timeoutMs,
           },
           schema as ZodType<T>,
