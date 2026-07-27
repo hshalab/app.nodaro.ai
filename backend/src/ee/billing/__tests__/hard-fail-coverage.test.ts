@@ -22,7 +22,7 @@
 
 import { describe, it, expect } from "vitest"
 import { STATIC_CREDIT_COSTS } from "../credits.js"
-import { IMAGE_TO_VIDEO_PROVIDERS, TEXT_TO_VIDEO_PROVIDERS, IMAGE_GEN_PROVIDERS, IMAGE_I2I_PROVIDERS, IMAGE_EDIT_PROVIDERS, buildVideoCreditModelIdentifier, buildMotionCreditModelIdentifier, buildCreditModelIdentifier, buildLlmCreditIdentifier, LLM_MODELS, FLUX2_RES_MP, type Flux2Model } from "@nodaro/shared"
+import { IMAGE_TO_VIDEO_PROVIDERS, TEXT_TO_VIDEO_PROVIDERS, IMAGE_GEN_PROVIDERS, IMAGE_I2I_PROVIDERS, IMAGE_EDIT_PROVIDERS, buildVideoCreditModelIdentifier, buildMotionCreditModelIdentifier, buildCreditModelIdentifier, buildLlmCreditIdentifier, LLM_MODELS, FLUX2_RES_MP, type Flux2Model, PIPELINE_PINNABLE_SCRIPT_LLMS } from "@nodaro/shared"
 
 // ---------------------------------------------------------------------------
 // Plausible-input matrices for each builder
@@ -179,6 +179,15 @@ describe("hard-fail policy: every runtime-emitted credit identifier is in STATIC
         const id = buildLlmCreditIdentifier(feature, model.id)
         check(id, `llm ${feature} ${model.id} tier=${model.tier}`)
       }
+    }
+
+    // Pipeline-pinnable models — create-pipeline.ts's tier guard passes each
+    // pinned id to checkCreditsWithProfile VERBATIM (bare model id, not a
+    // feature composite), so every allowlist member needs its own price row or
+    // picking it 500s the pipeline create. Script LLMs were unpriced until
+    // migration 274; image/video ids are covered by the matrices above.
+    for (const id of PIPELINE_PINNABLE_SCRIPT_LLMS) {
+      check(id, `pipeline pinnable script llm ${id}`)
     }
 
     // Assertion: nothing missing. The message lists every gap so PR review

@@ -839,6 +839,13 @@ export interface PluginLlmRequest {
   /** Nucleus-sampling cutoff (`top_p`) — pinned deliberately (1.0 disables it).
    *  Mirrors `LlmRequest.topP`. Additive-optional. */
   topP?: number
+  /** Reasoning effort (`low`–`max`), clamped per model by the app's registry.
+   *  Mirrors `LlmRequest.reasoningEffort`. Additive-optional — INERT until the
+   *  plugin repo mirrors the field in its own `contract.ts`. Note the output-cap
+   *  floor for reasoning models does NOT depend on this: `deriveParams` floors on
+   *  the registry's `thinkingDefaultOn`, so a plugin that sends no effort still
+   *  gets headroom. */
+  reasoningEffort?: string
 }
 
 /**

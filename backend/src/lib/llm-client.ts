@@ -269,8 +269,9 @@ function effectiveTimeout(req: LlmRequest): number {
 }
 
 /** Per-request derived params: clamped effort, temperature (stripped for
- *  models that reject it), and the output-token cap (raised to 32768 at
- *  xhigh/max so thinking doesn't truncate the answer). */
+ *  models that reject it), and the output-token cap (raised to 32768 whenever
+ *  reasoning tokens share the budget — at xhigh/max, or on ANY call to a
+ *  `thinkingDefaultOn` model — so thinking doesn't truncate the answer). */
 function deriveParams(model: LlmModelDef, req: LlmRequest): {
   eff: LlmReasoningEffort | undefined
   temperature: number | undefined
@@ -283,13 +284,18 @@ function deriveParams(model: LlmModelDef, req: LlmRequest): {
   // rejects sampling params gets neither.
   const topP = model.supportsTemperature === false ? undefined : req.topP
   let maxTokens = req.maxTokens ?? model.maxOutputTokens
-  if (eff === "xhigh" || eff === "max") {
-    // Reasoning tokens share the output budget on these models. Floor the cap
-    // even when the caller sent an explicit maxTokens — node data persists the
-    // old 2048 default, and a tier-bumped call must never truncate its answer
-    // because thinking consumed a small legacy cap. The cap is a ceiling, not
-    // spend: billing is flat per call, so raising it costs nothing unless the
-    // model actually generates that much.
+  // Reasoning tokens share the output budget. Two ways that happens:
+  //   - an xhigh/max effort was requested (any reasoning model), or
+  //   - the model reasons with no thinking param sent at all
+  //     (`thinkingDefaultOn` — Claude Opus 5 flipped this default, so even
+  //     Effort=Auto reasons and a 2048 cap is shared with the answer).
+  // Floor the cap even when the caller sent an explicit maxTokens — node data
+  // persists the old 2048 default, and hardcoded 2048s live in several routes
+  // (after-effects/motion-graphics/lottie-overlay); such a call must never
+  // truncate its answer because thinking consumed a small legacy cap. The cap
+  // is a ceiling, not spend: billing is flat per call, so raising it costs
+  // nothing unless the model actually generates that much.
+  if (eff === "xhigh" || eff === "max" || model.thinkingDefaultOn) {
     maxTokens = Math.max(maxTokens, 32768)
   }
   return { eff, temperature, topP, maxTokens }

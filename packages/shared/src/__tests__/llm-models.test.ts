@@ -20,12 +20,36 @@ import { PIPELINE_PINNABLE_SCRIPT_LLMS } from "../pipeline-types.js"
 // the NON-monetary model registry (ids, capabilities, tiers, feature
 // defaults) that stays in the published package.
 
+/** The registry's expected membership, in order — the single list both the
+ *  count guard and the id-order guard below assert against, so a model
+ *  addition can never leave one of them stale. */
+const EXPECTED_MODEL_IDS = [
+  "gemini-3-flash",
+  "gemini-3.6-flash",
+  "claude-haiku-4.5",
+  "claude-sonnet-4.6",
+  "gpt-5.2",
+  "gemini-3.1-pro",
+  "claude-opus-4.7",
+  "gpt-5.4",
+  "gpt-5.5",
+  "gpt-5.6-luna",
+  "gpt-5.6-terra",
+  "gpt-5.6-sol",
+  "claude-sonnet-5",
+  "claude-opus-4.8",
+  "claude-opus-5",
+  "claude-fable-5",
+]
+
 // ---------------------------------------------------------------------------
 // LLM_MODELS data integrity
 // ---------------------------------------------------------------------------
 describe("LLM_MODELS data integrity", () => {
-  it("should have exactly 15 models", () => {
-    expect(LLM_MODELS).toHaveLength(16)
+  it("model count matches the enumerated id list", () => {
+    // Bound to the id list asserted below rather than a hand-typed number, so
+    // the count and the title can never disagree after a model addition.
+    expect(LLM_MODELS).toHaveLength(EXPECTED_MODEL_IDS.length)
   })
 
   it("each model has all required fields", () => {
@@ -106,25 +130,7 @@ describe("LLM_MODEL_IDS", () => {
   })
 
   it("contains all expected model ids", () => {
-    const expected = [
-      "gemini-3-flash",
-      "gemini-3.6-flash",
-      "claude-haiku-4.5",
-      "claude-sonnet-4.6",
-      "gpt-5.2",
-      "gemini-3.1-pro",
-      "claude-opus-4.7",
-      "gpt-5.4",
-      "gpt-5.5",
-      "gpt-5.6-luna",
-      "gpt-5.6-terra",
-      "gpt-5.6-sol",
-      "claude-sonnet-5",
-      "claude-opus-4.8",
-      "claude-opus-5",
-      "claude-fable-5",
-    ]
-    expect(LLM_MODEL_IDS).toEqual(expected)
+    expect(LLM_MODEL_IDS).toEqual(EXPECTED_MODEL_IDS)
   })
 })
 
@@ -522,6 +528,25 @@ describe("reasoning effort registry", () => {
     expect(getLlmTier("gpt-5.5")).toBe("premium")
     expect(getLlmTier("gemini-3.6-flash")).toBe("economy")
     expect(getLlmTier("claude-fable-5")).toBe("premium")
+    expect(getLlmTier("claude-opus-5")).toBe("premium")
+  })
+
+  it("claude-opus-5 carries the full ladder, its own direct fallback, and thinkingDefaultOn", () => {
+    const m = getLlmModel("claude-opus-5")
+    expect(m?.reasoningEfforts).toEqual(["low", "medium", "high", "xhigh", "max"])
+    expect(m?.directFallbackModel).toBe("claude-opus-5")
+    // Load-bearing: consumers floor max_tokens off this flag, because Opus 5
+    // reasons even with NO thinking param sent. Dropping it silently
+    // reintroduces truncated answers at Effort=Auto on a premium model.
+    expect(m?.thinkingDefaultOn).toBe(true)
+  })
+
+  it("thinkingDefaultOn is set only where the vendor default actually reasons", () => {
+    // Opus 4.8 / 4.7 and Sonnet 5 do NOT reason when `thinking` is omitted —
+    // flagging them would inflate every call's cap for no reason.
+    for (const id of ["claude-opus-4.8", "claude-opus-4.7", "claude-sonnet-5", "claude-sonnet-4.6"]) {
+      expect(getLlmModel(id)?.thinkingDefaultOn, id).toBeUndefined()
+    }
   })
 
   it("gemini-3.6-flash exposes the KIE low/high thinking levels; claude-fable-5 the full Claude ladder", () => {
