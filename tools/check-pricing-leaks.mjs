@@ -113,7 +113,10 @@ function walk(dir) {
   return entries.flatMap((entry) => {
     const p = join(dir, entry.name)
     if (entry.isDirectory()) return SKIP_DIRS.has(entry.name) ? [] : walk(p)
-    return EXTS.has(extname(entry.name)) ? [p] : []
+    // Forward-slash-normalized so ALLOWLIST paths match on Windows too
+    // (path.join emits "\" there, which silently defeated the allowlist and
+    // blocked publishes run from a Windows checkout).
+    return EXTS.has(extname(entry.name)) ? [p.replaceAll("\\", "/")] : []
   })
 }
 
