@@ -57,6 +57,20 @@ export interface LlmModelDef {
   supportsTemperature?: false
   /** Claude-only: KIE is the preferred routing, direct Anthropic the fallback. */
   preferKie?: true
+  /**
+   * true = the model reasons even when NO thinking parameter is sent, so its
+   * reasoning tokens share the `max_tokens` budget on EVERY call — not just
+   * effort-bearing ones. Claude Opus 5 flipped this default (on Opus 4.8/4.7
+   * and Sonnet 5, omitting `thinking` means no thinking at all).
+   *
+   * Consumers MUST give such a model output headroom regardless of the
+   * requested effort, or reasoning silently eats a small legacy cap and the
+   * answer truncates with `stop_reason: max_tokens` — a paid-for empty reply,
+   * not an error. `deriveParams` (llm-client.ts) and the film-pipeline's
+   * `callLLM` both floor on this flag; keep it in sync with the vendor's
+   * documented default rather than inferring it from the model name.
+   */
+  thinkingDefaultOn?: true
 }
 
 export const LLM_MODELS: readonly LlmModelDef[] = [
@@ -143,7 +157,11 @@ export const LLM_MODELS: readonly LlmModelDef[] = [
   {
     id: "claude-opus-4.7",
     displayName: "Claude Opus 4.7",
-    desc: "Highest quality, complex tasks",
+    // Superlatives belong to the CURRENT top model only — `desc` renders in every
+    // model picker, so leaving "highest quality" on an older Opus steers
+    // quality-critical work backwards (all three Opus entries bill premium, so
+    // the mis-steer is invisible on the invoice).
+    desc: "Older Opus, complex tasks",
     tier: "premium",
     kieFormat: "messages",
     kieSlugOrModel: "claude-opus-4-7",
@@ -276,6 +294,9 @@ export const LLM_MODELS: readonly LlmModelDef[] = [
     reasoningEfforts: ["low", "medium", "high", "xhigh", "max"],
     supportsTemperature: false,
     preferKie: true,
+    // Opus 5 reasons with NO thinking param sent (vendor default flipped from
+    // Opus 4.8/4.7) — so every call needs output headroom, not just xhigh/max.
+    thinkingDefaultOn: true,
   },
   {
     id: "claude-fable-5",

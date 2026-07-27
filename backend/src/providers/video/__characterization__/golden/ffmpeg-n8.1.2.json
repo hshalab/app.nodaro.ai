@@ -1,5 +1,5 @@
 {
-  "ffmpegVersion": "n8.1.2-22-g94138f6973-20260712",
+  "ffmpegVersion": "n8.1.2-21-gce3c09c101-20260630",
   "operations": {
     "add-captions-karaoke-box": [
       {
@@ -4323,7 +4323,7 @@
           "kind": "image",
           "width": 640,
           "height": 360,
-          "meanLuma": 126.99
+          "meanLuma": 126.44
         }
       }
     ],
@@ -4334,7 +4334,7 @@
           "kind": "image",
           "width": 640,
           "height": 360,
-          "meanLuma": 127.38
+          "meanLuma": 126.85
         }
       }
     ],

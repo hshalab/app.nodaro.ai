@@ -21,6 +21,27 @@ const TEMPERATURE_UNSUPPORTED_MODELS = new Set<string>(
   ]),
 )
 
+/**
+ * Models that reason with no thinking param sent, so reasoning tokens share
+ * `max_tokens` with the emit tool_use — derived from the registry
+ * (`thinkingDefaultOn`) exactly like the temperature set above, since this is
+ * a SEPARATE call path from `lib/llm-client.ts` and must not drift from it.
+ */
+const THINKING_DEFAULT_ON_MODELS = new Set<string>(
+  LLM_MODELS.filter((m) => m.thinkingDefaultOn).flatMap((m) => [
+    m.kieSlugOrModel,
+    ...(m.directFallbackModel ? [m.directFallbackModel] : []),
+  ]),
+)
+
+/** Output cap for one stage turn. A reasoning-by-default model splits this
+ *  budget with its thinking, and a truncated turn yields NO tool_use block —
+ *  which this path reports as "Model did not call the emit tool." and then
+ *  retries the full prompt twice more. Give those models headroom; everything
+ *  else keeps the long-standing 8192. */
+const STAGE_MAX_TOKENS = 8192
+const STAGE_MAX_TOKENS_THINKING = 32768
+
 // Accept any Zod schema whose PARSED OUTPUT is T. The schema's INPUT type may
 // diverge from T (e.g. ZodDefault makes input optional but output required),
 // which is the case for ShowrunnerPlanSchema. z.toJSONSchema + safeParse only
@@ -175,7 +196,9 @@ export async function callLLM<T>(args: CallLLMArgs<T>): Promise<CallLLMResult<T>
     const supportsTemperature = !TEMPERATURE_UNSUPPORTED_MODELS.has(modelId)
     const createParams = {
       model: modelId,
-      max_tokens: 8192,
+      max_tokens: THINKING_DEFAULT_ON_MODELS.has(modelId)
+        ? STAGE_MAX_TOKENS_THINKING
+        : STAGE_MAX_TOKENS,
       ...(supportsTemperature ? { temperature } : {}),
       system: systemBlock,
       tools: [toolDef],

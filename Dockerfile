@@ -273,10 +273,18 @@ FROM node:22-slim AS runner
 # the same tarball via the SAME script (tools/install-pinned-ffmpeg.sh, which
 # also owns the ARG parsing) — a procedure change lands everywhere at once,
 # and a pin mismatch fails the suite's version guard loudly.
-ARG FFMPEG_TARBALL_URL_AMD64=https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-07-12-13-16/ffmpeg-n8.1.2-22-g94138f6973-linux64-gpl-8.1.tar.xz
-ARG FFMPEG_TARBALL_SHA256_AMD64=516b60bad3df2dedea23594c60e7afaecf3e6a440ca9091ef95ee1f62deba71e
-ARG FFMPEG_TARBALL_URL_ARM64=https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-07-12-13-16/ffmpeg-n8.1.2-22-g94138f6973-linuxarm64-gpl-8.1.tar.xz
-ARG FFMPEG_TARBALL_SHA256_ARM64=0a34477fb47a9c108b869fccc9919e00d0c7ebf886e8d45301c74d2d46640d64
+# PIN A MONTH-END BUILD, NEVER A MID-MONTH DAILY. BtbN keeps only ~2 weeks of
+# `autobuild-<date>-<time>` dailies and then DELETES the whole release — tag,
+# assets and all. The previous pin (2026-07-12, a daily) 404'd on 2026-07-27
+# and took every image build and the characterize CI job down with it, since
+# the tarball is fetched fresh whenever the Docker layer cache misses. The
+# month-end snapshots (…-06-30-…, …-05-31-…) are retained for YEARS — the
+# series currently reaches back to 2024-08 — so they are the only durable
+# choice here. Verify a candidate still resolves before pinning it.
+ARG FFMPEG_TARBALL_URL_AMD64=https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-06-30-13-34/ffmpeg-n8.1.2-21-gce3c09c101-linux64-gpl-8.1.tar.xz
+ARG FFMPEG_TARBALL_SHA256_AMD64=0ba73bbd93472c7622f6dec26d334c5e62e64d858d072490b2844320970456cd
+ARG FFMPEG_TARBALL_URL_ARM64=https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-06-30-13-34/ffmpeg-n8.1.2-21-gce3c09c101-linuxarm64-gpl-8.1.tar.xz
+ARG FFMPEG_TARBALL_SHA256_ARM64=d3f90a71a38238466de2e4dc98537862d244e3307383435f94cbc4b8491033f8
 COPY tools/install-pinned-ffmpeg.sh /tmp/install-pinned-ffmpeg.sh
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl ca-certificates xz-utils \

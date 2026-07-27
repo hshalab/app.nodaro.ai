@@ -2,7 +2,7 @@ import { supabase } from "../../lib/supabase.js"
 import { hasCredits } from "../../lib/config.js"
 import { getAppSettings } from "../../lib/app-settings.js"
 import { FREE_TIER_RESTRICTIONS, TIER_STORAGE_LIMITS } from "./stripe-config.js"
-import { buildCreditModelIdentifier, buildVideoCreditModelIdentifier, buildMotionCreditModelIdentifier, buildLlmCreditIdentifier, FLUX2_RES_MP, type Flux2Model, AI_AVATAR_DURATION_BUCKETS, resolveAiAvatarCreditId, type AiAvatarEngine, type AiAvatarResolution, CINEMATIC_MIN_DURATION_SEC, CINEMATIC_MAX_DURATION_SEC, cinematicCreditId, resolveCinematicCreditId, type CinematicResolution, resolveSwitchXCreditId, VIDEO_ANALYSIS_DURATION_BUCKETS, VIDEO_ANALYSIS_MAX_DURATION_SEC, VIDEO_ANALYSIS_BUCKET_CREDITS, buildVideoAnalysisCreditId, resolveVideoAnalysisModel, DEFAULT_VIDEO_ANALYSIS_MODEL } from "@nodaro/shared"
+import { PIPELINE_PINNABLE_SCRIPT_LLMS, getLlmTier, buildCreditModelIdentifier, buildVideoCreditModelIdentifier, buildMotionCreditModelIdentifier, buildLlmCreditIdentifier, FLUX2_RES_MP, type Flux2Model, AI_AVATAR_DURATION_BUCKETS, resolveAiAvatarCreditId, type AiAvatarEngine, type AiAvatarResolution, CINEMATIC_MIN_DURATION_SEC, CINEMATIC_MAX_DURATION_SEC, cinematicCreditId, resolveCinematicCreditId, type CinematicResolution, resolveSwitchXCreditId, VIDEO_ANALYSIS_DURATION_BUCKETS, VIDEO_ANALYSIS_MAX_DURATION_SEC, VIDEO_ANALYSIS_BUCKET_CREDITS, buildVideoAnalysisCreditId, resolveVideoAnalysisModel, DEFAULT_VIDEO_ANALYSIS_MODEL } from "@nodaro/shared"
 // Provider-$ cost formulas — CORE lib (not @nodaro/shared, an irrevocably
 // published Apache package). See the 2026-07-06 public-flip IP audit, S5.
 import { flux2BaseCredits } from "../../lib/pricing/flux2-cost.js"
@@ -76,6 +76,23 @@ for (const resolution of Object.keys(CINEMATIC_RATE_USD_PER_SEC) as CinematicRes
 // `mixed` is the shared credit family for BOTH mixed analysis tiers
 // (`mixed` + `mixed-fast` — variants of one engine plan; internals live in
 // the private analysis plugin); videoAnalysisCreditSegment maps the sentinels.
+// ── Pipeline-pinnable script LLMs — BARE model ids, not feature composites ──
+// `create-pipeline.ts`'s tier guard calls `checkCreditsWithProfile` with the
+// bare pinned id (alongside pinned image/video model ids, which ARE priced), so
+// it lands in `getModelCreditBaseCost` — and the 2026-05 hard-fail policy throws
+// `PriceNotConfiguredError` on any unconfigured identifier. An unpriced pinnable
+// id therefore turns "pick this Script LLM" into a 500 instead of a pipeline.
+// Derived from the shared allowlist × each model's registry tier so ADDING a
+// pinnable model cannot reintroduce the gap (guarded by hard-fail-coverage.test).
+// Gate-only: the pin check never deducts — the stage's real charge rides the
+// generate-script / llm-chat feature identifiers and their tier composites.
+const PINNABLE_SCRIPT_LLM_STATIC: Record<string, number> = Object.fromEntries(
+  PIPELINE_PINNABLE_SCRIPT_LLMS.map((id) => {
+    const tier = getLlmTier(id) // dash-form ids resolve via the registry's alias fallback
+    return [id, tier === "economy" ? 1 : tier === "premium" ? 3 : 2]
+  }),
+)
+
 const VIDEO_ANALYSIS_STATIC: Record<string, number> = {}
 for (const model of ["gemini-3-flash", "gemini-3.6-flash", "gemini-3.1-pro", "mixed"]) {
   // Bare per-model id (`video-analysis:<model>`) = the unknown-duration ceiling
@@ -834,6 +851,7 @@ export const STATIC_CREDIT_COSTS: Record<string, number> = {
   "motion-graphics-lottie": 5,         // standard (Sonnet 4.6, ~3K in + 4K out)
   "motion-graphics-lottie:economy": 1,
   "motion-graphics-lottie:premium": 8, // Opus 4.7 at the lottie token profile
+  ...PINNABLE_SCRIPT_LLM_STATIC,
   "composite": 0,
   "sub-workflow": 0,
   // ── Inline / control nodes — pure in-process logic, no provider cost (0cr).

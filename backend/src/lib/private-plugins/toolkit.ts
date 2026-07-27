@@ -61,6 +61,7 @@ import { pollKieTask, isUpstreamKieFailure } from "../../providers/kie/client.js
 import { combineVideos as combineVideosCore } from "../../providers/video/combine-videos.js"
 import { extractTailToFile } from "../../providers/video/extract-tail.js"
 import { llmCompleteStructured } from "../llm-client.js"
+import type { LlmReasoningEffort } from "@nodaro/shared"
 import type { ProviderOptions, ReconcileOpts } from "../../providers/provider.interface.js"
 import { randomUUID } from "node:crypto"
 import { dirname, join } from "node:path"
@@ -661,6 +662,10 @@ export function buildToolkit(): PluginToolkit {
             // survives; an unset field stays vendor-default as before.
             temperature: req.temperature,
             topP: req.topP,
+            // The contract keeps this a loose string (no cross-repo type
+            // identity); effectiveReasoningEffort ignores anything outside the
+            // ladder, so an unknown value degrades to vendor-default, not a 400.
+            reasoningEffort: req.reasoningEffort as LlmReasoningEffort | undefined,
           },
           schema as ZodType<T>,
           opts,
