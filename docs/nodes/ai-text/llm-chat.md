@@ -28,14 +28,14 @@ When the prompt (or a template) produces a single block with no `===NEXT===` mar
 | Instructions (System Prompt) | `string` | `""` | Optional system instructions that guide the model's behavior and output format. Labeled **Instructions (System Prompt)** in the config panel and **Instructions** on the node handle |
 | User Input | `string` | `""` | The main prompt. Can include references to upstream nodes via field mappings |
 | Model | `string` | `gemini-3.6-flash` | LLM model picked via the model selector — drives both capability and credit cost (see [Credit pricing](#credit-pricing)) |
-| Temperature | `number` | `0.7` | Creativity control (0 = deterministic, 1 = more creative). Ignored by models that reject the parameter (Claude Opus 4.7, GPT-5.5, the GPT-5.6 family, Claude Sonnet 5, Claude Opus 4.8, and Claude Fable 5) |
+| Temperature | `number` | `0.7` | Creativity control (0 = deterministic, 1 = more creative). Ignored by models that reject the parameter (Claude Opus 4.7, GPT-5.5, the GPT-5.6 family, Claude Sonnet 5, Claude Opus 4.8, Claude Opus 5, and Claude Fable 5) |
 | Max Tokens | `number` | `8192` | Maximum output length in tokens. At `xhigh`/`max` effort the effective cap is floored to 32768 so reasoning tokens can't truncate the answer |
 | # of runs | `number` | `1` | How many generations to produce per Run click (1–4 in the node's quick toolbar). Each run is charged separately — the Run button shows the multiplied credit cost |
 | Effort | `string` | `Auto` | Reasoning effort for models that support it — hidden entirely for models with no reasoning levels. See [Reasoning effort](#reasoning-effort) |
 
 ### Model selector
 
-The model is chosen from the shared LLM model selector and determines the credit cost by tier. All 15 models accept an image reference; only the **Gemini** models additionally accept video and audio references.
+The model is chosen from the shared LLM model selector and determines the credit cost by tier. All 16 models accept an image reference; only the **Gemini** models additionally accept video and audio references.
 
 | Model | Tier | Multimodal (references) |
 |-------|------|--------------------------|
@@ -53,9 +53,10 @@ The model is chosen from the shared LLM model selector and determines the credit
 | GPT-5.5 | Premium | image only |
 | GPT-5.6 Sol | Premium | image only |
 | Claude Opus 4.8 | Premium | image only |
+| Claude Opus 5 | Premium | image only |
 | Claude Fable 5 | Premium | image only |
 
-The default model is Gemini 3.6 Flash (economy tier). 11 of the 15 models expose reasoning levels and show an **Effort** selector next to the model picker (the exceptions: Gemini 3 Flash, Claude Haiku 4.5, GPT-5.2, and Gemini 3.1 Pro have no effort lever) — see [Reasoning effort](#reasoning-effort).
+The default model is Gemini 3.6 Flash (economy tier). 12 of the 16 models expose reasoning levels and show an **Effort** selector next to the model picker (the exceptions: Gemini 3 Flash, Claude Haiku 4.5, GPT-5.2, and Gemini 3.1 Pro have no effort lever) — see [Reasoning effort](#reasoning-effort).
 
 ## Canvas controls
 

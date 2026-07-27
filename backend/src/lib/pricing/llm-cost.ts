@@ -55,6 +55,9 @@ const LLM_MODEL_RATES_USD_PER_M: Record<string, LlmModelRateUsd> = {
   // grok-4.5 deferred — add its rate row when the model lands in the registry.
   "claude-sonnet-5":   { inputPricePerM: 0.85,  outputPricePerM: 4.275 },
   "claude-opus-4.8":   { inputPricePerM: 2.00,  outputPricePerM: 10.00 },
+  // KIE list price 400/2000 KIE-credits per M ($0.005/credit) — ~40% of the
+  // official vendor price (confirmed 2026-07-27).
+  "claude-opus-5":     { inputPricePerM: 2.00,  outputPricePerM: 10.00 },
   // KIE list price 800/4000 KIE-credits per M ($0.005/credit) — ~40% of the
   // official vendor price (confirmed 2026-07-26).
   "claude-fable-5":    { inputPricePerM: 4.00,  outputPricePerM: 20.00 },

@@ -245,7 +245,7 @@ export const LLM_MODELS: readonly LlmModelDef[] = [
   {
     id: "claude-opus-4.8",
     displayName: "Claude Opus 4.8",
-    desc: "Most capable Claude, long-horizon work",
+    desc: "Previous-gen Opus, long-horizon work",
     tier: "premium",
     kieFormat: "messages",
     kieSlugOrModel: "claude-opus-4-8",
@@ -254,6 +254,25 @@ export const LLM_MODELS: readonly LlmModelDef[] = [
     supportsImages: true,
     maxOutputTokens: 16384,
     directFallbackModel: "claude-opus-4-8",
+    reasoningEfforts: ["low", "medium", "high", "xhigh", "max"],
+    supportsTemperature: false,
+    preferKie: true,
+  },
+  {
+    id: "claude-opus-5",
+    displayName: "Claude Opus 5",
+    desc: "Latest Opus, deepest agentic reasoning",
+    tier: "premium",
+    kieFormat: "messages",
+    // KIE serves Opus 5 on the Claude-native messages dialect under the plain
+    // id (docs.kie.ai/market/claude/claude-opus-5.md) — same path shape as
+    // claude-opus-4-8 / claude-fable-5.
+    kieSlugOrModel: "claude-opus-5",
+    vendor: "anthropic",
+    structuredOutputMode: "anthropic-tool",
+    supportsImages: true,
+    maxOutputTokens: 16384,
+    directFallbackModel: "claude-opus-5",
     reasoningEfforts: ["low", "medium", "high", "xhigh", "max"],
     supportsTemperature: false,
     preferKie: true,
@@ -323,7 +342,7 @@ export const LLM_FEATURE_DEFAULTS: Record<LlmFeature, string> = {
   "lottie-overlay": "claude-sonnet-4.6",
   "3d-title": "claude-sonnet-4.6",
   "image-to-text": "claude-sonnet-4.6",
-  "describe-to-picker": "claude-opus-4.7",
+  "describe-to-picker": "claude-opus-5",
   "qa-check": "gemini-3.6-flash",
   "generate-script": "gemini-3.6-flash",
   "translate": "gemini-3.6-flash",
@@ -354,6 +373,7 @@ export const LLM_MODALITY_CAPS: Record<string, { image: boolean; video: boolean;
   "gpt-5.6-sol":       { image: true,  video: false, audio: false },
   "claude-sonnet-5":   { image: true,  video: false, audio: false },
   "claude-opus-4.8":   { image: true,  video: false, audio: false },
+  "claude-opus-5":     { image: true,  video: false, audio: false },
   "claude-fable-5":    { image: true,  video: false, audio: false },
 }
 

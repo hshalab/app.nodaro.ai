@@ -77,6 +77,10 @@ describe("calculateLlmCost", () => {
     // 1M/1M: 2.00 + 10.00 = 12.00
     expect(calculateLlmCost("claude-opus-4.8", { inputTokens: 1_000_000, outputTokens: 1_000_000 })).toBeCloseTo(12.0, 10)
   })
+  it("prices claude-opus-5 at KIE list rates", () => {
+    // 1M/1M: 2.00 + 10.00 = 12.00 (400/2000 KIE credits @ $0.005)
+    expect(calculateLlmCost("claude-opus-5", { inputTokens: 1_000_000, outputTokens: 1_000_000 })).toBeCloseTo(12.0, 10)
+  })
   it("prices gpt-5.5 at KIE list rates", () => {
     // (1000 * 1.40 + 500 * 8.40) / 1_000_000 = 0.0056
     expect(calculateLlmCost("gpt-5.5", { inputTokens: 1000, outputTokens: 500 })).toBeCloseTo(0.0056, 10)
