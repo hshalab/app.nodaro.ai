@@ -1,5 +1,17 @@
 # @nodaro/sdk
 
+## 1.10.0
+
+### Minor Changes
+
+- e0964c1: Workflow optimistic concurrency, first-class in the SDK: `UpdateWorkflowInput` gains `expectedUpdatedAt` / `expectedVersion`, and a stale write now throws the new `WorkflowConflictError` (409 `workflow_conflict`) carrying `currentUpdatedAt`, `currentVersion`, and `currentRecord` — the full current workflow returned by the server on conflict, so callers merge-and-retry without a follow-up GET instead of last-writer-wins clobbering concurrent tabs.
+
+### Patch Changes
+
+- Updated dependencies [9e92137]
+- Updated dependencies [4938964]
+  - @nodaro/shared@1.19.0
+
 ## 1.9.0
 
 ### Minor Changes
