@@ -14,6 +14,10 @@ The Upload Image node provides a source image to the workflow. Enter a direct UR
 
 Accepts: PNG, JPEG, WebP formats.
 
+## Adjust Image
+
+Choosing a file opens an **Adjust Image** step before the upload is committed: crop with an aspect-ratio preset (or freeform), and optionally convert to PNG, JPEG or WebP (under **Advanced**). Cropping happens in the browser, so the uploaded file is already the cropped region.
+
 ## Inputs & Outputs
 
 **Inputs:** None (this is a source node)

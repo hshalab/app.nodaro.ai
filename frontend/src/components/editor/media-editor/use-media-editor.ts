@@ -111,15 +111,25 @@ export function useMediaEditor({ onComplete, onCancel }: UseMediaEditorOptions) 
         duration: 0,
       }
 
-      if (mediaType === "image") {
-        const dims = await getImageDimensions(objectUrl)
-        info.naturalWidth = dims.width
-        info.naturalHeight = dims.height
-      } else if (mediaType === "video" && !needsConversion) {
-        const meta = await getVideoMetadata(objectUrl)
-        info.naturalWidth = meta.width
-        info.naturalHeight = meta.height
-        info.duration = meta.duration
+      // A probe failure must never stop the editor from opening — degrade to
+      // the panels that don't need the missing dimension.
+      try {
+        if (mediaType === "image") {
+          const dims = await getImageDimensions(objectUrl)
+          info.naturalWidth = dims.width
+          info.naturalHeight = dims.height
+        } else if (mediaType === "video" && !needsConversion) {
+          const meta = await getVideoMetadata(objectUrl)
+          info.naturalWidth = meta.width
+          info.naturalHeight = meta.height
+          info.duration = meta.duration
+        } else if (mediaType === "audio") {
+          // Without this the modal renders only the format dropdown: TrimPanel
+          // is gated on duration > 0.
+          info.duration = await getAudioDuration(objectUrl)
+        }
+      } catch {
+        // keep the zero defaults
       }
 
       editorFiles.push(info)
@@ -365,6 +375,46 @@ function getImageDimensions(url: string): Promise<{ width: number; height: numbe
     img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight })
     img.onerror = reject
     img.src = url
+  })
+}
+
+/**
+ * Duration of an audio file, in seconds. Resolves 0 rather than rejecting so a
+ * file we cannot probe still opens the editor (minus the trim panel).
+ */
+function getAudioDuration(url: string): Promise<number> {
+  return new Promise((resolve) => {
+    const audio = document.createElement("audio")
+    audio.preload = "metadata"
+
+    let settled = false
+    const done = (d: number) => {
+      if (settled) return
+      settled = true
+      audio.onloadedmetadata = null
+      audio.ontimeupdate = null
+      audio.onerror = null
+      resolve(Number.isFinite(d) && d > 0 ? d : 0)
+    }
+
+    audio.onloadedmetadata = () => {
+      // Chrome/Safari report Infinity for VBR MP3s that carry no duration
+      // header until the element is forced to seek past the end.
+      if (audio.duration === Infinity) {
+        audio.ontimeupdate = () => {
+          audio.ontimeupdate = null
+          audio.currentTime = 0
+          done(audio.duration)
+        }
+        audio.currentTime = Number.MAX_SAFE_INTEGER
+        return
+      }
+      done(audio.duration)
+    }
+    audio.onerror = () => done(0)
+    setTimeout(() => done(0), 5000)
+
+    audio.src = url
   })
 }
 
