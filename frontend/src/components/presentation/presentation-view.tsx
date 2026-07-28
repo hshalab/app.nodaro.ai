@@ -104,6 +104,26 @@ const EDITOR_META: Record<string, { filename: string; mime: string; outputKey: s
   audio: { filename: "edited-audio.mp3", mime: "audio/mpeg", outputKey: "audioUrl" },
 }
 
+const MIME_EXTENSIONS: Record<string, string> = {
+  "audio/mpeg": "mp3", "audio/mp3": "mp3", "audio/wav": "wav", "audio/x-wav": "wav",
+  "audio/wave": "wav", "audio/flac": "flac", "audio/x-flac": "flac", "audio/mp4": "m4a",
+  "audio/aac": "aac", "audio/ogg": "ogg", "audio/webm": "weba",
+  "video/mp4": "mp4", "video/webm": "webm", "video/quicktime": "mov",
+  "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp",
+}
+
+/**
+ * Name the edited file after what the editor actually produced. AudioMass can
+ * export wav/flac as well as mp3, so trusting EDITOR_META alone would upload a
+ * wav under a .mp3 name and an audio/mpeg content-type.
+ */
+function editedFile(type: "image" | "video" | "audio", blob: Blob): File {
+  const meta = EDITOR_META[type]
+  const mime = blob.type || meta.mime
+  const ext = MIME_EXTENSIONS[mime.toLowerCase()]
+  return new File([blob], ext ? `edited-${type}.${ext}` : meta.filename, { type: mime })
+}
+
 /** Extract generatedResults into a flat string[] for gallery display (shared by both fullscreen and tab branches). */
 function extractGeneratedListResults(
   source: Record<string, unknown>,
@@ -566,7 +586,7 @@ export function PresentationView({ mode, isOwner, onExitFullscreen, onRun, onCan
   const handleEditorSave = useCallback(async (blob: Blob) => {
     if (!editState) return
     const meta = EDITOR_META[editState.type]
-    const file = new File([blob], meta.filename, { type: meta.mime })
+    const file = editedFile(editState.type, blob)
     const { uploadFile: doUpload } = await import("@/lib/api")
     const { probeMediaMetadata } = await import("@/lib/probe-media-metadata")
     const [result, mediaMeta] = await Promise.all([doUpload(file), probeMediaMetadata(blob)])

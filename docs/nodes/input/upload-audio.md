@@ -12,7 +12,18 @@ The Upload Audio node provides a source audio file to the workflow. Enter a dire
 |-------|------|---------|-------------|
 | URL | Text input | — | Direct URL to an audio file |
 
-Accepts: MP3, WAV, M4A, AAC formats.
+Accepts: MP3, WAV, M4A, AAC, FLAC, OGG formats.
+
+## Adjust Audio
+
+Choosing a file (or dropping one on the node) opens an **Adjust Audio** step before the upload is committed:
+
+| Control | What it does |
+|---------|--------------|
+| Trim | Waveform scrubber with draggable start/end handles and looped preview playback. Only the selected range is passed downstream. |
+| Output Format (under **Advanced**) | Convert to MP3, WAV, M4A or AAC. Defaults to Original. |
+
+The header shows the resulting duration, format and estimated file size as you adjust. If the file's duration cannot be read, the trim control is hidden and the file uploads whole.
 
 ## Inputs & Outputs
 

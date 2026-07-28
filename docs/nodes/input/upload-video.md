@@ -14,6 +14,10 @@ The Upload Video node provides a source video to the workflow. Enter a direct UR
 
 Accepts: MP4, MOV, WebM formats.
 
+## Adjust Video
+
+Choosing a file opens an **Adjust Video** step before the upload is committed: crop with an aspect-ratio preset, trim to a range using the filmstrip scrubber, and optionally convert to MP4 or WebM (under **Advanced**). Formats the browser cannot play are converted automatically first.
+
 ## Inputs & Outputs
 
 **Inputs:** None (this is a source node)
