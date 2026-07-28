@@ -14,11 +14,17 @@ export function useUpstreamVideoDuration(nodeId: string, handleId: string): numb
     const src = s.nodes.find((n) => n.id === edge.source)
     if (!src) return null
     const data = src.data as Record<string, unknown>
+    // Keys that actually EXIST on node data. `generatedVideoDuration` and
+    // `uploadedDuration` were listed here and are written by nothing in the app —
+    // grep finds each exactly once, in this file — so two of the four lookups were
+    // always dead, which is part of why a wired video fell through to the pricing
+    // ceiling. Pinned by `__tests__/use-upstream-video-duration.test.ts`.
     const candidates: Array<number | undefined> = [
-      data.generatedVideoDuration as number | undefined,
       data.duration as number | undefined,
-      data.uploadedDuration as number | undefined,
       data.durationSeconds as number | undefined,
+      data.videoDuration as number | undefined,
+      data.videoDurationSec as number | undefined,
+      data.sourceDurationSec as number | undefined,
     ]
     return candidates.find((v) => typeof v === "number" && v > 0) ?? null
   })

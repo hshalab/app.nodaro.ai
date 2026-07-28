@@ -4527,6 +4527,10 @@ export type VideoAnalysisNodeData = {
   // Cached probe of the YouTube URL (duration binds credit pricing). Only trusted
   // while `probedYoutube.url === youtubeUrl` — a URL edit invalidates it.
   probedYoutube?: { url: string; durationSec: number }
+  // Same url-bound shape for a WIRED video: the duration read from the video's own
+  // metadata, so the credit estimate is not forced to the :600s ceiling. Only
+  // trusted while `probedVideo.url` still matches the resolved upstream url.
+  probedVideo?: { url: string; durationSec: number }
   // Analysis config
   llmModel?: string
   reasoningEffort?: LlmReasoningEffort
