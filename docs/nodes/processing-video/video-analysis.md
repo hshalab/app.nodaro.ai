@@ -224,9 +224,9 @@ charged) — generated and drift-guarded internally, never hand-written.
 
 | Tier | ≤60s | ≤180s | ≤360s | ≤600s |
 |------|------|-------|-------|-------|
-| `fast` (economy) | 2 | 2 | 5 | 9 |
-| `pro` (default) | 2 | 3 | 7 | 11 |
-| `mixed` / `mixed-fast` | 3 | 4 | 9 | 14 |
+| `fast` (economy) | 5 | 6 | 15 | 25 |
+| `pro` (default) | 6 | 8 | 20 | 33 |
+| `mixed` / `mixed-fast` | 10 | 13 | 35 | 57 |
 
 The two mixed tiers are variants of the same advanced analysis and share one
 price: `mixed` is tuned for maximum result quality; `mixed-fast` for the most
@@ -237,6 +237,12 @@ consistent output character run-to-run.
 Longer videos cost more because they are analyzed in more overlapping windows (a
 video over 180s is split into ~150-second windows), and higher tiers cost more
 per window.
+
+Every tier also analyzes each window **several times independently** and keeps
+the best result — three passes on `fast` and `pro`, and six on the mixed tiers
+(three of each model, so their readings can be compared and combined). That
+repetition is the main reason a tier costs what it does, and it is why the mixed
+tiers sit roughly twice the price of a single-model tier.
 
 **±3-second duration tolerance.** Credits are reserved up front from the bucket
 that fits the probed (metadata) duration. After download, the worker re-probes
