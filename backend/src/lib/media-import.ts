@@ -233,7 +233,18 @@ export async function importImageFromUrl(
     .select("id")
     .single()
   if (insertError) {
-    console.error("[media-import] failed to create asset record:", insertError)
+    // LOUD, because a swallowed failure here is a permanent quota leak, not a
+    // cosmetic one. The storage was already reserved above; without this row
+    // nothing can ever release it — `deleteOwnedMediaByUrl` proves ownership
+    // through `assets` and skips what it cannot find, the free-tier reaper
+    // iterates `assets`, and `permanentlyDeleteAsset` is the only path that
+    // decrements the quota. That is exactly how a wrong `upload_source` went
+    // unnoticed until every import had become unreclaimable (see migration
+    // 278). A `console.error` is not enough signal for that.
+    console.error(
+      `[media-import] ORPHANED ${buffer.length} bytes at ${r2Key} for user ${userId}: asset insert failed —`,
+      insertError,
+    )
   } else {
     assetId = asset.id
   }

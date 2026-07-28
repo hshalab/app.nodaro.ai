@@ -1350,25 +1350,58 @@ html, body {
   background-color: #ff0073 !important;
 }
 
-/* Slim styled scrollbar — thin track, rounded thumb, auto-hide */
+/* Slim styled scrollbar — thin track, rounded thumb.
+   9px rather than 6: 6px is a hard grab target, and these bars are dragged inside
+   small node panes where there is no room to miss. The ACTIVE thumb takes the
+   brand accent, so a drag reads as a drag instead of a slightly darker grey. */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 9px;
+  height: 9px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(128, 128, 128, 0.25);
+  background: rgba(128, 128, 128, 0.3);
   border-radius: 9999px;
+  /* Inset via a transparent border so the thumb reads slimmer than the 9px
+     hit-area it actually occupies. */
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(128, 128, 128, 0.45);
+  background: rgba(128, 128, 128, 0.5);
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:active {
+  background: #ff0073;
+  background-clip: padding-box;
 }
 /* Firefox */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(128, 128, 128, 0.25) transparent;
+  scrollbar-color: rgba(128, 128, 128, 0.3) transparent;
+}
+
+/* Opt-in: keep the thumb invisible until the pane is hovered, so a dense preview
+   (a node's result tree) is not framed by a permanent grey bar. The track keeps
+   its width either way, so revealing the thumb never reflows the content. */
+.scrollbar-reveal::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+.scrollbar-reveal:hover::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.45);
+  background-clip: padding-box;
+}
+.scrollbar-reveal::-webkit-scrollbar-thumb:active {
+  background: #ff0073;
+  background-clip: padding-box;
+}
+.scrollbar-reveal {
+  scrollbar-color: transparent transparent;
+}
+.scrollbar-reveal:hover {
+  scrollbar-color: rgba(128, 128, 128, 0.45) transparent;
 }
 
 /* Hide scrollbar utility for horizontal-scroll action bars */

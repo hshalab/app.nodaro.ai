@@ -13,6 +13,7 @@ import { NodeJobProgress } from "./node-job-progress"
 import { useWorkflowStore } from "@/hooks/use-workflow-store"
 import { useModelCredits } from "@/ee/hooks/use-model-credits"
 import { useUpstreamVideoDuration } from "@/hooks/use-upstream-video-duration"
+import { useUpstreamVideoProbe } from "@/hooks/use-upstream-video-probe"
 import { ACCEPTS_VIDEO } from "@/lib/ffmpeg-handles"
 import { DATA_HANDLE_COLORS } from "@/lib/data-handles"
 import { buildVideoAnalysisCreditId, resolveVideoAnalysisModel } from "@nodaro/shared"
@@ -127,6 +128,9 @@ function VideoAnalysisNodeComponent({ id, data, selected }: NodeProps) {
   // ceiling composite. Display only; the real reservation is computed
   // server-side from the actual video length (ffprobe is authoritative).
   const upstreamDuration = useUpstreamVideoDuration(id, "video")
+  // A wired video's duration read from its own metadata — the fallback that keeps
+  // the badge off the :600s ceiling when the producer stores no duration field.
+  const probedVideoDuration = useUpstreamVideoProbe(id, "video", nodeData.probedVideo, updateNodeData)
   const probedDuration =
     nodeData.probedYoutube && nodeData.probedYoutube.url === nodeData.youtubeUrl
       ? nodeData.probedYoutube.durationSec
@@ -135,8 +139,8 @@ function VideoAnalysisNodeComponent({ id, data, selected }: NodeProps) {
   // pro) so the pre-run credit estimate matches what the server charges.
   const model = resolveVideoAnalysisModel(nodeData.llmModel)
   const creditModelId = useMemo(
-    () => buildVideoAnalysisCreditId(model, probedDuration ?? upstreamDuration ?? undefined),
-    [model, probedDuration, upstreamDuration],
+    () => buildVideoAnalysisCreditId(model, probedDuration ?? upstreamDuration ?? probedVideoDuration ?? undefined),
+    [model, probedDuration, upstreamDuration, probedVideoDuration],
   )
   const credits = useModelCredits(creditModelId)
   const [treeOpen, setTreeOpen] = useState(false)
@@ -168,7 +172,7 @@ function VideoAnalysisNodeComponent({ id, data, selected }: NodeProps) {
           { id: "text",  type: "source", position: Position.Right, customStyle: { top: '52px',              right: '-29px' }, external: true },
         ]}
       >
-        <div className="flex flex-col gap-2 p-3" style={{ minHeight: 160 }}>
+        <div className="flex flex-col gap-2 p-3 h-full" style={{ minHeight: 160 }}>
           {status === "running" && (
             <div className="flex flex-col items-center justify-center gap-2 h-16 rounded-md bg-muted/30">
               <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
@@ -191,7 +195,7 @@ function VideoAnalysisNodeComponent({ id, data, selected }: NodeProps) {
           )}
 
           {status !== "running" && result && scenes.length > 0 && (
-            <div className="relative group">
+            <div className="relative group flex-1 min-h-0 flex flex-col">
               {/* A TREE, not a flat scene list. The old preview showed one array
                   and hid everything else the payload carries — slots, per-scene
                   audio layers, variation bindings, meta. Rows are closed one
@@ -199,7 +203,15 @@ function VideoAnalysisNodeComponent({ id, data, selected }: NodeProps) {
                   drills into; the node is narrow, so real inspection happens in
                   the expanded modal. No truncation: height is bounded by
                   max-h + scroll, so a long value costs scroll, never content. */}
-              <div className="rounded-md border bg-muted/30 max-h-64 overflow-auto p-1.5">
+              {/* `nowheel` is load-bearing, not cosmetic: React Flow's panOnScroll
+                  handler calls preventDefault + stopImmediatePropagation on any
+                  wheel event that is NOT inside a `.nowheel` subtree, so without it
+                  the canvas pans and this pane never scrolls at all — which is why
+                  the tree only scrolled in the expanded modal. `nodrag` lets a drag
+                  select text instead of moving the node, and `nopan` keeps a
+                  middle/space drag inside the pane. `flex-1 min-h-0` makes it fill
+                  the node's height rather than stopping at a fixed 16rem. */}
+              <div className="rounded-md border bg-muted/30 flex-1 min-h-0 overflow-auto p-1.5 nowheel nodrag nopan scrollbar-reveal">
                 <JsonTree value={result as unknown as JsonValue} labelFor={labelFor} />
               </div>
               <div className="absolute -top-1 -right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
