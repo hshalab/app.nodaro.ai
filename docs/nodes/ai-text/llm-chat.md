@@ -32,6 +32,7 @@ When the prompt (or a template) produces a single block with no `===NEXT===` mar
 | Max Tokens | `number` | `8192` | Maximum output length in tokens. At `xhigh`/`max` effort the effective cap is floored to 32768 so reasoning tokens can't truncate the answer |
 | # of runs | `number` | `1` | How many generations to produce per Run click (1–4 in the node's quick toolbar). Each run is charged separately — the Run button shows the multiplied credit cost |
 | Effort | `string` | `Auto` | Reasoning effort for models that support it — hidden entirely for models with no reasoning levels. See [Reasoning effort](#reasoning-effort) |
+| Advanced mode | `boolean` | `false` | Gemini models only. Runs the model on the provider's own API so **Temperature**, **Max Tokens** and the full reasoning-depth range actually apply — those controls appear once it is on. Bills one credit tier up; the node's cost badge updates immediately. Disabled with an inline reason on non-Gemini models |
 
 ### Model selector
 
@@ -56,7 +57,7 @@ The model is chosen from the shared LLM model selector and determines the credit
 | Claude Opus 5 | Premium | image only |
 | Claude Fable 5 | Premium | image only |
 
-The default model is Gemini 3.6 Flash (economy tier). 12 of the 16 models expose reasoning levels and show an **Effort** selector next to the model picker (the exceptions: Gemini 3 Flash, Claude Haiku 4.5, GPT-5.2, and Gemini 3.1 Pro have no effort lever) — see [Reasoning effort](#reasoning-effort).
+The default model is Gemini 3.6 Flash (economy tier). 12 of the 16 models expose reasoning levels and show an **Effort** selector next to the model picker (the exceptions: Gemini 3 Flash, Claude Haiku 4.5, GPT-5.2, and Gemini 3.1 Pro have no effort lever — though the two Gemini models gain one under **Advanced mode**, which reaches the provider's fuller range) — see [Reasoning effort](#reasoning-effort).
 
 ## Canvas controls
 

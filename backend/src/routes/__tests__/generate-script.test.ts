@@ -195,6 +195,7 @@ describe("POST /v1/generate-script", () => {
       tone: undefined,
       targetDuration: undefined,
       provider: undefined,
+      advanced: { advancedMode: undefined, temperature: undefined, maxTokens: undefined },
       usageLogId: "usage-1",
     })
   })

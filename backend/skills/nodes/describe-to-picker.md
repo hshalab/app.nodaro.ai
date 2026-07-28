@@ -1,7 +1,7 @@
 ---
 node_type: describe-to-picker
-generated_at: 2026-07-13T16:11:49.654Z
-generated_from: 9af14ef89
+generated_at: 2026-07-28T17:14:14.776Z
+generated_from: 15975a896
 ---
 
 # Describe to Picker
@@ -19,6 +19,9 @@ generated_from: 9af14ef89
 **Optional data fields:**
 - `llmModel?: string`
 - `reasoningEffort?: LlmReasoningEffort`
+- `advancedMode?: boolean`
+- `temperature?: number`
+- `maxTokens?: number`
 - `instructions?: string`
 - `executionStatus?: "idle" | "running" | "completed" | "failed"`
 - `currentJobProgress?: number`

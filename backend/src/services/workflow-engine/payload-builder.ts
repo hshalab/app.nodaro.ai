@@ -4849,6 +4849,7 @@ export function buildPayload(
           provider: data.provider,
           llmModel: scriptLlmModel,
           reasoningEffort: scriptEffort,
+          advanced: { advancedMode: data.advancedMode as boolean | undefined, temperature: data.temperature as number | undefined, maxTokens: data.maxTokens as number | undefined },
           usageLogId,
         },
       }
@@ -4879,6 +4880,7 @@ export function buildPayload(
           backgroundColor: (data.backgroundColor as string) ?? "#00000000",
           llmModel: mgLlmModel,
           reasoningEffort: mgEffort,
+          advanced: { advancedMode: data.advancedMode as boolean | undefined, temperature: data.temperature as number | undefined, maxTokens: data.maxTokens as number | undefined },
           usageLogId,
         },
       }

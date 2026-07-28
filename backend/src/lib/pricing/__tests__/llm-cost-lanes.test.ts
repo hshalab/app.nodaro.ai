@@ -25,14 +25,30 @@ describe("serving lane selects the rate band", () => {
     expect(direct).toBeCloseTo(0.00525, 10)
   })
 
-  it("prices the direct lane materially above KIE for every direct-capable model", () => {
+  it("never prices the direct lane BELOW the aggregator", () => {
+    // A direct row cheaper than its KIE row would mean the two bands got
+    // swapped — a vendor's own list price is never the discounted one.
+    // Equality is legitimate: KIE resells claude-sonnet-4.6 at exactly
+    // Anthropic list, with no markdown.
     for (const id of directRatedModelIds()) {
       const usage = { inputTokens: 10_000, outputTokens: 2_000 }
-      const kie = calculateLlmCost(id, usage, "kie")
-      const direct = calculateLlmCost(id, usage, "direct")
-      // Guards against a copy-paste that silently reuses the KIE numbers as
-      // "direct" — which would make the whole lane split invisible on the bill.
-      expect(direct, `${id} direct must exceed KIE`).toBeGreaterThan(kie)
+      expect(
+        calculateLlmCost(id, usage, "direct"),
+        `${id} direct must not undercut KIE`,
+      ).toBeGreaterThanOrEqual(calculateLlmCost(id, usage, "kie"))
+    }
+  })
+
+  it("prices every Gemini model strictly above KIE on the direct lane", () => {
+    // The Gemini gap is the entire reason lane routing is a per-model
+    // decision. If a copy-paste ever made these equal, the cost case for
+    // KIE-first routing would vanish and nothing else would catch it.
+    for (const id of ["gemini-3-flash", "gemini-3.6-flash", "gemini-3.1-pro"]) {
+      const usage = { inputTokens: 10_000, outputTokens: 2_000 }
+      expect(
+        calculateLlmCost(id, usage, "direct"),
+        `${id} direct must exceed KIE`,
+      ).toBeGreaterThan(calculateLlmCost(id, usage, "kie"))
     }
   })
 })
@@ -98,5 +114,30 @@ describe("video-analysis tiers can be served direct-only", () => {
     for (const modelId of Object.values(VIDEO_ANALYSIS_TIERS)) {
       expect(rated.has(modelId), `${modelId} must be costed on the direct band`).toBe(true)
     }
+  })
+})
+
+describe("direct-Anthropic lane costing", () => {
+  it("costs Claude models above the KIE band on the direct lane", () => {
+    // Every Claude model with a direct-SDK fallback must have a direct row —
+    // otherwise a fallback call silently bills at KIE's resale rate.
+    for (const m of LLM_MODELS.filter((x) => x.directFallbackModel)) {
+      const usage = { inputTokens: 10_000, outputTokens: 2_000 }
+      const kie = calculateLlmCost(m.id, usage, "kie")
+      const direct = calculateLlmCost(m.id, usage, "direct")
+      expect(direct, `${m.id} needs a direct rate row`).toBeGreaterThanOrEqual(kie)
+    }
+  })
+
+  it("every model with a direct-SDK fallback has a direct rate row", () => {
+    const rated = new Set(directRatedModelIds())
+    const missing = LLM_MODELS.filter((m) => m.directFallbackModel && !rated.has(m.id)).map((m) => m.id)
+    expect(missing).toEqual([])
+  })
+
+  it("prices claude-opus-5 at Anthropic list on the direct lane", () => {
+    // (10000 * 5.00 + 2000 * 25.00) / 1e6 = 0.10
+    expect(calculateLlmCost("claude-opus-5", { inputTokens: 10_000, outputTokens: 2_000 }, "direct"))
+      .toBeCloseTo(0.10, 10)
   })
 })

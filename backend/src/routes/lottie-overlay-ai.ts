@@ -14,6 +14,7 @@ import { validateLottieOverlayPlan } from "../lib/lottie-overlay-validator.js"
 import { extractJsonFromAIResponse } from "../lib/json-utils.js"
 import { llmComplete } from "../lib/llm-client.js"
 import { LLM_MODEL_IDS, LLM_REASONING_EFFORTS, buildLlmCreditIdentifier, resolveLlmCreditId, LLM_FEATURE_DEFAULTS } from "@nodaro/shared"
+import { LLM_ADVANCED_SHAPE, advancedModeError, resolveLlmParams } from "../lib/llm-advanced-mode.js"
 import { extractWorkflowId, extractNodeId, extractForcePrivate } from "../lib/request-helpers.js"
 import { buildJobInputData } from "../lib/job-input-data.js"
 import { markProviderCallStart } from "../lib/reconcile/persistence.js"
@@ -38,6 +39,7 @@ const generateBody = z.object({
   userId: z.string().uuid(),
   llmModel: z.enum(LLM_MODEL_IDS as [string, ...string[]]).optional(),
   reasoningEffort: z.enum(LLM_REASONING_EFFORTS).optional(),
+  ...LLM_ADVANCED_SHAPE,
 })
 
 export async function lottieOverlayAIRoutes(app: FastifyInstance) {
@@ -95,7 +97,9 @@ export async function lottieOverlayAIRoutes(app: FastifyInstance) {
       }
 
       // Reserve credits
-      const modelIdentifier = buildLlmCreditIdentifier("lottie-overlay", llmModel, parsed.data.reasoningEffort)
+      const advancedError = advancedModeError(parsed.data, llmModel)
+      if (advancedError) return reply.status(400).send({ error: advancedError })
+      const modelIdentifier = buildLlmCreditIdentifier("lottie-overlay", llmModel, parsed.data.reasoningEffort, parsed.data.advancedMode)
       const reservation = await reserveCreditsForJob(req, reply, job.id, modelIdentifier)
       if (reply.sent) return
       const usageLogId = reservation?.usageLogId
@@ -127,8 +131,7 @@ Overlay style: ${prompt}${assetSection}`
           modelId: llmModel,
           system: LOTTIE_OVERLAY_SYSTEM_PROMPT,
           messages: [{ role: "user", content: userMessage }],
-          maxTokens: 2048,
-          temperature: 0.3,
+          ...resolveLlmParams(parsed.data, { maxTokens: 2048, temperature: 0.3 }),
           reasoningEffort: parsed.data.reasoningEffort,
         })
 

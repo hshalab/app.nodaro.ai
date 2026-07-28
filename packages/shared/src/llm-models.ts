@@ -78,6 +78,17 @@ export interface LlmModelDef {
   preferDirect?: true
   /** Effort levels this model accepts (ascending). Absent/empty = no effort lever, picker hidden. */
   reasoningEfforts?: readonly LlmReasoningEffort[]
+  /**
+   * Effort levels available on the DIRECT lane, when the vendor's own API
+   * accepts more than the aggregator does. Absent = the direct lane offers the
+   * same set as `reasoningEfforts`.
+   *
+   * This exists because `reasoningEfforts` has to stay at the KIE-safe
+   * intersection — sending a level KIE rejects is a hard failure — while the
+   * vendor API accepts the full ladder. Unlocking those extra levels is one of
+   * the concrete things Advanced mode buys.
+   */
+  directReasoningEfforts?: readonly LlmReasoningEffort[]
   /** false = model rejects `temperature` (Claude 5-era, GPT-5.6). Absent = accepts. */
   supportsTemperature?: false
   /** Claude-only: KIE is the preferred routing, direct Anthropic the fallback. */
@@ -114,6 +125,9 @@ export const LLM_MODELS: readonly LlmModelDef[] = [
     // (Per-lane rates are deliberately NOT in this published package; see
     // backend/src/lib/pricing/llm-cost.ts.)
     directGeminiModel: "gemini-3-flash-preview",
+    // No `reasoningEfforts` at all on the KIE lane, but the vendor API accepts
+    // the full minimal→high ladder (`none` maps to Google's `minimal`).
+    directReasoningEfforts: ["none", "low", "medium", "high"],
   },
   {
     id: "gemini-3.6-flash",
@@ -136,6 +150,9 @@ export const LLM_MODELS: readonly LlmModelDef[] = [
     // feeds both lanes and this model is KIE-first. Widen it only if/when
     // `preferDirect` is set here.
     reasoningEfforts: ["low", "high"],
+    // Google's own API additionally accepts `minimal` and `medium` here —
+    // live-verified 2026-07-28. Advanced mode unlocks them.
+    directReasoningEfforts: ["none", "low", "medium", "high"],
     // KIE-first: this model backs 5 of the LLM_FEATURE_DEFAULTS plus the
     // video-analysis fast tier, so it carries the highest call volume of any
     // Gemini entry — the lane with the lower unit cost wins by default and
@@ -192,6 +209,9 @@ export const LLM_MODELS: readonly LlmModelDef[] = [
     supportsImages: true,
     maxOutputTokens: 16384,
     directGeminiModel: "gemini-3.1-pro-preview",
+    // Google documents low/medium/high for 3.1 Pro — no `minimal` tier, so
+    // this ladder is deliberately shorter than the flash models'.
+    directReasoningEfforts: ["low", "medium", "high"],
     // The ONE Gemini model routed direct-first. It is the premium/low-volume
     // tier (video-analysis `pro`, no LLM_FEATURE_DEFAULTS entry), so the ~4×
     // list-price premium lands on the smallest call volume — and it is where
@@ -483,13 +503,34 @@ export function getLlmTier(id: string): LlmTier {
   return getLlmModel(id)?.tier ?? "standard"
 }
 
+/**
+ * Effort levels this model actually accepts on the lane it will be served on.
+ *
+ * The two lanes do NOT offer the same ladder: the aggregator accepts a narrower
+ * set than the vendor's own API does, which is one of the concrete things
+ * Advanced mode buys. Kept as one lookup so the UI picker and the wire-side
+ * clamp can never disagree about what's selectable.
+ */
+export function availableReasoningEfforts(
+  modelId: string | undefined,
+  advanced = false,
+): readonly LlmReasoningEffort[] {
+  const model = getLlmModel(modelId ?? "")
+  if (!model) return []
+  if (advanced && supportsAdvancedMode(modelId)) {
+    return model.directReasoningEfforts ?? model.reasoningEfforts ?? []
+  }
+  return model.reasoningEfforts ?? []
+}
+
 /** Highest level the model supports that is ≤ the requested level; undefined = treat as Auto. */
 export function effectiveReasoningEffort(
   modelId: string | undefined,
   requested?: string,
+  advanced = false,
 ): LlmReasoningEffort | undefined {
   if (!requested || !(requested in EFFORT_RANK)) return undefined
-  const levels = getLlmModel(modelId ?? "")?.reasoningEfforts
+  const levels = availableReasoningEfforts(modelId, advanced)
   if (!levels || levels.length === 0) return undefined
   const req = requested as LlmReasoningEffort
   let best: LlmReasoningEffort | undefined
@@ -509,25 +550,64 @@ export function effectiveReasoningEffort(
  * premium stays premium). `high` is the Claude-family server default and
  * never bumps.
  */
-export function buildLlmCreditIdentifier(feature: string, modelId?: string, reasoningEffort?: string): string {
+/** One step up the economy → standard → premium ladder. Premium is the ceiling. */
+function bumpTier(tier: LlmTier): LlmTier {
+  if (tier === "economy") return "standard"
+  if (tier === "standard") return "premium"
+  return tier
+}
+
+/**
+ * Can this model be run in Advanced mode?
+ *
+ * Advanced mode pins the call to the vendor's own API, which is the only lane
+ * where sampling levers (`temperature`, `maxTokens`) and the full effort range
+ * actually take effect. Capability-derived from the registry — a model without
+ * a direct lane simply cannot offer it, so UI and routes both gate on this
+ * rather than on a hand-maintained model list.
+ */
+export function supportsAdvancedMode(modelId: string | undefined): boolean {
+  return Boolean(modelId && getLlmModel(modelId)?.directGeminiModel)
+}
+
+/** User-facing reason a model can't offer Advanced mode. Single-sourced so the
+ *  config panel's disabled hint and the route's 400 say the same thing. */
+export const ADVANCED_MODE_UNAVAILABLE_REASON =
+  "Advanced mode is available on Gemini models — switch the model to enable it."
+
+export function buildLlmCreditIdentifier(
+  feature: string,
+  modelId?: string,
+  reasoningEffort?: string,
+  advancedMode?: boolean,
+): string {
   if (!modelId) return feature
   let tier = getLlmTier(modelId)
   const eff = effectiveReasoningEffort(modelId, reasoningEffort)
-  if (eff !== undefined && EFFORT_TIER_BUMP.has(eff)) {
-    if (tier === "economy") tier = "standard"
-    else if (tier === "standard") tier = "premium"
-  }
+  if (eff !== undefined && EFFORT_TIER_BUMP.has(eff)) tier = bumpTier(tier)
+  // Advanced mode routes to the vendor's own API, which bills materially more
+  // per token than the aggregator. It bumps INDEPENDENTLY of the effort bump —
+  // the two are separate cost levers and genuinely stack, so a max-effort
+  // advanced economy call lands at premium. The bump is ignored on a model that
+  // can't run advanced at all, so a stale flag never inflates a bill.
+  if (advancedMode && supportsAdvancedMode(modelId)) tier = bumpTier(tier)
   if (tier === "standard") return feature
   return `${feature}:${tier}`
 }
 
 /**
- * Resolve llmModel (+ reasoningEffort) from raw body for creditGuard preHandler
- * (before Zod parsing). Returns the credit identifier for the given feature.
+ * Resolve llmModel (+ reasoningEffort, advancedMode) from raw body for the
+ * creditGuard preHandler (before Zod parsing). Returns the credit identifier
+ * for the given feature.
  */
 export function resolveLlmCreditId(feature: string, body: unknown): string {
   const b = body as Record<string, unknown> | undefined
-  return buildLlmCreditIdentifier(feature, b?.llmModel as string | undefined, b?.reasoningEffort as string | undefined)
+  return buildLlmCreditIdentifier(
+    feature,
+    b?.llmModel as string | undefined,
+    b?.reasoningEffort as string | undefined,
+    b?.advancedMode === true,
+  )
 }
 
 /** Models capable of video-analysis: capability-derived, never hand-listed (route-enum-sync convention). */

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { AdvancedModeToggle } from "./advanced-mode-toggle"
 import { AlertCircle, BookmarkPlus, Loader2, Image as ImageIcon, Video as VideoIcon, Music as MusicIcon, X, Save, Trash2 } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -347,8 +348,17 @@ export function LLMChatConfig({ data, onUpdate, sources, fieldMappings, onMapFie
         <ReasoningEffortSelect
           feature="llm-chat"
           modelId={data.llmModel}
+          advanced={data.advancedMode}
           value={data.reasoningEffort}
           onChange={(v) => onUpdate({ reasoningEffort: v })}
+        />
+        <AdvancedModeToggle
+          feature="llm-chat"
+          modelId={data.llmModel}
+          value={data.advancedMode}
+          temperature={data.temperature}
+          maxTokens={data.maxTokens}
+          onChange={onUpdate}
         />
       </div>
 

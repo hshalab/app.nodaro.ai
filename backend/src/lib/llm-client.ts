@@ -623,8 +623,9 @@ function buildResponse(
   text: string,
   usage?: { inputTokens: number; outputTokens: number },
   actualUsd?: number,
+  lane: LlmServingLane = "kie",
 ): LlmResponse {
-  const tableEstimate = usage ? calculateLlmCost(model, usage) : undefined
+  const tableEstimate = usage ? calculateLlmCost(model, usage, lane) : undefined
   if (actualUsd !== undefined && tableEstimate !== undefined && tableEstimate > 0) {
     const drift = Math.abs(actualUsd - tableEstimate) / tableEstimate
     if (drift > 0.25) {
@@ -951,7 +952,8 @@ async function callAnthropicDirect(model: LlmModelDef, req: LlmRequest): Promise
       (b): b is Anthropic.Messages.ToolUseBlock => b.type === "tool_use",
     )
     const usage = { inputTokens: response.usage.input_tokens, outputTokens: response.usage.output_tokens }
-    return buildResponse(model, toolUse ? JSON.stringify(toolUse.input) : "", usage)
+    // Anthropic's own API served this — cost it on the direct band, not KIE's.
+    return buildResponse(model, toolUse ? JSON.stringify(toolUse.input) : "", usage, undefined, "direct")
   }
 
   const response = await anthropic.messages.create(
@@ -968,7 +970,7 @@ async function callAnthropicDirect(model: LlmModelDef, req: LlmRequest): Promise
 
   const textBlock = response.content.find((b) => b.type === "text")
   const usage = { inputTokens: response.usage.input_tokens, outputTokens: response.usage.output_tokens }
-  return buildResponse(model, textBlock?.text ?? "", usage)
+  return buildResponse(model, textBlock?.text ?? "", usage, undefined, "direct")
 }
 
 async function streamAnthropicDirect(
@@ -1001,7 +1003,7 @@ async function streamAnthropicDirect(
 
   const finalMessage = await stream.finalMessage()
   const usage = { inputTokens: finalMessage.usage.input_tokens, outputTokens: finalMessage.usage.output_tokens }
-  return buildResponse(model, fullText, usage)
+  return buildResponse(model, fullText, usage, undefined, "direct")
 }
 
 // ---------------------------------------------------------------------------

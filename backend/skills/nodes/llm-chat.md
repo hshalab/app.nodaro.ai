@@ -1,7 +1,7 @@
 ---
 node_type: llm-chat
-generated_at: 2026-07-13T18:58:11.041Z
-generated_from: 90fabdb66
+generated_at: 2026-07-28T17:14:15.233Z
+generated_from: 15975a896
 ---
 
 # LLM Chat
@@ -24,6 +24,7 @@ generated_from: 90fabdb66
 **Optional data fields:**
 - `llmModel?: string`
 - `reasoningEffort?: LlmReasoningEffort`
+- `advancedMode?: boolean`
 - `repeatCount?: number`
 - `templateId?: string`
 - `generatedItems?: string[]`

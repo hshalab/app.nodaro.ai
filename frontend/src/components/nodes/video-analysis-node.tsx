@@ -42,7 +42,17 @@ function useAnalysisLabeler(result: VideoAnalysisResult | undefined): JsonNodeLa
       // slots[i] / scenes[i]
       if (path.length === 2 && typeof path[1] === "number") {
         if (path[0] === "slots") return `${v.slotId} · ${v.label} · ${String(v.source).replace("wired-", "")}`
-        if (path[0] === "scenes") return `#${v.sceneNumber} · ${secs(v.startSec)}–${secs(v.endSec)}s · ${v.label}`
+        if (path[0] === "scenes") {
+          // Surface the cinematography flags that only appear on SOME shots, so a
+          // slow-motion beat or a dutch angle is visible without drilling in.
+          // eye-level and a clean image are the defaults and stay silent.
+          const flags = [
+            v.angle && v.angle !== "eye-level" ? String(v.angle) : undefined,
+            v.speed,
+            Array.isArray(v.effects) && v.effects.length > 0 ? v.effects.join("+") : undefined,
+          ].filter(Boolean).join(" · ")
+          return `#${v.sceneNumber} · ${secs(v.startSec)}–${secs(v.endSec)}s · ${v.label}${flags ? ` · ${flags}` : ""}`
+        }
       }
       if (path.length !== 4 || typeof path[3] !== "number") return undefined
 

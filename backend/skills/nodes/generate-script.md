@@ -1,7 +1,7 @@
 ---
 node_type: generate-script
-generated_at: 2026-07-13T16:11:49.376Z
-generated_from: 9af14ef89
+generated_at: 2026-07-28T17:14:14.474Z
+generated_from: 15975a896
 ---
 
 # Generate Script
@@ -27,6 +27,9 @@ generated_from: 9af14ef89
 **Optional data fields:**
 - `llmModel?: string`
 - `reasoningEffort?: LlmReasoningEffort`
+- `advancedMode?: boolean`
+- `temperature?: number`
+- `maxTokens?: number`
 - `executionStatus?: "idle" | "running" | "completed" | "failed"`
 - `currentJobProgress?: number`
 - `errorMessage?: string`

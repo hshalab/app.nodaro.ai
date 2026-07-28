@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo, Suspense } from "react"
+import { AdvancedModeToggle } from "./advanced-mode-toggle"
 import { lazyWithRetry as lazy } from "@/lib/lazy-with-retry"
 import { Sparkles, Trash2, Info } from "lucide-react"
 import { Input } from "@/components/ui/input"
@@ -67,8 +68,17 @@ export function VideoComposerConfig({ data, onUpdate, sources, fieldMappings, on
       <ReasoningEffortSelect
         feature="scene-graph-ai"
         modelId={data.llmModel}
+        advanced={data.advancedMode}
         value={data.reasoningEffort}
         onChange={(v) => onUpdate({ reasoningEffort: v })}
+      />
+      <AdvancedModeToggle
+        feature="scene-graph-ai"
+        modelId={data.llmModel}
+        value={data.advancedMode}
+        temperature={data.temperature}
+        maxTokens={data.maxTokens}
+        onChange={onUpdate}
       />
 
       <MappableField field="compositionPrompt" label="Composition Prompt" sources={sources} fieldMappings={fieldMappings} onMapField={onMapField}>
@@ -121,8 +131,17 @@ export function AfterEffectsConfig({ data, onUpdate, sources, fieldMappings, onM
       <ReasoningEffortSelect
         feature="after-effects"
         modelId={data.llmModel}
+        advanced={data.advancedMode}
         value={data.reasoningEffort}
         onChange={(v) => onUpdate({ reasoningEffort: v })}
+      />
+      <AdvancedModeToggle
+        feature="after-effects"
+        modelId={data.llmModel}
+        value={data.advancedMode}
+        temperature={data.temperature}
+        maxTokens={data.maxTokens}
+        onChange={onUpdate}
       />
 
       <MappableField field="effectPrompt" label="Effect Prompt" sources={sources} fieldMappings={fieldMappings} onMapField={onMapField}>
@@ -210,8 +229,17 @@ export function LottieOverlayConfig({ data, onUpdate, sources, fieldMappings, on
       <ReasoningEffortSelect
         feature="lottie-overlay"
         modelId={data.llmModel}
+        advanced={data.advancedMode}
         value={data.reasoningEffort}
         onChange={(v) => onUpdate({ reasoningEffort: v })}
+      />
+      <AdvancedModeToggle
+        feature="lottie-overlay"
+        modelId={data.llmModel}
+        value={data.advancedMode}
+        temperature={data.temperature}
+        maxTokens={data.maxTokens}
+        onChange={onUpdate}
       />
 
       <MappableField field="overlayPrompt" label="Overlay Prompt" sources={sources} fieldMappings={fieldMappings} onMapField={onMapField}>
@@ -300,8 +328,17 @@ export function ThreeDTitleConfig({ data, onUpdate, sources, fieldMappings, onMa
       <ReasoningEffortSelect
         feature="3d-title"
         modelId={data.llmModel}
+        advanced={data.advancedMode}
         value={data.reasoningEffort}
         onChange={(v) => onUpdate({ reasoningEffort: v })}
+      />
+      <AdvancedModeToggle
+        feature="3d-title"
+        modelId={data.llmModel}
+        value={data.advancedMode}
+        temperature={data.temperature}
+        maxTokens={data.maxTokens}
+        onChange={onUpdate}
       />
 
       <MappableField field="titlePrompt" label="Title Prompt" sources={sources} fieldMappings={fieldMappings} onMapField={onMapField} labelAction={
@@ -445,8 +482,17 @@ export function MotionGraphicsConfig({ data, onUpdate, sources, fieldMappings, o
       <ReasoningEffortSelect
         feature={motionGraphicsFeature(data.engine)}
         modelId={data.llmModel}
+        advanced={data.advancedMode}
         value={data.reasoningEffort}
         onChange={(v) => onUpdate({ reasoningEffort: v })}
+      />
+      <AdvancedModeToggle
+        feature={motionGraphicsFeature(data.engine)}
+        modelId={data.llmModel}
+        value={data.advancedMode}
+        temperature={data.temperature}
+        maxTokens={data.maxTokens}
+        onChange={onUpdate}
       />
 
       <MappableField field="motionPrompt" label="Motion Graphics Prompt" sources={sources} fieldMappings={fieldMappings} onMapField={onMapField} labelAction={

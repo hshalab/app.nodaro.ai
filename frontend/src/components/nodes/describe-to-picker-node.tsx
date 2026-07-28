@@ -20,7 +20,7 @@ function DescribeToPickerNodeComponent({ id, data, selected }: NodeProps) {
   const nodeData = data as DescribeToPickerData
   const updateNodeData = useWorkflowStore((s) => s.updateNodeData)
   const credits = useModelCredits(
-    buildLlmCreditIdentifier("describe-to-picker", nodeData.llmModel || LLM_FEATURE_DEFAULTS["describe-to-picker"], nodeData.reasoningEffort),
+    buildLlmCreditIdentifier("describe-to-picker", nodeData.llmModel || LLM_FEATURE_DEFAULTS["describe-to-picker"], nodeData.reasoningEffort, nodeData.advancedMode === true),
     1,
   )
   const status = nodeData.executionStatus ?? "idle"

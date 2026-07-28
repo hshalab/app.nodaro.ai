@@ -1,7 +1,7 @@
 ---
 node_type: 3d-title
-generated_at: 2026-07-13T16:15:38.149Z
-generated_from: 9af14ef89
+generated_at: 2026-07-28T17:14:14.998Z
+generated_from: 15975a896
 ---
 
 # 3D Title
@@ -26,6 +26,9 @@ generated_from: 9af14ef89
 - `backgroundMediaUrl?: string`
 - `llmModel?: string`
 - `reasoningEffort?: LlmReasoningEffort`
+- `advancedMode?: boolean`
+- `temperature?: number`
+- `maxTokens?: number`
 - `executionStatus?: "idle" | "running" | "completed" | "failed"`
 - `currentJobProgress?: number`
 - `errorMessage?: string`

@@ -123,7 +123,7 @@ segmentation, or the field set. Leave it empty for a general-purpose breakdown.
 
 The result validates against the shared `videoAnalysisResultSchema`
 (`packages/shared/src/video-analysis.ts`) — the single source of truth for this
-contract. Three top-level keys: `meta`, `slots`, and `scenes[]`.
+contract. Top-level keys: `meta`, `look` (optional), `slots`, and `scenes[]`.
 
 ### `meta`
 
@@ -135,6 +135,55 @@ contract. Three top-level keys: `meta`, `slots`, and `scenes[]`.
 | `aspectRatio` | string | Snapped to a standard ratio (`16:9`, `9:16`, `1:1`, `4:3`, `3:4`, `21:9`) when within 3%, otherwise a reduced `w:h`. |
 | `title` | string, optional | Source title when known (e.g. the YouTube video title). |
 | `language` | string, optional | Dominant spoken language when detected. Always the language spoken in the footage — unaffected by either [translation checkbox](#output-language). |
+
+### `look` — the clip-level photography
+
+Optional. The properties that belong to the **whole piece** rather than any one
+shot, stated once so every regenerated shot can share them. Before this existed
+they were only ever prose inside each scene's `visual`, which meant a 40-scene
+analysis re-decided the grade forty times with nothing keeping the answers
+consistent — the same drift problem [entity slots](#slots--castable-entity-slots)
+solve for people.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `style` | string, optional | The rendering **medium** — *"live-action photoreal"*, *"2D anime"*, *"stop-motion claymation"*, *"3D render"*. Orthogonal to everything else here and the most consequential of them: two shots with identical grade, lens, lighting and framing look nothing alike when one is live action and the other an oil painting. |
+| `grade` | string, optional | Colour grade / palette — *"muted teal-and-orange, crushed blacks"*. |
+| `format` | string, optional | Camera or film **format and stock** — *"anamorphic digital"*, *"16mm film grain"*. |
+| `lens` | string, optional | Lens character — *"wide-angle, shallow depth of field throughout"*. |
+| `lighting` | string, optional | Overall lighting style — *"hard single-source daylight, deep shadow"*. |
+| `genre` | string, optional | What kind of piece this is — *"cinematic trailer"*, *"talking-head vlog"*. |
+| `influence` | string, optional | The visual influence the piece clearly evokes — *"shot like Deakins"*, *"Wes Anderson symmetry"*, *"80s Kodachrome editorial"*. Mirrors the **Photographer / Artist** picker. Omitted unless the style is genuinely recognisable: a confident misattribution drags an entire wrong aesthetic into every regenerated shot, so describing the look in `grade`/`lighting` beats guessing a name. |
+
+Every field is independently optional, and the whole object is omitted when the
+analyzer read nothing — it says nothing rather than guessing. A shot that
+*deviates* from the clip look still describes that deviation in its own `visual`.
+
+It is a sibling of `meta` rather than a member because `meta` is **measured** fact
+(ffprobe dimensions, probed duration) while `look` is the model's reading of the
+photography.
+
+**Which axis is clip-level and which is per-scene** — the split matters, because a
+property stated per scene drifts and a property stated once cannot follow the
+footage:
+
+| axis | scope | where |
+|------|-------|-------|
+| rendering medium | whole clip | `look.style` |
+| colour grade | whole clip | `look.grade` |
+| lens character | whole clip | `look.lens` |
+| camera / film format | whole clip | `look.format` |
+| visual influence | whole clip | `look.influence` |
+| kind of piece | whole clip | `look.genre` |
+| lighting | clip **default**, per-scene deviation | `look.lighting` + the scene's `visual` |
+| setting / location | per scene | [entity slots](#slots--castable-entity-slots) |
+| atmosphere, mood | per scene | the scene's `visual` |
+| framing, viewpoint, movement | per scene | `shotType`, `angle`, `camera` |
+| speed, effects, transition | per scene | `speed`, `effects`, `transitionOut` |
+
+Lighting is the one that sits on both: a piece has an overall lighting style, and
+individual scenes depart from it. The clip-level value is the default a recreation
+applies; a scene that differs says so in its own `visual`.
 
 ### `slots[]` — castable entity slots
 
@@ -191,8 +240,12 @@ node analyzes without them, and consuming apps that support per-look casting
 | `visual` | string | Raw visual description carrying `{slot:<id>}` tokens for future casting — **not the field to render from**. |
 | `visualResolved` | string | Self-contained, prompt-ready visual description — **the field downstream consumers read**. |
 | `oversized` | boolean, optional | Present and `true` when the scene exceeds 8 seconds (couldn't be cut shorter). Still one generation per scene. |
-| `transitionOut` | enum, optional | Transition into the next scene: `cut` / `fade` / `wipe` / `whip`. |
+| `transitionOut` | enum, optional | Visible edit **into the next shot**: `cut` · `fade` · `dissolve` · `wipe` · `whip`. Omitted when the cut carries no visible device. `dissolve` (cross-fade between images) is distinct from `fade` (through black or white) — they look nothing alike. |
 | `audio` | array | Concurrent audio layers (empty array `[]` = silence) — see below. |
+| `angle` | enum, optional | Camera **viewpoint** — where the camera sits relative to the subject. **Absent means eye-level.** See below. |
+| `speed` | enum, optional | Time manipulation: `slow-motion` / `ramp-in` / `ramp-out` / `timelapse` / `freeze` / `reverse`. **Absent means normal speed** — there is no `normal` member, so there is exactly one way to say "nothing unusual". |
+| `onScreenText` | string, optional | Text burned into this shot's picture — titles, captions, lower-thirds, subtitles — verbatim, in its original script. Absent when the frame carries none. Translated when [Translate on-screen text](#output-language) is on. |
+| `effects` | enum[], optional | Effects on this shot's **picture**: `blur` · `pixelate` · `glitch` · `grain` · `vignette` · `flash` · `distortion` · `double-exposure`. An array, since a shot can be grainy *and* vignetted. Absent means a clean image. |
 | `slotRefs` | string[] | Slot ids referenced by this scene, derived from its `visual` `{slot:x}` tokens. |
 | `slotVariations` | map, optional | `slotId → variationId` for slots wearing a non-default [look](#appearance-looks-variations) in this scene; absent key ⇒ the default look. Present only on runs that opted into looks. |
 
@@ -234,6 +287,27 @@ cut it is split at the boundary (the first scene keeps the head, the next gets t
 tail), and a line playing over a run of montage shots is attributed to the shot
 where it begins rather than repeated on every shot it plays over.
 
+**Three independent camera axes.** They used to overlap, which lost information:
+
+| axis | field | vocabulary |
+|------|-------|-----------|
+| **size** — how much of the subject is in frame | `shotType` | `Wide`, `Medium`, `Medium Close-Up`, `Close-Up`, `Extreme Close-Up`, plus `Two-Shot` / `Insert` / `Aerial` |
+| **viewpoint** — where the camera sits | `angle` | `eye-level` · `low` · `high` · `overhead` · `worms-eye` · `dutch` · `over-the-shoulder` · `pov` · `profile` · `from-behind` |
+| **movement** — what the camera does | `camera` | free text: `"slow push-in"`, `"handheld drift"`, `"static tripod"` |
+
+The relational viewpoints (`over-the-shoulder`, `pov`) used to be conventions
+inside the **`shotType`** list, competing with the sizes for a single slot — so an
+over-the-shoulder *medium* had to pick one and discard the other. They now live in
+`angle`, which lets both be stated: `shotType: "Medium"` + `angle: "over-the-shoulder"`.
+
+Likewise a true angle had nowhere to go and was improvised into the movement
+field (`"camera": "low angle static"` shipped on a real job), which both hid the
+angle from anything reading `camera` and polluted the movement vocabulary.
+
+`from-behind` and `over-the-shoulder` also mean **the face is not visible**, which
+is what [auto-cast](#auto-cast-reference-frames) needs to know before choosing a
+frame as an identity reference.
+
 **Read `visualResolved`, not `visual`.** `visual` retains `{slot:x}` tokens so
 the scene can be re-cast onto your own characters / objects / locations later;
 `visualResolved` is the token-expanded, self-contained version and is the field
@@ -250,15 +324,21 @@ charged) — generated and drift-guarded internally, never hand-written.
 
 | Tier | ≤60s | ≤180s | ≤360s | ≤600s |
 |------|------|-------|-------|-------|
-| `fast` (economy) | 5 | 6 | 15 | 25 |
-| `pro` (default) | 6 | 8 | 20 | 33 |
-| `mixed` / `mixed-fast` | 10 | 13 | 35 | 57 |
+| `fast` (economy) | 14 | 19 | 49 | 81 |
+| `pro` (default) | 21 | 27 | 72 | 120 |
+| `mixed` / `mixed-fast` | 34 | 46 | 120 | 200 |
 
 The two mixed tiers are variants of the same advanced analysis and share one
 price: `mixed` is tuned for maximum result quality; `mixed-fast` for the most
 consistent output character run-to-run.
 
 > These values are the internal pricing formula's current outputs.
+
+> **Repriced 2026-07-28.** Video Analysis now runs on the model provider's own
+> API rather than through a reseller, which is what lets it send real media to
+> the model instead of a link. Those calls cost roughly 3.3–3.5× more per token,
+> and the prices above are the same formula re-run against them — the margin on
+> this node is unchanged.
 
 Longer videos cost more because they are analyzed in more overlapping windows (a
 video over 180s is split into ~150-second windows), and higher tiers cost more

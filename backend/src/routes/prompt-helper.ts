@@ -6,6 +6,7 @@ import { creditGuard, reserveCreditsForJob } from "../middleware/credit-guard.js
 import { CreditsService } from "../ee/billing/credits.js"
 import { llmCompleteStructured } from "../lib/llm-client.js"
 import { LLM_MODEL_IDS, LLM_REASONING_EFFORTS, buildLlmCreditIdentifier, resolveLlmCreditId, LLM_FEATURE_DEFAULTS } from "@nodaro/shared"
+import { LLM_ADVANCED_SHAPE, advancedModeError, resolveLlmParams } from "../lib/llm-advanced-mode.js"
 import { extractWorkflowId, extractNodeId, extractForcePrivate } from "../lib/request-helpers.js"
 import { buildJobInputData } from "../lib/job-input-data.js"
 import { buildWizardAnalyzeSystem, buildWizardGenerateSystem, buildWizardEnhanceSystem } from "../prompts/prompt-wizard-system.js"
@@ -30,6 +31,7 @@ const wizardAnalyzeBody = z.object({
   duration: z.number().optional(),
   llmModel: z.enum(LLM_MODEL_IDS as [string, ...string[]]).optional(),
   reasoningEffort: z.enum(LLM_REASONING_EFFORTS).optional(),
+  ...LLM_ADVANCED_SHAPE,
   nodeContext: nodeContextSchema,
   userPreference: z.string().max(500).optional(),
 })
@@ -49,6 +51,7 @@ const wizardGenerateBody = z.object({
   duration: z.number().optional(),
   llmModel: z.enum(LLM_MODEL_IDS as [string, ...string[]]).optional(),
   reasoningEffort: z.enum(LLM_REASONING_EFFORTS).optional(),
+  ...LLM_ADVANCED_SHAPE,
   selections: z.array(wizardSelectionSchema).min(1),
   originalPrompt: z.string().max(5000).optional(),
   userPrompt: z.string().max(8000).optional(),
@@ -66,6 +69,7 @@ const wizardEnhanceBody = z.object({
   duration: z.number().optional(),
   llmModel: z.enum(LLM_MODEL_IDS as [string, ...string[]]).optional(),
   reasoningEffort: z.enum(LLM_REASONING_EFFORTS).optional(),
+  ...LLM_ADVANCED_SHAPE,
   nodeContext: nodeContextSchema,
   userPreference: z.string().max(500).optional(),
 })
@@ -131,7 +135,9 @@ export async function promptHelperRoutes(app: FastifyInstance) {
 
       const body = parsed.data
       const llmModel = body.llmModel ?? LLM_FEATURE_DEFAULTS["prompt-helper"]
-      const modelIdentifier = buildLlmCreditIdentifier("prompt-helper", llmModel, body.reasoningEffort)
+      const advancedError = advancedModeError(body, llmModel)
+      if (advancedError) return reply.status(400).send({ error: advancedError })
+      const modelIdentifier = buildLlmCreditIdentifier("prompt-helper", llmModel, body.reasoningEffort, body.advancedMode)
 
       // Create job record
       const { data: job, error: jobError } = await supabase
@@ -228,8 +234,7 @@ export async function promptHelperRoutes(app: FastifyInstance) {
           // options. On the Anthropic forced-tool path a truncated tool call
           // yields empty input → guaranteed validation failure with no salvage,
           // so give the structured output real headroom (capped per-model anyway).
-          maxTokens: 8192,
-          temperature: 0.7,
+          ...resolveLlmParams(body, { maxTokens: 8192, temperature: 0.7 }),
           reasoningEffort: body.reasoningEffort,
         }
 

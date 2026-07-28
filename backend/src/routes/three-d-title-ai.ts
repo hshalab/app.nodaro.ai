@@ -14,6 +14,7 @@ import { validateThreeDTitlePlan } from "../lib/three-d-title-validator.js"
 import { extractJsonFromAIResponse } from "../lib/json-utils.js"
 import { llmComplete } from "../lib/llm-client.js"
 import { LLM_MODEL_IDS, LLM_REASONING_EFFORTS, buildLlmCreditIdentifier, resolveLlmCreditId, LLM_FEATURE_DEFAULTS } from "@nodaro/shared"
+import { LLM_ADVANCED_SHAPE, advancedModeError, resolveLlmParams } from "../lib/llm-advanced-mode.js"
 import { ASPECT_DIMENSIONS } from "../lib/aspect-dimensions.js"
 import { extractWorkflowId, extractNodeId, extractForcePrivate } from "../lib/request-helpers.js"
 import { buildJobInputData } from "../lib/job-input-data.js"
@@ -33,6 +34,7 @@ const generateBody = z.object({
   userId: z.string().uuid(),
   llmModel: z.enum(LLM_MODEL_IDS as [string, ...string[]]).optional(),
   reasoningEffort: z.enum(LLM_REASONING_EFFORTS).optional(),
+  ...LLM_ADVANCED_SHAPE,
 })
 
 export async function threeDTitleAIRoutes(app: FastifyInstance) {
@@ -98,7 +100,9 @@ export async function threeDTitleAIRoutes(app: FastifyInstance) {
       }
 
       // Reserve credits
-      const modelIdentifier = buildLlmCreditIdentifier("3d-title", llmModel, parsed.data.reasoningEffort)
+      const advancedError = advancedModeError(parsed.data, llmModel)
+      if (advancedError) return reply.status(400).send({ error: advancedError })
+      const modelIdentifier = buildLlmCreditIdentifier("3d-title", llmModel, parsed.data.reasoningEffort, parsed.data.advancedMode)
       const reservation = await reserveCreditsForJob(req, reply, job.id, modelIdentifier)
       if (reply.sent) return
       const usageLogId = reservation?.usageLogId
@@ -127,8 +131,7 @@ Title prompt: ${prompt}`
           modelId: llmModel,
           system: THREE_D_TITLE_SYSTEM_PROMPT,
           messages: [{ role: "user", content: userMessage }],
-          maxTokens: 3072,
-          temperature: 0.4,
+          ...resolveLlmParams(parsed.data, { maxTokens: 3072, temperature: 0.4 }),
           reasoningEffort: parsed.data.reasoningEffort,
         })
 

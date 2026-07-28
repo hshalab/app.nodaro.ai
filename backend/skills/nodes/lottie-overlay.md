@@ -1,7 +1,7 @@
 ---
 node_type: lottie-overlay
-generated_at: 2026-07-13T16:11:49.853Z
-generated_from: 9af14ef89
+generated_at: 2026-07-28T17:14:14.990Z
+generated_from: 15975a896
 ---
 
 # Lottie Overlay
@@ -27,6 +27,9 @@ generated_from: 9af14ef89
 - `lottieAssets?: Array<{ id: string; url: string; name: string; durationSeconds?: number }>`
 - `llmModel?: string`
 - `reasoningEffort?: LlmReasoningEffort`
+- `advancedMode?: boolean`
+- `temperature?: number`
+- `maxTokens?: number`
 - `executionStatus?: "idle" | "running" | "completed" | "failed"`
 - `currentJobProgress?: number`
 - `errorMessage?: string`

@@ -15,6 +15,7 @@ import { extractJsonFromAIResponse } from "../lib/json-utils.js"
 import { llmComplete } from "../lib/llm-client.js"
 import { LLM_MODEL_IDS, LLM_REASONING_EFFORTS, buildLlmCreditIdentifier, resolveLlmCreditId, LLM_FEATURE_DEFAULTS, motionGraphicsFeature } from "@nodaro/shared"
 import { ASPECT_DIMENSIONS } from "../lib/aspect-dimensions.js"
+import { LLM_ADVANCED_SHAPE, advancedModeError, resolveLlmParams } from "../lib/llm-advanced-mode.js"
 import { extractWorkflowId, extractNodeId, extractForcePrivate } from "../lib/request-helpers.js"
 import { buildJobInputData } from "../lib/job-input-data.js"
 import { markProviderCallStart } from "../lib/reconcile/persistence.js"
@@ -32,6 +33,7 @@ const generateBody = z.object({
   userId: z.string().uuid(),
   llmModel: z.enum(LLM_MODEL_IDS as [string, ...string[]]).optional(),
   reasoningEffort: z.enum(LLM_REASONING_EFFORTS).optional(),
+  ...LLM_ADVANCED_SHAPE,
   engine: z.enum(["elements", "lottie"]).default("elements"),
   previousSids: z.array(z.string()).max(40).optional(),
 })
@@ -118,7 +120,9 @@ export async function motionGraphicsAIRoutes(app: FastifyInstance) {
           return sendInternalError(reply, req, lottieJobError, "Failed to create job")
         }
 
-        const modelIdentifier = buildLlmCreditIdentifier("motion-graphics-lottie", lottieLlmModel, parsed.data.reasoningEffort)
+        const advancedError = advancedModeError(parsed.data, lottieLlmModel)
+        if (advancedError) return reply.status(400).send({ error: advancedError })
+        const modelIdentifier = buildLlmCreditIdentifier("motion-graphics-lottie", lottieLlmModel, parsed.data.reasoningEffort, parsed.data.advancedMode)
         const reservation = await reserveCreditsForJob(req, reply, lottieJob.id, modelIdentifier)
         if (reply.sent) return
         const usageLogId = reservation?.usageLogId
@@ -133,6 +137,8 @@ export async function motionGraphicsAIRoutes(app: FastifyInstance) {
           backgroundColor,
           llmModel: lottieLlmModel,
           reasoningEffort: parsed.data.reasoningEffort,
+          // Rides the queue payload — the LLM call is in the worker.
+          advanced: { advancedMode: parsed.data.advancedMode, temperature: parsed.data.temperature, maxTokens: parsed.data.maxTokens },
           previousSids: parsed.data.previousSids,
           usageLogId,
         })
@@ -159,7 +165,9 @@ export async function motionGraphicsAIRoutes(app: FastifyInstance) {
       }
 
       // Reserve credits
-      const modelIdentifier = buildLlmCreditIdentifier("motion-graphics", llmModel, parsed.data.reasoningEffort)
+      const advancedErrorElements = advancedModeError(parsed.data, llmModel)
+      if (advancedErrorElements) return reply.status(400).send({ error: advancedErrorElements })
+      const modelIdentifier = buildLlmCreditIdentifier("motion-graphics", llmModel, parsed.data.reasoningEffort, parsed.data.advancedMode)
       const reservation = await reserveCreditsForJob(req, reply, job.id, modelIdentifier)
       if (reply.sent) return
       const usageLogId = reservation?.usageLogId
@@ -184,8 +192,7 @@ Prompt: ${prompt}`
           modelId: llmModel,
           system: MOTION_GRAPHICS_SYSTEM_PROMPT,
           messages: [{ role: "user", content: userMessage }],
-          maxTokens: 2048,
-          temperature: 0.3,
+          ...resolveLlmParams(parsed.data, { maxTokens: 2048, temperature: 0.3 }),
           reasoningEffort: parsed.data.reasoningEffort,
         })
 

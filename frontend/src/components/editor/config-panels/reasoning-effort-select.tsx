@@ -1,6 +1,6 @@
 import { useEffect } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { getLlmModel, LLM_FEATURE_DEFAULTS } from "@nodaro/shared"
+import { availableReasoningEfforts, LLM_FEATURE_DEFAULTS } from "@nodaro/shared"
 import type { LlmFeature, LlmReasoningEffort } from "@nodaro/shared"
 
 /** Shared across every reasoning-effort surface (this select + the llm-chat
@@ -10,6 +10,10 @@ export const EFFORT_LABELS: Record<LlmReasoningEffort, string> = {
   low: "Low",
   medium: "Medium",
   high: "High",
+  // Still accurate alongside Advanced mode: xhigh/max only exist on models
+  // that have no direct lane (Claude/GPT), and Advanced only exists on Gemini,
+  // so the effort bump and the advanced bump can never both apply to one call.
+  // If a Gemini model ever declares xhigh/max, revisit this wording.
   xhigh: "Very high (may bill one tier up)",
   max: "Max (may bill one tier up)",
 }
@@ -19,21 +23,29 @@ interface ReasoningEffortSelectProps {
   feature: LlmFeature
   /** The node's current llmModel (undefined = the feature default). */
   modelId?: string
+  /** Advanced mode is on for this node. The vendor's own API accepts a wider
+   *  effort ladder than the aggregator does, so the selectable levels — and
+   *  therefore whether this picker renders at all — depend on it. */
+  advanced?: boolean
   value?: LlmReasoningEffort
   onChange: (value: LlmReasoningEffort | undefined) => void
 }
 
 /** Effort picker for reasoning-capable models. Renders nothing when the
- *  active model declares no levels; clears a stale value on model switch
- *  (Provider Enum Sync pitfall 12b). "Auto" sends nothing → vendor default. */
-export function ReasoningEffortSelect({ feature, modelId, value, onChange }: ReasoningEffortSelectProps) {
+ *  active model declares no levels on the active lane; clears a stale value on
+ *  model OR lane switch (Provider Enum Sync pitfall 12b). "Auto" sends nothing
+ *  → vendor default. */
+export function ReasoningEffortSelect({ feature, modelId, advanced, value, onChange }: ReasoningEffortSelectProps) {
   const effectiveModel = modelId || LLM_FEATURE_DEFAULTS[feature]
-  const levels = getLlmModel(effectiveModel)?.reasoningEfforts ?? []
+  const levels = availableReasoningEfforts(effectiveModel, advanced)
 
+  // Lane is in the deps because turning Advanced OFF can narrow the ladder —
+  // e.g. a `medium` picked on the direct lane is not a level KIE accepts, and
+  // leaving it set would have the route clamp it silently.
   useEffect(() => {
     if (value && !levels.includes(value)) onChange(undefined)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectiveModel])
+  }, [effectiveModel, advanced])
 
   if (levels.length === 0) return null
 

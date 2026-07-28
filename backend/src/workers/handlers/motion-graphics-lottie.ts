@@ -14,6 +14,7 @@
  */
 
 import { LLM_FEATURE_DEFAULTS, applySlots } from "@nodaro/shared"
+import { resolveLlmParams, type LlmAdvancedInput } from "../../lib/llm-advanced-mode.js"
 import type { LlmReasoningEffort } from "@nodaro/shared"
 import { llmComplete } from "../../lib/llm-client.js"
 import { extractJsonFromAIResponse } from "../../lib/json-utils.js"
@@ -40,6 +41,7 @@ interface MotionGraphicsLottiePayload {
   durationInFrames: number
   backgroundColor: string
   llmModel?: string
+  advanced?: LlmAdvancedInput
   reasoningEffort?: string
   /** Regeneration hint (Phase 2) — accepted from day 1. */
   previousSids?: string[]
@@ -61,7 +63,7 @@ function buildUserMessage(p: {
 }
 
 const handleMotionGraphicsLottie: HandlerFn = async function handleMotionGraphicsLottie(job, ctx) {
-  const { prompt, fps, width, height, durationInFrames, backgroundColor, llmModel, reasoningEffort, previousSids } =
+  const { prompt, fps, width, height, durationInFrames, backgroundColor, llmModel, reasoningEffort, previousSids, advanced } =
     job.data as MotionGraphicsLottiePayload
   const modelId = llmModel ?? LLM_FEATURE_DEFAULTS["motion-graphics-lottie"]
   console.log(`[worker] motion-graphics-lottie ${ctx.jobId} (model: ${modelId})`)
@@ -77,8 +79,7 @@ const handleMotionGraphicsLottie: HandlerFn = async function handleMotionGraphic
       modelId,
       system: LOTTIE_GRAPHIC_SYSTEM_PROMPT,
       messages,
-      maxTokens: LOTTIE_MAX_TOKENS,
-      temperature: 0.3,
+      ...resolveLlmParams(advanced ?? {}, { maxTokens: LOTTIE_MAX_TOKENS, temperature: 0.3 }),
       timeoutMs: LOTTIE_LLM_TIMEOUT_MS,
       reasoningEffort: reasoningEffort as LlmReasoningEffort | undefined,
     })

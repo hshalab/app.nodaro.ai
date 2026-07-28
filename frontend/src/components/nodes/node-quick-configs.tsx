@@ -40,7 +40,7 @@ import {
   getDurationsForVideoModel,
   VIDEO_RESOLUTION_OPTIONS,
 } from "@/components/editor/config-panels/model-options"
-import { LLM_MODELS, STRUCTURED_VISION_MODELS, SHEET_TYPES, SHEET_SKINS, getLlmModel, VIDEO_ANALYSIS_TIER_ORDER, VIDEO_ANALYSIS_TIER_LABELS, DEFAULT_VIDEO_ANALYSIS_TIER } from "@nodaro/shared"
+import { availableReasoningEfforts, LLM_MODELS, STRUCTURED_VISION_MODELS, SHEET_TYPES, SHEET_SKINS, getLlmModel, VIDEO_ANALYSIS_TIER_ORDER, VIDEO_ANALYSIS_TIER_LABELS, DEFAULT_VIDEO_ANALYSIS_TIER } from "@nodaro/shared"
 import { EFFORT_LABELS } from "@/components/editor/config-panels/reasoning-effort-select"
 import { ALL_LANGUAGES } from "@/lib/audio-tags"
 
@@ -196,7 +196,7 @@ const llmModelControl: QuickConfigControl = {
 
 /** Effort dropdown for reasoning-capable models (writes `data.reasoningEffort`).
  *  Provider-aware: options are derived from the CURRENTLY selected `llmModel`'s
- *  `reasoningEfforts` levels — empty on non-reasoning models, so
+ *  effort levels ON THE ACTIVE LANE — empty on non-reasoning models, so
  *  {@link QuickConfigSelect} self-hides the control. Its generic fail-safe
  *  `useEffect` (same mechanism every provider-aware control here relies on)
  *  snaps or clears a stale stored effort whenever the model switch changes
@@ -207,8 +207,14 @@ const reasoningEffortControl: QuickConfigControl = {
   icon: Gauge,
   sentinelUndefined: "auto",
   options: (data) => {
-    const model = getLlmModel(typeof data.llmModel === "string" ? data.llmModel : "")
-    const levels = model?.reasoningEfforts ?? []
+    // Lane-aware: Advanced mode runs the model on the vendor API, which
+    // accepts a wider ladder than the aggregator. Reading the raw
+    // `reasoningEfforts` here would hide levels the node can actually use
+    // — and on gemini-3-flash would hide the control entirely.
+    const levels = availableReasoningEfforts(
+      typeof data.llmModel === "string" ? data.llmModel : "",
+      data.advancedMode === true,
+    )
     if (levels.length === 0) return []
     return [
       { value: "auto", label: "Auto" },

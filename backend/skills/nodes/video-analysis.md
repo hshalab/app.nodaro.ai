@@ -1,7 +1,7 @@
 ---
 node_type: video-analysis
-generated_at: 2026-07-22T09:10:14.297Z
-generated_from: 22424a3ff
+generated_at: 2026-07-28T17:14:14.854Z
+generated_from: 15975a896
 ---
 
 # Video Analysis
@@ -22,6 +22,9 @@ generated_from: 22424a3ff
 - `probedYoutube?: { url: string; durationSec: number }`
 - `llmModel?: string`
 - `reasoningEffort?: LlmReasoningEffort`
+- `advancedMode?: boolean`
+- `temperature?: number`
+- `maxTokens?: number`
 - `selectionMode?: "choose" | "combine"`
 - `translateSpeechToEnglish?: boolean`
 - `translateOnScreenTextToEnglish?: boolean`

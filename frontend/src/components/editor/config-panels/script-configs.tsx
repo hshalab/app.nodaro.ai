@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
+import { AdvancedModeToggle } from "./advanced-mode-toggle"
 import { Copy, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -90,8 +91,17 @@ export function GenerateScriptConfig({ data, onUpdate, sources, fieldMappings, o
       <ReasoningEffortSelect
         feature="generate-script"
         modelId={data.llmModel}
+        advanced={data.advancedMode}
         value={data.reasoningEffort}
         onChange={(v) => onUpdate({ reasoningEffort: v })}
+      />
+      <AdvancedModeToggle
+        feature="generate-script"
+        modelId={data.llmModel}
+        value={data.advancedMode}
+        temperature={data.temperature}
+        maxTokens={data.maxTokens}
+        onChange={onUpdate}
       />
       <MappableField field="sceneCount" label="Number of Scenes" sources={sources} fieldMappings={fieldMappings} onMapField={onMapField}>
         <Input
@@ -275,8 +285,17 @@ export function QACheckConfig({ data, onUpdate }: ConfigProps<QACheckData>) {
       <ReasoningEffortSelect
         feature="qa-check"
         modelId={data.llmModel}
+        advanced={data.advancedMode}
         value={data.reasoningEffort}
         onChange={(v) => onUpdate({ reasoningEffort: v })}
+      />
+      <AdvancedModeToggle
+        feature="qa-check"
+        modelId={data.llmModel}
+        value={data.advancedMode}
+        temperature={data.temperature}
+        maxTokens={data.maxTokens}
+        onChange={onUpdate}
       />
       <div>
         <Label>Check Type</Label>
@@ -409,8 +428,17 @@ export function ImageCriticConfig({ data, onUpdate, nodes, edges, nodeRefs, refM
       <ReasoningEffortSelect
         feature="image-critic"
         modelId={data.llmModel}
+        advanced={data.advancedMode}
         value={data.reasoningEffort}
         onChange={(v) => onUpdate({ reasoningEffort: v })}
+      />
+      <AdvancedModeToggle
+        feature="image-critic"
+        modelId={data.llmModel}
+        value={data.advancedMode}
+        temperature={data.temperature}
+        maxTokens={data.maxTokens}
+        onChange={onUpdate}
       />
     </div>
   )
@@ -458,8 +486,17 @@ export function ImageToTextConfig({ data, onUpdate, sources, fieldMappings, onMa
       <ReasoningEffortSelect
         feature="image-to-text"
         modelId={data.llmModel}
+        advanced={data.advancedMode}
         value={data.reasoningEffort}
         onChange={(v) => onUpdate({ reasoningEffort: v })}
+      />
+      <AdvancedModeToggle
+        feature="image-to-text"
+        modelId={data.llmModel}
+        value={data.advancedMode}
+        temperature={data.temperature}
+        maxTokens={data.maxTokens}
+        onChange={onUpdate}
       />
 
       <div>
@@ -574,8 +611,17 @@ export function DescribeToPickerConfig({ nodeId, data, onUpdate }: ConfigProps<D
       <ReasoningEffortSelect
         feature="describe-to-picker"
         modelId={data.llmModel}
+        advanced={data.advancedMode}
         value={data.reasoningEffort}
         onChange={(v) => onUpdate({ reasoningEffort: v })}
+      />
+      <AdvancedModeToggle
+        feature="describe-to-picker"
+        modelId={data.llmModel}
+        value={data.advancedMode}
+        temperature={data.temperature}
+        maxTokens={data.maxTokens}
+        onChange={onUpdate}
       />
       <div>
         <Label>Extra guidance (optional)</Label>

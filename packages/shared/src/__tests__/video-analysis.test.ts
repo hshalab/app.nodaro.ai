@@ -5,7 +5,9 @@ import {
   renderAnalyzedScene, isOversizedScene, aspectRatioFromDims,
   entitySlotSchema, analyzedSceneSchema,
   rewriteSceneBindings, dropUnknownBindings,
-  rewriteSpeakerSlots, dropUnknownSpeakers,
+  rewriteSpeakerSlots, dropUnknownSpeakers, mergeClipLook,
+  VIDEO_ANALYSIS_SPEED_EFFECTS, VIDEO_ANALYSIS_SHOT_ANGLES, VIDEO_ANALYSIS_FACELESS_ANGLES,
+  VIDEO_ANALYSIS_VISUAL_EFFECTS, VIDEO_ANALYSIS_TRANSITIONS,
   VIDEO_ANALYSIS_MAX_VARIATIONS, VIDEO_ANALYSIS_VARIATION_SLUGS, VIDEO_ANALYSIS_DEFAULT_VARIATION,
   type EntitySlot, type AudioLayer,
 } from "../video-analysis.js"
@@ -213,6 +215,136 @@ describe("speech attribution (speakerSlot)", () => {
     const r = dropUnknownSpeakers([speech("that's me!", { speakerSlot: "creator" })], new Set())
     expect(r.audio[0]).not.toHaveProperty("speakerSlot")
     expect(r.dropped).toEqual(["creator"])
+  })
+})
+
+describe("cinematography fields (angle / speed / onScreenText / look)", () => {
+  it("carries angle and speed as closed enums through a window round-trip", () => {
+    const parsed = windowAnalysisSchema.parse({
+      slots: [slot],
+      scenes: [{ ...baseScene, angle: "low", speed: "slow-motion", onScreenText: "ACT I" }],
+    })
+    expect(parsed.scenes[0]).toMatchObject({ angle: "low", speed: "slow-motion", onScreenText: "ACT I" })
+  })
+
+  it("supports the RELATIONAL viewpoints, so shotType keeps the size", () => {
+    // These were conventions inside the `shotType` list, competing with the
+    // sizes for one slot — so an over-the-shoulder MEDIUM had to throw one away.
+    const parsed = windowAnalysisSchema.parse({
+      slots: [slot],
+      scenes: [{ ...baseScene, shotType: "Medium", angle: "over-the-shoulder" }],
+    })
+    expect(parsed.scenes[0]).toMatchObject({ shotType: "Medium", angle: "over-the-shoulder" })
+    for (const a of ["pov", "profile", "from-behind"]) {
+      expect(windowAnalysisSchema.safeParse({ slots: [slot], scenes: [{ ...baseScene, angle: a }] }).success).toBe(true)
+    }
+  })
+
+  it("carries picture EFFECTS as an array — a shot can be grainy and vignetted", () => {
+    const parsed = windowAnalysisSchema.parse({
+      slots: [slot], scenes: [{ ...baseScene, effects: ["grain", "vignette"] }],
+    })
+    expect(parsed.scenes[0]!.effects).toEqual(["grain", "vignette"])
+  })
+
+  it("keeps compositing OUT of effects — that is where the phantom slot came from", () => {
+    // A field for "there is an inset of a person here" would hand a legitimate
+    // home to the invented `{slot:creator} overlay talking to camera`. An effect
+    // is verifiable in the pixels; a claim about who is inset is not.
+    for (const bad of ["picture-in-picture", "split-screen", "overlay"]) {
+      expect(windowAnalysisSchema.safeParse({ slots: [slot], scenes: [{ ...baseScene, effects: [bad] }] }).success).toBe(false)
+    }
+  })
+
+  it("transitions distinguish DISSOLVE from FADE — they look nothing alike", () => {
+    // Collapsed onto `fade` before this, so a cross-dissolve was rendered as a
+    // fade through black.
+    expect(VIDEO_ANALYSIS_TRANSITIONS).toContain("dissolve")
+    for (const t of VIDEO_ANALYSIS_TRANSITIONS) {
+      expect(windowAnalysisSchema.safeParse({ slots: [slot], scenes: [{ ...baseScene, transitionOut: t }] }).success).toBe(true)
+    }
+  })
+
+  it("effects and transitions are NOT the same axis", () => {
+    // `dissolve`/`fade` are edits BETWEEN shots; blur/pixelate are on the picture.
+    for (const t of ["dissolve", "fade", "wipe", "cut"]) {
+      expect(VIDEO_ANALYSIS_VISUAL_EFFECTS).not.toContain(t)
+    }
+    for (const e of VIDEO_ANALYSIS_VISUAL_EFFECTS) {
+      expect(VIDEO_ANALYSIS_TRANSITIONS).not.toContain(e as never)
+    }
+  })
+
+  it("marks the viewpoints where no face is visible — auto-cast reads this", () => {
+    // A reference frame shot from behind cannot cast a face, however well framed.
+    expect([...VIDEO_ANALYSIS_FACELESS_ANGLES].sort()).toEqual(["from-behind", "over-the-shoulder"])
+    for (const a of VIDEO_ANALYSIS_FACELESS_ANGLES) {
+      expect(VIDEO_ANALYSIS_SHOT_ANGLES).toContain(a)   // never a stale literal
+    }
+  })
+
+  it("rejects free-text angle — improvising it is the failure being fixed", () => {
+    // The shipped defect: `"camera": "low angle static"`, because angle had no
+    // field. A free-text `angle` would just move the improvisation.
+    expect(windowAnalysisSchema.safeParse({
+      slots: [slot], scenes: [{ ...baseScene, angle: "low angle static" }],
+    }).success).toBe(false)
+  })
+
+  it("has NO 'normal' speed member — absence is normal, so there is one way to say it", () => {
+    expect(VIDEO_ANALYSIS_SPEED_EFFECTS).not.toContain("normal")
+    expect(windowAnalysisSchema.safeParse({
+      slots: [slot], scenes: [{ ...baseScene, speed: "normal" }],
+    }).success).toBe(false)
+    // …and omitting it is valid.
+    expect(windowAnalysisSchema.safeParse({ slots: [slot], scenes: [baseScene] }).success).toBe(true)
+  })
+
+  it("keeps every new field OPTIONAL so an older producer still validates", () => {
+    const parsed = windowAnalysisSchema.parse({ slots: [slot], scenes: [baseScene] })
+    expect(parsed.scenes[0]).not.toHaveProperty("angle")
+    expect(parsed.scenes[0]).not.toHaveProperty("speed")
+    expect(parsed.scenes[0]).not.toHaveProperty("onScreenText")
+    expect(parsed).not.toHaveProperty("look")
+  })
+
+  it("the new scene fields reach the RESULT schema, not just the window one", () => {
+    // analyzedSceneSchema extends windowSceneBase — this pins that it stays that
+    // way, since a field the merged result drops is invisible to every consumer.
+    const scene = { ...baseScene, sceneNumber: 1, visualResolved: "x", slotRefs: [], angle: "dutch", speed: "freeze", onScreenText: "THE END" }
+    expect(analyzedSceneSchema.parse(scene)).toMatchObject({ angle: "dutch", speed: "freeze", onScreenText: "THE END" })
+  })
+
+  it("look is a SIBLING of meta, not inside it — meta is measured, look is read", () => {
+    const r = videoAnalysisResultSchema.parse({
+      meta: { durationSec: 10, width: 1920, height: 1080, aspectRatio: "16:9" },
+      look: { grade: "muted teal", format: "anamorphic digital", genre: "cinematic trailer" },
+      slots: [],
+      scenes: [{ ...baseScene, sceneNumber: 1, visualResolved: "x", slotRefs: [] }],
+    })
+    expect(r.look?.format).toBe("anamorphic digital")
+    expect(r.meta).not.toHaveProperty("look")
+  })
+})
+
+describe("mergeClipLook", () => {
+  it("takes the first non-empty value PER FIELD, not the first window wholesale", () => {
+    // Windows see different footage: one may read the grade while only a later
+    // one contains the shot that reveals the format.
+    expect(mergeClipLook([
+      { grade: "muted teal" },
+      { grade: "warm", format: "16mm film grain" },
+      { lens: "anamorphic flare" },
+    ])).toEqual({ grade: "muted teal", format: "16mm film grain", lens: "anamorphic flare" })
+  })
+
+  it("ignores blank strings and trims what it keeps", () => {
+    expect(mergeClipLook([{ grade: "   " }, { grade: "  crushed blacks  " }])).toEqual({ grade: "crushed blacks" })
+  })
+
+  it("returns undefined when nothing was read — never an empty object", () => {
+    expect(mergeClipLook([])).toBeUndefined()
+    expect(mergeClipLook([undefined, {}, { grade: "" }])).toBeUndefined()
   })
 })
 

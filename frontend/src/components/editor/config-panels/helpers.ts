@@ -270,6 +270,11 @@ const LLM_NODE_FEATURE_MAP: Record<string, LlmFeature> = {
   "qa-check": "qa-check",
   "image-to-text": "image-to-text",
   "image-critic": "image-critic",
+  // Was missing: its per-node badge priced correctly via its own
+  // buildLlmCreditIdentifier call, but the workflow TOTAL fell through to the
+  // flat 1-credit NODE_CREDIT_COSTS entry, so a premium model on this node was
+  // invisible in the pre-run estimate.
+  "describe-to-picker": "describe-to-picker",
 }
 
 export function getModelIdentifier(node: WorkflowNode): string {
@@ -282,13 +287,13 @@ export function getModelIdentifier(node: WorkflowNode): string {
   // motion-graphics: feature is engine-dependent (design §8 — every credit-id site branches on engine)
   if (node.type === "motion-graphics") {
     const feature = motionGraphicsFeature(data.engine as string | undefined)
-    return buildLlmCreditIdentifier(feature, (data.llmModel as string | undefined) || LLM_FEATURE_DEFAULTS[feature], data.reasoningEffort as string | undefined)
+    return buildLlmCreditIdentifier(feature, (data.llmModel as string | undefined) || LLM_FEATURE_DEFAULTS[feature], data.reasoningEffort as string | undefined, data.advancedMode === true)
   }
 
   // LLM-powered nodes: use composite credit identifier based on selected model tier
   const llmFeature = LLM_NODE_FEATURE_MAP[node.type ?? ""]
   if (llmFeature) {
-    return buildLlmCreditIdentifier(llmFeature, (data.llmModel as string | undefined) || LLM_FEATURE_DEFAULTS[llmFeature], data.reasoningEffort as string | undefined)
+    return buildLlmCreditIdentifier(llmFeature, (data.llmModel as string | undefined) || LLM_FEATURE_DEFAULTS[llmFeature], data.reasoningEffort as string | undefined, data.advancedMode === true)
   }
 
   const nodeType = node.type ?? "unknown"

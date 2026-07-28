@@ -615,6 +615,29 @@ async function executeSyncHttpNode(
 }
 
 // Exported for testing so regression tests can assert sync-HTTP body shape.
+/**
+ * The LLM knobs an LLM node forwards from its canvas data into the route body.
+ *
+ * ONE helper rather than a hand-written pair per node type: this used to be 11
+ * copies of `llmModel` + `reasoningEffort`, so adding a knob meant remembering
+ * all 11. Miss one and that node silently ignores the setting in an
+ * orchestrated run while single-node Run honours it — different output AND
+ * different billing for the same configuration, with nothing to catch it.
+ *
+ * `temperature`/`maxTokens` are forwarded unconditionally; routes ignore them
+ * unless `advancedMode` is set (see lib/llm-advanced-mode.ts), and a caller
+ * that wants its own default simply lists the field again after the spread.
+ */
+export function llmNodeParams(data: Record<string, unknown>) {
+  return {
+    llmModel: data.llmModel,
+    reasoningEffort: data.reasoningEffort,
+    advancedMode: data.advancedMode,
+    temperature: data.temperature,
+    maxTokens: data.maxTokens,
+  }
+}
+
 export function buildSyncHttpBody(
   node: SimpleNode,
   resolvedInputs: ResolvedInputs,
@@ -639,8 +662,7 @@ export function buildSyncHttpBody(
         systemPrompt: data.systemPrompt || data.template,
         userInput: resolvedInputs.prompt || data.userInput || data.prompt,
         userId: ctx.userId,
-        llmModel: data.llmModel,
-        reasoningEffort: data.reasoningEffort,
+        ...llmNodeParams(data),
         temperature: data.temperature ?? 0.7,
         maxTokens: data.maxTokens ?? 4096,
       })
@@ -661,8 +683,7 @@ export function buildSyncHttpBody(
         referenceImageUrls: resolvedInputs.referenceImageUrls,
         referenceVideoUrls: resolvedInputs.referenceVideoUrls,
         referenceAudioUrls: resolvedInputs.referenceAudioUrls,
-        llmModel: data.llmModel,
-        reasoningEffort: data.reasoningEffort,
+        ...llmNodeParams(data),
         temperature: data.temperature ?? 0.7,
         maxTokens: data.maxTokens ?? 8192,
         userId: ctx.userId,
@@ -697,8 +718,7 @@ export function buildSyncHttpBody(
         fps: data.fps,
         aspectRatio: data.aspectRatio,
         durationSeconds: data.durationSeconds,
-        llmModel: data.llmModel,
-        reasoningEffort: data.reasoningEffort,
+        ...llmNodeParams(data),
         userId: ctx.userId,
       })
     }
@@ -712,8 +732,7 @@ export function buildSyncHttpBody(
         width: data.width,
         height: data.height,
         durationSeconds: data.durationSeconds,
-        llmModel: data.llmModel,
-        reasoningEffort: data.reasoningEffort,
+        ...llmNodeParams(data),
         userId: ctx.userId,
       })
 
@@ -737,8 +756,7 @@ export function buildSyncHttpBody(
         width: data.width,
         height: data.height,
         durationSeconds: data.durationSeconds,
-        llmModel: data.llmModel,
-        reasoningEffort: data.reasoningEffort,
+        ...llmNodeParams(data),
         userId: ctx.userId,
       })
     }
@@ -753,8 +771,7 @@ export function buildSyncHttpBody(
         height: data.height,
         durationSeconds: data.durationSeconds,
         backgroundColor: data.backgroundColor,
-        llmModel: data.llmModel,
-        reasoningEffort: data.reasoningEffort,
+        ...llmNodeParams(data),
         userId: ctx.userId,
       })
 
@@ -767,8 +784,7 @@ export function buildSyncHttpBody(
         height: data.height,
         durationSeconds: data.durationSeconds,
         backgroundColor: data.backgroundColor,
-        llmModel: data.llmModel,
-        reasoningEffort: data.reasoningEffort,
+        ...llmNodeParams(data),
         userId: ctx.userId,
       })
 
@@ -777,8 +793,7 @@ export function buildSyncHttpBody(
         imageUrl: resolvedInputs.imageUrl || data.imageUrl,
         customPrompt: resolvedInputs.prompt || data.customPrompt || data.prompt,
         detailLevel: data.detailLevel || "detailed",
-        llmModel: data.llmModel,
-        reasoningEffort: data.reasoningEffort,
+        ...llmNodeParams(data),
         userId: ctx.userId,
       })
 
@@ -787,8 +802,7 @@ export function buildSyncHttpBody(
         imageUrl: resolvedInputs.imageUrl || data.imageUrl,
         targetPickers: downstreamPickerTypes,
         instructions: data.instructions,
-        llmModel: data.llmModel,
-        reasoningEffort: data.reasoningEffort,
+        ...llmNodeParams(data),
         userId: ctx.userId,
       }
 
@@ -804,8 +818,7 @@ export function buildSyncHttpBody(
         checkType: data.checkType || "content",
         provider: data.provider || "claude",
         threshold: data.threshold ?? 0.7,
-        llmModel: data.llmModel,
-        reasoningEffort: data.reasoningEffort,
+        ...llmNodeParams(data),
         userId: ctx.userId,
       })
 
@@ -816,8 +829,7 @@ export function buildSyncHttpBody(
         prompt: resolvedInputs.prompt ?? (data.prompt as string | undefined),
         mode: data.mode,
         threshold: data.threshold,
-        llmModel: data.llmModel,
-        reasoningEffort: data.reasoningEffort,
+        ...llmNodeParams(data),
         workflowId: ctx.workflowId,
         userId: ctx.userId,
       })

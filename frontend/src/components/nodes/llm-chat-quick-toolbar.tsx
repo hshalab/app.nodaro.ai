@@ -18,7 +18,7 @@ import { RunNodeButton } from "./run-node-button"
 import { PromptEditButton } from "./prompt-edit-button"
 import { useWorkflowStore } from "@/hooks/use-workflow-store"
 import { NODE_VISUAL_SCALE_FLOOR } from "@/lib/zoom-floor"
-import { LLM_MODELS, LLM_FEATURE_DEFAULTS, getLlmModel } from "@nodaro/shared"
+import { availableReasoningEfforts, LLM_MODELS, LLM_FEATURE_DEFAULTS, getLlmModel } from "@nodaro/shared"
 import type { LlmReasoningEffort } from "@nodaro/shared"
 import { GENERATE_TEXT_TEMPLATES } from "@/lib/generate-text-templates"
 import { EFFORT_LABELS } from "@/components/editor/config-panels/reasoning-effort-select"
@@ -46,7 +46,9 @@ const TIER_LABELS: Record<string, string> = {
  * `updateNodeData` call either way.
  */
 export function buildModelChangePatch(data: LLMChatData, nextModelId: string): Partial<LLMChatData> {
-  const nextLevels = getLlmModel(nextModelId)?.reasoningEfforts ?? []
+  // Lane-aware: the ladder the next model offers depends on whether this node
+  // runs advanced, so a value valid on one lane can be invalid on the other.
+  const nextLevels = availableReasoningEfforts(nextModelId, data.advancedMode)
   const currentEffort = data.reasoningEffort
   return {
     llmModel: nextModelId,
@@ -133,7 +135,7 @@ export function LlmChatQuickToolbar({
   // Reasoning effort — only rendered when the current model declares levels.
   // Options/labels are single-sourced from EFFORT_LABELS (shared with
   // ReasoningEffortSelect, the config-panel counterpart) so wording can't drift.
-  const effortLevels = modelEntry?.reasoningEfforts ?? []
+  const effortLevels = availableReasoningEfforts(currentModel, data.advancedMode)
   const effortValue = data.reasoningEffort ?? AUTO_EFFORT
   const effortLabel = data.reasoningEffort ? EFFORT_LABELS[data.reasoningEffort] : "Auto"
 

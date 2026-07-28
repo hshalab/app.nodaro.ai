@@ -1,7 +1,7 @@
 ---
 node_type: video-composer
-generated_at: 2026-07-13T16:11:49.840Z
-generated_from: 9af14ef89
+generated_at: 2026-07-28T17:14:14.976Z
+generated_from: 15975a896
 ---
 
 # Compose Video
@@ -27,6 +27,9 @@ generated_from: 9af14ef89
 - `assetOrder?: string[]`
 - `llmModel?: string`
 - `reasoningEffort?: LlmReasoningEffort`
+- `advancedMode?: boolean`
+- `temperature?: number`
+- `maxTokens?: number`
 - `executionStatus?: "idle" | "running" | "completed" | "failed"`
 - `currentJobProgress?: number`
 - `errorMessage?: string`

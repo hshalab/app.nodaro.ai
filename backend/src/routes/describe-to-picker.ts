@@ -8,6 +8,7 @@ import { creditGuard, reserveCreditsForJob } from "../middleware/credit-guard.js
 import { safeUrlSchema } from "../lib/url-validator.js"
 import { prefetchAsBase64 } from "../lib/anthropic-image.js"
 import { llmCompleteStructured, type LlmContentBlock } from "../lib/llm-client.js"
+import { LLM_ADVANCED_SHAPE, advancedModeError, resolveLlmParams } from "../lib/llm-advanced-mode.js"
 import { extractWorkflowId, extractNodeId, extractForcePrivate } from "../lib/request-helpers.js"
 import { buildJobInputData } from "../lib/job-input-data.js"
 import { formatZodError } from "../lib/zod-error.js"
@@ -35,6 +36,7 @@ const describeToPickerBody = z
     userId: z.string().uuid().optional(),
     llmModel: z.enum(LLM_MODEL_IDS as [string, ...string[]]).optional(),
     reasoningEffort: z.enum(LLM_REASONING_EFFORTS).optional(),
+    ...LLM_ADVANCED_SHAPE,
   })
   .refine((b) => (b.targetPickers?.length ?? 0) > 0 || !!b.targetPicker, {
     message: "targetPickers (or legacy targetPicker) is required",
@@ -182,7 +184,9 @@ export async function describeToPickerRoutes(app: FastifyInstance) {
       if (!model || !STRUCTURED_VISION_MODEL_IDS.has(model.id)) {
         return reply.status(400).send({ error: { code: "validation_error", message: "describe-to-picker requires a vision-capable model with structured output (Anthropic or Gemini)" } })
       }
-      const modelIdentifier = buildLlmCreditIdentifier("describe-to-picker", llmModelId, parsed.data.reasoningEffort)
+      const advancedError = advancedModeError(parsed.data, model.id)
+      if (advancedError) return reply.status(400).send({ error: advancedError })
+      const modelIdentifier = buildLlmCreditIdentifier("describe-to-picker", llmModelId, parsed.data.reasoningEffort, parsed.data.advancedMode)
 
       const { data: job, error: jobError } = await supabase
         .from("jobs")
@@ -217,6 +221,7 @@ export async function describeToPickerRoutes(app: FastifyInstance) {
             system: buildSystemPrompt(legend, instructions),
             messages: [{ role: "user", content }],
             reasoningEffort: parsed.data.reasoningEffort,
+            ...resolveLlmParams(parsed.data),
           },
           schema,
           { schemaName: toolName },

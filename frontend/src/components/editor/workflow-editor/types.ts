@@ -300,7 +300,7 @@ export function estimateNodeCredits(node: { type?: string; data?: Record<string,
     const durationSec =
       probed && probed.url === node.data.youtubeUrl ? probed.durationSec : undefined
     const bucketSec = bucketSecondsFromCreditId(buildVideoAnalysisCreditId(model, durationSec))
-    // The $-derived formula moved to backend/src/lib/pricing/video-analysis-cost.ts
+    // The $-derived formula moved to the private @nodaroai/cloud-plugins formula (output published as VIDEO_ANALYSIS_BUCKET_CREDITS)
     // (S5) — look up the precomputed credit table instead of computing it here.
     return bucketSec !== null
       ? VIDEO_ANALYSIS_BUCKET_CREDITS[buildVideoAnalysisCreditId(model, bucketSec)] ?? NODE_CREDIT_COSTS["video-analysis"] ?? 0

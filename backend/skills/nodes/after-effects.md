@@ -1,7 +1,7 @@
 ---
 node_type: after-effects
-generated_at: 2026-07-13T16:11:49.848Z
-generated_from: 9af14ef89
+generated_at: 2026-07-28T17:14:14.984Z
+generated_from: 15975a896
 ---
 
 # After Effects
@@ -26,6 +26,9 @@ generated_from: 9af14ef89
 - `height?: number`
 - `llmModel?: string`
 - `reasoningEffort?: LlmReasoningEffort`
+- `advancedMode?: boolean`
+- `temperature?: number`
+- `maxTokens?: number`
 - `executionStatus?: "idle" | "running" | "completed" | "failed"`
 - `currentJobProgress?: number`
 - `errorMessage?: string`

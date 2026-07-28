@@ -20,6 +20,148 @@
 import { z } from "zod"
 
 export const VIDEO_ANALYSIS_MAX_SCENE_SEC = 8
+
+/**
+ * Camera VIEWPOINT — where the camera is relative to the subject. The axis
+ * `shotType` does not carry, and the one the analyzer had been improvising.
+ *
+ * Two failures this fixes, both from real jobs:
+ *
+ *  1. `shotType` is framing SIZE (Wide … Extreme Close-Up), so a true angle had
+ *     nowhere to go and landed in the MOVEMENT field instead:
+ *     `"camera": "low angle static"`. That loses the angle to anything reading
+ *     `camera` and pollutes the movement vocabulary.
+ *  2. The relational viewpoints — `Over-the-Shoulder`, `POV` — were conventions
+ *     inside the `shotType` list, competing with the sizes for one slot. So an
+ *     over-the-shoulder MEDIUM had to pick one and threw the other away. They
+ *     belong here, leaving `shotType` free to state the size: an OTS medium is
+ *     `shotType: "Medium"` + `angle: "over-the-shoulder"`, which is strictly more
+ *     than either field could carry alone.
+ *
+ * A closed enum rather than free text precisely because improvisation is the
+ * failure being fixed. Absent means EYE-LEVEL — the overwhelming default, so
+ * omitting it costs nothing on most shots (the same "absence is the default"
+ * shape as `transitionOut` and appearance variations).
+ *
+ * `from-behind` and `over-the-shoulder` also carry real meaning downstream: a
+ * face is not visible in either, which is what auto-cast needs to know before
+ * choosing one as an identity reference.
+ */
+export const VIDEO_ANALYSIS_SHOT_ANGLES = [
+  // Vertical placement and roll — the classical "angles".
+  "eye-level", "low", "high", "overhead", "worms-eye", "dutch",
+  // Relational viewpoints — where the camera sits with respect to the subject.
+  "over-the-shoulder", "pov", "profile", "from-behind",
+] as const
+export type VideoAnalysisShotAngle = (typeof VIDEO_ANALYSIS_SHOT_ANGLES)[number]
+
+/** Viewpoints in which the subject's FACE is not visible — so a frame shot this
+ *  way is a poor identity reference however good its framing otherwise is. */
+export const VIDEO_ANALYSIS_FACELESS_ANGLES: ReadonlySet<string> = new Set(["over-the-shoulder", "from-behind"])
+
+/**
+ * Effects applied to the PICTURE of a shot. An array — a shot can be grainy and
+ * vignetted at once — and absent when the image is clean, which is most shots.
+ *
+ * Scoped deliberately to things done to the IMAGE, and NOT to compositing that
+ * asserts what is in the shot (picture-in-picture, split screen). That line
+ * matters: a real job invented `{slot:creator} overlay talking to camera` across
+ * nine scenes for a man who is never seen, so a field for "there is an inset of a
+ * person here" would hand that fabrication a legitimate home. An effect is
+ * verifiable in the pixels; a claim about who is inset is not.
+ *
+ * `dissolve` and `fade` are NOT here either — they are edits BETWEEN shots and
+ * belong to `transitionOut`.
+ */
+export const VIDEO_ANALYSIS_VISUAL_EFFECTS = [
+  "blur", "pixelate", "glitch", "grain", "vignette", "flash", "distortion", "double-exposure",
+] as const
+export type VideoAnalysisVisualEffect = (typeof VIDEO_ANALYSIS_VISUAL_EFFECTS)[number]
+
+/**
+ * Visible edit INTO the next shot.
+ *
+ * `dissolve` (a cross-fade from one image to the other) is distinct from `fade`
+ * (through black or white). Collapsing both onto `fade` — as this enum did — makes
+ * a recreation render the wrong edit, and the two look nothing alike.
+ */
+export const VIDEO_ANALYSIS_TRANSITIONS = ["cut", "fade", "dissolve", "wipe", "whip"] as const
+export type VideoAnalysisTransition = (typeof VIDEO_ANALYSIS_TRANSITIONS)[number]
+
+/**
+ * Time manipulation — slow motion, ramps, timelapse, freeze, reverse.
+ *
+ * Previously unrepresentable anywhere in the schema, so a recreation rendered
+ * every shot at normal speed no matter what the footage did. It is a first-class
+ * lever in every video model and a real editing decision in most action footage.
+ *
+ * `"normal"` is deliberately NOT a member: absence is normal speed, so there is
+ * exactly one way to say "nothing unusual here" and the field costs nothing on
+ * the majority of shots.
+ */
+export const VIDEO_ANALYSIS_SPEED_EFFECTS = ["slow-motion", "ramp-in", "ramp-out", "timelapse", "freeze", "reverse"] as const
+export type VideoAnalysisSpeedEffect = (typeof VIDEO_ANALYSIS_SPEED_EFFECTS)[number]
+
+/**
+ * The CLIP-LEVEL look — one source of truth for the properties that belong to
+ * the whole piece rather than any one shot.
+ *
+ * Colour grade, camera format and lens character were previously only ever prose
+ * inside each scene's `visual`, which meant a 43-scene analysis re-decided the
+ * grade forty-three independent times with nothing holding them consistent. That
+ * is the same drift problem entity slots solve for people: state it once, apply it
+ * everywhere. A recreation reads this alongside every scene.
+ *
+ * Every field optional — an analyzer that cannot read the format should say
+ * nothing rather than guess, and a per-scene deviation still belongs in that
+ * scene's `visual` prose.
+ */
+export const clipLookSchema = z.object({
+  /**
+   * The rendering MEDIUM — "live-action photoreal", "2D anime", "stop-motion
+   * claymation", "3D render", "oil painting", "pixel art".
+   *
+   * The most consequential field in this object, and orthogonal to every other
+   * one: two shots with identical grade, lens, lighting and framing still look
+   * nothing alike when one is live action and the other is an oil painting. Get
+   * this wrong and a recreation renders the whole piece in the wrong medium,
+   * which no amount of correct grade or lighting can rescue.
+   *
+   * Mirrors the product's Style picker, whose catalog defines exactly this axis
+   * and states its independence from lighting, colour-look, atmosphere and lens.
+   * A clip that genuinely changes medium partway (live action with an animated
+   * insert) states the deviation in that scene's `visual`, as with `lighting`.
+   */
+  style: z.string().optional(),
+  /** Colour grade / palette — "muted teal-and-orange, crushed blacks". */
+  grade: z.string().optional(),
+  /** Camera or film FORMAT and stock — "anamorphic digital", "16mm film grain". */
+  format: z.string().optional(),
+  /** Lens character — "wide-angle, shallow depth of field throughout". */
+  lens: z.string().optional(),
+  /** Overall lighting style — "hard single-source daylight, deep shadow". */
+  lighting: z.string().optional(),
+  /** What KIND of piece this is — "cinematic trailer", "talking-head vlog". */
+  genre: z.string().optional(),
+  /**
+   * The visual INFLUENCE the piece clearly evokes — a cinematographer, director,
+   * photographer or named aesthetic ("shot like Deakins", "Wes Anderson
+   * symmetry", "80s Kodachrome editorial").
+   *
+   * The highest-leverage field here by a distance: a couple of words transfer a
+   * whole aesthetic that would otherwise take a paragraph of grade, lens and
+   * lighting prose to approximate — which is exactly why the product already
+   * exposes it as a curated picker ("Photographer / Artist") whose catalog ships
+   * `in the style of …` prompt hints. The analyzer had no way to read it back.
+   *
+   * Deliberately conservative: OMIT unless the footage genuinely evokes a
+   * well-known, nameable style. A confident misattribution is worse than silence,
+   * because it drags an entire wrong aesthetic into every regenerated shot — so
+   * describing the look in `grade`/`lighting` always beats guessing a name.
+   */
+  influence: z.string().optional(),
+})
+export type ClipLook = z.infer<typeof clipLookSchema>
 export const VIDEO_ANALYSIS_ENTITY_SOURCES = ["wired-character", "wired-object", "wired-location", "wired-creature"] as const
 export type VideoAnalysisEntitySource = (typeof VIDEO_ANALYSIS_ENTITY_SOURCES)[number]
 /** Matches {slot:<id>} tokens. Distinct from NODE_REF_PATTERN / {image:N} grammars. */
@@ -108,8 +250,27 @@ const windowSceneBase = z.object({
   label: z.string().min(1),
   shotType: z.string().min(1),
   camera: z.string(),
+  /** Camera VIEWPOINT. Absent ⇒ eye-level. Keeps `camera` to pure MOVEMENT and
+   *  frees `shotType` to state the SIZE even on an over-the-shoulder or POV. */
+  angle: z.enum(VIDEO_ANALYSIS_SHOT_ANGLES).optional(),
+  /** Time manipulation. Absent ⇒ normal speed. */
+  speed: z.enum(VIDEO_ANALYSIS_SPEED_EFFECTS).optional(),
   visual: z.string().min(1),
-  transitionOut: z.enum(["cut", "fade", "wipe", "whip"]).optional(),
+  /**
+   * Text burned into the PICTURE of this shot — titles, captions, lower-thirds,
+   * subtitles — verbatim, in its original script. Absent when the frame carries
+   * none.
+   *
+   * Doctrine already asks for on-screen text inside `visual` prose, but a
+   * recreation needs to know discretely whether to RENDER text at all, and
+   * `translateOnScreenTextToEnglish` had no structured field to land in. It is
+   * also the signal the auto-cast frame judge reads: picture text belonging to an
+   * earlier scene's speech means the shot is replayed footage under a voice-over.
+   */
+  onScreenText: z.string().optional(),
+  /** Effects on this shot's PICTURE. Absent ⇒ a clean image. */
+  effects: z.array(z.enum(VIDEO_ANALYSIS_VISUAL_EFFECTS)).optional(),
+  transitionOut: z.enum(VIDEO_ANALYSIS_TRANSITIONS).optional(),
   // Array of concurrent layers (music + speech + sfx together); [] = silence.
   audio: z.array(audioLayerSchema),
   /** slotId → variationId for slots wearing a NON-default look in this scene
@@ -125,6 +286,9 @@ export type WindowScene = z.infer<typeof windowSceneSchema>
 /** What the MODEL emits per window (strict-JSON footer schema). scenes has NO min. */
 export const windowAnalysisSchema = z.object({
   language: z.string().optional(),
+  /** The clip-level look as read from THIS window. Merge folds the windows
+   *  field-by-field (first non-empty wins), like `language`. */
+  look: clipLookSchema.optional(),
   slots: z.array(entitySlotSchema),
   scenes: z.array(windowSceneSchema),
 })
@@ -147,6 +311,10 @@ export const videoAnalysisResultSchema = z.object({
     title: z.string().optional(),
     language: z.string().optional(),
   }),
+  /** Clip-level look, merged across windows. Deliberately a sibling of `meta`
+   *  rather than a member: `meta` is probed fact (ffprobe dimensions, probed
+   *  duration), while this is the model's reading of the photography. */
+  look: clipLookSchema.optional(),
   slots: z.array(entitySlotSchema),
   scenes: z.array(analyzedSceneSchema).min(1),
   /** CAST VARIATIONS (§4 cap handling): looks the analyzer's merge FOLDED into
@@ -265,6 +433,28 @@ export function dropUnknownSpeakers(
     return rest
   })
   return { audio: dropped.length > 0 ? out : audio, dropped }
+}
+
+/**
+ * Fold each window's reading of the clip look into one, FIELD BY FIELD: the first
+ * window that had something to say about a field wins it.
+ *
+ * Per-field rather than first-window-wins-everything because the windows see
+ * different footage — an opening window may read the grade confidently while only
+ * a later one contains the shot that reveals the format. Mirrors how `language` is
+ * resolved across windows rather than taken from window 0.
+ *
+ * Returns undefined when no window said anything, so an analysis with nothing to
+ * report omits the field rather than shipping an empty object.
+ */
+export function mergeClipLook(looks: ReadonlyArray<ClipLook | undefined>): ClipLook | undefined {
+  const out: Record<string, string> = {}
+  for (const look of looks) {
+    for (const [k, v] of Object.entries(look ?? {})) {
+      if (typeof v === "string" && v.trim() && !out[k]) out[k] = v.trim()
+    }
+  }
+  return Object.keys(out).length > 0 ? (out as ClipLook) : undefined
 }
 
 /** Substitute {slot:x}: castMap binding wins, else the slot's description, else literal id. */
