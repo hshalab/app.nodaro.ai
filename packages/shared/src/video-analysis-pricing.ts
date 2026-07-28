@@ -50,27 +50,27 @@ export const VIDEO_ANALYSIS_WINDOW = { LEN: WINDOW_LEN, STRIDE: WINDOW_STRIDE, O
  */
 export const VIDEO_ANALYSIS_BUCKET_CREDITS: Record<string, number> = {
   // Legacy fast-tier model (pre-2026-07) — kept for stored raw-id configs.
-  "video-analysis:gemini-3-flash:60s": 6,
-  "video-analysis:gemini-3-flash:180s": 7,
-  "video-analysis:gemini-3-flash:360s": 18,
-  "video-analysis:gemini-3-flash:600s": 30,
+  "video-analysis:gemini-3-flash:60s": 21,
+  "video-analysis:gemini-3-flash:180s": 24,
+  "video-analysis:gemini-3-flash:360s": 68,
+  "video-analysis:gemini-3-flash:600s": 112,
   // Current fast tier — regenerated from the private formula for its backing
   // model; higher than the legacy fast schedule but still ≤ pro per bucket.
-  "video-analysis:gemini-3.6-flash:60s": 14,
-  "video-analysis:gemini-3.6-flash:180s": 19,
-  "video-analysis:gemini-3.6-flash:360s": 49,
-  "video-analysis:gemini-3.6-flash:600s": 81,
-  "video-analysis:gemini-3.1-pro:60s": 21,
-  "video-analysis:gemini-3.1-pro:180s": 27,
-  "video-analysis:gemini-3.1-pro:360s": 72,
-  "video-analysis:gemini-3.1-pro:600s": 120,
+  "video-analysis:gemini-3.6-flash:60s": 54,
+  "video-analysis:gemini-3.6-flash:180s": 63,
+  "video-analysis:gemini-3.6-flash:360s": 175,
+  "video-analysis:gemini-3.6-flash:600s": 291,
+  "video-analysis:gemini-3.1-pro:60s": 84,
+  "video-analysis:gemini-3.1-pro:180s": 96,
+  "video-analysis:gemini-3.1-pro:360s": 269,
+  "video-analysis:gemini-3.1-pro:600s": 448,
   // Mixed tiers (`mixed` + `mixed-fast`) share ONE credit family — they are
   // variants of the same engine plan (plan internals live in the private
   // analysis plugin). Admin-tunable via model_pricing like every other row.
-  "video-analysis:mixed:60s": 34,
-  "video-analysis:mixed:180s": 46,
-  "video-analysis:mixed:360s": 120,
-  "video-analysis:mixed:600s": 200,
+  "video-analysis:mixed:60s": 137,
+  "video-analysis:mixed:180s": 158,
+  "video-analysis:mixed:360s": 443,
+  "video-analysis:mixed:600s": 739,
 }
 
 /**

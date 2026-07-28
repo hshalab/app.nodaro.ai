@@ -324,9 +324,9 @@ charged) — generated and drift-guarded internally, never hand-written.
 
 | Tier | ≤60s | ≤180s | ≤360s | ≤600s |
 |------|------|-------|-------|-------|
-| `fast` (economy) | 14 | 19 | 49 | 81 |
-| `pro` (default) | 21 | 27 | 72 | 120 |
-| `mixed` / `mixed-fast` | 34 | 46 | 120 | 200 |
+| `fast` (economy) | 54 | 63 | 175 | 291 |
+| `pro` (default) | 84 | 96 | 269 | 448 |
+| `mixed` / `mixed-fast` | 137 | 158 | 443 | 739 |
 
 The two mixed tiers are variants of the same advanced analysis and share one
 price: `mixed` is tuned for maximum result quality; `mixed-fast` for the most

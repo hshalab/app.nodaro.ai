@@ -86,8 +86,9 @@ describe("bare video-analysis node-type credit id", () => {
     for (const [id, credits] of Object.entries(VIDEO_ANALYSIS_BUCKET_CREDITS)) {
       expect(credits, `${id} exceeds the bare-id ceiling ${ceiling}`).toBeLessThanOrEqual(ceiling)
     }
-    // Migration 277 writes this number; keep them in lockstep.
-    expect(ceiling).toBe(200)
+    // The migration writes this number; keep them in lockstep (277 wrote 200, 278
+    // writes 739 after the measured reprice).
+    expect(ceiling).toBe(739)
   })
 
   it("the default tier at the ceiling bucket is NOT a safe fallback — mixed costs more", () => {

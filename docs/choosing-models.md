@@ -126,7 +126,6 @@ Many video models support **both** `t2v` and `i2v` from the same id — the Gene
 | HappyHorse 1.1 Ref2V | HappyHorse | Standard | 29 | i2v | HappyHorse 1.1 reference-to-video — 1–9 reference images, 3–15s at 720p/1080p, per-second pricing. |
 | Grok Imagine Video 1.5 | xAI | Standard | 30 | i2v | Grok Imagine 1.5 image-to-video — 1–15s, 480p/720p, per-second pricing. Requires an input image. |
 | Kling 3.0 Motion Transfer | Kuaishou | Standard | 30 | motion-transfer | Premium motion transfer via Kling 3.0. |
-| Video Analysis (Fast — legacy) | Nodaro | Standard | 30 | video-analysis | Legacy fast-tier analysis model (pre-2026-07). Kept so stored raw-model configs keep running and keep pricing under their own identifier; new fast-tier runs use the current fast model. |
 | Seedance 2 Fast | Bytedance | Standard | 31 | i2v, t2v | Cheaper / quicker Seedance 2 tier. |
 | Runway Extend | Runway | Standard | 32 | extend | Extend a Runway video by another clip. |
 | Wan 2.7 VideoEdit | Alibaba | Standard | 32 | v2v | Guided video editing with optional reference image, audio control, and prompt expansion. |
@@ -140,11 +139,12 @@ Many video models support **both** `t2v` and `i2v` from the same id — the Gene
 | Seedance 2 Extend | Bytedance | Premium | 53 | extend | Extend ANY video: generates the continuation (audio included) and trim-stitches it into one seamless clip. |
 | Kling Avatar Pro | Kuaishou | Premium | 56 | lip-sync | Premium lip-sync — better mouth shape and timing. |
 | ⭐ VEO 3.1 Quality | Google | Premium | 63 | i2v, t2v | Google VEO 3.1 Quality — premium cinematic video. 4/6/8s clips, optional end frame, native audio. Flat per-generation pricing across durations. |
-| Video Analysis (Fast) | Nodaro | Premium | 81 | video-analysis | Analyze a video into a structured shot list (scenes, camera, audio) — fast, economy tier. Billed per duration bucket. |
-| Video Analysis (Pro) | Nodaro | Premium | 120 | video-analysis | Analyze a video into a structured shot list (scenes, camera, audio) — higher-fidelity, default tier. Billed per duration bucket. |
-| Video Analysis (Mixed) | Nodaro | Premium | 200 | video-analysis | Our most advanced analysis tier — multiple analysis engines combined into one result for maximum completeness and accuracy. Billed per duration bucket. |
+| Video Analysis (Fast — legacy) | Nodaro | Premium | 112 | video-analysis | Legacy fast-tier analysis model (pre-2026-07). Kept so stored raw-model configs keep running and keep pricing under their own identifier; new fast-tier runs use the current fast model. |
+| Video Analysis (Fast) | Nodaro | Premium | 291 | video-analysis | Analyze a video into a structured shot list (scenes, camera, audio) — fast, economy tier. Billed per duration bucket. |
 | OmniHuman 1.5 | ByteDance | Premium | 405 | lip-sync | Premium prompt-directed talking avatar from a still image + audio. 720p / 1080p, up to 60s. People, pets, anime. |
+| Video Analysis (Pro) | Nodaro | Premium | 448 | video-analysis | Analyze a video into a structured shot list (scenes, camera, audio) — higher-fidelity, default tier. Billed per duration bucket. |
 | Volcengine Lip Sync | Volcengine | Premium | 600 | lip-sync | Video-to-video AI dubbing — re-syncs lips to a new vocal track. Multi-speaker (scene detection + speaker ID) in basic mode. Video input, billed per second. |
+| Video Analysis (Mixed) | Nodaro | Premium | 739 | video-analysis | Our most advanced analysis tier — multiple analysis engines combined into one result for maximum completeness and accuracy. Billed per duration bucket. |
 | Sync Lipsync v3 | Sync | Premium | 2000 | lip-sync | Dub existing footage — re-syncs lips to a new audio track. Video input, billed per second. |
 <!-- AUTO-GEN:END model-table-video -->
 
