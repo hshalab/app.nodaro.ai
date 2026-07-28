@@ -13,7 +13,7 @@ import { LOTTIE_OVERLAY_SYSTEM_PROMPT } from "../prompts/lottie-overlay-system.j
 import { validateLottieOverlayPlan } from "../lib/lottie-overlay-validator.js"
 import { extractJsonFromAIResponse } from "../lib/json-utils.js"
 import { llmComplete } from "../lib/llm-client.js"
-import { LLM_MODEL_IDS, LLM_REASONING_EFFORTS, buildLlmCreditIdentifier, resolveLlmCreditId, LLM_FEATURE_DEFAULTS } from "@nodaro/shared"
+import { LLM_ROUTE_DEFAULTS, LLM_MODEL_IDS, LLM_REASONING_EFFORTS, buildLlmCreditIdentifier, resolveLlmCreditId, LLM_FEATURE_DEFAULTS } from "@nodaro/shared"
 import { LLM_ADVANCED_SHAPE, advancedModeError, resolveLlmParams } from "../lib/llm-advanced-mode.js"
 import { extractWorkflowId, extractNodeId, extractForcePrivate } from "../lib/request-helpers.js"
 import { buildJobInputData } from "../lib/job-input-data.js"
@@ -79,6 +79,11 @@ export async function lottieOverlayAIRoutes(app: FastifyInstance) {
       const durationInFrames = Math.round(durationSeconds * fps)
 
       // Create job record
+      // Reject BEFORE the jobs row exists — a 400 after the insert leaves an
+      // orphan `pending` row with no reservation and no queue entry.
+      const advancedError = advancedModeError(parsed.data, llmModel)
+      if (advancedError) return reply.status(400).send({ error: advancedError })
+
       const { data: job, error: jobError } = await supabase
         .from("jobs")
         .insert({
@@ -97,8 +102,6 @@ export async function lottieOverlayAIRoutes(app: FastifyInstance) {
       }
 
       // Reserve credits
-      const advancedError = advancedModeError(parsed.data, llmModel)
-      if (advancedError) return reply.status(400).send({ error: advancedError })
       const modelIdentifier = buildLlmCreditIdentifier("lottie-overlay", llmModel, parsed.data.reasoningEffort, parsed.data.advancedMode)
       const reservation = await reserveCreditsForJob(req, reply, job.id, modelIdentifier)
       if (reply.sent) return
@@ -131,7 +134,7 @@ Overlay style: ${prompt}${assetSection}`
           modelId: llmModel,
           system: LOTTIE_OVERLAY_SYSTEM_PROMPT,
           messages: [{ role: "user", content: userMessage }],
-          ...resolveLlmParams(parsed.data, { maxTokens: 2048, temperature: 0.3 }),
+          ...resolveLlmParams(parsed.data, LLM_ROUTE_DEFAULTS["lottie-overlay"]),
           reasoningEffort: parsed.data.reasoningEffort,
         })
 

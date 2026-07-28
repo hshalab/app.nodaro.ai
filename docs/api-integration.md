@@ -701,7 +701,7 @@ credits per call).
 
 | Action | Body | Response |
 |---|---|---|
-| `analyze` | `{ action, nodeType, prompt?, provider?, style?, aspectRatio?, duration?, llmModel?, reasoningEffort?, nodeContext?, userPreference? }` | `{ jobId, questions }` |
+| `analyze` | `{ action, nodeType, prompt?, provider?, style?, aspectRatio?, duration?, llmModel?, reasoningEffort?, advancedMode?, temperature?, maxTokens?, nodeContext?, userPreference? }` | `{ jobId, questions }` |
 | `generate` | `{ action, nodeType, selections[], originalPrompt?, ... }` | `{ jobId, prompt, recommendedModel? }` |
 | `enhance` | `{ action, nodeType, prompt?, ... }` (no selections) | `{ jobId, prompt, recommendedModel? }` |
 

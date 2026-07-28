@@ -4,10 +4,11 @@ import { supabase } from "../lib/supabase.js"
 import { videoQueue } from "../lib/queue.js"
 import { creditGuard, reserveCreditsForJob } from "../middleware/credit-guard.js"
 import { LLM_ADVANCED_SHAPE, advancedModeError } from "../lib/llm-advanced-mode.js"
+import { resolveScriptModelId } from "../providers/script/script-generator.js"
 import { extractWorkflowId, extractNodeId, extractForcePrivate } from "../lib/request-helpers.js"
 import { extractMcpClient } from "../lib/extract-mcp-client.js"
 import { buildJobInputData } from "../lib/job-input-data.js"
-import { SCRIPT_PROVIDERS, LLM_MODEL_IDS, LLM_REASONING_EFFORTS, buildLlmCreditIdentifier, resolveLlmCreditId, LLM_TEXT_INPUT_MAX, LLM_FEATURE_DEFAULTS } from "@nodaro/shared"
+import { SCRIPT_PROVIDERS, LLM_MODEL_IDS, LLM_REASONING_EFFORTS, buildLlmCreditIdentifier, resolveLlmCreditId, LLM_TEXT_INPUT_MAX } from "@nodaro/shared"
 import { formatZodError } from "../lib/zod-error.js"
 import { sendInternalError } from "../lib/http-errors.js"
 
@@ -44,7 +45,9 @@ export async function generateScriptRoutes(app: FastifyInstance) {
       })
     }
 
-    const advancedError = advancedModeError(parsed.data, llmModel ?? LLM_FEATURE_DEFAULTS["generate-script"])
+    // Same resolution the worker uses — validating against a different model than
+// the one that runs is how an accepted request turns into a lane-pin failure.
+    const advancedError = advancedModeError(parsed.data, resolveScriptModelId(provider, llmModel))
     if (advancedError) return reply.status(400).send({ error: advancedError })
     const modelIdentifier = buildLlmCreditIdentifier("generate-script", llmModel, reasoningEffort, parsed.data.advancedMode)
     const mcpClient = extractMcpClient(req.body)

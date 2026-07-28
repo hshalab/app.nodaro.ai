@@ -13,7 +13,9 @@ export const EFFORT_LABELS: Record<LlmReasoningEffort, string> = {
   // Still accurate alongside Advanced mode: xhigh/max only exist on models
   // that have no direct lane (Claude/GPT), and Advanced only exists on Gemini,
   // so the effort bump and the advanced bump can never both apply to one call.
-  // If a Gemini model ever declares xhigh/max, revisit this wording.
+  // That is not a note to remember — it's pinned by "no advanced-capable model
+  // declares xhigh/max" in packages/shared's llm-models test, which goes red if
+  // the two bumps ever become stackable and this wording needs to change.
   xhigh: "Very high (may bill one tier up)",
   max: "Max (may bill one tier up)",
 }

@@ -130,6 +130,20 @@ const LEGACY_PROVIDER_MAP: Record<string, string> = {
   gpt: "gpt-5.2",
 }
 
+/**
+ * Model resolution for this feature, in one place: explicit `llmModel`, else the
+ * legacy `provider` alias, else the feature default.
+ *
+ * Exported because the ROUTE has to validate Advanced mode against the model the
+ * worker will actually run. It used to check `llmModel ?? feature default` — so
+ * a request carrying `provider: "claude"` and no `llmModel` validated against
+ * Gemini (Advanced supported) and then reached this function, which resolved
+ * `claude-sonnet-4.6` (no direct lane) and hard-failed at `assertLanePinnable`.
+ */
+export function resolveScriptModelId(provider?: ScriptProvider, llmModel?: string): string {
+  return llmModel || (provider ? LEGACY_PROVIDER_MAP[provider] : undefined) || LLM_FEATURE_DEFAULTS["generate-script"]
+}
+
 export async function generateScript(
   prompt: string,
   sceneCount: number = 5,
@@ -143,14 +157,7 @@ export async function generateScript(
    *  positionally. */
   advanced?: LlmAdvancedInput,
 ): Promise<GeneratedScript> {
-  // Resolve model: prefer explicit llmModel, then map legacy provider, then feature default
-  let resolvedModelId = llmModel
-  if (!resolvedModelId && provider) {
-    resolvedModelId = LEGACY_PROVIDER_MAP[provider]
-  }
-  if (!resolvedModelId) {
-    resolvedModelId = LLM_FEATURE_DEFAULTS["generate-script"]
-  }
+  const resolvedModelId = resolveScriptModelId(provider, llmModel)
 
   const duration = targetDuration ?? 60
 

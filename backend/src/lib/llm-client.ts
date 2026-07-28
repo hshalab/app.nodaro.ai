@@ -402,7 +402,13 @@ function deriveParams(model: LlmModelDef, req: LlmRequest): {
   topP: number | undefined
   maxTokens: number
 } {
-  const eff = effectiveReasoningEffort(model.id, req.reasoningEffort)
+  // The direct lane accepts a WIDER effort ladder than the aggregator, so the
+  // clamp has to know which lane this call is pinned to. Without this, Advanced
+  // mode unlocked temperature/maxTokens but silently kept clamping effort
+  // against the aggregator's set — the headline capability was inert, and on
+  // gemini-3-flash (which declares no KIE levels at all) every level the picker
+  // offered was discarded before it reached the wire.
+  const eff = effectiveReasoningEffort(model.id, req.reasoningEffort, req.requireLane === "direct")
   const temperature = model.supportsTemperature === false ? undefined : req.temperature
   // top_p rides the same support gate as temperature — a reasoning model that
   // rejects sampling params gets neither.

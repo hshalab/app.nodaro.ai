@@ -2,14 +2,24 @@
  * Image Collage provider — composites N images into ONE large (2K/4K) image
  * using ffmpeg, arranged by the smart/grid layout in `collage-layout.ts`.
  *
- * Pipeline: download every input → probe its natural dimensions → compute the
- * pixel layout (pure JS) → build a single ffmpeg `-filter_complex` that scales
- * + cover-crops each image into its rect and overlays it onto a colored canvas
- * → render one PNG frame. The layout math is engine-agnostic and unit-tested;
- * ffmpeg here only places pre-computed rectangles.
+ * Pipeline: download every input → probe the dimensions the DECODER will
+ * produce (see `probeImageSize`) → compute the pixel layout (pure JS) → build a
+ * single ffmpeg `-filter_complex` that fits each image INSIDE its rect,
+ * centred, and overlays it onto a colored canvas → render one PNG frame. The
+ * layout math is engine-agnostic and unit-tested; ffmpeg here only places
+ * pre-computed rectangles.
+ *
+ * "Fits inside", not "cover-crops": the filter is
+ * `force_original_aspect_ratio=decrease`, so a rect wider than its image leaves
+ * canvas showing rather than cropping to fill. This doc claimed the opposite
+ * for a long time and misled a downstream design into drawing its preview with
+ * `object-fit: cover`. The smart layout gives each cell its image's own aspect,
+ * which is what normally makes the distinction invisible — and is exactly why
+ * `probeImageSize` returning the wrong aspect is so visible.
  */
 
 import { join } from "node:path"
+import sharp from "sharp"
 import {
   createWorkDir,
   downloadFile,
@@ -78,8 +88,44 @@ function toFfmpegColor(input: string | undefined): string {
   return "white"
 }
 
-/** Probe a local image file for its pixel dimensions (no network — SSRF-safe). */
-async function probeImageSize(filePath: string): Promise<ImageDim> {
+/**
+ * Stored dimensions + an EXIF orientation tag → the dimensions as DISPLAYED.
+ *
+ * Tags 5-8 are the quarter-turns: they exchange the axes. 1-4 are identity,
+ * mirror and 180°, none of which changes which side is longer. Anything
+ * outside 1-8 (encoders do write 0) is treated as absent rather than guessed at.
+ */
+export function displayDims(w: number, h: number, orientation: number | undefined): ImageDim {
+  return orientation !== undefined && orientation >= 5 && orientation <= 8 ? { w: h, h: w } : { w, h }
+}
+
+/**
+ * Probe a local image file for the dimensions the COMPOSITOR will receive
+ * (no network — SSRF-safe).
+ *
+ * DISPLAY dimensions, not stored ones, and the distinction is not academic.
+ * ffmpeg auto-rotates on decode, so a JPEG carrying EXIF orientation 5-8
+ * reaches `scale` transposed — while ffprobe's `stream=width,height` reports
+ * the stored geometry and the rotation appears only in FRAME side data, which
+ * that query never sees. Laying out from stored dimensions therefore handed
+ * every phone-portrait photo a cell of the wrong aspect, and since the filter
+ * fits rather than fills (see the file doc), the mismatch rendered as visible
+ * padding: ~366px of white down each side of a 1317px cell, measured. The
+ * layout module's "zero crop, zero letterbox" property depends entirely on this
+ * function agreeing with the decoder.
+ *
+ * sharp reads the header only — no full decode — and reports the tag directly;
+ * `lib/anthropic-image.ts` already leans on it for the same reason. ffprobe
+ * stays as the fallback for anything sharp cannot open: no worse than before
+ * for those, and correct for every EXIF-bearing image.
+ */
+export async function probeImageSize(filePath: string): Promise<ImageDim> {
+  try {
+    const { width, height, orientation } = await sharp(filePath).metadata()
+    if (width && height) return displayDims(width, height, orientation)
+  } catch {
+    // Not a still image sharp can parse — fall through to ffprobe.
+  }
   try {
     const out = await runFfprobe([
       "-v", "error",

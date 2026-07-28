@@ -71,19 +71,28 @@ describe("sampling levers", () => {
     expect(screen.getByText("Max Tokens")).toBeInTheDocument()
   })
 
-  it("seed from the route default so they start where the node already is", () => {
-    setup({ modelId: "gemini-3.6-flash", value: true, defaultTemperature: 0.3, defaultMaxTokens: 2048 })
+  it("seeds from the FEATURE's real route defaults, not a hardcoded 0.7/2048", () => {
+    // after-effects sends 0.3/2048; the panel used to show 0.7/2048 on it.
+    render(<AdvancedModeToggle feature="after-effects" modelId="gemini-3.6-flash" value onChange={vi.fn()} />)
     expect(screen.getByText("Temperature: 0.3")).toBeInTheDocument()
     expect(screen.getByDisplayValue("2048")).toBeInTheDocument()
   })
 
-  it("warns about format breakage on structured-output nodes", () => {
-    setup({ modelId: "gemini-3.6-flash", value: true, structuredOutput: true })
+  it("seeds 3d-title at its real 3072 budget", () => {
+    // One arrow-key press used to commit 2048 here, cutting the budget by a
+    // third on a node that emits structured JSON.
+    render(<AdvancedModeToggle feature="3d-title" modelId="gemini-3.6-flash" value onChange={vi.fn()} />)
+    expect(screen.getByText("Temperature: 0.4")).toBeInTheDocument()
+    expect(screen.getByDisplayValue("3072")).toBeInTheDocument()
+  })
+
+  it("warns about format breakage on structured-output features", () => {
+    render(<AdvancedModeToggle feature="after-effects" modelId="gemini-3.6-flash" value onChange={vi.fn()} />)
     expect(screen.getByText(/breaking format/i)).toBeInTheDocument()
   })
 
-  it("stays quiet about format on free-text nodes", () => {
-    setup({ modelId: "gemini-3.6-flash", value: true })
+  it("stays quiet about format on free-text features", () => {
+    render(<AdvancedModeToggle feature="llm-chat" modelId="gemini-3.6-flash" value onChange={vi.fn()} />)
     expect(screen.queryByText(/breaking format/i)).not.toBeInTheDocument()
   })
 })

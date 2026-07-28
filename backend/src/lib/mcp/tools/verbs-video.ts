@@ -43,7 +43,9 @@ const I2V_MODEL_IDS = modelIdsByKindMode("video", ["i2v"], { includeHidden: true
 // Credit hint for the video_analysis tool description — derived from the
 // shared duration-bucket formula (NEVER hand-write the numbers; the formula is
 // the single source of truth, shape-guarded by packages/shared's pricing test; the $-formula itself lives in the private analysis plugin).
-// Renders like: "pro 2/3/7/11 credits; fast 1/1/2/3 credits; mixed 3/4/9/14 …".
+// Renders like: "fast <a>/<b>/<c>/<d> credits; pro …; mixed …" — deliberately
+// no example VALUES here: this comment sat three repricings stale, which is
+// exactly the failure the derived hint exists to prevent.
 // Priced per quality TIER — the underlying model is never surfaced.
 // resolveVideoAnalysisModel is sentinel-aware: mixed tiers resolve to their
 // roll-plan sentinel, which buildVideoAnalysisCreditId prices under the shared

@@ -1,4 +1,5 @@
 import { toast } from "sonner";
+import { llmAdvancedParams } from "@/lib/llm-advanced-params"
 import { useWorkflowStore } from "@/hooks/use-workflow-store";
 import {
   generateMusicApi,
@@ -4362,6 +4363,7 @@ export function executeNode(
       maxTokens: chatData.maxTokens ?? 2048,
       llmModel: chatData.llmModel,
       reasoningEffort: chatData.reasoningEffort,
+      ...llmAdvancedParams(chatData as unknown as Record<string, unknown>),
       // Stop button → aborts this stream mid-flight (cancels the SSE fetch).
       signal: ctx.signal,
       onToken: (token) => {
@@ -6437,6 +6439,7 @@ export function executeNode(
       userId: ctx.userId,
       llmModel: d.llmModel,
       reasoningEffort: d.reasoningEffort,
+      ...llmAdvancedParams(d as unknown as Record<string, unknown>),
     })
       .then((result) => {
         updateNodeData(node.id, {
@@ -6491,6 +6494,7 @@ export function executeNode(
       userId: ctx.userId,
       llmModel: d.llmModel,
       reasoningEffort: d.reasoningEffort,
+      ...llmAdvancedParams(d as unknown as Record<string, unknown>),
     })
       .then((result) => {
         updateNodeData(node.id, {
@@ -6566,6 +6570,7 @@ export function executeNode(
       userId: ctx.userId,
       llmModel: d.llmModel,
       reasoningEffort: d.reasoningEffort,
+      ...llmAdvancedParams(d as unknown as Record<string, unknown>),
     })
       .then((result) => {
         updateNodeData(node.id, {
@@ -6629,6 +6634,7 @@ export function executeNode(
       userId: ctx.userId,
       llmModel: d.llmModel,
       reasoningEffort: d.reasoningEffort,
+      ...llmAdvancedParams(d as unknown as Record<string, unknown>),
     })
       .then((result) => {
         updateNodeData(node.id, {
@@ -6670,6 +6676,7 @@ export function executeNode(
         backgroundColor: d.backgroundColor,
         llmModel: d.llmModel,
         reasoningEffort: d.reasoningEffort,
+        ...llmAdvancedParams(d as unknown as Record<string, unknown>),
         previousSids,
       }, ctx);
     }
@@ -6690,6 +6697,7 @@ export function executeNode(
       userId: ctx.userId!,
       llmModel: d.llmModel,
       reasoningEffort: d.reasoningEffort,
+      ...llmAdvancedParams(d as unknown as Record<string, unknown>),
     })
       .then((result) => {
         updateNodeData(node.id, {
@@ -7763,6 +7771,7 @@ export function executeNode(
       threshold: d.threshold ?? 0.7,
       llmModel: d.llmModel,
       reasoningEffort: d.reasoningEffort,
+      ...llmAdvancedParams(d as unknown as Record<string, unknown>),
     }).then(
       (result) => {
         updateNodeData(node.id, {
@@ -7813,6 +7822,7 @@ export function executeNode(
       threshold: d.threshold ?? 0.7,
       llmModel: d.llmModel,
       reasoningEffort: d.reasoningEffort,
+      ...llmAdvancedParams(d as unknown as Record<string, unknown>),
     }).then(
       async (result) => {
         // Dedup short-circuit: credit-guard may return { jobId, deduped: true } within 10s.

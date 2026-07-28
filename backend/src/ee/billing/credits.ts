@@ -260,7 +260,13 @@ export const STATIC_CREDIT_COSTS: Record<string, number> = {
   // per-model duration composites are read from the shared table above
   // (VIDEO_ANALYSIS_STATIC); see that block for the PROVISIONAL/Gate-0.5 (18b)
   // reconciliation note.
-  "video-analysis": VIDEO_ANALYSIS_BUCKET_CREDITS[buildVideoAnalysisCreditId(DEFAULT_VIDEO_ANALYSIS_MODEL, VIDEO_ANALYSIS_MAX_DURATION_SEC)]!,
+  // The MAX of the whole table, not the default tier at the ceiling bucket: the
+  // default (pro) tops out at 120 while `mixed` reaches 200, so "default model,
+  // longest video" is itself an under-quote. This id is the unknown-model AND
+  // unknown-duration fallback, so it has to bound every row — it feeds a pre-run
+  // balance gate, and a gate that under-quotes protects nothing. Pinned by
+  // `video-analysis-catalog-sync.test.ts` and written by migration 277.
+  "video-analysis": Math.max(...Object.values(VIDEO_ANALYSIS_BUCKET_CREDITS)),
   ...VIDEO_ANALYSIS_STATIC,
   "flux-lora-character": 2,      // flux-dev-lora inference via Replicate. Internal-only id selected by payload-builder when a single trained @character is mentioned.
   "character-lora-training": 150, // Replicate ostris/flux-dev-lora-trainer (1000 steps, one-shot). Refunded by webhook on failure/cancel.

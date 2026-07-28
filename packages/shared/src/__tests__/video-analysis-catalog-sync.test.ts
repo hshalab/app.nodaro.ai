@@ -13,7 +13,9 @@ import {
   VIDEO_ANALYSIS_BUCKET_CREDITS,
   VIDEO_ANALYSIS_DURATION_BUCKETS,
   VIDEO_ANALYSIS_MAX_DURATION_SEC,
+  buildVideoAnalysisCreditId,
 } from "../video-analysis-pricing.js"
+import { DEFAULT_VIDEO_ANALYSIS_MODEL } from "../llm-models.js"
 
 /** Every `video-analysis:*` pricing row declared anywhere in the catalog. */
 const catalogRows = Object.values(MODEL_CATALOG)
@@ -59,5 +61,41 @@ describe("model catalog video-analysis pricing", () => {
       expect([...buckets].sort((a, b) => a - b), `${model} bucket coverage`)
         .toEqual([...VIDEO_ANALYSIS_DURATION_BUCKETS])
     }
+  })
+})
+
+/**
+ * The BARE `video-analysis` node-type id — the one every colon-scoped guard misses.
+ *
+ * `getModelIdentifier` (frontend) has no video-analysis branch, so it falls through
+ * to `return nodeType` and the run-credits estimate resolves this exact id. It was
+ * seeded at 3 credits in migration 247 with the comment "= flash 600s" and then
+ * skipped by FIVE consecutive repricings (248, 259, 273, 275, 276), every one of
+ * which matched only `video-analysis:` prefixes — including this test file's own
+ * `catalogRows` filter above. A real run reserves 21-200, so the pre-run balance
+ * check was quoting 3 for a run it would then refuse.
+ *
+ * The value is the MAXIMUM of the table, not the default tier at the ceiling
+ * bucket: this test's first version pinned the latter and failed immediately,
+ * because the default (pro) tops out at 120 while `mixed` reaches 200. Reached only
+ * when BOTH model and duration are unknown, so it has to bound every row.
+ */
+describe("bare video-analysis node-type credit id", () => {
+  it("bounds EVERY bucketed row — an unknown-duration estimate must never UNDER-quote", () => {
+    const ceiling = Math.max(...Object.values(VIDEO_ANALYSIS_BUCKET_CREDITS))
+    for (const [id, credits] of Object.entries(VIDEO_ANALYSIS_BUCKET_CREDITS)) {
+      expect(credits, `${id} exceeds the bare-id ceiling ${ceiling}`).toBeLessThanOrEqual(ceiling)
+    }
+    // Migration 277 writes this number; keep them in lockstep.
+    expect(ceiling).toBe(200)
+  })
+
+  it("the default tier at the ceiling bucket is NOT a safe fallback — mixed costs more", () => {
+    // Pins the reason the bare id is the table max rather than the intuitive
+    // "default model, longest video" value, so nobody re-derives it wrongly.
+    const defaultAtCeiling = VIDEO_ANALYSIS_BUCKET_CREDITS[
+      buildVideoAnalysisCreditId(DEFAULT_VIDEO_ANALYSIS_MODEL, VIDEO_ANALYSIS_MAX_DURATION_SEC)
+    ]!
+    expect(defaultAtCeiling).toBeLessThan(Math.max(...Object.values(VIDEO_ANALYSIS_BUCKET_CREDITS)))
   })
 })

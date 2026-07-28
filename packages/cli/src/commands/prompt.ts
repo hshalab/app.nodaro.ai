@@ -20,6 +20,9 @@ interface WizardOpts extends GlobalOpts {
   duration?: number
   llmModel?: string
   reasoningEffort?: string
+  advanced?: boolean
+  temperature?: number
+  maxTokens?: number
 }
 
 /** The provider/style/aspect/duration/model fields every action passes through. */
@@ -31,6 +34,9 @@ function commonWizardFields(opts: WizardOpts) {
     duration: opts.duration,
     llmModel: opts.llmModel,
     reasoningEffort: opts.reasoningEffort,
+    advancedMode: opts.advanced,
+    temperature: opts.temperature,
+    maxTokens: opts.maxTokens,
   }
 }
 
@@ -50,6 +56,9 @@ export function promptCommand(): Command {
     .option("--duration <seconds>", "clip duration in seconds", (v) => parseInt(v, 10))
     .option("--llm-model <id>")
     .option("--reasoning-effort <level>", "reasoning effort: none|low|medium|high|xhigh|max (model-dependent)")
+    .option("--advanced", "Gemini models only: run on the provider's own API so --temperature/--max-tokens/the full reasoning range apply. Bills one credit tier up.")
+    .option("--temperature <n>", "Sampling temperature (only with --advanced)", parseFloat)
+    .option("--max-tokens <n>", "Output token cap (only with --advanced)", (v: string) => parseInt(v, 10))
     .option("--profile <name>")
     .action(async (opts: WizardOpts) => {
       try {
@@ -115,6 +124,9 @@ export function promptCommand(): Command {
     .option("--duration <seconds>", "clip duration in seconds", (v) => parseInt(v, 10))
     .option("--llm-model <id>")
     .option("--reasoning-effort <level>", "reasoning effort: none|low|medium|high|xhigh|max (model-dependent)")
+    .option("--advanced", "Gemini models only: run on the provider's own API so --temperature/--max-tokens/the full reasoning range apply. Bills one credit tier up.")
+    .option("--temperature <n>", "Sampling temperature (only with --advanced)", parseFloat)
+    .option("--max-tokens <n>", "Output token cap (only with --advanced)", (v: string) => parseInt(v, 10))
     .option("--profile <name>")
     .option("--json")
     .action(async (opts: WizardOpts) => {
@@ -155,6 +167,9 @@ export function promptCommand(): Command {
     .option("--duration <seconds>", "clip duration in seconds", (v) => parseInt(v, 10))
     .option("--llm-model <id>")
     .option("--reasoning-effort <level>", "reasoning effort: none|low|medium|high|xhigh|max (model-dependent)")
+    .option("--advanced", "Gemini models only: run on the provider's own API so --temperature/--max-tokens/the full reasoning range apply. Bills one credit tier up.")
+    .option("--temperature <n>", "Sampling temperature (only with --advanced)", parseFloat)
+    .option("--max-tokens <n>", "Output token cap (only with --advanced)", (v: string) => parseInt(v, 10))
     .option("--profile <name>")
     .option("--json")
     .action(async (opts: WizardOpts & { selection?: string[]; originalPrompt?: string }) => {
@@ -189,6 +204,9 @@ export function promptCommand(): Command {
     .option("--duration <seconds>", "clip duration in seconds", (v) => parseInt(v, 10))
     .option("--llm-model <id>")
     .option("--reasoning-effort <level>", "reasoning effort: none|low|medium|high|xhigh|max (model-dependent)")
+    .option("--advanced", "Gemini models only: run on the provider's own API so --temperature/--max-tokens/the full reasoning range apply. Bills one credit tier up.")
+    .option("--temperature <n>", "Sampling temperature (only with --advanced)", parseFloat)
+    .option("--max-tokens <n>", "Output token cap (only with --advanced)", (v: string) => parseInt(v, 10))
     .option("--profile <name>")
     .option("--json")
     .action(async (opts: WizardOpts) => {

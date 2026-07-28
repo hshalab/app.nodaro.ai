@@ -1,11 +1,16 @@
 /**
  * Smart collage layout — pure geometry, no I/O.
  *
- * Given N source images (natural dimensions), a fixed output canvas, and a
- * gap, computes one pixel rectangle per image such that the images tile the
- * WHOLE canvas with no wasted space. Each image is later cover-cropped into
- * its rectangle by the compositor (ffmpeg), so a rectangle only needs to be
- * proportional-ish to its source to keep cropping minimal.
+ * Given N source images (their DISPLAYED dimensions — see `probeImageSize`),
+ * a fixed output canvas, and a gap, computes one pixel rectangle per image such
+ * that the images tile the WHOLE canvas with no wasted space.
+ *
+ * The compositor (ffmpeg) fits each image INSIDE its rectangle and centres it
+ * — `force_original_aspect_ratio=decrease`, not a cover-crop, whatever this doc
+ * used to say. So a rectangle whose aspect differs from its image's is not
+ * cropped to fit, it is PADDED with the canvas colour: in smart mode the cells
+ * carry each image's own aspect precisely so that padding is zero, which makes
+ * the caller's dimensions load-bearing rather than approximate.
  *
  * Two modes:
  *   • "smart"  — justified rows (Google-Photos / Flickr style). Images are

@@ -13,7 +13,7 @@
  * generic "pre-task" pickup is the stale-sweep contract.
  */
 
-import { LLM_FEATURE_DEFAULTS, applySlots } from "@nodaro/shared"
+import { LLM_ROUTE_DEFAULTS, LLM_FEATURE_DEFAULTS, applySlots } from "@nodaro/shared"
 import { resolveLlmParams, type LlmAdvancedInput } from "../../lib/llm-advanced-mode.js"
 import type { LlmReasoningEffort } from "@nodaro/shared"
 import { llmComplete } from "../../lib/llm-client.js"
@@ -79,7 +79,7 @@ const handleMotionGraphicsLottie: HandlerFn = async function handleMotionGraphic
       modelId,
       system: LOTTIE_GRAPHIC_SYSTEM_PROMPT,
       messages,
-      ...resolveLlmParams(advanced ?? {}, { maxTokens: LOTTIE_MAX_TOKENS, temperature: 0.3 }),
+      ...resolveLlmParams(advanced ?? {}, { ...LLM_ROUTE_DEFAULTS["motion-graphics-lottie"], maxTokens: LOTTIE_MAX_TOKENS }),
       timeoutMs: LOTTIE_LLM_TIMEOUT_MS,
       reasoningEffort: reasoningEffort as LlmReasoningEffort | undefined,
     })

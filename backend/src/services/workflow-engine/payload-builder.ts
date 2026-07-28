@@ -4839,7 +4839,7 @@ export function buildPayload(
       return {
         jobName: "generate-script",
         queueName: "video-generation",
-        modelIdentifier: buildLlmCreditIdentifier("generate-script", scriptLlmModel, scriptEffort),
+        modelIdentifier: buildLlmCreditIdentifier("generate-script", scriptLlmModel, scriptEffort, data.advancedMode === true),
         payload: {
           jobId,
           prompt: resolvedInputs.prompt || resolveRefs(data.prompt as string | undefined, refMap),
@@ -4869,7 +4869,7 @@ export function buildPayload(
       return {
         jobName: "motion-graphics-lottie",
         queueName: "video-generation",
-        modelIdentifier: buildLlmCreditIdentifier(motionGraphicsFeature(data.engine as string | undefined), mgLlmModel, mgEffort),
+        modelIdentifier: buildLlmCreditIdentifier(motionGraphicsFeature(data.engine as string | undefined), mgLlmModel, mgEffort, data.advancedMode === true),
         payload: {
           jobId,
           prompt: resolvedInputs.prompt || resolveRefs(data.motionPrompt as string | undefined, refMap),

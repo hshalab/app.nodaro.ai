@@ -192,6 +192,14 @@ const llmModelControl: QuickConfigControl = {
   ariaLabel: "Model",
   icon: Sparkles,
   options: LLM_MODELS.map((m) => ({ value: m.id, label: m.displayName })),
+  // Clearing `advancedMode` on ANY model switch is deliberately blunt: the
+  // registry's additionalClear is unconditional, so a Gemini→Gemini switch also
+  // turns Advanced off and the user has to re-enable it. That is a visible,
+  // recoverable annoyance. The alternative — leaving the flag set — strands the
+  // node on a model with no direct lane, where the badge still looks right and
+  // an orchestrated run fails with `advanced_mode_unsupported` and no visible
+  // cause. Prefer the annoyance.
+  additionalClear: ["advancedMode"],
 }
 
 /** Effort dropdown for reasoning-capable models (writes `data.reasoningEffort`).
@@ -233,6 +241,9 @@ const visionModelControl: QuickConfigControl = {
   ariaLabel: "Model",
   icon: Sparkles,
   options: STRUCTURED_VISION_MODELS.map((m) => ({ value: m.id, label: m.displayName })),
+  // Same rationale as llmModelControl: a stranded advancedMode fails an
+  // orchestrated run invisibly, so clear it on any model switch.
+  additionalClear: ["advancedMode"],
 }
 
 // NOTE: the lists below mirror INLINE `<SelectItem>`s in the referenced config

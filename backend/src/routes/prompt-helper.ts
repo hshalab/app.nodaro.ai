@@ -5,7 +5,7 @@ import { config } from "../lib/config.js"
 import { creditGuard, reserveCreditsForJob } from "../middleware/credit-guard.js"
 import { CreditsService } from "../ee/billing/credits.js"
 import { llmCompleteStructured } from "../lib/llm-client.js"
-import { LLM_MODEL_IDS, LLM_REASONING_EFFORTS, buildLlmCreditIdentifier, resolveLlmCreditId, LLM_FEATURE_DEFAULTS } from "@nodaro/shared"
+import { LLM_ROUTE_DEFAULTS, LLM_MODEL_IDS, LLM_REASONING_EFFORTS, buildLlmCreditIdentifier, resolveLlmCreditId, LLM_FEATURE_DEFAULTS } from "@nodaro/shared"
 import { LLM_ADVANCED_SHAPE, advancedModeError, resolveLlmParams } from "../lib/llm-advanced-mode.js"
 import { extractWorkflowId, extractNodeId, extractForcePrivate } from "../lib/request-helpers.js"
 import { buildJobInputData } from "../lib/job-input-data.js"
@@ -234,7 +234,7 @@ export async function promptHelperRoutes(app: FastifyInstance) {
           // options. On the Anthropic forced-tool path a truncated tool call
           // yields empty input → guaranteed validation failure with no salvage,
           // so give the structured output real headroom (capped per-model anyway).
-          ...resolveLlmParams(body, { maxTokens: 8192, temperature: 0.7 }),
+          ...resolveLlmParams(body, LLM_ROUTE_DEFAULTS["prompt-helper"]),
           reasoningEffort: body.reasoningEffort,
         }
 

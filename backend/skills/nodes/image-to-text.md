@@ -1,7 +1,7 @@
 ---
 node_type: image-to-text
-generated_at: 2026-07-28T17:14:14.768Z
-generated_from: 15975a896
+generated_at: 2026-07-28T19:15:38.508Z
+generated_from: c5fbf290c
 ---
 
 # Describe Image
@@ -55,6 +55,11 @@ generated_from: 15975a896
 - `image_asset_id`
 - `detail_level`
 - `custom_prompt`
+- `llmModel`
+- `reasoning_effort`
+- `advanced_mode`
+- `temperature`
+- `max_tokens`
 <!-- AUTO-GEN:END mcp-call -->
 
 ## Common gotchas
