@@ -11,6 +11,9 @@ Describe Image (internally `image-to-text`) analyzes an input image using Claude
 |-------|------|---------|-------------|
 | Detail Level | select | `"detailed"` | Controls description depth: `brief` (1-2 sentences), `detailed` (3-6 sentences, flowing prose), `structured` (labeled sections: Subject, Setting, Colors, Lighting, Mood, Details) |
 | Custom Prompt | text | `""` | Optional override for the system prompt. When provided, replaces the default detail-level prompt entirely. Max 2000 characters. |
+| Model | select | Gemini 3.6 Flash | Any vision-capable LLM. Drives capability and credit tier. |
+| Effort | select | `Auto` | Reasoning effort for models that support it. |
+| Advanced mode | boolean | `false` | Gemini models only. Runs the model on the provider's own API so **Temperature** and **Max Tokens** actually apply. Bills one credit tier up; disabled with an inline reason on other models. |
 
 ## Inputs & Outputs
 

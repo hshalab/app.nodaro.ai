@@ -550,6 +550,49 @@ export function effectiveReasoningEffort(
  * premium stays premium). `high` is the Claude-family server default and
  * never bumps.
  */
+
+/**
+ * The sampling defaults each LLM feature's route sends when Advanced mode is
+ * OFF — and therefore the values its Advanced panel must seed the sliders with.
+ *
+ * SINGLE SOURCE because the two used to disagree: the routes hardcoded their
+ * own literals while the toggle fell back to 0.7/2048, so the panel displayed
+ * a temperature the run never used, and one arrow-key press on 3D Title's Max
+ * Tokens silently cut its budget from 3072 to 2048 on a node that emits
+ * structured JSON.
+ *
+ * `structuredOutput` marks the features whose prompt asks the model for JSON —
+ * a high temperature measurably degrades schema adherence there, so the panel
+ * warns. Absent `temperature` means the route sends none (vendor default).
+ */
+export interface LlmRouteDefaults {
+  temperature?: number
+  maxTokens?: number
+  structuredOutput?: true
+}
+
+export const LLM_ROUTE_DEFAULTS: Record<string, LlmRouteDefaults> = {
+  "llm-chat":                { temperature: 0.7,  maxTokens: 8192 },
+  "ai-writer":               { temperature: 0.7,  maxTokens: 8192 },
+  "prompt-helper":           { temperature: 0.7,  maxTokens: 8192, structuredOutput: true },
+  "generate-script":         { maxTokens: 16384, structuredOutput: true },
+  "qa-check":                { maxTokens: 1024,  structuredOutput: true },
+  "image-critic":            { maxTokens: 1024,  structuredOutput: true },
+  "image-to-text":           { maxTokens: 1024 },
+  "describe-to-picker":      { structuredOutput: true },
+  "scene-graph-ai":          { temperature: 0.3,  maxTokens: 4096, structuredOutput: true },
+  "after-effects":           { temperature: 0.3,  maxTokens: 2048, structuredOutput: true },
+  "lottie-overlay":          { temperature: 0.3,  maxTokens: 2048, structuredOutput: true },
+  "motion-graphics":         { temperature: 0.3,  maxTokens: 2048, structuredOutput: true },
+  "motion-graphics-lottie":  { temperature: 0.3,  maxTokens: 8192, structuredOutput: true },
+  "3d-title":                { temperature: 0.4,  maxTokens: 3072, structuredOutput: true },
+}
+
+/** Route defaults for a feature; `{}` for an unknown one. */
+export function llmRouteDefaults(feature: string | undefined): LlmRouteDefaults {
+  return (feature && LLM_ROUTE_DEFAULTS[feature]) || {}
+}
+
 /** One step up the economy → standard → premium ladder. Premium is the ceiling. */
 function bumpTier(tier: LlmTier): LlmTier {
   if (tier === "economy") return "standard"

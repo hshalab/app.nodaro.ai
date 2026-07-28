@@ -2,8 +2,15 @@ import { useEffect } from "react"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { supportsAdvancedMode, ADVANCED_MODE_UNAVAILABLE_REASON, LLM_FEATURE_DEFAULTS } from "@nodaro/shared"
+import { supportsAdvancedMode, ADVANCED_MODE_UNAVAILABLE_REASON, LLM_FEATURE_DEFAULTS, llmRouteDefaults } from "@nodaro/shared"
 import type { LlmFeature } from "@nodaro/shared"
+
+/** Mirrors `LLM_ADVANCED_SHAPE.maxTokens` in the backend. A number input's
+ *  `min`/`max` are advisory — typing 999999 commits it — and the route then
+ *  rejects the whole run with a validation error naming a field the user can
+ *  see is "in range". Clamping on blur keeps the stored value acceptable. */
+const MAX_TOKENS_MIN = 1
+const MAX_TOKENS_MAX = 32768
 
 interface AdvancedModeToggleProps {
   feature: LlmFeature
@@ -14,13 +21,6 @@ interface AdvancedModeToggleProps {
   /** Current sampling values, rendered only while advanced is on. */
   temperature?: number
   maxTokens?: number
-  /** Route defaults, so the revealed controls start where the node already is
-   *  rather than snapping to some other number the first time they appear. */
-  defaultTemperature?: number
-  defaultMaxTokens?: number
-  /** Set on nodes whose prompt asks the model for JSON — a high temperature
-   *  measurably degrades schema adherence there. */
-  structuredOutput?: boolean
 }
 
 /**
@@ -42,10 +42,13 @@ export function AdvancedModeToggle({
   onChange,
   temperature,
   maxTokens,
-  defaultTemperature,
-  defaultMaxTokens,
-  structuredOutput,
 }: AdvancedModeToggleProps) {
+  // Seeded from the SAME table the routes read, so the sliders open on the
+  // value that actually runs. These used to be props no panel passed, so every
+  // node displayed 0.7/2048 while its route used e.g. 0.3/3072 — and one
+  // arrow-key press committed the wrong number.
+  const { temperature: defaultTemperature, maxTokens: defaultMaxTokens, structuredOutput } =
+    llmRouteDefaults(feature)
   const effectiveModel = modelId || LLM_FEATURE_DEFAULTS[feature]
   const supported = supportsAdvancedMode(effectiveModel)
   const on = value === true
@@ -106,13 +109,22 @@ export function AdvancedModeToggle({
             <Label className="text-xs text-muted-foreground">Max Tokens</Label>
             <Input
               type="number"
-              min={256}
-              max={32768}
+              min={MAX_TOKENS_MIN}
+              max={MAX_TOKENS_MAX}
               step={256}
               value={maxTokens ?? defaultMaxTokens ?? 2048}
               onChange={(e) =>
                 onChange({ maxTokens: parseInt(e.target.value, 10) || defaultMaxTokens || 2048 })
               }
+              // Clamp on blur, not on change — clamping mid-typing rewrites the
+              // field under the cursor ("3" becomes "256" before "3000" exists).
+              onBlur={(e) => {
+                const n = parseInt(e.target.value, 10)
+                const clamped = Number.isFinite(n)
+                  ? Math.min(MAX_TOKENS_MAX, Math.max(MAX_TOKENS_MIN, n))
+                  : (defaultMaxTokens ?? 2048)
+                if (clamped !== maxTokens) onChange({ maxTokens: clamped })
+              }}
               className="mt-1 bg-[#F8FAFC] dark:bg-[#121212] border-gray-200 dark:border-[#2D2D2D]"
             />
           </div>

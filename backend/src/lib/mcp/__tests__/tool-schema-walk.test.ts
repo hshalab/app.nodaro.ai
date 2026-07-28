@@ -25,6 +25,7 @@
 import { readFileSync, readdirSync } from "node:fs"
 import { join } from "node:path"
 import { describe, it, expect } from "vitest"
+import { LLM_MCP_FIELDS } from "../tools/_llm-fields.js"
 
 const TOOLS_DIR = join(__dirname, "..", "tools")
 const TOOL_FILES = readdirSync(TOOLS_DIR).filter(
@@ -97,9 +98,57 @@ function parseToolFile(filename: string): ParsedTool[] {
       /^\s*(?:"([^"]+)"|([a-zA-Z_][a-zA-Z0-9_]*))\s*:\s*z\s*\./gm,
     )
     const keys = [...keyMatches].map((k) => (k[1] ?? k[2]) as string)
-    tools.push({ file: filename, name, schemaKeys: keys, source })
+    tools.push({ file: filename, name, schemaKeys: [...keys, ...spreadKeys(schemaBody, name)], source })
   }
   return tools
+}
+
+/**
+ * Shared schema fragments a tool may spread into its `inputSchema`.
+ *
+ * The key-scan above only sees literal `key: z.…` lines, so a spread would
+ * silently REMOVE its keys from the walk — coverage quietly shrinking as the
+ * codebase gets more DRY, which is the opposite of what should happen. Each
+ * fragment is resolved to its real keys here, and an unrecognised spread is a
+ * hard failure rather than a silent skip.
+ */
+const SCHEMA_FRAGMENTS: Record<string, readonly string[]> = {
+  LLM_MCP_FIELDS: Object.keys(LLM_MCP_FIELDS),
+}
+
+/**
+ * The mapper each fragment's keys are read through. A fragment is consumed by
+ * passing `args` wholesale (`...llmPayloadFields(args)`), so the literal
+ * `args.<key>` reference the walk looks for can never appear — the reference
+ * check accepts the mapper call instead. Requiring a specific mapper (rather
+ * than exempting fragment keys outright) keeps the check real: spread the
+ * fields and forget to forward them, and this still fails.
+ */
+const FRAGMENT_CONSUMERS: Record<string, string> = {
+  LLM_MCP_FIELDS: "llmPayloadFields(args)",
+}
+
+/** Keys that a spread fragment contributes, mapped to the consumer call that
+ *  must appear in the file for them to count as read. */
+const FRAGMENT_KEY_CONSUMER = new Map<string, string>(
+  Object.entries(SCHEMA_FRAGMENTS).flatMap(([name, keys]) =>
+    keys.map((k) => [k, FRAGMENT_CONSUMERS[name] as string] as [string, string]),
+  ),
+)
+
+function spreadKeys(schemaBody: string, toolName: string): string[] {
+  const out: string[] = []
+  for (const m of schemaBody.matchAll(/^\s*\.\.\.([A-Za-z_][A-Za-z0-9_]*)\s*,?\s*$/gm)) {
+    const fragment = SCHEMA_FRAGMENTS[m[1] as string]
+    if (!fragment) {
+      throw new Error(
+        `Tool "${toolName}" spreads unknown schema fragment "${m[1]}". Add it to ` +
+          `SCHEMA_FRAGMENTS in tool-schema-walk.test.ts so its keys stay covered by the walk.`,
+      )
+    }
+    out.push(...fragment)
+  }
+  return out
 }
 
 const ALL_TOOLS: ParsedTool[] = []
@@ -213,6 +262,11 @@ describe("MCP tool schema keys are referenced in the handler", () => {
       if (!tool) {
         throw new Error(`Tool ${toolName} not found — internal test bug`)
       }
+      // A key that only arrives via a spread fragment is read through its
+      // mapper, not by name.
+      const consumer = FRAGMENT_KEY_CONSUMER.get(key)
+      if (consumer && tool.source.includes(consumer)) return
+
       const escaped = key.replace(/[$()*+./?[\\\]^{|}-]/g, "\\$&")
       // Reference patterns: args.key, args["key"], or `{ key } = args` /
       // `({ key }) =>` destructuring.

@@ -1,4 +1,5 @@
 import { useWorkflowStore } from "@/hooks/use-workflow-store";
+import { llmAdvancedParams } from "@/lib/llm-advanced-params"
 import {
   generateImage,
   editImage,
@@ -493,11 +494,19 @@ export function runScriptGeneration(
   llmModel?: string,
   reasoningEffort?: string,
 ): Promise<string> {
-  const { updateNodeData } = useWorkflowStore.getState();
+  const { updateNodeData, nodes } = useWorkflowStore.getState();
   updateNodeData(nodeId, { executionStatus: "running" });
+  // This executor takes positional params rather than the node, so the Advanced
+  // trio is read from the store. Without it the config panel's toggle is dead on
+  // single-node Run: the badge shows the bumped price while the request omits
+  // the flag entirely.
+  const advanced = llmAdvancedParams(
+    nodes.find((n) => n.id === nodeId)?.data as Record<string, unknown> | undefined,
+  );
 
   return new Promise<string>((resolve, reject) => {
-    generateScriptApi({ prompt, sceneCount, tone, targetDuration, provider, llmModel, reasoningEffort, userId: ctx.userId })
+    generateScriptApi({ prompt, sceneCount, tone, targetDuration, provider, llmModel, reasoningEffort,
+      ...advanced, userId: ctx.userId })
       .then(({ jobId }) => {
         if (ctx.signal?.aborted) {
           // Run discarded/aborted while the create-job request was in flight.

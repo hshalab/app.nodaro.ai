@@ -79,6 +79,53 @@ describe("toolkit.llm forwards every tuning field", () => {
     expect(sent.temperature).toBe(0)
   })
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Lane pinning. Video-analysis is direct-only BY CONSTRUCTION: the aggregator
+  // reaches Gemini by smuggling media URLs through an `image_url` field rather
+  // than sending real media parts, and drops record-shaped schema fields — so a
+  // run served by KIE returns differently-grounded analysis with nothing to
+  // signal it. The pin lives in this adapter's DEFAULT, which means deleting one
+  // `?? "direct"` silently moves every analysis onto the wrong lane with no type
+  // error and no runtime error. These are the tests that fail instead.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  it("multimodal defaults to the direct lane — the video-analysis invariant", async () => {
+    const tk = buildToolkit()
+    await tk.llm.completeStructuredMultimodal(
+      { model: "gemini-3.6-flash", messages: [{ role: "user", content: [{ type: "video", url: "https://x/y.mp4" }] }] },
+      {},
+    )
+    const sent = mockStructured.mock.calls[0]![0] as Record<string, unknown>
+    expect(sent.requireLane, "multimodal calls must pin the direct lane by default").toBe("direct")
+  })
+
+  it("an explicit lane still wins over the default", async () => {
+    // The default is a default, not a hard-code: a caller that genuinely wants
+    // the aggregator can still say so.
+    const tk = buildToolkit()
+    await tk.llm.completeStructuredMultimodal(
+      {
+        model: "gemini-3.6-flash",
+        requireLane: "kie",
+        messages: [{ role: "user", content: [{ type: "text", text: "t" }] }],
+      },
+      {},
+    )
+    const sent = mockStructured.mock.calls[0]![0] as Record<string, unknown>
+    expect(sent.requireLane).toBe("kie")
+  })
+
+  it("the TEXT adapter does NOT pin — it must stay opt-in", async () => {
+    // Deliberate asymmetry: text-only calls (gvp/evp planners, film-studio
+    // doctrine, the video-analysis grader on a non-Gemini model) have no media
+    // to lose and must keep their registry routing. Pinning them would hard-fail
+    // every non-Gemini model at `assertLanePinnable`.
+    const tk = buildToolkit()
+    await tk.llm.completeStructured({ model: "gpt-5.6-terra", prompt: "p" }, {})
+    const sent = mockStructured.mock.calls[0]![0] as Record<string, unknown>
+    expect(sent.requireLane).toBeUndefined()
+  })
+
   it("omitted fields stay undefined (vendor default), not coerced", async () => {
     const tk = buildToolkit()
     await tk.llm.completeStructuredMultimodal(

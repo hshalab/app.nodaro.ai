@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify"
 import { z } from "zod"
-import { IMAGE_CRITIC_MODES, ImageCriticResultSchema, LLM_MODEL_IDS, LLM_REASONING_EFFORTS, LLM_FEATURE_DEFAULTS, buildLlmCreditIdentifier, resolveLlmCreditId, type ImageCriticMode, type ImageCriticResult } from "@nodaro/shared"
+import { LLM_ROUTE_DEFAULTS, IMAGE_CRITIC_MODES, ImageCriticResultSchema, LLM_MODEL_IDS, LLM_REASONING_EFFORTS, LLM_FEATURE_DEFAULTS, buildLlmCreditIdentifier, resolveLlmCreditId, type ImageCriticMode, type ImageCriticResult } from "@nodaro/shared"
 import { LLM_ADVANCED_SHAPE, advancedModeError, resolveLlmParams } from "../lib/llm-advanced-mode.js"
 import { supabase } from "../lib/supabase.js"
 import { creditGuard, reserveCreditsForJob } from "../middleware/credit-guard.js"
@@ -196,7 +196,7 @@ export async function imageCriticRoutes(app: FastifyInstance) {
           modelId: llmModel,
           system,
           messages: [{ role: "user", content }],
-          ...resolveLlmParams(parsed.data, { maxTokens: 1024 }),
+          ...resolveLlmParams(parsed.data, LLM_ROUTE_DEFAULTS["image-critic"]),
           reasoningEffort: parsed.data.reasoningEffort,
         })
 

@@ -38,7 +38,7 @@ vi.mock("@nodaro/shared", () => ({
   },
 }))
 
-import { generateScript } from "../script-generator.js"
+import { generateScript, resolveScriptModelId } from "../script-generator.js"
 
 const VALID_SCRIPT = {
   title: "The Awakening",
@@ -427,5 +427,34 @@ describe("generateScript — scene normalization", () => {
     const result = await generateScript("p")
     expect(result.title).toBe("The Awakening")
     expect(result.totalDuration).toBe(60)
+  })
+})
+
+/**
+ * The route validates Advanced mode against a model; the worker runs one. They
+ * used to disagree: `provider: "claude"` with no `llmModel` validated against
+ * the feature default (Gemini — Advanced supported) and then ran
+ * `claude-sonnet-4.6` (no direct lane), so an accepted 200 turned into a
+ * lane-pin failure inside the worker. One exported resolver now serves both.
+ */
+describe("resolveScriptModelId", () => {
+  it("prefers an explicit llmModel over the legacy provider alias", () => {
+    expect(resolveScriptModelId("claude" as never, "gemini-3.1-pro")).toBe("gemini-3.1-pro")
+  })
+
+  it("maps each legacy provider alias to a real model id", () => {
+    expect(resolveScriptModelId("claude" as never)).toBe("claude-sonnet-4.6")
+    expect(resolveScriptModelId("gemini" as never)).toBe("gemini-3.6-flash")
+    expect(resolveScriptModelId("gpt" as never)).toBe("gpt-5.2")
+  })
+
+  it("falls back to the feature default when neither is given", () => {
+    expect(resolveScriptModelId()).toBe("default-script-model")
+  })
+
+  it("an unknown provider value falls through to the default, never undefined", () => {
+    // The route hands this straight to `advancedModeError`, which would treat
+    // undefined as "no model" and skip the capability check entirely.
+    expect(resolveScriptModelId("not-a-provider" as never)).toBe("default-script-model")
   })
 })

@@ -796,6 +796,16 @@ if ("jobId" in result) {
 > exact rule and worked examples. Workflow/canvas LLM nodes carry the same
 > field on their node `data` (`reasoningEffort?: LlmReasoningEffort`), and
 > `client.promptHelper.*` accepts it directly in its request body.
+
+> **Advanced mode.** The same routes accept `advancedMode: true` (Gemini models
+> only), which runs the request on the provider's own API rather than through
+> the aggregator. That is the only lane where `temperature`, `maxTokens` and the
+> full reasoning-effort range actually take effect — on the default lane those
+> levers are not reliably honoured. It bills **one credit tier up**, and this
+> bump is independent of the effort bump above. A model with no direct lane
+> returns `400 advanced_mode_unsupported`. Canvas LLM nodes carry the same field
+> on their node `data` (`advancedMode?: boolean`), and the CLI exposes it as
+> `--advanced`.
 >
 > `client.nodes.run(type, params)` POSTs `params` straight to `POST
 > /v1/<type>` — that matches the registered route only for `generate-script`,
@@ -2081,7 +2091,7 @@ AI prompt assistance for generation nodes. All three methods delegate to
 [API Integration §12](./api-integration.md#12-prompt-wizard)) and reserve
 credits per call.
 
-All three inputs also accept optional `llmModel` and `reasoningEffort` fields
+All three inputs also accept optional `llmModel`, `reasoningEffort`, `advancedMode`, `temperature` and `maxTokens` fields
 (the latter is model-dependent — unsupported or omitted levels fall back to
 the vendor default). Both are forwarded to the underlying LLM call and affect
 credit cost the same way as every other LLM-backed node — see

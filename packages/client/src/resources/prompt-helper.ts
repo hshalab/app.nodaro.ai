@@ -13,6 +13,18 @@ interface CommonInput {
   llmModel?: string
   /** Reasoning effort level (model-dependent). */
   reasoningEffort?: string
+  /**
+   * Gemini models only. Runs the request on the provider's own API so
+   * `temperature`, `maxTokens` and the full reasoning range actually take
+   * effect — on the default lane those levers are not reliably honoured.
+   * Bills one credit tier up. A model without a direct lane returns
+   * `400 advanced_mode_unsupported`.
+   */
+  advancedMode?: boolean
+  /** Sampling temperature. Only honoured when `advancedMode` is true. */
+  temperature?: number
+  /** Output token cap. Only honoured when `advancedMode` is true. */
+  maxTokens?: number
   nodeContext?: WizardNodeContext
   userPreference?: string
   /** Associates this call with a workflow execution. Read server-side before Zod. */

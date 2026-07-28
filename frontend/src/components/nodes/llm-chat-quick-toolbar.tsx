@@ -18,7 +18,7 @@ import { RunNodeButton } from "./run-node-button"
 import { PromptEditButton } from "./prompt-edit-button"
 import { useWorkflowStore } from "@/hooks/use-workflow-store"
 import { NODE_VISUAL_SCALE_FLOOR } from "@/lib/zoom-floor"
-import { availableReasoningEfforts, LLM_MODELS, LLM_FEATURE_DEFAULTS, getLlmModel } from "@nodaro/shared"
+import { supportsAdvancedMode, availableReasoningEfforts, LLM_MODELS, LLM_FEATURE_DEFAULTS, getLlmModel } from "@nodaro/shared"
 import type { LlmReasoningEffort } from "@nodaro/shared"
 import { GENERATE_TEXT_TEMPLATES } from "@/lib/generate-text-templates"
 import { EFFORT_LABELS } from "@/components/editor/config-panels/reasoning-effort-select"
@@ -48,10 +48,16 @@ const TIER_LABELS: Record<string, string> = {
 export function buildModelChangePatch(data: LLMChatData, nextModelId: string): Partial<LLMChatData> {
   // Lane-aware: the ladder the next model offers depends on whether this node
   // runs advanced, so a value valid on one lane can be invalid on the other.
-  const nextLevels = availableReasoningEfforts(nextModelId, data.advancedMode)
+  // Advanced mode is cleared FIRST, because it narrows the effort ladder: a
+  // model with no direct lane can't run advanced, and leaving the flag set
+  // strands the node — the badge stays correct while an orchestrated run
+  // hard-400s `advanced_mode_unsupported` with no visible cause.
+  const nextAdvanced = data.advancedMode === true && supportsAdvancedMode(nextModelId)
+  const nextLevels = availableReasoningEfforts(nextModelId, nextAdvanced)
   const currentEffort = data.reasoningEffort
   return {
     llmModel: nextModelId,
+    ...(data.advancedMode === true && !nextAdvanced ? { advancedMode: undefined } : {}),
     ...(currentEffort && !nextLevels.includes(currentEffort) ? { reasoningEffort: undefined } : {}),
   }
 }

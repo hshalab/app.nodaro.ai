@@ -2921,6 +2921,13 @@ export async function generateScriptApi(params: {
   provider?: string
   llmModel?: string
   reasoningEffort?: string
+  /** Advanced mode + its sampling levers. Without these the config panel's
+   *  toggle is dead on single-node Run: the badge shows the bumped price while
+   *  the request omits the flag, so the run bills the lower tier and never
+   *  pins the lane. */
+  advancedMode?: boolean
+  temperature?: number
+  maxTokens?: number
   userId?: string
 }): Promise<{ jobId: string }> {
   return apiJson("/v1/generate-script", {
@@ -4834,6 +4841,8 @@ export async function generateSceneGraph(params: {
   userId: string
   llmModel?: string
   reasoningEffort?: string
+  advancedMode?: boolean
+  maxTokens?: number
 }): Promise<{ jobId: string; sceneGraph: Record<string, unknown> }> {
   return apiJson("/v1/scene-graph/generate", {
     body: params,
@@ -4854,6 +4863,8 @@ export async function generateAfterEffects(params: {
   userId: string
   llmModel?: string
   reasoningEffort?: string
+  advancedMode?: boolean
+  maxTokens?: number
 }): Promise<{ jobId: string; effectPlan: Record<string, unknown> }> {
   return apiJson("/v1/after-effects/generate", {
     body: params,
@@ -4887,6 +4898,8 @@ export async function generateLottieOverlay(params: {
   userId: string
   llmModel?: string
   reasoningEffort?: string
+  advancedMode?: boolean
+  maxTokens?: number
 }): Promise<{ jobId: string; overlayPlan: Record<string, unknown> }> {
   return apiJson("/v1/lottie-overlay/generate", {
     body: params,
@@ -4909,6 +4922,8 @@ export async function generate3DTitle(params: {
   userId: string
   llmModel?: string
   reasoningEffort?: string
+  advancedMode?: boolean
+  maxTokens?: number
 }): Promise<{ jobId: string; titlePlan: Record<string, unknown> }> {
   return apiJson("/v1/3d-title/generate", {
     body: params,
@@ -4930,6 +4945,8 @@ export async function generateMotionGraphics(params: {
   userId: string
   llmModel?: string
   reasoningEffort?: string
+  advancedMode?: boolean
+  maxTokens?: number
   engine?: "elements" | "lottie"
   previousSids?: string[]
 }): Promise<{
@@ -4956,6 +4973,8 @@ export async function wizardAnalyze(params: {
   duration?: number
   llmModel?: string
   reasoningEffort?: string
+  advancedMode?: boolean
+  maxTokens?: number
   nodeContext?: {
     connectedInputTypes?: string[]
     referenceImageCount?: number
@@ -4989,6 +5008,8 @@ export async function wizardGenerate(params: {
   duration?: number
   llmModel?: string
   reasoningEffort?: string
+  advancedMode?: boolean
+  maxTokens?: number
   selections: Array<{ category: string; value: string; isCustom: boolean }>
   originalPrompt?: string
   nodeContext?: {
@@ -5074,6 +5095,7 @@ export async function generateAIWriterStream(params: {
   userId: string
   llmModel?: string
   reasoningEffort?: string
+  advancedMode?: boolean
   onToken: (token: string) => void
   signal?: AbortSignal
 }): Promise<{ jobId: string; generatedText: string }> {
@@ -5092,6 +5114,7 @@ export async function llmChatStream(params: {
   userId: string
   llmModel?: string
   reasoningEffort?: string
+  advancedMode?: boolean
   onToken: (token: string) => void
   signal?: AbortSignal
 }): Promise<{ jobId: string; generatedText: string }> {
@@ -7046,6 +7069,8 @@ export function qaCheckApi(params: {
   threshold?: number
   llmModel?: string
   reasoningEffort?: string
+  advancedMode?: boolean
+  maxTokens?: number
 }): Promise<{ jobId: string; score: number; approved: boolean; reason: string }> {
   return apiRequest("/v1/qa-check", "QA check failed", {
     method: "POST",
@@ -7061,6 +7086,8 @@ export function imageCriticApi(params: {
   threshold?: number
   llmModel?: string
   reasoningEffort?: string
+  advancedMode?: boolean
+  maxTokens?: number
 }): Promise<{
   jobId: string
   score: number

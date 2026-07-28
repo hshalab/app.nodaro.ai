@@ -13,7 +13,7 @@ import { AFTER_EFFECTS_SYSTEM_PROMPT } from "../prompts/after-effects-system.js"
 import { validateAfterEffectsPlan } from "../lib/after-effects-validator.js"
 import { extractJsonFromAIResponse } from "../lib/json-utils.js"
 import { llmComplete } from "../lib/llm-client.js"
-import { LLM_MODEL_IDS, LLM_REASONING_EFFORTS, buildLlmCreditIdentifier, resolveLlmCreditId, LLM_FEATURE_DEFAULTS } from "@nodaro/shared"
+import { LLM_ROUTE_DEFAULTS, LLM_MODEL_IDS, LLM_REASONING_EFFORTS, buildLlmCreditIdentifier, resolveLlmCreditId, LLM_FEATURE_DEFAULTS } from "@nodaro/shared"
 import { LLM_ADVANCED_SHAPE, advancedModeError, resolveLlmParams } from "../lib/llm-advanced-mode.js"
 import { ASPECT_DIMENSIONS } from "../lib/aspect-dimensions.js"
 import { extractWorkflowId, extractNodeId, extractForcePrivate } from "../lib/request-helpers.js"
@@ -74,6 +74,11 @@ export async function afterEffectsAIRoutes(app: FastifyInstance) {
       const durationInFrames = Math.round(durationSeconds * fps)
 
       // Create job record
+      // Reject BEFORE the jobs row exists — a 400 after the insert leaves an
+      // orphan `pending` row with no reservation and no queue entry.
+      const advancedError = advancedModeError(parsed.data, llmModel)
+      if (advancedError) return reply.status(400).send({ error: advancedError })
+
       const { data: job, error: jobError } = await supabase
         .from("jobs")
         .insert({
@@ -92,8 +97,6 @@ export async function afterEffectsAIRoutes(app: FastifyInstance) {
       }
 
       // Reserve credits
-      const advancedError = advancedModeError(parsed.data, llmModel)
-      if (advancedError) return reply.status(400).send({ error: advancedError })
       const modelIdentifier = buildLlmCreditIdentifier("after-effects", llmModel, parsed.data.reasoningEffort, parsed.data.advancedMode)
       const reservation = await reserveCreditsForJob(req, reply, job.id, modelIdentifier)
       if (reply.sent) return
@@ -119,7 +122,7 @@ Effect style: ${prompt}`
           modelId: llmModel,
           system: AFTER_EFFECTS_SYSTEM_PROMPT,
           messages: [{ role: "user", content: userMessage }],
-          ...resolveLlmParams(parsed.data, { maxTokens: 2048, temperature: 0.3 }),
+          ...resolveLlmParams(parsed.data, LLM_ROUTE_DEFAULTS["after-effects"]),
           reasoningEffort: parsed.data.reasoningEffort,
         })
 

@@ -5,7 +5,7 @@ import { config } from "../lib/config.js"
 import { creditGuard, reserveCreditsForJob } from "../middleware/credit-guard.js"
 import { CreditsService } from "../ee/billing/credits.js"
 import { llmComplete, type LlmContentBlock } from "../lib/llm-client.js"
-import { LLM_MODEL_IDS, LLM_REASONING_EFFORTS, buildLlmCreditIdentifier, resolveLlmCreditId, LLM_FEATURE_DEFAULTS } from "@nodaro/shared"
+import { LLM_ROUTE_DEFAULTS, LLM_MODEL_IDS, LLM_REASONING_EFFORTS, buildLlmCreditIdentifier, resolveLlmCreditId, LLM_FEATURE_DEFAULTS } from "@nodaro/shared"
 import { LLM_ADVANCED_SHAPE, advancedModeError, resolveLlmParams } from "../lib/llm-advanced-mode.js"
 import { safeUrlSchema } from "../lib/url-validator.js"
 import { safeFetch } from "../lib/safe-fetch.js"
@@ -143,7 +143,7 @@ export async function imageToTextRoutes(app: FastifyInstance) {
               { type: "text", text: "Describe this image." },
             ],
           }],
-          ...resolveLlmParams(parsed.data, { maxTokens: 1024 }),
+          ...resolveLlmParams(parsed.data, LLM_ROUTE_DEFAULTS["image-to-text"]),
           reasoningEffort: parsed.data.reasoningEffort,
         })
 

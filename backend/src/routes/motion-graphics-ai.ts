@@ -13,7 +13,7 @@ import { MOTION_GRAPHICS_SYSTEM_PROMPT } from "../prompts/motion-graphics-system
 import { validateMotionGraphicsPlan } from "../lib/motion-graphics-validator.js"
 import { extractJsonFromAIResponse } from "../lib/json-utils.js"
 import { llmComplete } from "../lib/llm-client.js"
-import { LLM_MODEL_IDS, LLM_REASONING_EFFORTS, buildLlmCreditIdentifier, resolveLlmCreditId, LLM_FEATURE_DEFAULTS, motionGraphicsFeature } from "@nodaro/shared"
+import { LLM_ROUTE_DEFAULTS, LLM_MODEL_IDS, LLM_REASONING_EFFORTS, buildLlmCreditIdentifier, resolveLlmCreditId, LLM_FEATURE_DEFAULTS, motionGraphicsFeature } from "@nodaro/shared"
 import { ASPECT_DIMENSIONS } from "../lib/aspect-dimensions.js"
 import { LLM_ADVANCED_SHAPE, advancedModeError, resolveLlmParams } from "../lib/llm-advanced-mode.js"
 import { extractWorkflowId, extractNodeId, extractForcePrivate } from "../lib/request-helpers.js"
@@ -96,6 +96,10 @@ export async function motionGraphicsAIRoutes(app: FastifyInstance) {
       // credits, and enqueues — the worker calls the LLM + validator + finalizes.
       if (parsed.data.engine === "lottie") {
         const lottieLlmModel = parsed.data.llmModel ?? LLM_FEATURE_DEFAULTS["motion-graphics-lottie"]
+        // Reject BEFORE the jobs row exists — a 400 after the insert leaves an
+        // orphan `pending` row with no reservation and no queue entry.
+        const advancedError = advancedModeError(parsed.data, lottieLlmModel)
+        if (advancedError) return reply.status(400).send({ error: advancedError })
 
         const { data: lottieJob, error: lottieJobError } = await supabase
           .from("jobs")
@@ -120,8 +124,6 @@ export async function motionGraphicsAIRoutes(app: FastifyInstance) {
           return sendInternalError(reply, req, lottieJobError, "Failed to create job")
         }
 
-        const advancedError = advancedModeError(parsed.data, lottieLlmModel)
-        if (advancedError) return reply.status(400).send({ error: advancedError })
         const modelIdentifier = buildLlmCreditIdentifier("motion-graphics-lottie", lottieLlmModel, parsed.data.reasoningEffort, parsed.data.advancedMode)
         const reservation = await reserveCreditsForJob(req, reply, lottieJob.id, modelIdentifier)
         if (reply.sent) return
@@ -146,6 +148,10 @@ export async function motionGraphicsAIRoutes(app: FastifyInstance) {
         return { jobId: lottieJob.id }
       }
 
+      // Reject BEFORE the jobs row exists (see the lottie branch above).
+      const advancedErrorElements = advancedModeError(parsed.data, llmModel)
+      if (advancedErrorElements) return reply.status(400).send({ error: advancedErrorElements })
+
       // Create job record
       const { data: job, error: jobError } = await supabase
         .from("jobs")
@@ -165,8 +171,6 @@ export async function motionGraphicsAIRoutes(app: FastifyInstance) {
       }
 
       // Reserve credits
-      const advancedErrorElements = advancedModeError(parsed.data, llmModel)
-      if (advancedErrorElements) return reply.status(400).send({ error: advancedErrorElements })
       const modelIdentifier = buildLlmCreditIdentifier("motion-graphics", llmModel, parsed.data.reasoningEffort, parsed.data.advancedMode)
       const reservation = await reserveCreditsForJob(req, reply, job.id, modelIdentifier)
       if (reply.sent) return
@@ -192,7 +196,7 @@ Prompt: ${prompt}`
           modelId: llmModel,
           system: MOTION_GRAPHICS_SYSTEM_PROMPT,
           messages: [{ role: "user", content: userMessage }],
-          ...resolveLlmParams(parsed.data, { maxTokens: 2048, temperature: 0.3 }),
+          ...resolveLlmParams(parsed.data, LLM_ROUTE_DEFAULTS["motion-graphics"]),
           reasoningEffort: parsed.data.reasoningEffort,
         })
 

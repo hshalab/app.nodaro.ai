@@ -26,7 +26,9 @@ const llmChatBody = z.object({
   referenceVideoUrls: z.array(z.string().url()).max(3).optional(),
   referenceAudioUrls: z.array(z.string().url()).max(3).optional(),
   temperature: z.number().min(0).max(2).default(0.7),
-  maxTokens: z.number().min(1).max(16384).default(8192),
+  // 32768 matches LLM_ADVANCED_SHAPE and the Advanced-mode input's ceiling.
+  // At 16384 a value the panel accepts hard-400s every later run of that node.
+  maxTokens: z.number().min(1).max(32768).default(8192),
   userId: z.string().uuid().optional(),
   llmModel: z.enum(LLM_MODEL_IDS as [string, ...string[]]).optional(),
   reasoningEffort: z.enum(LLM_REASONING_EFFORTS).optional(),

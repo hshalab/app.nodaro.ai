@@ -374,6 +374,7 @@ Turns a rough idea into guided questions with options for a target node type
 | `nodeType` | string | Required. Target node type. |
 | `prompt` | string (max 5000) | Optional. The rough idea. Omit to build from scratch. |
 | `provider` / `style` / `aspectRatio` / `duration` / `llmModel` | — | Optional. |
+| `advanced_mode` / `temperature` / `max_tokens` | — | Optional. Gemini models only — runs on the provider's own API so the sampling levers and the full reasoning range actually apply. Bills one credit tier up; another model returns `400 advanced_mode_unsupported`. |
 
 **Response:** `{ jobId, questions }` — each question is
 `{ category, label, options[], selected, allowCustom, multi? }`.
@@ -390,6 +391,7 @@ Builds a single optimized prompt from `analyze_prompt` selections.
 | `selections` | array | Required. One `{ category, value, isCustom }` per answered question. |
 | `originalPrompt` | string (max 5000) | Optional. Woven into the result. |
 | `provider` / `style` / `aspectRatio` / `duration` / `llmModel` | — | Optional. |
+| `advanced_mode` / `temperature` / `max_tokens` | — | Optional. Gemini models only — runs on the provider's own API so the sampling levers and the full reasoning range actually apply. Bills one credit tier up; another model returns `400 advanced_mode_unsupported`. |
 
 **Response:** `{ jobId, prompt, recommendedModel? }`.
 
@@ -405,6 +407,7 @@ prompt with no questions round-trip.
 | `nodeType` | string | Required. |
 | `prompt` | string (max 5000) | Optional. The rough idea to improve. |
 | `provider` / `style` / `aspectRatio` / `duration` / `llmModel` | — | Optional. |
+| `advanced_mode` / `temperature` / `max_tokens` | — | Optional. Gemini models only — runs on the provider's own API so the sampling levers and the full reasoning range actually apply. Bills one credit tier up; another model returns `400 advanced_mode_unsupported`. |
 
 **Response:** `{ jobId, prompt, recommendedModel? }`.
 
@@ -422,7 +425,7 @@ prompt with no questions round-trip.
 | `edit_image` | Targeted edits: remove background, upscale, inpaint, or use Nodaro's nano-banana-edit model. |
 | `generate_mask` | Generate or refine a segmentation mask for inpainting workflows. |
 | `image_collage` | Composite 2–30 images into one 2K/4K image with a smart (justified) or grid layout — no image is ever cropped (smart floats the output height; grid letterboxes). Accepts `images[]` (`url` or `asset_id`, each with an optional `size` hint: 0 auto / 1 big / 2 medium / 3 small — relative sizing for the smart layout), `layout`, `resolution` (default `4K`), `aspect_ratio` (any `W:H`, default `4:3`), `gap`, `background_color`. |
-| `image_to_text` | Extract a text description (caption/transcription) from an image using a vision model. |
+| `image_to_text` | Extract a text description (caption/transcription) from an image using a vision model. Accepts `llmModel`, `reasoning_effort`, and the Advanced-mode trio (`advanced_mode` / `temperature` / `max_tokens`) — Advanced mode is Gemini-only and bills one credit tier up. |
 | `generate_script` | Generate a short video script from a prompt (LLM-backed; outputs scene-by-scene copy). |
 | `save_image_defaults` | Persist preferred `model`, `aspect_ratio`, and `quality` values so they become the defaults for subsequent `generate_image` calls in the same session. |
 
@@ -495,8 +498,13 @@ below are the shared pricing formula's current outputs:
 
 | Tier | ≤60s | ≤180s | ≤360s | ≤600s |
 |------|------|-------|-------|-------|
-| `fast` (economy) | 1 | 1 | 2 | 3 |
-| `pro` (default) | 2 | 3 | 7 | 11 |
+| `fast` (economy) | 14 | 19 | 49 | 81 |
+| `pro` (default) | 21 | 27 | 72 | 120 |
+| `mixed` / `mixed-fast` | 34 | 46 | 120 | 200 |
+
+The live tool description carries these same numbers — it is generated from the
+shared pricing table at server start, so it is always current. This table is
+hand-maintained; if the two ever disagree, the tool description is right.
 
 ---
 

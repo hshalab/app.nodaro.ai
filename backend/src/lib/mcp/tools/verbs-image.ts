@@ -15,6 +15,7 @@ import {
   JOB_OUTPUT_SCHEMA,
   uiMeta,
 } from "./_verb-helpers.js"
+import { LLM_MCP_FIELDS, llmPayloadFields } from "./_llm-fields.js"
 import { WIDGET_URI } from "../widgets/registrar.js"
 import { modelIdsByKindMode, MODIFY_IMAGE_PROVIDERS } from "@nodaro/shared"
 import { getUserMcpPreferences } from "../user-preferences.js"
@@ -900,6 +901,7 @@ export function registerImageVerbs({ server, session, fastify }: RegisterOpts): 
         image_asset_id: z.string().optional().describe("Nodaro image job id."),
         detail_level: z.enum(["brief", "detailed", "comprehensive"]).optional().describe("How much detail to include. Default detailed."),
         custom_prompt: z.string().max(2000).optional().describe("Override the default system prompt with a specific question (e.g. 'List all text visible in the image')."),
+        ...LLM_MCP_FIELDS,
       },
       outputSchema: JOB_OUTPUT_SCHEMA,
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
@@ -916,6 +918,7 @@ export function registerImageVerbs({ server, session, fastify }: RegisterOpts): 
         imageUrl,
         ...(args.detail_level ? { detailLevel: args.detail_level } : {}),
         ...(args.custom_prompt ? { customPrompt: args.custom_prompt } : {}),
+        ...llmPayloadFields(args),
         mcp_client: session.clientName,
         userId: session.userId,
       }

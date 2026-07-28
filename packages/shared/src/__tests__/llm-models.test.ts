@@ -678,6 +678,25 @@ describe("advanced mode", () => {
     }
   })
 
+  it("no advanced-capable model declares xhigh/max — the UI copy depends on it", () => {
+    // `EFFORT_LABELS` in reasoning-effort-select.tsx labels xhigh/max "may bill
+    // one tier up" and its comment explains that the effort bump and the
+    // advanced bump can never both apply, because Advanced is Gemini-only and
+    // no Gemini model reaches xhigh/max. That was a note asking a future reader
+    // to remember; this is the check that fails instead.
+    //
+    // If this ever goes red, the two bumps CAN stack: reword the labels to say
+    // so and revisit whether a double bump is the price we want.
+    for (const m of LLM_MODELS) {
+      if (!supportsAdvancedMode(m.id)) continue
+      const levels = [...(m.reasoningEfforts ?? []), ...(m.directReasoningEfforts ?? [])]
+      expect(levels, `${m.id} can run advanced AND declares a tier-bumping effort`)
+        .not.toEqual(expect.arrayContaining(["xhigh"]))
+      expect(levels, `${m.id} can run advanced AND declares a tier-bumping effort`)
+        .not.toEqual(expect.arrayContaining(["max"]))
+    }
+  })
+
   it("never bumps past premium", () => {
     expect(buildLlmCreditIdentifier("llm-chat", "gemini-3.1-pro", "max", true)).toBe("llm-chat:premium")
   })

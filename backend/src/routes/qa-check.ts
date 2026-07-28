@@ -5,7 +5,7 @@ import { config } from "../lib/config.js"
 import { creditGuard, reserveCreditsForJob } from "../middleware/credit-guard.js"
 import { CreditsService } from "../ee/billing/credits.js"
 import { llmComplete } from "../lib/llm-client.js"
-import { LLM_MODEL_IDS, LLM_REASONING_EFFORTS, buildLlmCreditIdentifier, resolveLlmCreditId, LLM_FEATURE_DEFAULTS } from "@nodaro/shared"
+import { LLM_ROUTE_DEFAULTS, LLM_MODEL_IDS, LLM_REASONING_EFFORTS, buildLlmCreditIdentifier, resolveLlmCreditId, LLM_FEATURE_DEFAULTS } from "@nodaro/shared"
 import { LLM_ADVANCED_SHAPE, advancedModeError, resolveLlmParams } from "../lib/llm-advanced-mode.js"
 import { extractWorkflowId, extractNodeId, extractForcePrivate } from "../lib/request-helpers.js"
 import { buildJobInputData } from "../lib/job-input-data.js"
@@ -112,7 +112,7 @@ You MUST respond with ONLY a valid JSON object in this exact format, no other te
           system: systemPrompt,
           messages: [{ role: "user", content: `Evaluate the following content:\n\n${content}` }],
           reasoningEffort: parsed.data.reasoningEffort,
-          ...resolveLlmParams(parsed.data, { maxTokens: 1024 }),
+          ...resolveLlmParams(parsed.data, LLM_ROUTE_DEFAULTS["qa-check"]),
         })
 
         const rawText = response.text

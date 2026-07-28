@@ -32,6 +32,23 @@ generated_from: cb1e786d
 ```
 <!-- AUTO-GEN:END node-data-shape -->
 
+> **This block is frozen, and hand-maintained below.** `ai-writer` no longer
+> appears in `NODE_DEFINITIONS` (the editor migrates it to `llm-chat`), so
+> `gen:skills` cannot regenerate this file — it was last generated 2026-05-18
+> and the generator silently skips it. The `/v1/ai-writer` route is still live
+> and has gained fields since. Anything below this line is maintained by hand.
+
+**Additional accepted fields** (present on the route, absent from the frozen
+block above):
+
+- `llmModel?: string` — any id from the LLM model registry.
+- `reasoningEffort?: "none" | "low" | "medium" | "high" | "xhigh" | "max"` —
+  clamped to what the chosen model declares. `xhigh`/`max` bill one tier up.
+- `advancedMode?: boolean` — Gemini models only. Runs the request on the
+  provider's own API so `temperature` / `maxTokens` / the full reasoning range
+  actually apply. Bills one credit tier up. Sending it with a non-Gemini model
+  returns `400 advanced_mode_unsupported`.
+
 ## When to use
 
 (Add prose here. Auto-gen will preserve it across regenerations.)
