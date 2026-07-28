@@ -1389,6 +1389,14 @@ export type GenerateScriptData = {
   model: string
   llmModel?: string
   reasoningEffort?: LlmReasoningEffort
+  /** Advanced mode: pin this node to the vendor's own API so the sampling
+   *  levers below actually apply. Bills one credit tier up. Undefined (not
+   *  false) when off, so pre-feature workflows stay byte-identical. */
+  advancedMode?: boolean
+  /** Sampling levers — only honoured when `advancedMode` is on (the
+   *  aggregator lane does not reliably apply them). */
+  temperature?: number
+  maxTokens?: number
   sceneCount: number
   styleGuide: string
   structure: "freeform" | "8-step" | "custom"
@@ -2442,6 +2450,14 @@ export type QACheckData = {
   threshold: number
   llmModel?: string
   reasoningEffort?: LlmReasoningEffort
+  /** Advanced mode: pin this node to the vendor's own API so the sampling
+   *  levers below actually apply. Bills one credit tier up. Undefined (not
+   *  false) when off, so pre-feature workflows stay byte-identical. */
+  advancedMode?: boolean
+  /** Sampling levers — only honoured when `advancedMode` is on (the
+   *  aggregator lane does not reliably apply them). */
+  temperature?: number
+  maxTokens?: number
   fieldMappings: FieldMappings
   currentJobId?: string
   executionStatus?: "idle" | "running" | "completed" | "failed"
@@ -2459,6 +2475,14 @@ export type ImageCriticData = {
   prompt?: string
   llmModel?: string
   reasoningEffort?: LlmReasoningEffort
+  /** Advanced mode: pin this node to the vendor's own API so the sampling
+   *  levers below actually apply. Bills one credit tier up. Undefined (not
+   *  false) when off, so pre-feature workflows stay byte-identical. */
+  advancedMode?: boolean
+  /** Sampling levers — only honoured when `advancedMode` is on (the
+   *  aggregator lane does not reliably apply them). */
+  temperature?: number
+  maxTokens?: number
   fieldMappings: FieldMappings
   // runtime
   currentJobId?: string
@@ -3064,6 +3088,14 @@ export type ImageToTextData = {
   customPrompt: string
   llmModel?: string
   reasoningEffort?: LlmReasoningEffort
+  /** Advanced mode: pin this node to the vendor's own API so the sampling
+   *  levers below actually apply. Bills one credit tier up. Undefined (not
+   *  false) when off, so pre-feature workflows stay byte-identical. */
+  advancedMode?: boolean
+  /** Sampling levers — only honoured when `advancedMode` is on (the
+   *  aggregator lane does not reliably apply them). */
+  temperature?: number
+  maxTokens?: number
   fieldMappings: FieldMappings
   executionStatus?: "idle" | "running" | "completed" | "failed"
   currentJobProgress?: number
@@ -3079,6 +3111,14 @@ export type DescribeToPickerData = {
   /** Anthropic vision model id; default claude-sonnet-4.6. */
   llmModel?: string
   reasoningEffort?: LlmReasoningEffort
+  /** Advanced mode: pin this node to the vendor's own API so the sampling
+   *  levers below actually apply. Bills one credit tier up. Undefined (not
+   *  false) when off, so pre-feature workflows stay byte-identical. */
+  advancedMode?: boolean
+  /** Sampling levers — only honoured when `advancedMode` is on (the
+   *  aggregator lane does not reliably apply them). */
+  temperature?: number
+  maxTokens?: number
   /** Optional extra guidance appended to the analyzer system prompt. */
   instructions?: string
   executionStatus?: "idle" | "running" | "completed" | "failed"
@@ -3518,6 +3558,14 @@ export type VideoComposerData = {
   assetOrder?: string[]
   llmModel?: string
   reasoningEffort?: LlmReasoningEffort
+  /** Advanced mode: pin this node to the vendor's own API so the sampling
+   *  levers below actually apply. Bills one credit tier up. Undefined (not
+   *  false) when off, so pre-feature workflows stay byte-identical. */
+  advancedMode?: boolean
+  /** Sampling levers — only honoured when `advancedMode` is on (the
+   *  aggregator lane does not reliably apply them). */
+  temperature?: number
+  maxTokens?: number
   fieldMappings: FieldMappings
   executionStatus?: "idle" | "running" | "completed" | "failed"
   currentJobProgress?: number
@@ -3534,6 +3582,14 @@ export type AfterEffectsData = {
   height?: number
   llmModel?: string
   reasoningEffort?: LlmReasoningEffort
+  /** Advanced mode: pin this node to the vendor's own API so the sampling
+   *  levers below actually apply. Bills one credit tier up. Undefined (not
+   *  false) when off, so pre-feature workflows stay byte-identical. */
+  advancedMode?: boolean
+  /** Sampling levers — only honoured when `advancedMode` is on (the
+   *  aggregator lane does not reliably apply them). */
+  temperature?: number
+  maxTokens?: number
   fps: number
   durationSeconds: number
   executionStatus?: "idle" | "running" | "completed" | "failed"
@@ -3552,6 +3608,14 @@ export type LottieOverlayData = {
   lottieAssets?: Array<{ id: string; url: string; name: string; durationSeconds?: number }>
   llmModel?: string
   reasoningEffort?: LlmReasoningEffort
+  /** Advanced mode: pin this node to the vendor's own API so the sampling
+   *  levers below actually apply. Bills one credit tier up. Undefined (not
+   *  false) when off, so pre-feature workflows stay byte-identical. */
+  advancedMode?: boolean
+  /** Sampling levers — only honoured when `advancedMode` is on (the
+   *  aggregator lane does not reliably apply them). */
+  temperature?: number
+  maxTokens?: number
   fps: number
   durationSeconds: number
   executionStatus?: "idle" | "running" | "completed" | "failed"
@@ -3569,6 +3633,14 @@ export type ThreeDTitleData = {
   backgroundMediaUrl?: string
   llmModel?: string
   reasoningEffort?: LlmReasoningEffort
+  /** Advanced mode: pin this node to the vendor's own API so the sampling
+   *  levers below actually apply. Bills one credit tier up. Undefined (not
+   *  false) when off, so pre-feature workflows stay byte-identical. */
+  advancedMode?: boolean
+  /** Sampling levers — only honoured when `advancedMode` is on (the
+   *  aggregator lane does not reliably apply them). */
+  temperature?: number
+  maxTokens?: number
   fps: number
   durationSeconds: number
   executionStatus?: "idle" | "running" | "completed" | "failed"
@@ -3587,6 +3659,14 @@ export type MotionGraphicsData = {
   backgroundColor: string
   llmModel?: string
   reasoningEffort?: LlmReasoningEffort
+  /** Advanced mode: pin this node to the vendor's own API so the sampling
+   *  levers below actually apply. Bills one credit tier up. Undefined (not
+   *  false) when off, so pre-feature workflows stay byte-identical. */
+  advancedMode?: boolean
+  /** Sampling levers — only honoured when `advancedMode` is on (the
+   *  aggregator lane does not reliably apply them). */
+  temperature?: number
+  maxTokens?: number
   fps: number
   durationSeconds: number
   executionStatus?: "idle" | "running" | "completed" | "failed"
@@ -4383,6 +4463,10 @@ export type LLMChatData = {
   userInput: string
   llmModel?: string
   reasoningEffort?: LlmReasoningEffort
+  /** Advanced mode: pin this node to the vendor's own API so the sampling
+   *  levers below actually apply. Bills one credit tier up. Undefined (not
+   *  false) when off, so pre-feature workflows stay byte-identical. */
+  advancedMode?: boolean
   temperature: number
   maxTokens: number
   /** How many generations to produce per Run click. `llm-chat` is in
@@ -4446,6 +4530,14 @@ export type VideoAnalysisNodeData = {
   // Analysis config
   llmModel?: string
   reasoningEffort?: LlmReasoningEffort
+  /** Advanced mode: pin this node to the vendor's own API so the sampling
+   *  levers below actually apply. Bills one credit tier up. Undefined (not
+   *  false) when off, so pre-feature workflows stay byte-identical. */
+  advancedMode?: boolean
+  /** Sampling levers — only honoured when `advancedMode` is on (the
+   *  aggregator lane does not reliably apply them). */
+  temperature?: number
+  maxTokens?: number
   // best-of-N result strategy: "choose" (judge picks the best roll — default) or
   // "combine" (judge picks, then a grounded refine pass folds video-verified
   // details from the losing rolls into the winner).

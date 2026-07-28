@@ -8,6 +8,7 @@ import { CreditsService } from "../ee/billing/credits.js"
 import { createSSEStream } from "../lib/sse.js"
 import { llmComplete, llmStream } from "../lib/llm-client.js"
 import { LLM_MODEL_IDS, LLM_REASONING_EFFORTS, buildLlmCreditIdentifier, resolveLlmCreditId, LLM_FEATURE_DEFAULTS, LLM_TEXT_INPUT_MAX } from "@nodaro/shared"
+import { advancedModeError, resolveLlmParams } from "../lib/llm-advanced-mode.js"
 import { extractWorkflowId, extractNodeId, extractForcePrivate } from "../lib/request-helpers.js"
 import { buildJobInputData } from "../lib/job-input-data.js"
 import { formatZodError } from "../lib/zod-error.js"
@@ -24,6 +25,7 @@ const aiWriterBody = z.object({
   userId: z.string().uuid().optional(),
   llmModel: z.enum(LLM_MODEL_IDS as [string, ...string[]]).optional(),
   reasoningEffort: z.enum(LLM_REASONING_EFFORTS).optional(),
+  advancedMode: z.boolean().optional(),
 })
 
 export async function aiWriterRoutes(app: FastifyInstance) {
@@ -69,7 +71,9 @@ export async function aiWriterRoutes(app: FastifyInstance) {
       }
 
       const llmModel = parsed.data.llmModel ?? LLM_FEATURE_DEFAULTS["ai-writer"]
-      const modelIdentifier = buildLlmCreditIdentifier("ai-writer", llmModel, parsed.data.reasoningEffort)
+      const advancedError = advancedModeError(parsed.data, llmModel)
+      if (advancedError) return reply.status(400).send({ error: advancedError })
+      const modelIdentifier = buildLlmCreditIdentifier("ai-writer", llmModel, parsed.data.reasoningEffort, parsed.data.advancedMode)
 
       // Create a job record for audit trail
       const { data: job, error: jobError } = await supabase
@@ -109,8 +113,7 @@ export async function aiWriterRoutes(app: FastifyInstance) {
           modelId: llmModel,
           system: systemPrompt,
           messages: [{ role: "user", content: userInput }],
-          maxTokens,
-          temperature,
+          ...resolveLlmParams(parsed.data, { maxTokens, temperature }),
           reasoningEffort: parsed.data.reasoningEffort,
         })
 
@@ -198,7 +201,9 @@ export async function aiWriterRoutes(app: FastifyInstance) {
       }
 
       const llmModel = parsed.data.llmModel ?? LLM_FEATURE_DEFAULTS["ai-writer"]
-      const modelIdentifier = buildLlmCreditIdentifier("ai-writer", llmModel, parsed.data.reasoningEffort)
+      const advancedError = advancedModeError(parsed.data, llmModel)
+      if (advancedError) return reply.status(400).send({ error: advancedError })
+      const modelIdentifier = buildLlmCreditIdentifier("ai-writer", llmModel, parsed.data.reasoningEffort, parsed.data.advancedMode)
 
       // Create job record
       const { data: job, error: jobError } = await supabase
@@ -253,8 +258,7 @@ export async function aiWriterRoutes(app: FastifyInstance) {
             modelId: llmModel,
             system: systemPrompt,
             messages: [{ role: "user", content: userInput }],
-            maxTokens,
-            temperature,
+            ...resolveLlmParams(parsed.data, { maxTokens, temperature }),
             reasoningEffort: parsed.data.reasoningEffort,
           },
           (delta) => {

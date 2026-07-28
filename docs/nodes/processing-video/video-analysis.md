@@ -324,15 +324,21 @@ charged) — generated and drift-guarded internally, never hand-written.
 
 | Tier | ≤60s | ≤180s | ≤360s | ≤600s |
 |------|------|-------|-------|-------|
-| `fast` (economy) | 5 | 6 | 15 | 25 |
-| `pro` (default) | 6 | 8 | 20 | 33 |
-| `mixed` / `mixed-fast` | 10 | 13 | 35 | 57 |
+| `fast` (economy) | 14 | 19 | 49 | 81 |
+| `pro` (default) | 21 | 27 | 72 | 120 |
+| `mixed` / `mixed-fast` | 34 | 46 | 120 | 200 |
 
 The two mixed tiers are variants of the same advanced analysis and share one
 price: `mixed` is tuned for maximum result quality; `mixed-fast` for the most
 consistent output character run-to-run.
 
 > These values are the internal pricing formula's current outputs.
+
+> **Repriced 2026-07-28.** Video Analysis now runs on the model provider's own
+> API rather than through a reseller, which is what lets it send real media to
+> the model instead of a link. Those calls cost roughly 3.3–3.5× more per token,
+> and the prices above are the same formula re-run against them — the margin on
+> this node is unchanged.
 
 Longer videos cost more because they are analyzed in more overlapping windows (a
 video over 180s is split into ~150-second windows), and higher tiers cost more

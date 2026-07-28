@@ -8,6 +8,7 @@ import { createSSEStream } from "../lib/sse.js"
 import { llmComplete, llmStream } from "../lib/llm-client.js"
 import type { LlmContentBlock } from "../lib/llm-client.js"
 import { LLM_MODEL_IDS, LLM_REASONING_EFFORTS, buildLlmCreditIdentifier, resolveLlmCreditId, LLM_FEATURE_DEFAULTS, getLlmModalityCaps, LLM_TEXT_INPUT_MAX } from "@nodaro/shared"
+import { advancedModeError, resolveLlmParams } from "../lib/llm-advanced-mode.js"
 import { extractWorkflowId, extractNodeId, extractForcePrivate } from "../lib/request-helpers.js"
 import { buildJobInputData } from "../lib/job-input-data.js"
 import { formatZodError } from "../lib/zod-error.js"
@@ -29,6 +30,7 @@ const llmChatBody = z.object({
   userId: z.string().uuid().optional(),
   llmModel: z.enum(LLM_MODEL_IDS as [string, ...string[]]).optional(),
   reasoningEffort: z.enum(LLM_REASONING_EFFORTS).optional(),
+  advancedMode: z.boolean().optional(),
 })
 
 function buildUserContent(
@@ -108,7 +110,9 @@ export async function llmChatRoutes(app: FastifyInstance) {
       if (modalityError) {
         return reply.status(400).send({ error: modalityError })
       }
-      const modelIdentifier = buildLlmCreditIdentifier("llm-chat", llmModel, parsed.data.reasoningEffort)
+      const advancedError = advancedModeError(parsed.data, llmModel)
+      if (advancedError) return reply.status(400).send({ error: advancedError })
+      const modelIdentifier = buildLlmCreditIdentifier("llm-chat", llmModel, parsed.data.reasoningEffort, parsed.data.advancedMode)
 
       const { data: job, error: jobError } = await supabase
         .from("jobs")
@@ -141,8 +145,7 @@ export async function llmChatRoutes(app: FastifyInstance) {
           modelId: llmModel,
           system: systemPrompt,
           messages: [{ role: "user", content: buildUserContent(userInput, { images: referenceImageUrls, videos: referenceVideoUrls, audios: referenceAudioUrls }) }],
-          maxTokens,
-          temperature,
+          ...resolveLlmParams(parsed.data, { maxTokens, temperature }),
           reasoningEffort: parsed.data.reasoningEffort,
         })
 
@@ -229,7 +232,9 @@ export async function llmChatRoutes(app: FastifyInstance) {
       if (modalityError) {
         return reply.status(400).send({ error: modalityError })
       }
-      const modelIdentifier = buildLlmCreditIdentifier("llm-chat", llmModel, parsed.data.reasoningEffort)
+      const advancedError = advancedModeError(parsed.data, llmModel)
+      if (advancedError) return reply.status(400).send({ error: advancedError })
+      const modelIdentifier = buildLlmCreditIdentifier("llm-chat", llmModel, parsed.data.reasoningEffort, parsed.data.advancedMode)
 
       const { data: job, error: jobError } = await supabase
         .from("jobs")
@@ -275,8 +280,7 @@ export async function llmChatRoutes(app: FastifyInstance) {
             modelId: llmModel,
             system: systemPrompt,
             messages: [{ role: "user", content: buildUserContent(userInput, { images: referenceImageUrls, videos: referenceVideoUrls, audios: referenceAudioUrls }) }],
-            maxTokens,
-            temperature,
+            ...resolveLlmParams(parsed.data, { maxTokens, temperature }),
             reasoningEffort: parsed.data.reasoningEffort,
           },
           (delta) => {

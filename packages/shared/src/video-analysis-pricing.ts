@@ -24,8 +24,11 @@
  * `VIDEO_CLIP_CREDITS` uses in `film-pricing.ts`. It is what the frontend's
  * client-side cost preview (`estimateNodeCredits` in
  * workflow-editor/types.ts) reads instead of calling the formula directly.
- * A backend test (`video-analysis-cost.test.ts`) cross-checks this table
- * against the live formula so it can't silently drift.
+ * The formula's own test in `@nodaroai/cloud-plugins`
+ * (`src/plugins/video-analysis/__tests__/cost.test.ts`) cross-checks this table
+ * against it and fails on drift. There is deliberately NO app-side formula to
+ * check against — it was moved private in 2026-07 and the old backend test
+ * went with it.
  */
 
 export const VIDEO_ANALYSIS_DURATION_BUCKETS = [60, 180, 360, 600] as const
@@ -47,27 +50,27 @@ export const VIDEO_ANALYSIS_WINDOW = { LEN: WINDOW_LEN, STRIDE: WINDOW_STRIDE, O
  */
 export const VIDEO_ANALYSIS_BUCKET_CREDITS: Record<string, number> = {
   // Legacy fast-tier model (pre-2026-07) — kept for stored raw-id configs.
-  "video-analysis:gemini-3-flash:60s": 2,
-  "video-analysis:gemini-3-flash:180s": 3,
-  "video-analysis:gemini-3-flash:360s": 6,
-  "video-analysis:gemini-3-flash:600s": 9,
+  "video-analysis:gemini-3-flash:60s": 6,
+  "video-analysis:gemini-3-flash:180s": 7,
+  "video-analysis:gemini-3-flash:360s": 18,
+  "video-analysis:gemini-3-flash:600s": 30,
   // Current fast tier — regenerated from the private formula for its backing
   // model; higher than the legacy fast schedule but still ≤ pro per bucket.
-  "video-analysis:gemini-3.6-flash:60s": 5,
-  "video-analysis:gemini-3.6-flash:180s": 6,
-  "video-analysis:gemini-3.6-flash:360s": 15,
-  "video-analysis:gemini-3.6-flash:600s": 25,
-  "video-analysis:gemini-3.1-pro:60s": 6,
-  "video-analysis:gemini-3.1-pro:180s": 8,
-  "video-analysis:gemini-3.1-pro:360s": 20,
-  "video-analysis:gemini-3.1-pro:600s": 33,
+  "video-analysis:gemini-3.6-flash:60s": 14,
+  "video-analysis:gemini-3.6-flash:180s": 19,
+  "video-analysis:gemini-3.6-flash:360s": 49,
+  "video-analysis:gemini-3.6-flash:600s": 81,
+  "video-analysis:gemini-3.1-pro:60s": 21,
+  "video-analysis:gemini-3.1-pro:180s": 27,
+  "video-analysis:gemini-3.1-pro:360s": 72,
+  "video-analysis:gemini-3.1-pro:600s": 120,
   // Mixed tiers (`mixed` + `mixed-fast`) share ONE credit family — they are
   // variants of the same engine plan (plan internals live in the private
   // analysis plugin). Admin-tunable via model_pricing like every other row.
-  "video-analysis:mixed:60s": 10,
-  "video-analysis:mixed:180s": 13,
-  "video-analysis:mixed:360s": 35,
-  "video-analysis:mixed:600s": 57,
+  "video-analysis:mixed:60s": 34,
+  "video-analysis:mixed:180s": 46,
+  "video-analysis:mixed:360s": 120,
+  "video-analysis:mixed:600s": 200,
 }
 
 /**

@@ -1,6 +1,7 @@
 import type { Job } from "bullmq"
 import { generateImage, imageToVideo, videoToVideo } from "../../providers/index.js"
 import { generateScript, type ScriptProvider } from "../../providers/script/script-generator.js"
+import type { LlmAdvancedInput } from "../../lib/llm-advanced-mode.js"
 import {
   commitJobCredits,
   shouldSaveJobResult,
@@ -293,7 +294,7 @@ function makeEntityImageHandler(
 }
 
 const handleGenerateScript: HandlerFn = async function handleGenerateScript(job, ctx) {
-  const { prompt, sceneCount, tone, targetDuration, provider, llmModel, reasoningEffort } = job.data as {
+  const { prompt, sceneCount, tone, targetDuration, provider, llmModel, reasoningEffort, advanced } = job.data as {
     jobId: string
     prompt: string
     sceneCount?: number
@@ -302,10 +303,11 @@ const handleGenerateScript: HandlerFn = async function handleGenerateScript(job,
     provider?: ScriptProvider
     llmModel?: string
     reasoningEffort?: string
+    advanced?: LlmAdvancedInput
   }
   console.log(`[worker] generate-script ${ctx.jobId} (model: ${llmModel ?? provider ?? "default"})`)
 
-  const script = await generateScript(prompt, sceneCount, tone, targetDuration, provider, llmModel, reasoningEffort)
+  const script = await generateScript(prompt, sceneCount, tone, targetDuration, provider, llmModel, reasoningEffort, advanced)
   await setJobProgress(job, ctx.jobId, 100)
 
   if (!await shouldSaveJobResult(ctx.jobId)) return

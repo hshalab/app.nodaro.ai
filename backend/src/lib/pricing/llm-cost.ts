@@ -1,8 +1,8 @@
 /**
  * LLM provider-cost formula — CORE (not ee/): `backend/src/lib/llm-client.ts`
  * needs the real USD cost for internal cost logging regardless of edition,
- * and `video-analysis-cost.ts` / `ee/billing/credits.ts` need it to price the
- * video-analysis node. The model-id enum, capabilities, and tier/feature
+ * and `ee/billing/credits.ts` needs it to price nodes. (`video-analysis-cost.ts`
+ * is gone — that formula moved into the private analysis plugin in 2026-07.) The model-id enum, capabilities, and tier/feature
  * registries stay in `@nodaro/shared` (`llm-models.ts`) — this file holds
  * only the provider-$ per-token rate table and the cost formula derived
  * from it.

@@ -113,10 +113,11 @@ describe("video-analysis-pricing", () => {
     }
   })
 
-  // Full drift-detection against the live $-formula lives in
-  // backend/src/lib/pricing/__tests__/video-analysis-cost.test.ts (this
-  // package cannot see the formula post-S5). This is a lightweight shape
-  // check that the precomputed table covers every legal id.
+  // Full drift-detection against the live $-formula lives in the PRIVATE
+  // plugin repo (src/plugins/video-analysis/__tests__/cost.test.ts) — the
+  // formula moved there in 2026-07 and the app-side test was deleted with it,
+  // so nothing in THIS repo can recompute these numbers. This is a lightweight
+  // shape check that the precomputed table covers every legal id.
   it("VIDEO_ANALYSIS_BUCKET_CREDITS has a positive-integer entry for every model × bucket id", () => {
     for (const model of VIDEO_ANALYSIS_LLM_MODELS) {
       for (const bucketSec of VIDEO_ANALYSIS_DURATION_BUCKETS) {

@@ -2199,13 +2199,14 @@ function getNodeModelIdentifier(node: { type: string; data?: Record<string, unkn
   if (nodeType === "ai-writer") return "ai-writer"
 
   // LLM Chat uses tiered credit identifier based on selected model. Reasoning
-  // effort is passed through too — actual billing bumps a tier on clamped
-  // xhigh/max effort (buildLlmCreditIdentifier's 3rd arg), so omitting it here
+  // effort and advanced mode are passed through too — actual billing bumps a
+  // tier on clamped xhigh/max effort and again on advanced mode
+  // (buildLlmCreditIdentifier's 3rd and 4th args), so omitting either here
   // would make the pre-run estimate understate the reservation.
   if (nodeType === "llm-chat") {
     const llmModel = data.llmModel as string | undefined
     const reasoningEffort = data.reasoningEffort as string | undefined
-    return buildLlmCreditIdentifier("llm-chat", llmModel, reasoningEffort)
+    return buildLlmCreditIdentifier("llm-chat", llmModel, reasoningEffort, data.advancedMode === true)
   }
 
   // Suno generate/cover/extend use "model" field (V4/V5/V5_5)

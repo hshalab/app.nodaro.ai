@@ -102,7 +102,6 @@ Many video models support **both** `t2v` and `i2v` from the same id — the Gene
 | Hailuo 2.3 Standard | MiniMax | Everyday | 8 | i2v | Cheaper Hailuo 2.3 tier — good baseline quality. |
 | VEO 3.1 Lite | Google | Everyday | 8 | i2v, t2v | VEO 3.1 Lite — most cost-effective VEO tier for high-volume generation. 4/6/8s with audio, supports first+last frame. |
 | Bytedance Pro Fast I2V | Bytedance | Everyday | 9 | i2v | Faster Bytedance Pro variant. |
-| Video Analysis (Fast — legacy) | Nodaro | Everyday | 9 | video-analysis | Legacy fast-tier analysis model (pre-2026-07). Kept so stored raw-model configs keep running and keep pricing under their own identifier; new fast-tier runs use the current fast model. |
 | Wan 2.2 Turbo | Alibaba | Everyday | 10 | i2v, t2v | Cheap, fast Wan turbo — 5s. Serves both i2v and t2v under one id. |
 | Kling 2.5 Turbo Pro | Kuaishou | Everyday | 11 | i2v, t2v | Faster Kling — good quality at lower cost. Supports end frame. |
 | Wan Flash V2V | Alibaba | Everyday | 13 | v2v | Faster Wan V2V variant. |
@@ -120,7 +119,6 @@ Many video models support **both** `t2v` and `i2v` from the same id — the Gene
 | Hailuo 2.3 Pro | MiniMax | Standard | 20 | i2v | Hailuo 2.3 Pro — newer Hailuo with 768P / 1080P resolutions. |
 | Gemini Omni | Google | Standard | 23 | i2v, t2v | Google multimodal video with native audio; text/image-to-video + video-edit. |
 | Kling 3 Omni | Kuaishou | Standard | 25 | i2v | Kling 3 Omni via Replicate — 3-15s, 720p/1080p, end frame + reference images, native audio. |
-| Video Analysis (Fast) | Nodaro | Standard | 25 | video-analysis | Analyze a video into a structured shot list (scenes, camera, audio) — fast, economy tier. Billed per duration bucket. |
 | Kling 2.6 | Kuaishou | Standard | 28 | i2v, t2v | Kling 2.6 I2V — strong motion realism. 5s/10s, optional native audio. |
 | Kling Avatar Standard | Kuaishou | Standard | 28 | lip-sync | Lip-sync a still portrait to driving audio. Standard quality. |
 | HappyHorse 1.1 | HappyHorse | Standard | 29 | t2v | HappyHorse 1.1 text-to-video — 3–15s at 720p/1080p, 9 aspect ratios incl. 21:9/9:21, per-second pricing. |
@@ -128,10 +126,10 @@ Many video models support **both** `t2v` and `i2v` from the same id — the Gene
 | HappyHorse 1.1 Ref2V | HappyHorse | Standard | 29 | i2v | HappyHorse 1.1 reference-to-video — 1–9 reference images, 3–15s at 720p/1080p, per-second pricing. |
 | Grok Imagine Video 1.5 | xAI | Standard | 30 | i2v | Grok Imagine 1.5 image-to-video — 1–15s, 480p/720p, per-second pricing. Requires an input image. |
 | Kling 3.0 Motion Transfer | Kuaishou | Standard | 30 | motion-transfer | Premium motion transfer via Kling 3.0. |
+| Video Analysis (Fast — legacy) | Nodaro | Standard | 30 | video-analysis | Legacy fast-tier analysis model (pre-2026-07). Kept so stored raw-model configs keep running and keep pricing under their own identifier; new fast-tier runs use the current fast model. |
 | Seedance 2 Fast | Bytedance | Standard | 31 | i2v, t2v | Cheaper / quicker Seedance 2 tier. |
 | Runway Extend | Runway | Standard | 32 | extend | Extend a Runway video by another clip. |
 | Wan 2.7 VideoEdit | Alibaba | Standard | 32 | v2v | Guided video editing with optional reference image, audio control, and prompt expansion. |
-| Video Analysis (Pro) | Nodaro | Standard | 33 | video-analysis | Analyze a video into a structured shot list (scenes, camera, audio) — higher-fidelity, default tier. Billed per duration bucket. |
 | HappyHorse Edit | HappyHorse | Standard | 35 | v2v | HappyHorse video-edit — video-to-video transformation, up to 60s input, 720p/1080p output. |
 | Runway Aleph V2V | Runway | Standard | 35 | v2v | Runway Aleph — video-to-video conversion. |
 | Seedance 2 | Bytedance | Standard | 38 | i2v, t2v | Seedance 2 — premium tier with native audio. Per-second pricing by resolution. |
@@ -141,8 +139,10 @@ Many video models support **both** `t2v` and `i2v` from the same id — the Gene
 | ⭐ Kling 3.0 | Kuaishou | Premium | 50 | i2v, t2v | Premium Kling 3.0 — variable 3-15s duration, native audio, 720P/1080P. |
 | Seedance 2 Extend | Bytedance | Premium | 53 | extend | Extend ANY video: generates the continuation (audio included) and trim-stitches it into one seamless clip. |
 | Kling Avatar Pro | Kuaishou | Premium | 56 | lip-sync | Premium lip-sync — better mouth shape and timing. |
-| Video Analysis (Mixed) | Nodaro | Premium | 57 | video-analysis | Our most advanced analysis tier — multiple analysis engines combined into one result for maximum completeness and accuracy. Billed per duration bucket. |
 | ⭐ VEO 3.1 Quality | Google | Premium | 63 | i2v, t2v | Google VEO 3.1 Quality — premium cinematic video. 4/6/8s clips, optional end frame, native audio. Flat per-generation pricing across durations. |
+| Video Analysis (Fast) | Nodaro | Premium | 81 | video-analysis | Analyze a video into a structured shot list (scenes, camera, audio) — fast, economy tier. Billed per duration bucket. |
+| Video Analysis (Pro) | Nodaro | Premium | 120 | video-analysis | Analyze a video into a structured shot list (scenes, camera, audio) — higher-fidelity, default tier. Billed per duration bucket. |
+| Video Analysis (Mixed) | Nodaro | Premium | 200 | video-analysis | Our most advanced analysis tier — multiple analysis engines combined into one result for maximum completeness and accuracy. Billed per duration bucket. |
 | OmniHuman 1.5 | ByteDance | Premium | 405 | lip-sync | Premium prompt-directed talking avatar from a still image + audio. 720p / 1080p, up to 60s. People, pets, anime. |
 | Volcengine Lip Sync | Volcengine | Premium | 600 | lip-sync | Video-to-video AI dubbing — re-syncs lips to a new vocal track. Multi-speaker (scene detection + speaker ID) in basic mode. Video input, billed per second. |
 | Sync Lipsync v3 | Sync | Premium | 2000 | lip-sync | Dub existing footage — re-syncs lips to a new audio track. Video input, billed per second. |

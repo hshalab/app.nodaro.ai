@@ -1,7 +1,7 @@
 ---
 node_type: qa-check
-generated_at: 2026-07-13T16:15:37.802Z
-generated_from: 9af14ef89
+generated_at: 2026-07-28T17:14:14.631Z
+generated_from: 15975a896
 ---
 
 # QA Check
@@ -23,6 +23,9 @@ generated_from: 9af14ef89
 **Optional data fields:**
 - `llmModel?: string`
 - `reasoningEffort?: LlmReasoningEffort`
+- `advancedMode?: boolean`
+- `temperature?: number`
+- `maxTokens?: number`
 - `currentJobId?: string`
 - `executionStatus?: "idle" | "running" | "completed" | "failed"`
 - `errorMessage?: string`

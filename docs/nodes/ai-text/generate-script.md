@@ -11,6 +11,7 @@ The Generate Script node uses Gemini Flash to produce a structured, multi-scene 
 |-------|------|---------|-------------|
 | Provider | `ScriptProvider` | `"gemini"` | AI model provider for script generation |
 | Model | `string` | `"gemini-2.5-flash"` | Specific model version |
+| Advanced mode | `boolean` | `false` | Gemini models only. Runs the model on the provider's own API so **Temperature**, **Max Tokens** and the full reasoning-depth range actually apply — those controls appear once it is on. Bills one credit tier up; the node's cost badge updates immediately. Disabled with an inline reason on non-Gemini models |
 | Scene Count | `number` | `5` | Number of scenes to generate |
 | Style Guide | `string` | `""` | Optional style directions that influence the visual and narrative style of the script |
 | Structure | `"freeform" \| "8-step" \| "custom"` | `"freeform"` | Script structure template. Freeform allows the AI to decide pacing; 8-step follows a classic narrative arc |

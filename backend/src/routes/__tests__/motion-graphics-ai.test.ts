@@ -245,6 +245,7 @@ describe("POST /v1/motion-graphics/generate — engine=lottie (async enqueue)", 
       durationInFrames: 150,
       backgroundColor: "#00000000",
       llmModel: "claude-sonnet-4.6",
+      advanced: { advancedMode: undefined, temperature: undefined, maxTokens: undefined },
       previousSids: undefined,
       usageLogId: "usage-1",
     })

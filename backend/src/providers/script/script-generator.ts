@@ -1,3 +1,4 @@
+import { resolveLlmParams, type LlmAdvancedInput } from "../../lib/llm-advanced-mode.js"
 import { llmComplete } from "../../lib/llm-client.js"
 import { getLlmModel, LLM_FEATURE_DEFAULTS } from "@nodaro/shared"
 import type { LlmReasoningEffort } from "@nodaro/shared"
@@ -137,6 +138,10 @@ export async function generateScript(
   provider?: ScriptProvider,
   llmModel?: string,
   reasoningEffort?: string,
+  /** Advanced-mode params. An OBJECT rather than a 9th positional scalar —
+   *  this signature is already 7 deep and every existing call site passes
+   *  positionally. */
+  advanced?: LlmAdvancedInput,
 ): Promise<GeneratedScript> {
   // Resolve model: prefer explicit llmModel, then map legacy provider, then feature default
   let resolvedModelId = llmModel
@@ -163,8 +168,8 @@ export async function generateScript(
     modelId: resolvedModelId,
     system: SYSTEM_PROMPT,
     messages: [{ role: "user", content: userPrompt }],
-    maxTokens: Math.min(modelMaxTokens, 16384),
     reasoningEffort: reasoningEffort as LlmReasoningEffort | undefined,
+    ...resolveLlmParams(advanced ?? {}, { maxTokens: Math.min(modelMaxTokens, 16384) }),
   })
 
   const raw = response.text

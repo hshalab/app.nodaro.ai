@@ -10,6 +10,8 @@ import {
   resolveLlmCreditId,
   motionGraphicsFeature,
   effectiveReasoningEffort,
+  supportsAdvancedMode,
+  availableReasoningEfforts,
 } from "../llm-models.js"
 import type { LlmModelDef, LlmTier, LlmFeature } from "../llm-models.js"
 import { PIPELINE_PINNABLE_SCRIPT_LLMS } from "../pipeline-types.js"
@@ -641,5 +643,107 @@ describe("direct-vendor lane declarations", () => {
     // cost/usage reconciliation looks models up by whatever id the wire used.
     expect(getLlmModel("gemini-3.1-pro-preview")?.id).toBe("gemini-3.1-pro")
     expect(getLlmModel("gemini-3-flash-preview")?.id).toBe("gemini-3-flash")
+  })
+})
+
+describe("advanced mode", () => {
+  it("is available exactly on models with a direct Gemini lane", () => {
+    for (const m of LLM_MODELS) {
+      expect(supportsAdvancedMode(m.id), m.id).toBe(Boolean(m.directGeminiModel))
+    }
+  })
+
+  it("is unavailable for an unknown or missing model id", () => {
+    expect(supportsAdvancedMode(undefined)).toBe(false)
+    expect(supportsAdvancedMode("not-a-real-model")).toBe(false)
+  })
+
+  it("bumps the credit tier one step", () => {
+    // gemini-3-flash is economy → standard (standard renders as the bare feature)
+    expect(buildLlmCreditIdentifier("llm-chat", "gemini-3-flash")).toBe("llm-chat:economy")
+    expect(buildLlmCreditIdentifier("llm-chat", "gemini-3-flash", undefined, true)).toBe("llm-chat")
+  })
+
+  it("is independent of the effort bump — advanced adds exactly one step", () => {
+    // No Gemini model declares xhigh/max today (their KIE-safe ceiling is
+    // `high`, which never bumps), so the two bumps cannot currently stack in
+    // practice — `max` clamps to `high` first. What must hold regardless is
+    // that advanced adds exactly one step on top of whatever the
+    // effort-clamped tier already is.
+    for (const effort of [undefined, "low", "high", "max"]) {
+      const plain = buildLlmCreditIdentifier("llm-chat", "gemini-3.6-flash", effort)
+      const advanced = buildLlmCreditIdentifier("llm-chat", "gemini-3.6-flash", effort, true)
+      expect(plain, `effort=${effort}`).toBe("llm-chat:economy")
+      expect(advanced, `effort=${effort}`).toBe("llm-chat")
+    }
+  })
+
+  it("never bumps past premium", () => {
+    expect(buildLlmCreditIdentifier("llm-chat", "gemini-3.1-pro", "max", true)).toBe("llm-chat:premium")
+  })
+
+  it("ignores the flag on a model that cannot run advanced (no silent overcharge)", () => {
+    // gpt-5.2 has no direct lane — a stale advancedMode flag must not inflate it.
+    expect(buildLlmCreditIdentifier("llm-chat", "gpt-5.2", undefined, true))
+      .toBe(buildLlmCreditIdentifier("llm-chat", "gpt-5.2"))
+    expect(buildLlmCreditIdentifier("llm-chat", "claude-opus-4.7", undefined, true))
+      .toBe(buildLlmCreditIdentifier("llm-chat", "claude-opus-4.7"))
+  })
+
+  it("back-compat: omitting the 4th arg is identical to before for every model", () => {
+    for (const m of LLM_MODELS) {
+      expect(buildLlmCreditIdentifier("x", m.id, "high", false)).toBe(buildLlmCreditIdentifier("x", m.id, "high"))
+    }
+  })
+
+  it("resolveLlmCreditId reads advancedMode from the raw body", () => {
+    expect(resolveLlmCreditId("llm-chat", { llmModel: "gemini-3-flash", advancedMode: true })).toBe("llm-chat")
+    expect(resolveLlmCreditId("llm-chat", { llmModel: "gemini-3-flash" })).toBe("llm-chat:economy")
+    // Only a real boolean true counts — a truthy string must not bump.
+    expect(resolveLlmCreditId("llm-chat", { llmModel: "gemini-3-flash", advancedMode: "yes" })).toBe("llm-chat:economy")
+  })
+})
+
+describe("lane-aware reasoning efforts", () => {
+  it("widens the ladder on the direct lane where the vendor accepts more", () => {
+    expect(availableReasoningEfforts("gemini-3.6-flash")).toEqual(["low", "high"])
+    expect(availableReasoningEfforts("gemini-3.6-flash", true)).toEqual(["none", "low", "medium", "high"])
+  })
+
+  it("exposes an effort lever on models that have none via KIE", () => {
+    // gemini-3-flash declares no reasoningEfforts at all — Advanced is the
+    // only way its effort picker appears.
+    expect(availableReasoningEfforts("gemini-3-flash")).toEqual([])
+    expect(availableReasoningEfforts("gemini-3-flash", true)).toEqual(["none", "low", "medium", "high"])
+  })
+
+  it("respects a shorter direct ladder (3.1 Pro has no minimal tier)", () => {
+    expect(availableReasoningEfforts("gemini-3.1-pro", true)).toEqual(["low", "medium", "high"])
+  })
+
+  it("ignores the advanced flag on a model with no direct lane", () => {
+    const claude = availableReasoningEfforts("claude-sonnet-4.6")
+    expect(availableReasoningEfforts("claude-sonnet-4.6", true)).toEqual(claude)
+  })
+
+  it("clamps against the lane's ladder, not the other lane's", () => {
+    // `medium` is not on 3.6-flash's KIE ladder → clamps down to `low`.
+    expect(effectiveReasoningEffort("gemini-3.6-flash", "medium")).toBe("low")
+    // On the direct lane `medium` is a real level → survives.
+    expect(effectiveReasoningEffort("gemini-3.6-flash", "medium", true)).toBe("medium")
+  })
+
+  it("every directReasoningEfforts entry is a valid effort, ascending", () => {
+    for (const m of LLM_MODELS.filter((x) => x.directReasoningEfforts)) {
+      const levels = m.directReasoningEfforts!
+      for (const l of levels) expect(LLM_REASONING_EFFORTS, m.id).toContain(l)
+      const ranks = levels.map((l) => LLM_REASONING_EFFORTS.indexOf(l))
+      expect(ranks, `${m.id} must be ascending`).toEqual([...ranks].sort((a, b) => a - b))
+    }
+  })
+
+  it("only advanced-capable models declare a direct ladder", () => {
+    const bad = LLM_MODELS.filter((m) => m.directReasoningEfforts && !supportsAdvancedMode(m.id)).map((m) => m.id)
+    expect(bad).toEqual([])
   })
 })
