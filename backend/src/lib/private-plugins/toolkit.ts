@@ -666,6 +666,10 @@ export function buildToolkit(): PluginToolkit {
             // identity); effectiveReasoningEffort ignores anything outside the
             // ladder, so an unknown value degrades to vendor-default, not a 400.
             reasoningEffort: req.reasoningEffort as LlmReasoningEffort | undefined,
+            // Unset by default — this text-only path serves gvp/evp planners
+            // and film-studio doctrine, which keep the registry's cost-aware
+            // routing. Only a caller that must not touch KIE pins a lane.
+            requireLane: req.requireLane,
           },
           schema as ZodType<T>,
           opts,
@@ -694,6 +698,13 @@ export function buildToolkit(): PluginToolkit {
             // what it passed; `effectiveReasoningEffort` clamps unknown values.
             reasoningEffort: req.reasoningEffort as LlmReasoningEffort | undefined,
             timeoutMs: req.timeoutMs,
+            // Video-analysis is direct-ONLY. This is the analysis lane (see the
+            // contract docstring), so it defaults to the direct Google API and
+            // takes no KIE fallback: falling back would silently swap real
+            // media parts for KIE's `image_url` URL-smuggling hack and return
+            // differently-grounded analysis instead of an error. A caller that
+            // genuinely wants the aggregator passes `requireLane: "kie"`.
+            requireLane: req.requireLane ?? "direct",
           },
           schema as ZodType<T>,
           opts,

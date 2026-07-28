@@ -36,6 +36,11 @@ const envSchema = z.object({
   FAL_KEY: z.string().default(""),
   KIE_API_KEY: z.string().default(""),
   ANTHROPIC_API_KEY: z.string().default(""),
+  /** Google Gemini API key (https://aistudio.google.com/apikey). Enables the
+   *  direct-Google lane for models declaring `directGeminiModel`; empty leaves
+   *  every Gemini model on KIE. Deliberately NOT named `GOOGLE_API_KEY` — the
+   *  `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` pair is OAuth login, unrelated. */
+  GEMINI_API_KEY: z.string().default(""),
   ELEVENLABS_API_KEY: z.string().default(""),
   HEYGEN_API_KEY: z.string().default(""),
   BEEBLE_API_KEY: z.string().default(""),

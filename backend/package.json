@@ -44,7 +44,9 @@
     "@fastify/formbody": "^8.0.2",
     "@fastify/multipart": "^9.4.0",
     "@fastify/rate-limit": "^10.3.0",
+    "@google/genai": "^2.13.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "@nodaro/prompts": "*",
     "@nodaro/shared": "*",
     "@remotion/bundler": "^4.0.0",
     "@remotion/renderer": "^4.0.0",
@@ -63,8 +65,7 @@
     "stripe": "^20.4.1",
     "undici": "^6.25.0",
     "youtube-dl-exec": "^3.0.30",
-    "zod": "^4.4.0",
-    "@nodaro/prompts": "*"
+    "zod": "^4.4.0"
   },
   "engines": {
     "node": ">=22"

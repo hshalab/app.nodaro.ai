@@ -609,3 +609,37 @@ describe("buildLlmCreditIdentifier effort bump (xhigh/max only)", () => {
     expect(resolveLlmCreditId("llm-chat", { llmModel: "gpt-5.6-terra", reasoningEffort: "max" })).toBe("llm-chat:premium")
   })
 })
+
+describe("direct-vendor lane declarations", () => {
+  it("no model declares BOTH preferKie and preferDirect", () => {
+    // They are the two halves of one idea (which lane goes first). Declaring
+    // both is meaningless and would make routing depend on branch order in
+    // llm-client rather than on the registry.
+    const conflicted = LLM_MODELS.filter((m) => m.preferKie && m.preferDirect).map((m) => m.id)
+    expect(conflicted).toEqual([])
+  })
+
+  it("preferDirect is only meaningful alongside a directGeminiModel", () => {
+    const orphaned = LLM_MODELS.filter((m) => m.preferDirect && !m.directGeminiModel).map((m) => m.id)
+    expect(orphaned).toEqual([])
+  })
+
+  it("every direct-lane model id is a non-empty, non-placeholder string", () => {
+    for (const m of LLM_MODELS.filter((x) => x.directGeminiModel)) {
+      expect(m.directGeminiModel!.length, m.id).toBeGreaterThan(0)
+      expect(m.directGeminiModel, m.id).not.toContain(" ")
+    }
+  })
+
+  it("only google-vendor models carry a Gemini direct lane", () => {
+    const misvendored = LLM_MODELS.filter((m) => m.directGeminiModel && m.vendor !== "google").map((m) => m.id)
+    expect(misvendored).toEqual([])
+  })
+
+  it("getLlmModel resolves a model by its direct Google id", () => {
+    // The `-preview`-suffixed Google ids differ from our canonical ids, and
+    // cost/usage reconciliation looks models up by whatever id the wire used.
+    expect(getLlmModel("gemini-3.1-pro-preview")?.id).toBe("gemini-3.1-pro")
+    expect(getLlmModel("gemini-3-flash-preview")?.id).toBe("gemini-3-flash")
+  })
+})

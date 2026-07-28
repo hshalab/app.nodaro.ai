@@ -26,11 +26,26 @@
  */
 import type { LlmModelDef } from "@nodaro/shared"
 
+/**
+ * Which upstream actually served the call. The SAME model id bills at very
+ * different rates per lane — Google's list price for Gemini runs ~3.3–4× what
+ * KIE resells it for — so a rate row is meaningless without one of these.
+ */
+export type LlmServingLane = "kie" | "direct"
+
 interface LlmModelRateUsd {
   /** Cost per million input tokens (USD) */
   inputPricePerM: number
   /** Cost per million output tokens (USD) */
   outputPricePerM: number
+  /**
+   * Some vendors step up to a second price band once the PROMPT crosses a
+   * token count (Gemini 3.1 Pro doubles at 200k). When set, `longContext`
+   * rates apply to the whole call as soon as `inputTokens` exceeds this.
+   * Absent = one flat band, which is the common case.
+   */
+  longContextThresholdTokens?: number
+  longContext?: { inputPricePerM: number; outputPricePerM: number }
 }
 
 /** Per-model USD/M-token provider rates, keyed by the shared LLM_MODEL_IDS enum. */
@@ -63,13 +78,61 @@ const LLM_MODEL_RATES_USD_PER_M: Record<string, LlmModelRateUsd> = {
   "claude-fable-5":    { inputPricePerM: 4.00,  outputPricePerM: 20.00 },
 }
 
-/** Calculate provider cost in USD from token usage and model pricing. */
+/**
+ * Google list prices for the DIRECT lane (`GEMINI_API_KEY` →
+ * generativelanguage), keyed by our model id — NOT by the `-preview`-suffixed
+ * Google id, so callers never have to translate. Verified against
+ * ai.google.dev/gemini-api/docs/pricing on 2026-07-28.
+ *
+ * These sit 3.3–4× above the KIE rows above, which is the whole reason lane
+ * routing is a per-model decision (`preferDirect` in the shared registry)
+ * rather than a global switch.
+ *
+ * KNOWN GAP: the direct-Anthropic fallback lane has no rows here, so a Claude
+ * call that falls back off KIE is still costed at the KIE rate. That skew
+ * predates this table; the mechanism now exists to close it — it just needs
+ * verified Anthropic list prices, which are deliberately not guessed here.
+ */
+const LLM_DIRECT_RATES_USD_PER_M: Record<string, LlmModelRateUsd> = {
+  "gemini-3-flash": { inputPricePerM: 0.50, outputPricePerM: 3.00 },
+  "gemini-3.6-flash": { inputPricePerM: 1.50, outputPricePerM: 7.50 },
+  "gemini-3.1-pro": {
+    inputPricePerM: 2.00,
+    outputPricePerM: 12.00,
+    // Google doubles the input band and steps output to $18 once the prompt
+    // clears 200k. Video-analysis on long inputs reaches this routinely, so
+    // it is modelled rather than averaged away.
+    longContextThresholdTokens: 200_000,
+    longContext: { inputPricePerM: 4.00, outputPricePerM: 18.00 },
+  },
+}
+
+/**
+ * Calculate provider cost in USD from token usage and model pricing.
+ *
+ * `lane` selects the rate table — it defaults to `"kie"` so every pre-existing
+ * call site keeps its exact previous behaviour. Pass `"direct"` only when the
+ * vendor's own API served the call.
+ */
 export function calculateLlmCost(
   modelOrId: string | LlmModelDef,
   usage: { inputTokens: number; outputTokens: number },
+  lane: LlmServingLane = "kie",
 ): number {
   const id = typeof modelOrId === "string" ? modelOrId : modelOrId.id
-  const rate = LLM_MODEL_RATES_USD_PER_M[id]
+  // A missing direct row falls back to the KIE row rather than to $0 — an
+  // under-report of a real spend is worse than a stale-but-nonzero estimate.
+  const rate = (lane === "direct" ? LLM_DIRECT_RATES_USD_PER_M[id] : undefined) ?? LLM_MODEL_RATES_USD_PER_M[id]
   if (!rate) return 0
-  return (usage.inputTokens * rate.inputPricePerM + usage.outputTokens * rate.outputPricePerM) / 1_000_000
+  const band =
+    rate.longContext && rate.longContextThresholdTokens !== undefined &&
+    usage.inputTokens > rate.longContextThresholdTokens
+      ? rate.longContext
+      : rate
+  return (usage.inputTokens * band.inputPricePerM + usage.outputTokens * band.outputPricePerM) / 1_000_000
+}
+
+/** Test/introspection hook: model ids carrying a direct-lane rate row. */
+export function directRatedModelIds(): string[] {
+  return Object.keys(LLM_DIRECT_RATES_USD_PER_M)
 }
