@@ -5,8 +5,9 @@ import {
   renderAnalyzedScene, isOversizedScene, aspectRatioFromDims,
   entitySlotSchema, analyzedSceneSchema,
   rewriteSceneBindings, dropUnknownBindings,
+  rewriteSpeakerSlots, dropUnknownSpeakers,
   VIDEO_ANALYSIS_MAX_VARIATIONS, VIDEO_ANALYSIS_VARIATION_SLUGS, VIDEO_ANALYSIS_DEFAULT_VARIATION,
-  type EntitySlot,
+  type EntitySlot, type AudioLayer,
 } from "../video-analysis.js"
 
 const slot: EntitySlot = { slotId: "hero", label: "Protagonist", source: "wired-character", role: "person", description: "tan man, mustache, black tee" }
@@ -145,6 +146,73 @@ describe("binding rewrite helpers (merge consumes — spec §4)", () => {
     const r = dropUnknownBindings({ ghost: "dream" }, new Map())
     expect(r.kept).toBeUndefined()
     expect(r.dropped).toEqual([{ slotId: "ghost", variationId: "dream" }])
+  })
+})
+
+describe("speech attribution (speakerSlot)", () => {
+  const speech = (content: string, over: Partial<AudioLayer> = {}): AudioLayer => ({ mode: "speech", content, ...over })
+
+  it("rides on speech layers and survives a window round-trip", () => {
+    const parsed = windowAnalysisSchema.parse({
+      slots: [slot],
+      scenes: [{ ...baseScene, audio: [speech("As a kid…", { voice: "male, warm", speakerSlot: "hero" })] }],
+    })
+    expect(parsed.scenes[0]!.audio[0]!.speakerSlot).toBe("hero")
+  })
+
+  it("is NOT refined against mode — a mis-tagged music layer must not fail the whole roll", () => {
+    // The window schema IS the enforced decode grammar. Rejecting here would
+    // throw away every scene in a window over one stray field; the sanitizer
+    // below strips it instead.
+    expect(windowAnalysisSchema.safeParse({
+      slots: [slot],
+      scenes: [{ ...baseScene, audio: [{ mode: "music", content: "synth bed", speakerSlot: "hero" }] }],
+    }).success).toBe(true)
+  })
+
+  it("rewriteSpeakerSlots follows a slot through cross-window unification", () => {
+    // Slot unification renames the loser id and rewrites {slot:…} tokens and
+    // variation bindings; attribution has to move with them or it dangles.
+    const audio = [speech("hi", { speakerSlot: "man-2" }), speech("ho", { speakerSlot: "other" })]
+    expect(rewriteSpeakerSlots(audio, { "man-2": "hero" }).map((a) => a.speakerSlot)).toEqual(["hero", "other"])
+  })
+
+  it("rewriteSpeakerSlots is copy-on-write when no layer names a renamed slot", () => {
+    const audio = [speech("hi", { speakerSlot: "hero" }), { mode: "music" as const, content: "bed" }]
+    expect(rewriteSpeakerSlots(audio, { ghost: "other" })).toBe(audio)
+  })
+
+  it("dropUnknownSpeakers strips attribution to a slot that no longer exists", () => {
+    const r = dropUnknownSpeakers([speech("hi", { speakerSlot: "ghost" })], new Set(["hero"]))
+    expect(r.audio[0]).not.toHaveProperty("speakerSlot")
+    expect(r.dropped).toEqual(["ghost"])
+  })
+
+  it("dropUnknownSpeakers strips attribution from music/sfx — nobody is speaking", () => {
+    const r = dropUnknownSpeakers(
+      [{ mode: "sfx", content: "door slam", speakerSlot: "hero" }],
+      new Set(["hero"]),
+    )
+    expect(r.audio[0]).not.toHaveProperty("speakerSlot")
+    expect(r.dropped).toEqual(["hero"])
+  })
+
+  it("dropUnknownSpeakers keeps a valid speaker and every other layer field", () => {
+    const audio = [speech("As a kid…", { voice: "male, warm", speakerSlot: "hero" })]
+    const r = dropUnknownSpeakers(audio, new Set(["hero"]))
+    expect(r.audio).toBe(audio)          // copy-on-write: untouched input returned as-is
+    expect(r.dropped).toEqual([])
+  })
+
+  it("attribution alone must NOT keep a slot alive — that is the phantom narrator", () => {
+    // A slot referenced only as a speaker is a voice with no body (doctrine §5).
+    // deriveSlotRefs reads {slot:…} tokens from `visual` ONLY, so an
+    // attribution-only slot stays invisible to the reference sweep and gets
+    // dropped — then dropUnknownSpeakers removes the dangling attribution.
+    expect(deriveSlotRefs("a lunar plain, no one in frame")).toEqual([])
+    const r = dropUnknownSpeakers([speech("that's me!", { speakerSlot: "creator" })], new Set())
+    expect(r.audio[0]).not.toHaveProperty("speakerSlot")
+    expect(r.dropped).toEqual(["creator"])
   })
 })
 

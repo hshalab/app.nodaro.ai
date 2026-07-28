@@ -78,6 +78,27 @@ const audioLayerSchema = z.object({
   mode: z.enum(["speech", "music", "sfx"]),
   content: z.string().min(1),
   voice: z.string().optional(),
+  /**
+   * SPEECH ONLY — `slotId` of the on-screen speaker saying these words.
+   *
+   * `voice` casts a voice ("male, proud triumphant shouting"); this says WHO it
+   * belongs to, so a recreation can route the line to the right character
+   * instead of guessing. Usually one person speaks per scene and the guess is
+   * right, which is exactly why the cases with two speakers over one cut fail
+   * silently without this field.
+   *
+   * Optional by design and deliberately NOT refined against `mode` here: the
+   * window schema is the enforced decode grammar, and rejecting a whole roll
+   * because the model tagged a music layer would be a hair-trigger failure. A
+   * speaker on a non-speech layer, or one naming a slot that no longer exists,
+   * is stripped structurally by `dropUnknownSpeakers` — the same
+   * unwrap/drop/sweep philosophy the slot-token and binding channels use.
+   *
+   * An unseen narrator gets NO speaker: a voice with no body is never a slot
+   * (doctrine §5), so attribution here would resurrect the phantom-entity
+   * defect that `stripOrphanSlots` exists to kill.
+   */
+  speakerSlot: z.string().optional(),
 })
 export type AudioLayer = z.infer<typeof audioLayerSchema>
 
@@ -200,6 +221,50 @@ export function dropUnknownBindings(
     else dropped.push({ slotId, variationId })
   }
   return { kept: Object.keys(kept).length > 0 ? kept : undefined, dropped }
+}
+
+/**
+ * Rewrite speech attribution after cross-window slot unification — the
+ * `rewriteSceneBindings` counterpart for the `audio` channel. Slot unification
+ * renames a loser id to its survivor and rewrites `{slot:…}` tokens and
+ * variation bindings; an un-rewritten `speakerSlot` would be left pointing at an
+ * id that no longer exists. Copy-on-write: returns the input array untouched
+ * when no layer names a renamed slot.
+ */
+export function rewriteSpeakerSlots(audio: AudioLayer[], slotRenames: Record<string, string>): AudioLayer[] {
+  if (!audio.some((a) => a.speakerSlot !== undefined && slotRenames[a.speakerSlot])) return audio
+  return audio.map((a) => {
+    const to = a.speakerSlot !== undefined ? slotRenames[a.speakerSlot] : undefined
+    return to ? { ...a, speakerSlot: to } : a
+  })
+}
+
+/**
+ * Strip attribution that no scene can honour — the `dropUnknownBindings` mirror
+ * for the `audio` channel. Two cases, both model sloppiness rather than errors
+ * worth failing a roll over:
+ *   - a `speakerSlot` on a `music`/`sfx` layer (nobody is speaking)
+ *   - a `speakerSlot` naming a slot that is not in the final list
+ *
+ * MUST run AFTER the orphan-slot sweep, and attribution must NEVER count as a
+ * slot reference for that sweep: a slot reachable only as a speaker is a voice
+ * with no body — precisely the invented-narrator entity doctrine §5 forbids. The
+ * two passes compose to remove both the phantom slot and the dangling
+ * attribution pointing at it.
+ */
+export function dropUnknownSpeakers(
+  audio: AudioLayer[],
+  validSlotIds: Set<string>,
+): { audio: AudioLayer[]; dropped: string[] } {
+  const dropped: string[] = []
+  const out = audio.map((a) => {
+    if (a.speakerSlot === undefined) return a
+    if (a.mode === "speech" && validSlotIds.has(a.speakerSlot)) return a
+    dropped.push(a.speakerSlot)
+    const { speakerSlot: _drop, ...rest } = a
+    return rest
+  })
+  return { audio: dropped.length > 0 ? out : audio, dropped }
 }
 
 /** Substitute {slot:x}: castMap binding wins, else the slot's description, else literal id. */

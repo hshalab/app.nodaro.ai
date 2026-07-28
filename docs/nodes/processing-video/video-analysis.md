@@ -206,7 +206,33 @@ is three entries. An **empty array `[]` means genuine silence** — there is no
 |-------|------|-------------|
 | `mode` | enum | `speech` / `music` / `sfx`. |
 | `content` | string | `speech`: the words, verbatim as spoken — or translated when [Translate speech](#output-language) is on; `music` / `sfx`: generation-ready description. |
-| `voice` | string, optional | Speaker / voice descriptor — `speech` layers only. |
+| `voice` | string, optional | Voice-casting descriptor (`"male, warm, conversational"`) — `speech` layers only. Describes the *voice*, not who owns it. |
+| `speakerSlot` | string, optional | `slotId` of the on-screen speaker — `speech` layers only. See below. |
+
+**`speakerSlot`** answers *who* is talking, where `voice` only says what the
+voice sounds like. Most scenes have one speaker and the pairing is obvious, which
+is exactly why the scenes with two speakers across one cut used to be ambiguous;
+with this field a recreation can route each line to the right character.
+
+It is **optional and best-effort** — expect it to be absent when the analyzer
+cannot attribute a line confidently. Two cases where it is deliberately never
+set:
+
+- **The speaker is not on screen.** An unseen narrator or voice-over is never an
+  entity slot (a slot is something you *see*), so there is nothing to point at.
+  Its casting lives in `voice`.
+- **The speaker is visible but not a slot** — a one-off passer-by with a single
+  line carries no slot to reference.
+
+When present it always names a slot in the same result's `slots` array;
+attribution to an unknown slot, or on a `music` / `sfx` layer, is stripped before
+the result is returned.
+
+**Each line appears exactly once.** Reading the `speech` layers in scene order
+reproduces the soundtrack with nothing said twice: when an utterance straddles a
+cut it is split at the boundary (the first scene keeps the head, the next gets the
+tail), and a line playing over a run of montage shots is attributed to the shot
+where it begins rather than repeated on every shot it plays over.
 
 **Read `visualResolved`, not `visual`.** `visual` retains `{slot:x}` tokens so
 the scene can be re-cast onto your own characters / objects / locations later;
