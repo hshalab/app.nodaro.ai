@@ -51,6 +51,31 @@ export interface LlmModelDef {
   structuredOutputMode?: "anthropic-tool" | "kie-response-format" | "responses-json-schema"
   /** If set, fallback to direct Anthropic SDK with this model ID when KIE.ai fails */
   directFallbackModel?: string
+  /**
+   * Google Gemini API model id for the DIRECT lane (generativelanguage, keyed
+   * by `GEMINI_API_KEY`) — the Google-side twin of `directFallbackModel`.
+   * Presence declares "this model CAN be served straight from Google"; absence
+   * pins it to KIE forever. Stated, never derived: Google carries `-preview`
+   * suffixes on unreleased models, so the id routinely differs from both `id`
+   * and `kieSlugOrModel` (`gemini-3.1-pro` → `gemini-3.1-pro-preview`).
+   */
+  directGeminiModel?: string
+  /**
+   * Try the direct-vendor lane FIRST for this model, with KIE as the failure
+   * fallback. Absent (while `directGeminiModel` is set) = KIE first, direct
+   * only when KIE fails.
+   *
+   * This is a per-model COST decision, not just a routing one: the two lanes
+   * bill the same model at materially different unit rates, so a model that
+   * backs a high-volume default (see `LLM_FEATURE_DEFAULTS`) is usually better
+   * left on whichever lane is cheaper. The rate tables for both lanes live in
+   * `backend/src/lib/pricing/llm-cost.ts` — deliberately not in this package,
+   * which is published to npm.
+   *
+   * Mutually exclusive with `preferKie` — the Claude-side half of the same
+   * idea. Guarded by a registry test so the two can't both be set.
+   */
+  preferDirect?: true
   /** Effort levels this model accepts (ascending). Absent/empty = no effort lever, picker hidden. */
   reasoningEfforts?: readonly LlmReasoningEffort[]
   /** false = model rejects `temperature` (Claude 5-era, GPT-5.6). Absent = accepts. */
@@ -85,6 +110,10 @@ export const LLM_MODELS: readonly LlmModelDef[] = [
     structuredOutputMode: "kie-response-format",
     supportsImages: true,
     maxOutputTokens: 8192,
+    // KIE-first: no `preferDirect` — direct is the reliability fallback only.
+    // (Per-lane rates are deliberately NOT in this published package; see
+    // backend/src/lib/pricing/llm-cost.ts.)
+    directGeminiModel: "gemini-3-flash-preview",
   },
   {
     id: "gemini-3.6-flash",
@@ -102,7 +131,16 @@ export const LLM_MODELS: readonly LlmModelDef[] = [
     maxOutputTokens: 8192,
     // KIE's 3.6 endpoint accepts `reasoning_effort: low | high` (thinking
     // level) — exactly the chat-completions wire mapping deriveParams sends.
+    // Google's own API additionally accepts `minimal` and `medium` on this
+    // model; the set stays at the KIE-safe intersection because ONE field
+    // feeds both lanes and this model is KIE-first. Widen it only if/when
+    // `preferDirect` is set here.
     reasoningEfforts: ["low", "high"],
+    // KIE-first: this model backs 5 of the LLM_FEATURE_DEFAULTS plus the
+    // video-analysis fast tier, so it carries the highest call volume of any
+    // Gemini entry — the lane with the lower unit cost wins by default and
+    // direct is the reliability fallback only.
+    directGeminiModel: "gemini-3.6-flash",
   },
   {
     id: "claude-haiku-4.5",
@@ -153,6 +191,15 @@ export const LLM_MODELS: readonly LlmModelDef[] = [
     structuredOutputMode: "kie-response-format",
     supportsImages: true,
     maxOutputTokens: 16384,
+    directGeminiModel: "gemini-3.1-pro-preview",
+    // The ONE Gemini model routed direct-first. It is the premium/low-volume
+    // tier (video-analysis `pro`, no LLM_FEATURE_DEFAULTS entry), so the ~4×
+    // list-price premium lands on the smallest call volume — and it is where
+    // the direct lane's capability wins actually matter: real `thinkingLevel`
+    // control, native media ingestion, and a `responseJsonSchema` that honours
+    // `additionalProperties` (KIE's `response_format` silently DROPS
+    // record/map-shaped fields — see the z.record rule in backend/CLAUDE.md).
+    preferDirect: true,
   },
   {
     id: "claude-opus-4.7",
@@ -425,8 +472,11 @@ export function getLlmModel(id: string): LlmModelDef | undefined {
     if (aliased) return aliased
   }
   // Last resort: provider slugs double as historical aliases (e.g. the
-  // dated Anthropic slugs) — accept any model whose slug matches exactly.
-  return LLM_MODELS.find((m) => m.kieSlugOrModel === id || m.directFallbackModel === id)
+  // dated Anthropic slugs, the `-preview`-suffixed Google ids) — accept any
+  // model whose slug matches exactly, on either lane.
+  return LLM_MODELS.find(
+    (m) => m.kieSlugOrModel === id || m.directFallbackModel === id || m.directGeminiModel === id,
+  )
 }
 
 export function getLlmTier(id: string): LlmTier {

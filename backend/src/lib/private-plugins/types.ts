@@ -846,6 +846,14 @@ export interface PluginLlmRequest {
    *  the registry's `thinkingDefaultOn`, so a plugin that sends no effort still
    *  gets headroom. */
   reasoningEffort?: string
+  /**
+   * Pin the serving lane and disable fallback. Additive-optional; UNSET by
+   * default here, because this text-only path serves many plugins (gvp/evp
+   * planners, film-studio doctrine) that should keep the registry's
+   * cost-aware routing. A video-analysis text step that must not touch KIE
+   * passes `"direct"` explicitly — the multimodal variant defaults to it.
+   */
+  requireLane?: "direct" | "kie"
 }
 
 /**
@@ -886,6 +894,17 @@ export interface PluginLlmMultimodalRequest {
    *  ignores anything off the ladder, so an unknown value degrades to the vendor
    *  default rather than a 400. */
   reasoningEffort?: string
+  /**
+   * Pin the serving lane and disable fallback. Additive-optional, so an older
+   * plugin that never sets it is unaffected (no CONTRACT_VERSION bump).
+   *
+   * **This path DEFAULTS to `"direct"`** — it is the video-analysis lane, and
+   * analysis must never be served through KIE: KIE reaches Gemini via the
+   * `image_url` URL-smuggling hack rather than real media parts, so a silent
+   * fallback would produce differently-grounded analysis instead of an error.
+   * Pass `"kie"` explicitly to opt a non-analysis multimodal caller out.
+   */
+  requireLane?: "direct" | "kie"
 }
 
 export interface PluginLlmToolkit {

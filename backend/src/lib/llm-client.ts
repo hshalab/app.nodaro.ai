@@ -11,8 +11,9 @@ import type Anthropic from "@anthropic-ai/sdk"
 import { config } from "./config.js"
 import { getLlmModel, LLM_FEATURE_DEFAULTS, effectiveReasoningEffort } from "@nodaro/shared"
 import type { LlmModelDef, LlmFeature, LlmReasoningEffort } from "@nodaro/shared"
-import { calculateLlmCost } from "./pricing/llm-cost.js"
+import { calculateLlmCost, type LlmServingLane } from "./pricing/llm-cost.js"
 import { getAnthropicClient } from "./anthropic.js"
+import { callGeminiDirect, streamGeminiDirect } from "./gemini/client.js"
 import { KIE_API_BASE } from "../providers/kie/client.js"
 import { z, type ZodType } from "zod"
 import { extractJsonFromAIResponse, extractKieToolCallInput } from "./json-utils.js"
@@ -81,6 +82,21 @@ export interface LlmRequest {
    * calling {@link llmCompleteStructured} over setting this directly.
    */
   jsonSchema?: { name: string; schema: Record<string, unknown> }
+  /**
+   * Pin the serving lane for THIS call, overriding the model's registry
+   * default — and disable fallback entirely.
+   *
+   * `"direct"` means direct-ONLY: no KIE leg, ever. Video-analysis uses this.
+   * The point is that a silent fallback would be WORSE than an outage there —
+   * KIE reaches Gemini through the `image_url` URL-smuggling hack rather than
+   * real media parts, and its `response_format` drops record-shaped schema
+   * fields, so a fallback run would quietly produce differently-grounded
+   * analysis rather than fail. A hard error is the honest outcome.
+   *
+   * Pinning a model with no lane of that kind is a configuration error and
+   * throws rather than degrading — see {@link assertLanePinnable}.
+   */
+  requireLane?: LlmServingLane
 }
 
 export interface LlmResponse {
@@ -98,6 +114,14 @@ export interface LlmResponse {
 export async function llmComplete(req: LlmRequest): Promise<LlmResponse> {
   const model = resolveModel(req)
 
+  // A pinned lane wins over every registry preference below, and never falls back.
+  if (req.requireLane) {
+    assertLanePinnable(model, req.requireLane)
+    return req.requireLane === "direct"
+      ? callGeminiDirect(model, req, deriveParams(model, req))
+      : callKie(model, req)
+  }
+
   if (model.directFallbackModel && config.ANTHROPIC_API_KEY) {
     const eff = effectiveReasoningEffort(model.id, req.reasoningEffort)
     const mustDirect =
@@ -114,11 +138,73 @@ export async function llmComplete(req: LlmRequest): Promise<LlmResponse> {
     }
   }
 
+  if (geminiDirectAvailable(model)) {
+    return model.preferDirect
+      ? withFallback(() => callGeminiDirect(model, req, deriveParams(model, req)), kieFallback(model, req))
+      : withFallback(() => callKie(model, req), () => callGeminiDirect(model, req, deriveParams(model, req)))
+  }
+
   if (config.KIE_API_KEY) {
     return callKie(model, req)
   }
 
-  throw new Error(`No LLM provider available for model ${model.id} (need KIE_API_KEY or ANTHROPIC_API_KEY)`)
+  throw new Error(
+    `No LLM provider available for model ${model.id} (need KIE_API_KEY, ANTHROPIC_API_KEY or GEMINI_API_KEY)`,
+  )
+}
+
+/**
+ * Fail a lane pin loudly at the call site rather than quietly serving it from
+ * the other lane. Both failure modes are configuration errors, and both are
+ * things an operator can fix from the message alone — which is the whole
+ * reason this throws instead of degrading.
+ */
+function assertLanePinnable(model: LlmModelDef, lane: LlmServingLane): void {
+  if (lane === "direct") {
+    if (!model.directGeminiModel) {
+      throw new Error(
+        `Model ${model.id} is pinned to the direct lane but declares no directGeminiModel — ` +
+          `pick a model with a direct Google lane (see packages/shared/src/llm-models.ts)`,
+      )
+    }
+    if (!config.GEMINI_API_KEY) {
+      throw new Error(
+        `Model ${model.id} is pinned to the direct lane but GEMINI_API_KEY is not set — ` +
+          `set it in the environment (Railway: staging AND production)`,
+      )
+    }
+    return
+  }
+  if (!config.KIE_API_KEY) {
+    throw new Error(`Model ${model.id} is pinned to the KIE lane but KIE_API_KEY is not set`)
+  }
+}
+
+/** The direct Google lane is usable when the registry names a Gemini model id
+ *  for this entry AND a key is configured. Both halves are required — a model
+ *  with no `directGeminiModel` stays on KIE no matter what is in the env. */
+function geminiDirectAvailable(model: LlmModelDef): boolean {
+  return Boolean(model.directGeminiModel) && Boolean(config.GEMINI_API_KEY)
+}
+
+/** KIE as a fallback leg, or `undefined` when it isn't configured (in which
+ *  case the primary lane's error must surface rather than be swallowed). */
+function kieFallback(model: LlmModelDef, req: LlmRequest): (() => Promise<LlmResponse>) | undefined {
+  return config.KIE_API_KEY ? () => callKie(model, req) : undefined
+}
+
+/** Run `primary`, falling back to `secondary` on failure. With no secondary the
+ *  original error propagates untouched. */
+async function withFallback(
+  primary: () => Promise<LlmResponse>,
+  secondary: (() => Promise<LlmResponse>) | undefined,
+): Promise<LlmResponse> {
+  if (!secondary) return primary()
+  try {
+    return await primary()
+  } catch {
+    return secondary()
+  }
 }
 
 export async function llmStream(
@@ -127,6 +213,14 @@ export async function llmStream(
   signal?: AbortSignal,
 ): Promise<LlmResponse> {
   const model = resolveModel(req)
+
+  // A pinned lane wins over every registry preference below, and never falls back.
+  if (req.requireLane) {
+    assertLanePinnable(model, req.requireLane)
+    return req.requireLane === "direct"
+      ? streamGeminiDirect(model, req, deriveParams(model, req), onToken, signal)
+      : streamKie(model, req, onToken, signal)
+  }
 
   if (model.directFallbackModel && config.ANTHROPIC_API_KEY) {
     const eff = effectiveReasoningEffort(model.id, req.reasoningEffort)
@@ -149,11 +243,41 @@ export async function llmStream(
     }
   }
 
+  if (geminiDirectAvailable(model)) {
+    const direct = (cb: (chunk: string) => void) =>
+      streamGeminiDirect(model, req, deriveParams(model, req), cb, signal)
+    const kie = config.KIE_API_KEY ? (cb: (chunk: string) => void) => streamKie(model, req, cb, signal) : undefined
+    return model.preferDirect
+      ? streamWithFallback(direct, kie, onToken)
+      : streamWithFallback(kie ?? direct, kie ? direct : undefined, onToken)
+  }
+
   if (config.KIE_API_KEY) {
     return streamKie(model, req, onToken, signal)
   }
 
   throw new Error(`No LLM provider available for model ${model.id}`)
+}
+
+/**
+ * Streaming twin of {@link withFallback}. The extra rule: once a token has
+ * reached the caller the stream is TAINTED — restarting on the other lane
+ * would duplicate everything already emitted — so a mid-stream failure always
+ * surfaces. Only a failure before the first token is recoverable.
+ */
+async function streamWithFallback(
+  primary: (onToken: (chunk: string) => void) => Promise<LlmResponse>,
+  secondary: ((onToken: (chunk: string) => void) => Promise<LlmResponse>) | undefined,
+  onToken: (chunk: string) => void,
+): Promise<LlmResponse> {
+  if (!secondary) return primary(onToken)
+  let emitted = false
+  try {
+    return await primary((chunk) => { emitted = true; onToken(chunk) })
+  } catch (err) {
+    if (emitted) throw err
+    return secondary(onToken)
+  }
 }
 
 // ---------------------------------------------------------------------------

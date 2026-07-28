@@ -66,6 +66,14 @@ REPLICATE_API_TOKEN=
 ANTHROPIC_API_KEY=
 ELEVENLABS_API_KEY=
 
+# Optional — Google Gemini API key (https://aistudio.google.com/apikey).
+# Enables the direct-Google lane for Gemini models. Without it, every Gemini
+# model is served through KIE, which is the default for all but the premium
+# tier. See "Gemini routing" below before setting it: the direct lane is
+# billed at Google's list price, which is materially higher per token.
+# NOT the same as GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET (OAuth sign-in).
+GEMINI_API_KEY=
+
 # Optional — enables fal.ai-hosted models (e.g. Sync Lipsync v3).
 # Without it, fal models are inert; the rest of the app is unaffected.
 FAL_KEY=
@@ -413,6 +421,53 @@ nothing runs. Confirm `REDIS_URL` is correct and Redis is healthy
 a provider whose env var is unset. Add `KIE_API_KEY` /
 `REPLICATE_API_TOKEN` / `ANTHROPIC_API_KEY` / `ELEVENLABS_API_KEY` /
 `FAL_KEY` per your needs and restart.
+
+### Gemini routing (`GEMINI_API_KEY`)
+
+Gemini models can be served two ways, and which lane each model uses is
+declared per model in the registry (`packages/shared/src/llm-models.ts`),
+not by a global switch:
+
+| Model | Default lane | Direct lane used when |
+|-------|--------------|-----------------------|
+| `gemini-3-flash` | KIE | KIE fails |
+| `gemini-3.6-flash` | KIE | KIE fails |
+| `gemini-3.1-pro` | Direct Google | always (KIE is the fallback) |
+| **video-analysis (any tier)** | **Direct Google — ONLY** | **always; there is no fallback** |
+
+> **`GEMINI_API_KEY` is REQUIRED if you use video-analysis.** That node is
+> pinned to the direct lane with no KIE fallback, so without the key every
+> analysis job fails with
+> `... is pinned to the direct lane but GEMINI_API_KEY is not set`.
+> Set the key **before** deploying a build that includes this behaviour.
+
+For everything else the key is optional: leave it unset and the remaining
+Gemini models are served through KIE exactly as before.
+
+Video-analysis is direct-only on purpose. KIE reaches Gemini by smuggling
+media URLs through an `image_url` field rather than sending real media parts,
+and its `response_format` silently drops record-shaped schema fields. A
+fallback would therefore not degrade gracefully — it would return
+differently-grounded analysis with no signal that anything changed. A hard
+error is the honest outcome.
+
+Two things to know before changing a model's lane:
+
+- **Cost.** The two lanes bill the same model at materially different per-token
+  rates, so moving a model to the direct lane changes what it costs to run.
+  The high-volume defaults (`llm-chat`, `prompt-helper`, `qa-check`,
+  `generate-script`, `translate`) all sit on `gemini-3.6-flash`, which is why
+  that model stays KIE-first. The rate tables for both lanes live in
+  `backend/src/lib/pricing/llm-cost.ts`, and provider cost is recorded against
+  whichever lane actually served the call. Check the current published rates
+  for your own keys before switching a high-volume model over.
+- **Media.** The direct Google API cannot fetch arbitrary URLs. Image, video,
+  and audio references are downloaded and re-sent as inline bytes (small) or
+  uploaded through the Gemini Files API (large, 48-hour retention). This is
+  automatic, but it means the direct lane does real I/O the KIE lane did not.
+
+To move a model between lanes, set or remove `preferDirect` on its registry
+entry — no client code changes.
 
 **Running on arm64?** The image ships a distinct arm64 build of the same
 pinned ffmpeg source. Rendered-output parity between the amd64 and arm64
