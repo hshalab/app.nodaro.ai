@@ -15,6 +15,7 @@ import { getStripe } from "../billing/stripe-client.js"
 import { PRICE_TO_PLAN, getTierFromPriceId, TIER_CREDITS, TIER_STORAGE_LIMITS, TOP_UPS } from "../billing/stripe-config.js"
 import { ensureStripeCustomer } from "../billing/provision-credits.js"
 import { rejectProgrammaticAuth } from "../../lib/api-auth-mode.js"
+import { tierColumns } from "../billing/tier-columns.js"
 
 /** Extract origin from request headers for redirect URLs. */
 function getOrigin(req: { headers: Record<string, string | string[] | undefined> }): string {
@@ -295,7 +296,7 @@ export async function billingRoutes(app: FastifyInstance) {
       // downgrade policy in stripe-webhook. Reducing them here charged the user
       // back the credits they already paid for this period and could shove them
       // over the new (smaller) storage quota mid-cycle.
-      const profileUpdate: Record<string, unknown> = { tier: newTier }
+      const profileUpdate: Record<string, unknown> = { ...tierColumns(newTier) }
       if (isUpgrade) {
         profileUpdate.subscription_credits = newCredits
         profileUpdate.storage_limit_bytes = newStorageLimit

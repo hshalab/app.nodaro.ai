@@ -4,6 +4,7 @@ import { supabase } from "../../lib/supabase.js"
 import { requireAdmin } from "../middleware/require-admin.js"
 import { getStripe } from "../billing/stripe-client.js"
 import { getTierFromPriceId } from "../billing/stripe-config.js"
+import { tierColumns } from "../billing/tier-columns.js"
 
 // ============================================================
 // Admin Subscription Health Routes
@@ -199,7 +200,7 @@ export async function adminSubscriptionHealthRoutes(app: FastifyInstance) {
     // Update profile
     await supabase
       .from("profiles")
-      .update({ current_period_end: freshEnd, tier })
+      .update({ current_period_end: freshEnd, ...tierColumns(tier) })
       .eq("id", userId)
 
     return {

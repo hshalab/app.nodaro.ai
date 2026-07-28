@@ -8,6 +8,7 @@ import { requireAdmin } from "../middleware/require-admin.js"
 import { invalidateAuthCache } from "../../middleware/auth.js"
 import { invalidateAdminCache } from "../../lib/admin-check.js"
 import { TIER_CREDITS } from "../billing/stripe-config.js"
+import { tierColumns, resolveTierFrom } from "../billing/tier-columns.js"
 
 // ---- Zod Schemas ----
 
@@ -28,7 +29,10 @@ export async function adminCreditsRoutes(app: FastifyInstance) {
 
     let dbQuery = supabase
       .from("profiles")
-      .select("id, display_name, avatar_url, subscription_tier, subscription_credits, topup_credits, daily_spent_credits, storage_used_bytes, storage_limit_bytes, created_at", { count: "exact" })
+      // `tier` as well as `subscription_tier`: the Stripe paths historically
+      // wrote only `tier`, so a paying customer could show here as "free".
+      // resolveTierFrom() picks the same column credit enforcement does.
+      .select("id, display_name, avatar_url, tier, subscription_tier, subscription_credits, topup_credits, daily_spent_credits, storage_used_bytes, storage_limit_bytes, created_at", { count: "exact" })
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1)
 
@@ -46,6 +50,9 @@ export async function adminCreditsRoutes(app: FastifyInstance) {
 
     const users = (data ?? []).map((u) => ({
       ...u,
+      // Report the tier that is actually enforced, not the raw column — see
+      // tier-columns.ts for why the two can disagree.
+      subscription_tier: resolveTierFrom(u),
       total_credits: (u.subscription_credits ?? 0) + (u.topup_credits ?? 0),
     }))
 
@@ -123,7 +130,7 @@ export async function adminCreditsRoutes(app: FastifyInstance) {
     // Fetch current profile
     const { data: profile, error: fetchError } = await supabase
       .from("profiles")
-      .select("subscription_tier, subscription_credits, topup_credits")
+      .select("tier, subscription_tier, subscription_credits, topup_credits")
       .eq("id", id)
       .single()
 
@@ -131,7 +138,7 @@ export async function adminCreditsRoutes(app: FastifyInstance) {
       return reply.code(404).send({ error: "User not found" })
     }
 
-    const oldTier = profile.subscription_tier ?? "free"
+    const oldTier = resolveTierFrom(profile)
     if (oldTier === tier) {
       return reply.code(200).send({ message: "Tier unchanged", tier })
     }
@@ -142,8 +149,7 @@ export async function adminCreditsRoutes(app: FastifyInstance) {
     const { error: updateError } = await supabase
       .from("profiles")
       .update({
-        subscription_tier: tier,
-        tier,
+        ...tierColumns(tier),
         subscription_credits: newCredits,
       })
       .eq("id", id)

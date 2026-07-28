@@ -178,7 +178,9 @@ export function useAdminUsers(
       const { data, error } = await supabase
         .from("profiles")
         .select(
-          "id, email, full_name, subscription_tier, subscription_credits, topup_credits, daily_spent_credits, storage_used_bytes, storage_limit_bytes, role, created_at",
+          // `tier` too: the Stripe paths write only `tier`, so reading
+          // `subscription_tier` alone showed paying customers as "free".
+          "id, email, full_name, tier, subscription_tier, subscription_credits, topup_credits, daily_spent_credits, storage_used_bytes, storage_limit_bytes, role, created_at",
         )
         .order(sortColumn, { ascending, nullsFirst: false })
         // Stable secondary sort so paginated rows don't shift around between pages.
@@ -187,7 +189,8 @@ export function useAdminUsers(
       if (error) throw error
       return (data ?? []).map((row) => ({
         ...row,
-        subscription_tier: row.subscription_tier ?? "free",
+        // Same precedence credit enforcement uses (backend tier-columns.ts).
+        subscription_tier: row.tier ?? row.subscription_tier ?? "free",
         subscription_credits: row.subscription_credits ?? 0,
         topup_credits: row.topup_credits ?? 0,
         daily_spent_credits: row.daily_spent_credits ?? 0,
