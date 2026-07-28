@@ -88,10 +88,16 @@ const LLM_MODEL_RATES_USD_PER_M: Record<string, LlmModelRateUsd> = {
  * routing is a per-model decision (`preferDirect` in the shared registry)
  * rather than a global switch.
  *
- * KNOWN GAP: the direct-Anthropic fallback lane has no rows here, so a Claude
- * call that falls back off KIE is still costed at the KIE rate. That skew
- * predates this table; the mechanism now exists to close it — it just needs
- * verified Anthropic list prices, which are deliberately not guessed here.
+ * The Anthropic rows below cover the direct-SDK lane (`ANTHROPIC_API_KEY` →
+ * api.anthropic.com), which every model carrying `directFallbackModel` can
+ * reach. Two of them — `claude-haiku-4.5` and `claude-sonnet-4.6` — declare no
+ * `preferKie`, so they are served DIRECT by default whenever the key is set,
+ * not just on fallback. Anthropic list prices verified 2026-07-28.
+ *
+ * `claude-sonnet-5` is pinned to its standard $3/$15 rather than the
+ * introductory $2/$10 running through 2026-08-31: the intro rate would make
+ * this table silently wrong the day it lapses, and over-reporting cost during
+ * the promo is the safe direction to be wrong in.
  */
 const LLM_DIRECT_RATES_USD_PER_M: Record<string, LlmModelRateUsd> = {
   "gemini-3-flash": { inputPricePerM: 0.50, outputPricePerM: 3.00 },
@@ -105,6 +111,14 @@ const LLM_DIRECT_RATES_USD_PER_M: Record<string, LlmModelRateUsd> = {
     longContextThresholdTokens: 200_000,
     longContext: { inputPricePerM: 4.00, outputPricePerM: 18.00 },
   },
+  // Anthropic direct-SDK lane.
+  "claude-haiku-4.5": { inputPricePerM: 1.00, outputPricePerM: 5.00 },
+  "claude-sonnet-4.6": { inputPricePerM: 3.00, outputPricePerM: 15.00 },
+  "claude-opus-4.7": { inputPricePerM: 5.00, outputPricePerM: 25.00 },
+  "claude-sonnet-5": { inputPricePerM: 3.00, outputPricePerM: 15.00 },
+  "claude-opus-4.8": { inputPricePerM: 5.00, outputPricePerM: 25.00 },
+  "claude-opus-5": { inputPricePerM: 5.00, outputPricePerM: 25.00 },
+  "claude-fable-5": { inputPricePerM: 10.00, outputPricePerM: 50.00 },
 }
 
 /**
