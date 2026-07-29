@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { imageCollageBody } from "../image-collage.js"
+import { collageLayoutBody, imageCollageBody } from "../image-collage.js"
 
 const base = {
   imageUrls: ["https://media.nodaro.ai/a.png", "https://media.nodaro.ai/b.png"],
@@ -66,5 +66,47 @@ describe("imageCollageBody imageSizes (per-image size hints)", () => {
     expect(
       imageCollageBody.safeParse({ ...base, imageSizes: new Array(31).fill(0) }).success,
     ).toBe(false)
+  })
+})
+
+describe("collageLayoutBody — the free preview", () => {
+  const dims = [{ w: 1200, h: 800 }, { w: 800, h: 1200 }]
+
+  it("requires the resolution, unlike its sibling", () => {
+    // The renderer defaults 2K, this route's family defaults 4K. A preview
+    // built against the wrong canvas is exact for a picture nobody gets, so
+    // the caller has to say which one rather than inherit a trap.
+    expect(collageLayoutBody.safeParse({ dims }).success).toBe(false)
+    expect(collageLayoutBody.safeParse({ dims, resolution: "2K" }).success).toBe(true)
+  })
+
+  it("needs two images, because below that there is no collage", () => {
+    // And because `computeCollageLayout` throws on an empty array — a 500
+    // where this should be a 400.
+    expect(collageLayoutBody.safeParse({ dims: [dims[0]], resolution: "2K" }).success).toBe(false)
+    expect(collageLayoutBody.safeParse({ dims: [], resolution: "2K" }).success).toBe(false)
+  })
+
+  it("bounds the dimensions rather than trusting the body", () => {
+    const bad = [
+      [{ w: 0, h: 100 }, { w: 100, h: 100 }],
+      [{ w: -5, h: 100 }, { w: 100, h: 100 }],
+      [{ w: 1.5, h: 100 }, { w: 100, h: 100 }],
+      [{ w: 999999, h: 100 }, { w: 100, h: 100 }],
+    ]
+    for (const d of bad) expect(collageLayoutBody.safeParse({ dims: d, resolution: "2K" }).success).toBe(false)
+    expect(collageLayoutBody.safeParse({ dims: Array.from({ length: 31 }, () => dims[0]), resolution: "2K" }).success).toBe(false)
+  })
+
+  it("takes the same size-hint range the renderer does", () => {
+    expect(collageLayoutBody.safeParse({ dims, resolution: "2K", imageSizes: [1, 3] }).success).toBe(true)
+    expect(collageLayoutBody.safeParse({ dims, resolution: "2K", imageSizes: [4] }).success).toBe(false)
+    expect(collageLayoutBody.safeParse({ dims, resolution: "2K", imageSizes: [-1] }).success).toBe(false)
+  })
+
+  it("carries NO imageUrls — it is handed dimensions, not pictures", () => {
+    const parsed = collageLayoutBody.safeParse({ dims, resolution: "2K", imageUrls: ["https://x/a.png"] })
+    expect(parsed.success).toBe(true)
+    if (parsed.success) expect(parsed.data).not.toHaveProperty("imageUrls")
   })
 })
