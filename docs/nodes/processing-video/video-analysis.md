@@ -327,7 +327,7 @@ charged) — generated and drift-guarded internally, never hand-written.
 | `fast` (economy) | 3 | 4 | 9 | 14 |
 | `pro` (default) | 9 | 12 | 30 | 49 |
 | `mixed` / `mixed-fast` | 11 | 15 | 38 | 63 |
-| `smart` (highest accuracy) | 42 | 94 | 207 | 346 |
+| `smart` (highest accuracy) | 46 | 98 | 211 | 350 |
 
 The two mixed tiers are variants of the same advanced analysis and share one
 price: `mixed` is tuned for maximum result quality; `mixed-fast` for the most

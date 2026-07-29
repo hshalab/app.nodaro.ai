@@ -75,10 +75,10 @@ export const VIDEO_ANALYSIS_BUCKET_CREDITS: Record<string, number> = {
   // frame sampling turned all the way up. Priced well above the economy tiers
   // because it genuinely costs more to run, and it is the only tier whose
   // accuracy was measured against a hand-counted edit list.
-  "video-analysis:smart:60s": 42,
-  "video-analysis:smart:180s": 94,
-  "video-analysis:smart:360s": 207,
-  "video-analysis:smart:600s": 346,
+  "video-analysis:smart:60s": 46,
+  "video-analysis:smart:180s": 98,
+  "video-analysis:smart:360s": 211,
+  "video-analysis:smart:600s": 350,
 }
 
 /**
