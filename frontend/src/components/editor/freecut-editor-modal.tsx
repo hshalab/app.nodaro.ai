@@ -208,7 +208,7 @@ export function FreeCutEditorModal({ videoUrl, freecutProjectUrl, additionalAsse
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 bg-[#1E1E1E] border-b border-[#2D2D2D] shrink-0">
         <div className="flex items-center gap-3">
-          <span className="text-sm font-medium text-white">FreeCut Editor</span>
+          <span className="text-sm font-medium text-white">Nodaro Editor</span>
           <button
             type="button"
             className="flex items-center gap-1.5 px-2 py-1 text-[11px] rounded-md text-white/50 hover:text-white/80 hover:bg-white/10 transition-colors"
@@ -241,7 +241,7 @@ export function FreeCutEditorModal({ videoUrl, freecutProjectUrl, additionalAsse
           className="w-full h-full border-0"
           allow="autoplay; camera; microphone; storage-access"
           onLoad={() => setIframeLoaded(true)}
-          title="FreeCut Video Editor"
+          title="Nodaro Video Editor"
         />
       </div>
 

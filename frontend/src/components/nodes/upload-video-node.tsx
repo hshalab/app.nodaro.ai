@@ -295,8 +295,8 @@ function UploadVideoNodeComponent({ id, data, selected }: NodeProps) {
                 }} title="Copy URL">
                 <Link className="w-3.5 h-3.5" />
               </button>
-              <button type="button" aria-label="Edit in FreeCut" className="w-7 h-7 flex items-center justify-center bg-black/40 backdrop-blur-sm hover:bg-black/60 border border-white/10 text-white rounded-full shadow-sm"
-                onClick={(e) => { e.stopPropagation(); openFreeCut(id, videoUrl, undefined) }} title="Edit in FreeCut">
+              <button type="button" aria-label="Edit in Nodaro" className="w-7 h-7 flex items-center justify-center bg-black/40 backdrop-blur-sm hover:bg-black/60 border border-white/10 text-white rounded-full shadow-sm"
+                onClick={(e) => { e.stopPropagation(); openFreeCut(id, videoUrl, undefined) }} title="Edit in Nodaro">
                 <Scissors className="w-3.5 h-3.5" />
               </button>
               <SaveToLibraryButton url={videoUrl} type="video" />
