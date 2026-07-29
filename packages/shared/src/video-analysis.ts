@@ -205,6 +205,19 @@ export const entitySlotSchema = z.object({
    *  where this entity is clearly visible. Optional/additive: producers may
    *  omit it; consumers use it as an identity reference for recreation. */
   refImageUrl: z.string().url().optional(),
+  /**
+   * Why `refImageUrl` is ABSENT, when the analyzer's vision pass actively
+   * refused every candidate frame rather than merely failing to produce one.
+   *
+   * Present only alongside a missing `refImageUrl`, and only for a real refusal
+   * — never for a technical failure, so its presence always carries meaning. The
+   * important case reads like "the shots bound to this slot show someone else —
+   * cast as X, but on screen: Y", which is the analyzer telling you the casting
+   * description and the footage disagree. A consumer should treat that as a
+   * reason to review the slot before spending on regeneration, since a wrong
+   * identity propagates into every regenerated shot.
+   */
+  refRejectedReason: z.string().optional(),
   /** NON-default looks only; present only when at least one exists. */
   variations: z.array(slotVariationSchema).max(VIDEO_ANALYSIS_MAX_VARIATIONS).optional(),
 })
@@ -327,6 +340,21 @@ export const videoAnalysisResultSchema = z.object({
     variationId: z.string(),
     label: z.string(),
   })).optional(),
+  /**
+   * Analyzer diagnostics for THIS result — things the analysis noticed about
+   * itself that a reader should know before spending on regeneration.
+   *
+   * Added because there was previously no channel for them at all: the merge
+   * layer has always produced a warnings list and the auto-cast pass has always
+   * had findings, and every one of them died in a `console.warn` inside a worker
+   * the user cannot see. So a run could quietly drop a duplicated line, fold a
+   * cast look, or conclude a character is not the person their own description
+   * names, and the result looked indistinguishable from a clean one.
+   *
+   * Prose, not codes, and deliberately so — these are read by a human deciding
+   * whether to re-run, not branched on. Absent when there is nothing to report.
+   */
+  warnings: z.array(z.string()).optional(),
 })
 export type VideoAnalysisResult = z.infer<typeof videoAnalysisResultSchema>
 

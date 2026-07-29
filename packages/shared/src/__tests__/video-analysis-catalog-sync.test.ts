@@ -86,17 +86,25 @@ describe("bare video-analysis node-type credit id", () => {
     for (const [id, credits] of Object.entries(VIDEO_ANALYSIS_BUCKET_CREDITS)) {
       expect(credits, `${id} exceeds the bare-id ceiling ${ceiling}`).toBeLessThanOrEqual(ceiling)
     }
-    // The migration writes this number; keep them in lockstep (277 wrote 200, 278
-    // writes 739 after the measured reprice).
-    expect(ceiling).toBe(739)
+    // The migration writes this number; keep them in lockstep (277 wrote 200,
+    // 279 wrote 739, 280 writes 346 — every tier now dispatches one identical
+    // analyzer pass, so the whole schedule flattened and the ceiling fell with it).
+    expect(ceiling).toBe(346)
   })
 
-  it("the default tier at the ceiling bucket is NOT a safe fallback — mixed costs more", () => {
-    // Pins the reason the bare id is the table max rather than the intuitive
+  it("the bare id still bounds the default tier at the ceiling bucket", () => {
+    // Pins the reason the bare id is the table MAX rather than the intuitive
     // "default model, longest video" value, so nobody re-derives it wrongly.
+    //
+    // Was `toBeLessThan`, on the premise that `mixed` cost strictly more than the
+    // default tier. That premise is gone: all tiers resolve to the same single
+    // pass, so every row at a given bucket is equal and the correct assertion is
+    // the INVARIANT (the bare id must never under-quote), not the old strict gap.
+    // Should tiers ever diverge again this still holds, and the ceiling check
+    // above catches any row that outgrows it.
     const defaultAtCeiling = VIDEO_ANALYSIS_BUCKET_CREDITS[
       buildVideoAnalysisCreditId(DEFAULT_VIDEO_ANALYSIS_MODEL, VIDEO_ANALYSIS_MAX_DURATION_SEC)
     ]!
-    expect(defaultAtCeiling).toBeLessThan(Math.max(...Object.values(VIDEO_ANALYSIS_BUCKET_CREDITS)))
+    expect(defaultAtCeiling).toBeLessThanOrEqual(Math.max(...Object.values(VIDEO_ANALYSIS_BUCKET_CREDITS)))
   })
 })

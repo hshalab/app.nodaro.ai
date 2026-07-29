@@ -75,6 +75,24 @@ describe("chat-completions wire mapping (KIE forwards ONLY image_url; drops vide
     expect(types).not.toContain("video_url")
     expect(types).not.toContain("audio_url")
   })
+
+  it("throws on an fps-bearing video block instead of sampling at 1 fps anyway", async () => {
+    const { llmComplete } = await import("../llm-client.js")
+
+    // `image_url` smuggling hands Gemini a bare URL, so a requested sampling
+    // rate has nowhere to go and Gemini falls back to its 1 fps default. That
+    // returns HTTP 200 with analysis grounded in a third of the frames the
+    // caller asked for — indistinguishable from success. Fail loudly instead.
+    await expect(
+      llmComplete({
+        modelId: "gemini-3-flash",
+        system: "",
+        messages: [{ role: "user", content: [{ type: "video", url: "https://x/clip.mp4", fps: 3 }] }],
+      }),
+    ).rejects.toThrow(/cannot carry a sampling rate/)
+
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
 })
 
 // Helper: a Response stand-in for non-streaming fetch mocks.

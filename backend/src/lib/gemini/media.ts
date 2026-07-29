@@ -38,6 +38,9 @@ const MAX_MEDIA_BYTES = 512 * 1024 * 1024
 /** Download budget. Long videos on a cold R2 edge are genuinely slow. */
 const FETCH_TIMEOUT_MS = 120_000
 
+/** Google's documented ceiling for `VideoMetadata.fps`. */
+const MAX_SAMPLING_FPS = 24
+
 /** Files API retention is 48h; expire our handles well inside it. */
 const FILE_CACHE_TTL_MS = 12 * 60 * 60 * 1000
 const FILE_CACHE_MAX_ENTRIES = 256
@@ -194,8 +197,35 @@ async function uploadViaTempFile(
  * Text and already-base64 blocks are pure transforms. URL-bearing blocks are
  * dereferenced here — see the module docstring for why that is unavoidable on
  * this lane.
+ *
+ * Split in two on purpose. {@link resolveBlockPart} decides WHERE the bytes come
+ * from and has four separate `return` sites for a video (YouTube passthrough,
+ * cache hit, inline, Files API upload); this wrapper is the ONE place per-part
+ * metadata is attached. Attaching it inside would mean four edits today and a
+ * silent drop the day a fifth source is added.
  */
 export async function blockToGeminiPart(ai: GoogleGenAI, block: LlmContentBlock): Promise<Part> {
+  const part = await resolveBlockPart(ai, block)
+  // `videoMetadata` is a sibling of inlineData/fileData ON THE PART. Nesting it
+  // inside either one is rejected outright by the SDK's own types and is the
+  // entire content of google-gemini/cookbook#787.
+  if (block.type === "video" && block.fps !== undefined) {
+    assertSamplingRate(block.fps)
+    return { ...part, videoMetadata: { fps: block.fps } }
+  }
+  return part
+}
+
+/** `VideoMetadata.fps`: "the default value is 1.0. The valid range is (0.0, 24.0]"
+ *  (@google/genai 2.13.0). Out of range is a 400 from Google after the whole clip
+ *  has already been uploaded, so it is worth catching before the round-trip. */
+function assertSamplingRate(fps: number): void {
+  if (!Number.isFinite(fps) || fps <= 0 || fps > MAX_SAMPLING_FPS) {
+    throw new Error(`Gemini video fps must be in (0, ${MAX_SAMPLING_FPS}]; got ${fps}`)
+  }
+}
+
+async function resolveBlockPart(ai: GoogleGenAI, block: LlmContentBlock): Promise<Part> {
   if (block.type === "text") return { text: block.text }
   if (block.type === "image_base64") {
     return { inlineData: { mimeType: block.mediaType, data: block.data } }

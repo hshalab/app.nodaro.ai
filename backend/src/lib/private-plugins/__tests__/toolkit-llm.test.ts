@@ -79,6 +79,30 @@ describe("toolkit.llm forwards every tuning field", () => {
     expect(sent.temperature).toBe(0)
   })
 
+  // The same failure class one level down: a tuning field on the CONTENT BLOCK
+  // rather than on the request. `messages` currently passes by reference, so fps
+  // rides through for free — this test is what fails if a per-block mapping
+  // layer is ever introduced and forgets it, which would silently return every
+  // analysis at Gemini's 1 fps default.
+  it("forwards a video block's fps sampling rate untouched", async () => {
+    const tk = buildToolkit()
+    await tk.llm.completeStructuredMultimodal(
+      {
+        model: "gemini-3.1-pro",
+        messages: [{ role: "user", content: [{ type: "video", url: "https://x/y.mp4", fps: 3 }, { type: "text", text: "t" }] }],
+      },
+      {},
+    )
+    const sent = mockStructured.mock.calls[0]![0] as {
+      messages: Array<{ content: Array<Record<string, unknown>> }>
+    }
+    expect(sent.messages[0]!.content[0], "fps was dropped between contract and llm-client").toEqual({
+      type: "video",
+      url: "https://x/y.mp4",
+      fps: 3,
+    })
+  })
+
   // ─────────────────────────────────────────────────────────────────────────
   // Lane pinning. Video-analysis is direct-only BY CONSTRUCTION: the aggregator
   // reaches Gemini by smuggling media URLs through an `image_url` field rather
