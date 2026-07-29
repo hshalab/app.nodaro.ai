@@ -35,6 +35,8 @@ const supabase = createClient(url, key)
 interface JobProvenance {
   id: string
   status: string
+  source: string | null
+  source_detail: string | null
   mcp_client: string | null
   workflow_id: string | null
   node_id: string | null
@@ -64,7 +66,10 @@ interface JobProvenance {
  */
 function classify(j: JobProvenance): string[] {
   const out: string[] = []
-  if (j.mcp_client) out.push(`MCP — client "${j.mcp_client}"`)
+  // `source` (migration 282) is the authoritative answer when present; the
+  // marker-based inference below is the fallback for rows that predate it.
+  if (j.source) out.push(j.source_detail ? `${j.source} — ${j.source_detail}` : j.source)
+  if (!j.source && j.mcp_client) out.push(`MCP — client "${j.mcp_client}"`)
   if (j.workflow_execution_id) out.push(`workflow run (execution ${j.workflow_execution_id})`)
   else if (j.workflow_id && j.node_id) out.push("single-node Run from the canvas")
   if (out.length === 0) out.push("direct REST / SDK call (no MCP tag, no workflow context)")
@@ -74,7 +79,7 @@ function classify(j: JobProvenance): string[] {
 const { data, error } = await supabase
   .from("jobs")
   .select(
-    "id,status,mcp_client,workflow_id,node_id,workflow_execution_id,provider,user_id,created_at,started_at,completed_at,input_data->>type",
+    "id,status,source,source_detail,mcp_client,workflow_id,node_id,workflow_execution_id,provider,user_id,created_at,started_at,completed_at,input_data->>type",
   )
   .eq("id", jobId)
   .maybeSingle()

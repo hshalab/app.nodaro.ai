@@ -331,3 +331,21 @@ export type {
   PublishListingResult,
   SharedListing,
 } from "./resources/community.js"
+
+export { TemplatesResource } from "./resources/templates.js"
+export type {
+  TemplateBrowseCard,
+  TemplateSort,
+  BrowseTemplatesParams,
+  BrowseTemplatesResult,
+  Template,
+  CloneTemplateParams,
+  CloneTemplateResult,
+} from "./resources/templates.js"
+
+export { TutorialsResource } from "./resources/tutorials.js"
+export type {
+  TutorialVideoItem,
+  TutorialFlowItem,
+  TutorialCategory,
+} from "./resources/tutorials.js"

@@ -121,7 +121,31 @@ describe("GET /v1/me", () => {
       displayName: "Ada Lovelace",
       avatarUrl: "https://cdn.example.com/ada.png",
       tier: "pro",
+      isAdmin: false,
     })
+  })
+
+  it.each(["admin", "super_admin"])("surfaces isAdmin: true for role %s (descriptive only)", async (role) => {
+    mockProfileSingle({
+      data: {
+        id: TEST_USER_ID,
+        email: "ops@example.com",
+        full_name: "Ops",
+        avatar_url: null,
+        subscription_tier: "pro",
+        role,
+      },
+      error: null,
+    })
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/v1/me",
+      headers: { "x-user-id": TEST_USER_ID },
+    })
+
+    expect(res.statusCode).toBe(200)
+    expect(res.json().data.isAdmin).toBe(true)
   })
 
   it("coalesces null name/avatar/tier to sensible defaults", async () => {
@@ -149,6 +173,7 @@ describe("GET /v1/me", () => {
       displayName: null,
       avatarUrl: null,
       tier: "free",
+      isAdmin: false,
     })
   })
 })

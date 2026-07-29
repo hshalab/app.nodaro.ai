@@ -48,6 +48,13 @@ interface EntityImageJobData {
   // directly to the user's characters row — so closing the studio mid-job
   // doesn't orphan the result. See `lib/character-auto-attach.ts`.
   attachToCharacterId?: string
+  // Opt-out of the portrait auto-attach while KEEPING the character linkage.
+  // Set by `POST /v1/extension/reimagine`: its single job is a busy
+  // full-scene image whose auto-attach as `source_image_url` would poison
+  // the identity anchor every future variant reference set builds on. The
+  // job still records `attachToCharacterId` for provenance/UI association.
+  // Absent/false → existing behavior (count===1 portrait auto-attach).
+  skipPortraitAttach?: boolean
   // `attachToColumn` is shared between the Character and Location auto-attach
   // paths — the Character path narrows via `resolveAssetColumn`, the Location
   // path narrows against `LOCATION_ATTACH_COLUMNS`. Typed `string` here so a
@@ -111,6 +118,7 @@ function makeEntityImageHandler(
       assetType,
       provider,
       attachToCharacterId,
+      skipPortraitAttach,
       attachToColumn,
       attachName,
       attachToLocationId,
@@ -198,8 +206,12 @@ function makeEntityImageHandler(
     // committed and the job row holds the URL as the ultimate source.
     if (attachToCharacterId && ctx.jobUserId) {
       if (logPrefix === "generate-character") {
-        // Portrait → source_image_url
-        await setCharacterPortrait({ characterId: attachToCharacterId, userId: ctx.jobUserId, url: r2Url })
+        // Portrait → source_image_url (unless the route opted out — the
+        // extension reimagine flow keeps the linkage but must not anchor
+        // identity on a full-scene image).
+        if (!skipPortraitAttach) {
+          await setCharacterPortrait({ characterId: attachToCharacterId, userId: ctx.jobUserId, url: r2Url })
+        }
       } else if (attachToColumn && attachName) {
         const column: CharacterAssetColumn | null = resolveAssetColumn(attachToColumn)
         if (column) {

@@ -33,6 +33,7 @@ import {
   readR2ObjectBuffer,
   deleteFromR2,
 } from "../storage.js"
+import { storeImportedImageBuffer } from "../media-import.js"
 import { markProviderCallStart } from "../reconcile/persistence.js"
 import { sendInternalError } from "../http-errors.js"
 import { runPostProcessing } from "../post-processing-error.js"
@@ -568,6 +569,7 @@ export function buildToolkit(): PluginToolkit {
       downloadR2ObjectToFile,
       readR2ObjectBuffer,
       deleteFromR2,
+      storeImportedImageBuffer,
     },
     jobs: {
       markJobCompleted: pluginMarkJobCompleted,

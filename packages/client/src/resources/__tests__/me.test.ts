@@ -20,6 +20,7 @@ const IDENTITY: UserIdentity = {
   displayName: "Ada Lovelace",
   avatarUrl: "https://cdn.example.com/ada.png",
   tier: "pro",
+  isAdmin: false,
 }
 
 describe("me() identity", () => {
