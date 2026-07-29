@@ -596,6 +596,15 @@ orchestrator already use):
   **Gemini Omni** / **Kling 3 Omni** / **Grok i2v** (7), **VEO 3.x**
   (`veo3` / `veo3.1` / `veo3_lite`, 3). This set is kept in lock-step with the
   model catalog by a drift guard, so it can't silently fall out of sync.
+- **References-only runs (no `imageUrl`).** On `POST /v1/generate-video` the
+  start frame is optional whenever at least one supplied reference kind is
+  supported by the selected provider (per the caps above) — e.g. Kling 3 Omni
+  with `referenceImageUrls` alone. VEO 3.x references-only runs are
+  auto-normalized to `REFERENCE_2_VIDEO`, so passing `generationType` is not
+  required. Reference kinds the provider can't carry don't lift the
+  requirement: a provider with no reference support still needs `imageUrl`,
+  and e.g. audio-only references on an images-only model are rejected with a
+  400 rather than silently dropped.
 - **Backward compatible.** Omit `connectedReferences` and the route behaves
   exactly as before — a pre-assembled `prompt` + flat `referenceImageUrls` pass
   through unchanged. `connectedReferences` feeds the **image** channel only;

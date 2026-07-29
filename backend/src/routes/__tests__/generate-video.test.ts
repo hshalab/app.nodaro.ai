@@ -85,7 +85,7 @@ vi.mock("@/lib/video-schemas.js", async () => {
 // ---------------------------------------------------------------------------
 
 import { generateVideoRoutes, assembleVideoConnectedReferences } from "../generate-video.js"
-import type { ConnectedReference } from "@nodaro/shared"
+import { VIDEO_REF_LIMITS_BY_PROVIDER, type ConnectedReference } from "@nodaro/shared"
 import { supabase } from "../../lib/supabase.js"
 import { videoQueue } from "../../lib/queue.js"
 import { probeMediaDuration } from "../../providers/video/ffmpeg-utils.js"
@@ -959,6 +959,144 @@ describe("POST /v1/generate-video — connectedReferences integration", () => {
         connectedReferences: [
           { id: "r1", defaultName: "object", source: "wired-image", url: "https://cdn.example/x.png", description: "thing" },
         ],
+      },
+    })
+    expect(res.statusCode).toBe(200)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// References-only runs — the imageUrl exemption is catalog-driven
+// ---------------------------------------------------------------------------
+
+describe("POST /v1/generate-video — references-only (catalog-driven imageUrl exemption)", () => {
+  const USER = "00000000-0000-4000-8000-000000000001"
+  const REFS = ["https://cdn.example/ref-1.png", "https://cdn.example/ref-2.png"]
+
+  it("accepts a references-only kling-3-omni run (prod repro: 2 refs, duration 15, no imageUrl)", async () => {
+    mockJobInsert({ data: { id: "job-k3o" }, error: null })
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/generate-video",
+      payload: {
+        userId: USER,
+        provider: "kling-3-omni",
+        prompt: "two subjects interacting",
+        referenceImageUrls: REFS,
+        duration: 15,
+      },
+    })
+    expect(res.statusCode).toBe(200)
+    const addMock = vi.mocked(videoQueue.add)
+    expect(addMock).toHaveBeenCalledTimes(1)
+    const [jobName, payload] = addMock.mock.calls[0] as [string, Record<string, unknown>]
+    expect(jobName).toBe("image-to-video")
+    expect(payload.referenceImageUrls).toEqual(REFS)
+    expect(payload.imageUrl).toBeUndefined()
+  })
+
+  it("every catalog provider with an image-ref cap accepts a references-only run (drift guard)", async () => {
+    // The References UI offers refs to every provider advertising a cap in
+    // VIDEO_REF_LIMITS_BY_PROVIDER — a provider added there without this route
+    // accepting its ref-only runs is the exact regression that 400'd
+    // kling-3-omni / grok-i2v / happyhorse-ref2v.
+    const imageRefProviders = Object.entries(VIDEO_REF_LIMITS_BY_PROVIDER)
+      .filter(([, caps]) => (caps?.images ?? 0) > 0)
+      .map(([provider]) => provider)
+    expect(imageRefProviders.length).toBeGreaterThan(0)
+    mockJobInsert({ data: { id: "job-any" }, error: null })
+    for (const provider of imageRefProviders) {
+      const res = await app.inject({
+        method: "POST",
+        url: "/v1/generate-video",
+        payload: {
+          userId: USER,
+          provider,
+          prompt: "references only",
+          referenceImageUrls: [REFS[0]],
+        },
+      })
+      expect(res.statusCode, `provider ${provider} must accept a references-only run`).toBe(200)
+    }
+  })
+
+  it("normalizes a VEO references-only run to REFERENCE_2_VIDEO (parity with the orchestrator)", async () => {
+    mockJobInsert({ data: { id: "job-veo-ref" }, error: null })
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/generate-video",
+      payload: {
+        userId: USER,
+        provider: "veo3.1",
+        prompt: "scene from references",
+        referenceImageUrls: REFS,
+      },
+    })
+    expect(res.statusCode).toBe(200)
+    const [, payload] = vi.mocked(videoQueue.add).mock.calls[0] as [string, Record<string, unknown>]
+    // Without this hint the KIE i2v VEO branch ships imageUrls=[undefined].
+    expect(payload.generationType).toBe("REFERENCE_2_VIDEO")
+  })
+
+  it("does NOT inject REFERENCE_2_VIDEO for a VEO run that has a start frame", async () => {
+    mockJobInsert({ data: { id: "job-veo-i2v" }, error: null })
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/generate-video",
+      payload: {
+        userId: USER,
+        provider: "veo3.1",
+        prompt: "animate this",
+        imageUrl: "https://cdn.example/start.png",
+        referenceImageUrls: REFS,
+      },
+    })
+    expect(res.statusCode).toBe(200)
+    const [, payload] = vi.mocked(videoQueue.add).mock.calls[0] as [string, Record<string, unknown>]
+    expect(payload.generationType).toBeUndefined()
+  })
+
+  it("still rejects references-only for a provider with no ref caps (refs would be silently dropped)", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/generate-video",
+      payload: {
+        userId: USER,
+        provider: "wan-i2v",
+        prompt: "motion",
+        referenceImageUrls: REFS,
+      },
+    })
+    expect(res.statusCode).toBe(400)
+    expect(res.json().error.message).toBe("imageUrl is required")
+  })
+
+  it("rejects audio-only references on an images-only provider (kind not carryable)", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/generate-video",
+      payload: {
+        userId: USER,
+        provider: "kling-3-omni",
+        prompt: "narrated scene",
+        referenceAudioUrls: ["https://cdn.example/voice.mp3"],
+      },
+    })
+    expect(res.statusCode).toBe(400)
+    expect(res.json().error.message).toBe("imageUrl is required")
+  })
+
+  it("keeps the Seedance 2 audio-only exemption (audio IS a carryable kind there)", async () => {
+    mockJobInsert({ data: { id: "job-s2-audio" }, error: null })
+    vi.mocked(probeMediaDuration).mockResolvedValue(10)
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/generate-video",
+      payload: {
+        userId: USER,
+        provider: "seedance-2",
+        prompt: "a person speaking",
+        referenceAudioUrls: ["https://cdn.example/voice.mp3"],
       },
     })
     expect(res.statusCode).toBe(200)
