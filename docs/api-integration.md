@@ -167,8 +167,11 @@ and `@nodaro/cli` send it automatically — you only need this when calling the
 REST API directly. Omitting it is fine; those jobs are simply recorded as
 generic API calls.
 
-Browser callers need do nothing: the `Origin` header already identifies the
-site, and jobs are attributed to that host automatically.
+Browser callers need do nothing — and should NOT send this header. The `Origin`
+header already identifies the site, and Nodaro prefers it: it names the product
+(`studio.nodaro.ai`) rather than the library. `@nodaro/sdk` omits the header
+automatically when it runs in a browser, so a page never depends on the header
+being allowlisted server-side.
 
 ## 5. Sync vs async execution
 

@@ -228,3 +228,64 @@ describe("voices.recast", () => {
     )
   })
 })
+
+/**
+ * `X-Nodaro-Client` identifies non-browser callers (CLI, server-side
+ * integrations) to the backend, which records it as job provenance.
+ *
+ * It is deliberately NOT sent from a browser: the browser already sends
+ * `Origin`, which the backend prefers because it names the product rather than
+ * the library — and, more importantly, a non-safelisted request header from a
+ * browser must be echoed in the server's `Access-Control-Allow-Headers` or the
+ * PREFLIGHT fails, breaking every call from that app. Suppressing it in
+ * browsers removes that coupling entirely.
+ */
+describe("client identification header", () => {
+  const capture = () => {
+    const calls: RequestInit[] = []
+    const fetchMock = vi.fn((_u: unknown, init: RequestInit) => {
+      calls.push(init)
+      return mockOk({ ok: true }) as unknown as Promise<Response>
+    })
+    return { calls, fetchMock: fetchMock as unknown as typeof fetch }
+  }
+  const headersOf = (init: RequestInit) => (init.headers ?? {}) as Record<string, string>
+
+  it("sends sdk/<version> when there is no browser (Node, CLI, server)", async () => {
+    const { calls, fetchMock } = capture()
+    const c = createClient({ baseUrl: "https://x", auth: new StaticTokenAuth("t"), fetch: fetchMock })
+    await c.request("GET", "/v1/ping")
+    expect(headersOf(calls[0]!)["X-Nodaro-Client"]).toMatch(/^sdk\//)
+  })
+
+  it("an explicit clientLabel is used verbatim — this is how the CLI is distinguishable", async () => {
+    const { calls, fetchMock } = capture()
+    const c = createClient({ baseUrl: "https://x", auth: new StaticTokenAuth("t"), fetch: fetchMock, clientLabel: "cli/1.6.0" })
+    await c.request("GET", "/v1/ping")
+    expect(headersOf(calls[0]!)["X-Nodaro-Client"]).toBe("cli/1.6.0")
+  })
+
+  it("omits the DEFAULT label in a browser — Origin already says more, and a stale server allowlist would break the preflight", async () => {
+    vi.stubGlobal("window", { document: {} })
+    try {
+      const { calls, fetchMock } = capture()
+      const c = createClient({ baseUrl: "https://x", auth: new StaticTokenAuth("t"), fetch: fetchMock })
+      await c.request("GET", "/v1/ping")
+      expect(headersOf(calls[0]!)["X-Nodaro-Client"]).toBeUndefined()
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it("still sends an EXPLICIT label in a browser — naming yourself is deliberate", async () => {
+    vi.stubGlobal("window", { document: {} })
+    try {
+      const { calls, fetchMock } = capture()
+      const c = createClient({ baseUrl: "https://x", auth: new StaticTokenAuth("t"), fetch: fetchMock, clientLabel: "studio/2.0.0" })
+      await c.request("GET", "/v1/ping")
+      expect(headersOf(calls[0]!)["X-Nodaro-Client"]).toBe("studio/2.0.0")
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+})

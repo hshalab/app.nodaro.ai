@@ -34,12 +34,23 @@
  *  3. `app`       — a developer-app OAuth token (`req.appAuthorization`).
  *                   Beats the client header: what matters is WHICH integration,
  *                   not that it happened to use our SDK to get there.
- *  4. `cli`/`sdk` — the `X-Nodaro-Client` header the published packages send.
- *  5. `web`       — an `Origin` header. Browsers always send it and CORS
+ *  4. `web`       — an `Origin` header. Browsers always send it and CORS
  *                   already validates it, so it cannot be spoofed by a page we
  *                   don't serve. Non-browser callers never send it.
+ *  5. `cli`/`sdk` — the `X-Nodaro-Client` header the published packages send.
  *  6. `api`       — none of the above: a raw HTTP call, or an SDK/CLI old
  *                   enough to predate the header.
+ *
+ * ORIGIN ABOVE THE CLIENT HEADER is deliberate and was originally the other way
+ * round, which was wrong. All six Nodaro client apps (studio / person / voice /
+ * recast / recut / stitch) are browser SPAs built ON `@nodaro/sdk`, so they send
+ * BOTH signals: `Origin: https://studio.nodaro.ai` and the SDK's default
+ * `sdk/<version>`. With the header winning, every one of them would have
+ * collapsed into an undifferentiated "SDK" the moment they bumped the
+ * dependency — losing exactly the per-app visibility this feature exists to
+ * provide. `Origin` names the actual product; `sdk/x.y.z` only says which
+ * library it happened to use. The CLI is unaffected: Node sends no Origin, so
+ * its explicit `cli/<version>` still applies.
  *
  * NOTE `workflow` is deliberately NOT derived here. A job that belongs to an
  * orchestrated run is identified by `workflow_execution_id` being set, which is
@@ -126,11 +137,13 @@ export function deriveJobSource(req: FastifyRequest): DerivedJobSource {
     return { source: "app", sourceDetail: detail(req.appAuthorization.appId) }
   }
 
-  const fromHeader = parseClientHeader(firstHeaderValue(req.headers[CLIENT_HEADER] as string | string[] | undefined))
-  if (fromHeader) return fromHeader
-
+  // Before the client header: a browser app that uses the SDK sends both, and
+  // the origin host is the more specific answer. See the precedence note above.
   const host = originHost(firstHeaderValue(req.headers.origin))
   if (host) return { source: "web", sourceDetail: detail(host) }
+
+  const fromHeader = parseClientHeader(firstHeaderValue(req.headers[CLIENT_HEADER] as string | string[] | undefined))
+  if (fromHeader) return fromHeader
 
   return { source: "api", sourceDetail: null }
 }
