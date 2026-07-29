@@ -89,6 +89,18 @@ function toFfmpegColor(input: string | undefined): string {
 }
 
 /**
+ * The same normalisation as {@link toFfmpegColor}, in the form a browser can
+ * paint with. Deliberately beside it, sharing the identical validity rule and
+ * the identical fallback: a preview that paints a different background than the
+ * render is a wrong preview, and that divergence would be invisible until
+ * someone looked at a gap.
+ */
+export function toCssColor(input: string | undefined): string {
+  const raw = (input ?? "").trim().replace(/^#/, "")
+  return /^[0-9a-fA-F]{6}$/.test(raw) ? `#${raw.toLowerCase()}` : "#ffffff"
+}
+
+/**
  * Stored dimensions + an EXIF orientation tag → the dimensions as DISPLAYED.
  *
  * Tags 5-8 are the quarter-turns: they exchange the axes. 1-4 are identity,
@@ -197,6 +209,61 @@ export function buildCollageFfmpegArgs(opts: {
   return args
 }
 
+/** Fully-resolved geometry inputs. Nothing here is optional-with-a-default:
+ *  see {@link resolveCollageGeometry}. */
+export interface CollageGeometryParams {
+  readonly dims: readonly ImageDim[]
+  readonly layout: CollageLayoutMode
+  readonly resolution: CollageResolution
+  readonly aspectRatio: string
+  readonly gap: number
+  /** Index-aligned with `dims`. Padded and clamped here, once. */
+  readonly imageSizes?: readonly number[]
+}
+
+/**
+ * Where every image lands, and how big the canvas ends up.
+ *
+ * SHARED by the renderer and by the free layout route, so a client preview is
+ * EXACT for the same dimensions rather than a second implementation that drifts.
+ *
+ * It defaults NOTHING. That is deliberate and it is the whole reason this takes
+ * resolved values instead of a request object: this provider's own entry point
+ * defaults 2K/1:1 while the HTTP route defaults 4K/4:3, so folding either set in
+ * here would rebuild the exact divergence the sharing exists to remove. Each
+ * edge resolves its own parameters and passes numbers.
+ */
+export function resolveCollageGeometry(params: CollageGeometryParams): {
+  rects: ReturnType<typeof computeCollageLayout>["rects"]
+  canvasW: number
+  canvasH: number
+} {
+  // In smart mode the WIDTH is honoured and the target height only steers the
+  // row count — the layout floats the real output height. Grid honours both.
+  const { w: targetW, h: targetH } = resolveCollageCanvas(params.resolution, params.aspectRatio)
+  // Size hints are index-aligned with the images. Keyed off `dims.length`
+  // because that is the one length BOTH callers have — the layout route never
+  // sees `imageUrls` — and because walking `dims` is what makes a MALFORMED
+  // stored value degrade rather than throw: this provider is reached from a
+  // worker reading a job row, not only from the validated route.
+  //
+  // The padding and clamping themselves are belt-and-braces, not load-bearing:
+  // `collage-layout.ts` is the authority on tolerance and already reads any
+  // unknown value as auto and ignores extras. Mutating either away leaves the
+  // output identical, so no test here claims otherwise.
+  const sizes = params.imageSizes
+    ? params.dims.map((_, i) => {
+        const v = params.imageSizes![i]
+        return typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= 3 ? v : 0
+      })
+    : undefined
+  return computeCollageLayout([...params.dims], targetW, targetH, {
+    mode: params.layout,
+    gap: params.gap,
+    sizes,
+  })
+}
+
 /**
  * Render the collage. Returns the local PNG path (caller uploads to R2 and
  * cleans up the work dir).
@@ -212,19 +279,7 @@ export async function createImageCollage(params: ImageCollageParams): Promise<st
   const aspectRatio = params.aspectRatio ?? "1:1"
   const gap = Math.max(0, Math.min(200, Math.floor(params.gap ?? 24)))
   const bgColor = toFfmpegColor(params.backgroundColor)
-  // Size hints aligned to imageUrls — pad missing entries with 0 (auto) and
-  // clamp garbage; the layout treats unknown values as auto anyway.
   const imageSizes = params.imageSizes
-    ? imageUrls.map((_, i) => {
-        const v = params.imageSizes![i]
-        return typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= 3 ? v : 0
-      })
-    : undefined
-
-  // Target canvas from resolution × aspect. In smart mode the WIDTH is honoured
-  // and the target height only steers the row count; the layout floats the real
-  // output height. In grid mode both are honoured exactly.
-  const { w: targetW, h: targetH } = resolveCollageCanvas(resolution, aspectRatio)
 
   const workDir = await createWorkDir("image-collage")
   const outputPath = join(workDir, "collage.png")
@@ -252,7 +307,16 @@ export async function createImageCollage(params: ImageCollageParams): Promise<st
   // Probe dimensions concurrently (ffprobe on local files — cheap, not gated by
   // the ffmpeg semaphore), then compute the layout.
   const dims = await Promise.all(localPaths.map(probeImageSize))
-  const { rects, canvasW, canvasH } = computeCollageLayout(dims, targetW, targetH, { mode: layout, gap, sizes: imageSizes })
+  // The SAME function the free layout route calls — a preview and this render
+  // cannot disagree about geometry for the same dimensions.
+  const { rects, canvasW, canvasH } = resolveCollageGeometry({
+    dims,
+    layout,
+    resolution,
+    aspectRatio,
+    gap,
+    imageSizes,
+  })
 
   const args = buildCollageFfmpegArgs({ localPaths, rects, canvasW, canvasH, bgColor, outputPath })
   await runFfmpeg(args)
