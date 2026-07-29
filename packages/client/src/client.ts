@@ -26,6 +26,21 @@ import { PresetsResource } from "./resources/node-presets.js"
 import { PickerCatalogsResource } from "./resources/picker-catalogs.js"
 import { CommunityResource } from "./resources/community.js"
 
+/** Replaced at build time by tsup `define` from package.json. The fallback
+ *  keeps `tsx`/vitest runs of the source working, where no define applies. */
+declare const __SDK_VERSION__: string | undefined
+const SDK_VERSION = typeof __SDK_VERSION__ === "string" ? __SDK_VERSION__ : "0.0.0-dev"
+
+/**
+ * Identifies the calling package to the backend, which records it as the job's
+ * provenance (`jobs.source` / `source_detail`) so an operator can tell a CLI
+ * run from an SDK integration from a browser session.
+ *
+ * Only `sdk/…` and `cli/…` are honoured server-side; anything else is ignored
+ * rather than trusted, since this is an unauthenticated header.
+ */
+export const CLIENT_HEADER = "X-Nodaro-Client"
+
 export interface ClientOptions {
   /** Backend base URL, e.g. "https://nodaro.example.com" or empty string for same-origin. */
   baseUrl: string
@@ -35,6 +50,14 @@ export interface ClientOptions {
   fetch?: typeof fetch
   /** Default request timeout in ms. Default 60s. */
   timeoutMs?: number
+  /**
+   * Overrides the `X-Nodaro-Client` label. Defaults to `sdk/<version>`.
+   *
+   * Exists for `@nodaro/cli`, which is a wrapper AROUND this SDK: without an
+   * override every CLI invocation would be recorded as an SDK call and the two
+   * surfaces could never be told apart.
+   */
+  clientLabel?: string
 }
 
 interface RequestOptions {
@@ -66,6 +89,8 @@ export class NodaroClient {
   readonly baseUrl: string
   readonly auth: Auth
   readonly timeoutMs: number
+  /** Value sent as `X-Nodaro-Client`; recorded by the backend as job provenance. */
+  readonly clientLabel: string
   private readonly fetchOverride: typeof fetch | undefined
 
   /**
@@ -109,6 +134,7 @@ export class NodaroClient {
     this.auth = opts.auth
     this.fetchOverride = opts.fetch
     this.timeoutMs = opts.timeoutMs ?? 60_000
+    this.clientLabel = opts.clientLabel ?? `sdk/${SDK_VERSION}`
 
     this.workflows = new WorkflowsResource(this)
     this.projects = new ProjectsResource(this)
@@ -149,6 +175,7 @@ export class NodaroClient {
       typeof FormData !== "undefined" && options.body instanceof FormData
     const headers: Record<string, string> = {
       ...(isFormData ? {} : { "Content-Type": "application/json" }),
+      [CLIENT_HEADER]: this.clientLabel,
       ...(options.headers ?? {}),
     }
     if (token) headers["Authorization"] = `Bearer ${token}`

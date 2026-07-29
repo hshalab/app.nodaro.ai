@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify"
 import { z } from "zod"
 import { fetchChannelPosts, normalizeChannel } from "../services/social/telegram-channel.js"
 import { sendInternalError } from "../lib/http-errors.js"
+import { insertJob } from "../lib/insert-job.js"
 import { supabase } from "../lib/supabase.js"
 import { creditGuard, reserveCreditsForJob } from "../middleware/credit-guard.js"
 import { commitReservedCreditsForJob, refundReservedCreditsForJob } from "../lib/credits-job-lifecycle.js"
@@ -55,9 +56,7 @@ export async function telegramChannelRoutes(app: FastifyInstance): Promise<void>
 
     // Validation rejects above cost nothing — the job row (and the reservation
     // attached to it) is only created once the request is known to be runnable.
-    const { data: job, error: jobErr } = await supabase
-      .from("jobs")
-      .insert({
+    const { data: job, error: jobErr } = await insertJob(req, {
         user_id: userId,
         workflow_id: workflowId || null,
         status: "processing",
@@ -65,8 +64,6 @@ export async function telegramChannelRoutes(app: FastifyInstance): Promise<void>
         provider: "telegram-channel-feed",
         job_type: "telegram-channel-feed",
       })
-      .select("id")
-      .single()
 
     if (jobErr || !job) {
       return reply.status(500).send({ error: { code: "internal_error" } })

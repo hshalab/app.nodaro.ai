@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify"
 import { sendInternalError } from "../lib/http-errors.js"
+import { insertJob } from "../lib/insert-job.js"
 import { z } from "zod"
 import { safeUrlSchema } from "../lib/url-validator.js"
 import { supabase } from "../lib/supabase.js"
@@ -173,9 +174,7 @@ export async function renderVideoRoutes(app: FastifyInstance) {
     const dimensions = ASPECT_DIMENSIONS[body.aspectRatio]
     const durationInFrames = Math.round(body.durationSeconds * body.fps)
 
-    const { data: job, error } = await supabase
-      .from("jobs")
-      .insert({
+    const { data: job, error } = await insertJob(req, {
         workflow_id: extractWorkflowId(req.body),
         node_id: extractNodeId(req.body),
         force_private: extractForcePrivate(req.body) || undefined,
@@ -188,8 +187,6 @@ export async function renderVideoRoutes(app: FastifyInstance) {
           durationInFrames,
         },
       })
-      .select("id")
-      .single()
 
     if (error) {
       return sendInternalError(reply, req, error, "Failed to render video")
@@ -239,9 +236,7 @@ export async function renderVideoRoutes(app: FastifyInstance) {
       })
     }
 
-    const { data: job, error } = await supabase
-      .from("jobs")
-      .insert({
+    const { data: job, error } = await insertJob(req, {
         workflow_id: extractWorkflowId(req.body),
         node_id: extractNodeId(req.body),
         force_private: extractForcePrivate(req.body) || undefined,
@@ -252,8 +247,6 @@ export async function renderVideoRoutes(app: FastifyInstance) {
           mode: "scene-graph",
         },
       })
-      .select("id")
-      .single()
 
     if (error) {
       return sendInternalError(reply, req, error, "Failed to render video")
@@ -302,9 +295,7 @@ export async function renderVideoRoutes(app: FastifyInstance) {
       })
     }
 
-    const { data: job, error } = await supabase
-      .from("jobs")
-      .insert({
+    const { data: job, error } = await insertJob(req, {
         workflow_id: extractWorkflowId(req.body),
         node_id: extractNodeId(req.body),
         force_private: extractForcePrivate(req.body) || undefined,
@@ -315,8 +306,6 @@ export async function renderVideoRoutes(app: FastifyInstance) {
           mode: "plan",
         },
       })
-      .select("id")
-      .single()
 
     if (error) {
       return sendInternalError(reply, req, error, "Failed to render video")

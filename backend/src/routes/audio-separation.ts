@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify"
 import { z } from "zod"
 import { supabase } from "../lib/supabase.js"
+import { insertJob } from "../lib/insert-job.js"
 import { videoQueue } from "../lib/queue.js"
 import { safeUrlSchema } from "../lib/url-validator.js"
 import { creditGuard, reserveCreditsForJob } from "../middleware/credit-guard.js"
@@ -51,9 +52,7 @@ export async function audioSeparationRoutes(app: FastifyInstance) {
       })
     }
 
-    const { data: job, error } = await supabase
-      .from("jobs")
-      .insert({
+    const { data: job, error } = await insertJob(req, {
         workflow_id: extractWorkflowId(req.body),
         node_id: extractNodeId(req.body),
         force_private: extractForcePrivate(req.body) || undefined,
@@ -61,8 +60,6 @@ export async function audioSeparationRoutes(app: FastifyInstance) {
         status: "pending",
         input_data: buildJobInputData(parsed.data, "audio-separation"),
       })
-      .select("id")
-      .single()
 
     if (error) {
       return sendInternalError(reply, req, error, "Failed to create job")

@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { UserFilter, type UserFilterValue } from "@/components/user-filter"
 import { JobAssetView } from "@/components/admin/job-asset-view"
+import { JobSourceBadge } from "@/components/admin/job-source-badge"
 import { useAdminJobs, useAllAdminUsersLite, type AdminJob } from "@/ee/hooks/queries/use-admin-queries"
 
 const STATUS_OPTIONS = ["all", "pending", "queued", "processing", "completed", "failed", "cancelled"] as const
@@ -142,9 +143,10 @@ function JobDetailDialog({ job, open, onOpenChange }: { job: AdminJob; open: boo
           <div className="col-span-2">
             <span className="text-muted-foreground">Source</span>
             <p>
-              {job.workflow_execution_id ? (
-                <span>Workflow Execution <span className="font-mono text-xs text-muted-foreground">({job.workflow_execution_id.slice(0, 8)})</span></span>
-              ) : "Single Node Run"}
+              <JobSourceBadge source={job.source} sourceDetail={job.source_detail} />
+              {job.workflow_execution_id && (
+                <span className="ml-2">Workflow Execution <span className="font-mono text-xs text-muted-foreground">({job.workflow_execution_id.slice(0, 8)})</span></span>
+              )}
             </p>
           </div>
         </div>
@@ -325,10 +327,11 @@ export default function AdminJobsPage() {
                   ) : <span className="text-muted-foreground">-</span>}
                 </td>
                 <td className="px-3 py-2">
-                  {job.workflow_execution_id
-                    ? <Badge variant="outline" className="text-xs">Workflow</Badge>
-                    : <span className="text-xs text-muted-foreground">Single</span>
-                  }
+                  <JobSourceBadge
+                    source={job.source}
+                    sourceDetail={job.source_detail}
+                    workflowExecutionId={job.workflow_execution_id}
+                  />
                 </td>
                 <td className="px-3 py-2 text-xs">{job.credits ?? "-"}</td>
                 <td className="px-3 py-2 text-xs text-muted-foreground">{job.provider ?? "-"}</td>

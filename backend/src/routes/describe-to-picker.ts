@@ -3,6 +3,7 @@ import { z } from "zod"
 import { buildMultiPickerAnalyzerSpec, PICKER_TYPES, type PickerType, type PickerGaps } from "@nodaro/prompts"
 import { buildLlmCreditIdentifier, resolveLlmCreditId, getLlmModel, LLM_FEATURE_DEFAULTS, LLM_MODEL_IDS, LLM_REASONING_EFFORTS, STRUCTURED_VISION_MODELS } from "@nodaro/shared"
 import { supabase } from "../lib/supabase.js"
+import { insertJob } from "../lib/insert-job.js"
 import { config } from "../lib/config.js"
 import { creditGuard, reserveCreditsForJob } from "../middleware/credit-guard.js"
 import { safeUrlSchema } from "../lib/url-validator.js"
@@ -188,9 +189,7 @@ export async function describeToPickerRoutes(app: FastifyInstance) {
       if (advancedError) return reply.status(400).send({ error: advancedError })
       const modelIdentifier = buildLlmCreditIdentifier("describe-to-picker", llmModelId, parsed.data.reasoningEffort, parsed.data.advancedMode)
 
-      const { data: job, error: jobError } = await supabase
-        .from("jobs")
-        .insert({
+      const { data: job, error: jobError } = await insertJob(req, {
           workflow_id: extractWorkflowId(req.body),
           node_id: extractNodeId(req.body),
           force_private: extractForcePrivate(req.body) || undefined,
@@ -198,8 +197,6 @@ export async function describeToPickerRoutes(app: FastifyInstance) {
           status: "pending",
           input_data: buildJobInputData(parsed.data, "describe-to-picker"),
         })
-        .select("id")
-        .single()
       if (jobError) {
         return sendInternalError(reply, req, jobError, "Failed to create job")
       }

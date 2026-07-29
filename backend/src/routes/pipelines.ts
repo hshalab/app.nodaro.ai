@@ -3,6 +3,7 @@ import { z } from "zod"
 import { CHAT_ENABLED_STAGES, CHAT_TURN_CAPS, CHAT_WIRED_STAGES, ENTITY_TYPES, EntityRejectInputSchema, IMAGE_CRITIC_UNRESOLVABLE, PIPELINE_STAGE_NAMES, PipelineInputSchema, PipelineStageNameSchema, SubGateNameSchema, clearImageCriticMetadata, clearVideoCriticMetadata, type ChatEnabledStage, type EntityType, type JsonPatch, type PipelineStageName, type ProposedChange, type ShowrunnerPlan } from "@nodaro/shared"
 import { getIdentityLockClause } from "@nodaro/prompts"
 import { hasCredits } from "../lib/config.js"
+import { insertJob } from "../lib/insert-job.js"
 import { requireScope, type Scope } from "../lib/scopes.js"
 import { createSSEStream } from "../lib/sse.js"
 import { supabase } from "../lib/supabase.js"
@@ -691,9 +692,7 @@ export async function pipelinesRoutes(app: FastifyInstance) {
       // Create a jobs row for credit accounting (matches the ai-writer /
       // adjust-volume pattern — synchronous LLM call, jobs row exists only
       // to anchor the credit reservation for commit/refund).
-      const { data: job, error: jobErr } = await supabase
-        .from("jobs")
-        .insert({
+      const { data: job, error: jobErr } = await insertJob(req, {
           user_id: userId,
           status: "pending",
           input_data: {
@@ -703,8 +702,6 @@ export async function pipelinesRoutes(app: FastifyInstance) {
             feedback: body.data.feedback,
           },
         })
-        .select("id")
-        .single()
       if (jobErr || !job) {
         return reply
           .status(500)

@@ -57,6 +57,12 @@ export interface AdminJob {
   readonly workflow_id: string | null
   readonly workflow_name: string
   readonly workflow_execution_id: string | null
+  /** Which surface created the job — mcp | web | cli | sdk | app | api |
+   *  internal. Null for rows predating migration 282. */
+  readonly source: string | null
+  /** Specific identity within `source`: MCP client name, browser origin host,
+   *  client package/version, or developer-app id. */
+  readonly source_detail: string | null
   readonly workflow_project_id: string | null
   /** Set by Phase 1 reconciliation: which upstream provider type was called. */
   readonly provider_kind: string | null
@@ -220,6 +226,8 @@ interface JobRow {
   user_id: string
   workflow_id: string | null
   workflow_execution_id: string | null
+  source: string | null
+  source_detail: string | null
   provider_kind: string | null
   provider_task_id: string | null
   reconcile_attempts: number | null
@@ -240,7 +248,7 @@ export function useAdminJobs(
       const supabase = createClient()
       let query = supabase
         .from("jobs")
-        .select("id, status, job_type, credits, provider, provider_cost, display_cost, error_message, input_data, output_data, created_at, started_at, completed_at, user_id, workflow_id, workflow_execution_id, provider_kind, provider_task_id, reconcile_attempts, reconcile_last_error, provider_call_started_at") as unknown as {
+        .select("id, status, job_type, credits, provider, provider_cost, display_cost, error_message, input_data, output_data, created_at, started_at, completed_at, user_id, workflow_id, workflow_execution_id, source, source_detail, provider_kind, provider_task_id, reconcile_attempts, reconcile_last_error, provider_call_started_at") as unknown as {
           order: (col: string, opts: { ascending: boolean }) => typeof query
           range: (from: number, to: number) => typeof query
           eq: (col: string, val: string) => typeof query
@@ -290,6 +298,8 @@ export function useAdminJobs(
         workflow_name: wfMap.get(j.workflow_id ?? "")?.name ?? "Unknown",
         workflow_execution_id: j.workflow_execution_id ?? null,
         workflow_project_id: wfMap.get(j.workflow_id ?? "")?.project_id ?? null,
+        source: j.source ?? null,
+        source_detail: j.source_detail ?? null,
         provider_kind: j.provider_kind ?? null,
         provider_task_id: j.provider_task_id ?? null,
         reconcile_attempts: j.reconcile_attempts ?? 0,

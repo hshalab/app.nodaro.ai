@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify"
 import { z } from "zod"
 import { config } from "../lib/config.js"
+import { insertJob } from "../lib/insert-job.js"
 import { supabase } from "../lib/supabase.js"
 import { llmComplete } from "../lib/llm-client.js"
 import { creditGuard, reserveCreditsForJob } from "../middleware/credit-guard.js"
@@ -112,17 +113,13 @@ export async function llmSuggestDescriptionRoutes(app: FastifyInstance) {
 
       // Audit-trail job row (mirrors qa-check / image-to-text). Reserve credits
       // against it; commit on success, refund on any failure.
-      const { data: job, error: jobError } = await supabase
-        .from("jobs")
-        .insert({
+      const { data: job, error: jobError } = await insertJob(req, {
           workflow_id: extractWorkflowId(req.body),
           node_id: extractNodeId(req.body),
           user_id: userId,
           status: "pending",
           input_data: { type: "llm-suggest-description", kind: parsed.data.kind },
         })
-        .select("id")
-        .single()
       if (jobError || !job) {
         return sendInternalError(reply, req, jobError, "Failed to create job")
       }

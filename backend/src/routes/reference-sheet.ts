@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify"
 import { supabase } from "../lib/supabase.js"
+import { insertJob } from "../lib/insert-job.js"
 import { videoQueue } from "../lib/queue.js"
 import { creditGuard, reserveCreditsForJob } from "../middleware/credit-guard.js"
 import { referenceSheetBody } from "./reference-sheet.schema.js"
@@ -45,9 +46,7 @@ export async function referenceSheetRoutes(app: FastifyInstance): Promise<void> 
       }
 
       const mcpClient = extractMcpClient(req.body)
-      const { data: job, error: jobErr } = await supabase
-        .from("jobs")
-        .insert({
+      const { data: job, error: jobErr } = await insertJob(req, {
           workflow_id: extractWorkflowId(req.body),
           node_id: extractNodeId(req.body),
           force_private: extractForcePrivate(req.body) || undefined,
@@ -57,7 +56,6 @@ export async function referenceSheetRoutes(app: FastifyInstance): Promise<void> 
           input_data: buildJobInputData(parsed.data, "reference-sheet"),
           ...(mcpClient ? { mcp_client: mcpClient } : {}),
         })
-        .select("id").single()
       if (jobErr || !job) return sendInternalError(reply, req, jobErr, "Failed to create job")
 
       const reservation = await reserveCreditsForJob(req, reply, job.id, sheetCreditId(body))

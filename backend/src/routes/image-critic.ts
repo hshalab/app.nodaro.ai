@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify"
 import { z } from "zod"
 import { LLM_ROUTE_DEFAULTS, IMAGE_CRITIC_MODES, ImageCriticResultSchema, LLM_MODEL_IDS, LLM_REASONING_EFFORTS, LLM_FEATURE_DEFAULTS, buildLlmCreditIdentifier, resolveLlmCreditId, type ImageCriticMode, type ImageCriticResult } from "@nodaro/shared"
 import { LLM_ADVANCED_SHAPE, advancedModeError, resolveLlmParams } from "../lib/llm-advanced-mode.js"
+import { insertJob } from "../lib/insert-job.js"
 import { supabase } from "../lib/supabase.js"
 import { creditGuard, reserveCreditsForJob } from "../middleware/credit-guard.js"
 import { llmComplete, type LlmContentBlock } from "../lib/llm-client.js"
@@ -137,9 +138,7 @@ export async function imageCriticRoutes(app: FastifyInstance) {
       if (advancedError) return reply.status(400).send({ error: advancedError })
       const modelIdentifier = buildLlmCreditIdentifier("image-critic", llmModel, parsed.data.reasoningEffort, parsed.data.advancedMode)
 
-      const { data: job, error: jobError } = await supabase
-        .from("jobs")
-        .insert({
+      const { data: job, error: jobError } = await insertJob(req, {
           workflow_id: extractWorkflowId(req.body),
           node_id: extractNodeId(req.body),
           force_private: extractForcePrivate(req.body) || undefined,
@@ -147,8 +146,6 @@ export async function imageCriticRoutes(app: FastifyInstance) {
           status: "pending",
           input_data: buildJobInputData(parsed.data, "image-critic"),
         })
-        .select("id")
-        .single()
 
       if (jobError || !job) {
         return sendInternalError(reply, req, jobError, "Failed to create job")

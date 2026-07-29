@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify"
 import { z } from "zod"
 import { supabase } from "../lib/supabase.js"
+import { insertJob } from "../lib/insert-job.js"
 import { safeUrlSchema } from "../lib/url-validator.js"
 import { safeFetch } from "../lib/safe-fetch.js"
 import { extractWorkflowId, extractNodeId, extractForcePrivate } from "../lib/request-helpers.js"
@@ -31,9 +32,7 @@ export async function webhookOutputRoutes(app: FastifyInstance) {
     const userId = req.userId
 
     // Create job record
-    const { data: job, error: jobError } = await supabase
-      .from("jobs")
-      .insert({
+    const { data: job, error: jobError } = await insertJob(req, {
         workflow_id: extractWorkflowId(req.body),
         node_id: extractNodeId(req.body),
         force_private: extractForcePrivate(req.body) || undefined,
@@ -42,8 +41,6 @@ export async function webhookOutputRoutes(app: FastifyInstance) {
         provider: "webhook-output",
         input_data: buildJobInputData(parsed.data, "webhook-output"),
       })
-      .select("id")
-      .single()
 
     if (jobError || !job) {
       return reply.status(500).send({ error: "Failed to create job record" })

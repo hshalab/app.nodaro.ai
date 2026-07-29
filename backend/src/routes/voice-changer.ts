@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify"
 import { sendInternalError } from "../lib/http-errors.js"
+import { insertJob } from "../lib/insert-job.js"
 import { z } from "zod"
 import { VOICE_CHANGER_MODEL_IDS } from "@nodaro/shared"
 import { supabase } from "../lib/supabase.js"
@@ -58,9 +59,7 @@ export async function voiceChangerRoutes(app: FastifyInstance) {
 
     const mcpClient = extractMcpClient(req.body)
 
-    const { data: job, error } = await supabase
-      .from("jobs")
-      .insert({
+    const { data: job, error } = await insertJob(req, {
         workflow_id: extractWorkflowId(req.body),
         node_id: extractNodeId(req.body),
         force_private: extractForcePrivate(req.body) || undefined,
@@ -69,8 +68,6 @@ export async function voiceChangerRoutes(app: FastifyInstance) {
         input_data: buildJobInputData(parsed.data, "voice-changer"),
         ...(mcpClient ? { mcp_client: mcpClient } : {}),
       })
-      .select("id")
-      .single()
 
     if (error) {
       return sendInternalError(reply, req, error, "Failed to change voice")

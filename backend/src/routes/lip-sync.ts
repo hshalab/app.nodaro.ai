@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify"
 import { z } from "zod"
 import { safeUrlSchema } from "../lib/url-validator.js"
+import { insertJob } from "../lib/insert-job.js"
 import { supabase } from "../lib/supabase.js"
 import { videoQueue } from "../lib/queue.js"
 import { creditGuard, reserveCreditsForJob } from "../middleware/credit-guard.js"
@@ -141,9 +142,7 @@ export async function lipSyncRoutes(app: FastifyInstance) {
 
     const mcpClient = extractMcpClient(req.body)
 
-    const { data: job, error } = await supabase
-      .from("jobs")
-      .insert({
+    const { data: job, error } = await insertJob(req, {
         workflow_id: extractWorkflowId(req.body),
         node_id: extractNodeId(req.body),
         force_private: extractForcePrivate(req.body) || undefined,
@@ -152,8 +151,6 @@ export async function lipSyncRoutes(app: FastifyInstance) {
         input_data: buildJobInputData(parsed.data, "lip-sync"),
         ...(mcpClient ? { mcp_client: mcpClient } : {}),
       })
-      .select("id")
-      .single()
 
     if (error) {
       return sendInternalError(reply, req, error, "Failed to create job")

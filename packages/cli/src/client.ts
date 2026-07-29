@@ -2,6 +2,11 @@ import { createClient, StaticTokenAuth, NodaroError, UnauthorizedError } from "@
 import pc from "picocolors"
 import { getProfile } from "./config.js"
 
+/** Replaced at build time by tsup `define` from package.json; the fallback
+ *  keeps source-mode runs (tsx / vitest) working. */
+declare const __CLI_VERSION__: string | undefined
+const CLI_VERSION = typeof __CLI_VERSION__ === "string" ? __CLI_VERSION__ : "0.0.0-dev"
+
 export function buildClient(profileName?: string): ReturnType<typeof createClient> {
   const { name, profile } = getProfile(profileName)
   if (!profile) {
@@ -12,6 +17,10 @@ export function buildClient(profileName?: string): ReturnType<typeof createClien
   return createClient({
     baseUrl: profile.baseUrl,
     auth: new StaticTokenAuth(profile.token),
+    // Without this the CLI is indistinguishable from any other SDK consumer:
+    // it IS an SDK consumer, so it would otherwise report `sdk/<sdk version>`
+    // and every CLI-created job would be filed under the wrong surface.
+    clientLabel: `cli/${CLI_VERSION}`,
   })
 }
 

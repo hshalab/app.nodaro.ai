@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify"
 import { z } from "zod"
 import { supabase } from "../lib/supabase.js"
+import { insertJob } from "../lib/insert-job.js"
 import { executeAppRun } from "../services/app-execution.js"
 import { buildCreditModelIdentifier } from "@nodaro/shared"
 import type { ComponentMetadata } from "@nodaro/shared"
@@ -74,9 +75,7 @@ export async function componentExecuteRoutes(app: FastifyInstance) {
       appSlug,
       inputs: inputOverrides ?? {},
     }
-    const { data: wrapperJob, error: jobError } = await supabase
-      .from("jobs")
-      .insert({
+    const { data: wrapperJob, error: jobError } = await insertJob(req, {
         user_id: req.userId,
         provider: "component",
         status: "processing",
@@ -85,8 +84,6 @@ export async function componentExecuteRoutes(app: FastifyInstance) {
         ...(workflowId ? { workflow_id: workflowId } : {}),
         ...(mcpClient ? { mcp_client: mcpClient } : {}),
       })
-      .select("id")
-      .single()
 
     if (jobError || !wrapperJob) {
       return sendInternalError(reply, req, jobError, "Failed to create component job")

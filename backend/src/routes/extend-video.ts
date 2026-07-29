@@ -12,6 +12,7 @@
 import type { FastifyInstance } from "fastify"
 import { z } from "zod"
 import { safeUrlSchema } from "../lib/url-validator.js"
+import { insertJob } from "../lib/insert-job.js"
 import { supabase } from "../lib/supabase.js"
 import { kieTaskOwnedByAnother } from "../lib/kie-task-ownership.js"
 import { videoQueue } from "../lib/queue.js"
@@ -146,9 +147,7 @@ export async function extendVideoRoutes(app: FastifyInstance) {
     // job_type powers the reconcile cron's correct finalization path —
     // see lib/reconcile/replicate.ts (defaults to "generate-image" when
     // null, which mis-uploads videos as images for LTX prediction jobs).
-    const { data: job, error } = await supabase
-      .from("jobs")
-      .insert({
+    const { data: job, error } = await insertJob(req, {
         workflow_id: extractWorkflowId(req.body),
         node_id: extractNodeId(req.body),
         force_private: extractForcePrivate(req.body) || undefined,
@@ -158,8 +157,6 @@ export async function extendVideoRoutes(app: FastifyInstance) {
         input_data: buildJobInputData(parsed.data, "extend-video"),
         ...(mcpClient ? { mcp_client: mcpClient } : {}),
       })
-      .select("id")
-      .single()
 
     if (error) {
       return sendInternalError(reply, req, error, "Failed to create job")

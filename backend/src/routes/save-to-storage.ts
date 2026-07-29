@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify"
 import { sendInternalError } from "../lib/http-errors.js"
+import { insertJob } from "../lib/insert-job.js"
 import { z } from "zod"
 import { supabase } from "../lib/supabase.js"
 import { uploadToR2 } from "../lib/storage.js"
@@ -73,9 +74,7 @@ export async function saveToStorageRoutes(app: FastifyInstance) {
     const detectedType: MediaType = parsed.data.mediaType ?? detectMediaType(mediaUrl)
 
     // Create a job record
-    const { data: job, error: jobError } = await supabase
-      .from("jobs")
-      .insert({
+    const { data: job, error: jobError } = await insertJob(req, {
         workflow_id: extractWorkflowId(req.body),
         node_id: extractNodeId(req.body),
         force_private: extractForcePrivate(req.body) || undefined,
@@ -83,8 +82,6 @@ export async function saveToStorageRoutes(app: FastifyInstance) {
         status: "pending",
         input_data: { ...buildJobInputData(parsed.data, "save-to-storage"), mediaType: detectedType },
       })
-      .select("id")
-      .single()
 
     if (jobError) {
       return sendInternalError(reply, req, jobError, "Failed to save to storage")

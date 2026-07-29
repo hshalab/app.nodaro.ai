@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify"
 import { sendInternalError } from "../lib/http-errors.js"
+import { insertJob } from "../lib/insert-job.js"
 import { z } from "zod"
 import { safeUrlSchema } from "../lib/url-validator.js"
 import { supabase } from "../lib/supabase.js"
@@ -39,9 +40,7 @@ export async function trimAudioRoutes(app: FastifyInstance) {
     const modelIdentifier = "trim-audio"
     const mcpClient = extractMcpClient(req.body)
 
-    const { data: job, error } = await supabase
-      .from("jobs")
-      .insert({
+    const { data: job, error } = await insertJob(req, {
         workflow_id: extractWorkflowId(req.body),
         node_id: extractNodeId(req.body),
         force_private: extractForcePrivate(req.body) || undefined,
@@ -50,8 +49,6 @@ export async function trimAudioRoutes(app: FastifyInstance) {
         input_data: buildJobInputData(parsed.data, "trim-audio"),
         ...(mcpClient ? { mcp_client: mcpClient } : {}),
       })
-      .select("id")
-      .single()
 
     if (error) {
       return sendInternalError(reply, req, error, "Failed to trim audio")

@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify"
 import { z } from "zod"
 import { supabase } from "../lib/supabase.js"
+import { insertJob } from "../lib/insert-job.js"
 import { config } from "../lib/config.js"
 import { creditGuard, reserveCreditsForJob } from "../middleware/credit-guard.js"
 import { CreditsService } from "../ee/billing/credits.js"
@@ -77,9 +78,7 @@ export async function imageToTextRoutes(app: FastifyInstance) {
       const mcpClient = extractMcpClient(req.body)
 
       // Create a job record for audit trail
-      const { data: job, error: jobError } = await supabase
-        .from("jobs")
-        .insert({
+      const { data: job, error: jobError } = await insertJob(req, {
           workflow_id: extractWorkflowId(req.body),
           node_id: extractNodeId(req.body),
         force_private: extractForcePrivate(req.body) || undefined,
@@ -88,8 +87,6 @@ export async function imageToTextRoutes(app: FastifyInstance) {
           input_data: buildJobInputData(parsed.data, "image-to-text"),
           ...(mcpClient ? { mcp_client: mcpClient } : {}),
         })
-        .select("id")
-        .single()
 
       if (jobError) {
         return sendInternalError(reply, req, jobError, "Failed to create job")
