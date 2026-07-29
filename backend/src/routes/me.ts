@@ -28,7 +28,7 @@ export async function meRoutes(app: FastifyInstance) {
     // nullable, so coalesce to "free" to keep `tier` a non-null string.
     const { data: profile, error } = await supabase
       .from("profiles")
-      .select("id, email, full_name, avatar_url, subscription_tier")
+      .select("id, email, full_name, avatar_url, tier, subscription_tier")
       .eq("id", userId)
       .single()
 
@@ -42,7 +42,11 @@ export async function meRoutes(app: FastifyInstance) {
         email: profile.email,
         displayName: profile.full_name ?? null,
         avatarUrl: profile.avatar_url ?? null,
-        tier: profile.subscription_tier ?? "free",
+        // `tier` first: it is the column the Stripe paths write, so it tracks
+        // reality; `subscription_tier` is the fallback for rows predating it.
+        // Inlined rather than importing ee/billing/tier-columns.ts — core may
+        // not statically import from ee/ (tools/check-ee-imports.mjs).
+        tier: profile.tier ?? profile.subscription_tier ?? "free",
       },
     })
   })

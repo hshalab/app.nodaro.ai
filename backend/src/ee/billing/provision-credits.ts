@@ -13,6 +13,7 @@ import {
   TIER_CREDITS,
   TIER_STORAGE_LIMITS,
 } from "./stripe-config.js"
+import { tierColumns } from "./tier-columns.js"
 import { CreditsService } from "./credits.js"
 import { invalidateBalanceCache } from "../routes/credits.js"
 
@@ -123,7 +124,7 @@ export async function handleSubscriptionCreated(
   const { error: profileError } = await supabase
     .from("profiles")
     .update({
-      tier,
+      ...tierColumns(tier),
       subscription_credits: credits,
       credits_reset_at: new Date().toISOString(),
       storage_limit_bytes: storageLimit,
@@ -295,7 +296,7 @@ export async function handleSubscriptionUpdated(
   const { error: profileError } = await supabase
     .from("profiles")
     .update({
-      tier: newTier,
+      ...tierColumns(newTier),
       storage_limit_bytes: storageLimit,
       current_period_end: data.currentPeriodEnd,
       // Clear any stale cancellation marker — an updated/active subscription is
@@ -361,7 +362,7 @@ export async function handleSubscriptionCanceled(
   const { error: profileError } = await supabase
     .from("profiles")
     .update({
-      tier: "free",
+      ...tierColumns("free"),
       subscription_credits: cappedCredits,
       storage_limit_bytes: TIER_STORAGE_LIMITS.free,
       subscription_ended_at: now,

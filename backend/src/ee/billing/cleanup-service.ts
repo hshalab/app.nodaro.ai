@@ -1,6 +1,7 @@
 import { supabase } from "../../lib/supabase.js"
 import { config } from "../../lib/config.js"
 import { deleteFromR2, batchDeleteFromR2, listObjectsByPrefixWithMeta } from "../../lib/storage.js"
+import { tierColumns } from "./tier-columns.js"
 /**
  * R2 prefix under which the video-analysis worker writes its transient
  * intermediates (`<prefix>/<jobId>/{source.mp4,window-<k>.mp4,state.json}`).
@@ -543,7 +544,7 @@ export async function cleanupCanceledUserMedia(): Promise<CleanupResult> {
     await supabase
       .from("profiles")
       .update({
-        tier: FREE_TIER_DEFAULTS.tier,
+        ...tierColumns(FREE_TIER_DEFAULTS.tier),
         subscription_credits: FREE_TIER_DEFAULTS.subscription_credits,
         storage_limit_bytes: FREE_TIER_DEFAULTS.storage_limit_bytes,
         storage_used_bytes: 0,
@@ -625,7 +626,7 @@ export async function expireSubscriptions(): Promise<ExpiryResult> {
       await supabase
         .from("profiles")
         .update({
-          tier: FREE_TIER_DEFAULTS.tier,
+          ...tierColumns(FREE_TIER_DEFAULTS.tier),
           subscription_credits: FREE_TIER_DEFAULTS.subscription_credits,
           storage_limit_bytes: FREE_TIER_DEFAULTS.storage_limit_bytes,
           subscription_ended_at: now,
