@@ -32,6 +32,8 @@ walkthrough-style introduction, see the [SDK Quickstart](./sdk-quickstart.md).
   - [`client.presets`](#clientpresets)
   - [`client.pickerCatalogs`](#clientpickercatalogs)
   - [`client.community`](#clientcommunity)
+  - [`client.templates`](#clienttemplates)
+  - [`client.tutorials`](#clienttutorials)
 - [Type re-exports](#type-re-exports)
 
 ---
@@ -85,7 +87,7 @@ a developer-app OAuth token) resolves to its owner's identity. Throws
 
 ```ts
 const me = await client.me()
-// { id, email, displayName, avatarUrl, tier }
+// { id, email, displayName, avatarUrl, tier, isAdmin }
 ```
 
 **Signature:** `me(): Promise<UserIdentity>`
@@ -99,6 +101,7 @@ Returns `UserIdentity`:
 | `displayName` | `string \| null` | Human-readable display name (from `profiles.full_name`); `null` if unset. |
 | `avatarUrl` | `string \| null` | Avatar URL; `null` if unset. |
 | `tier` | `string` | Subscription tier (e.g. `"free"`, `"pro"`). |
+| `isAdmin` | `boolean` | Whether the user holds an admin role. **Descriptive only** — use it to decide whether to render admin UI instead of capability-probing an admin endpoint; every admin API stays enforced server-side regardless. |
 
 ---
 
@@ -3306,6 +3309,73 @@ await client.community.report(listingId, "real_person_no_consent")
 
 ---
 
+### `client.templates`
+
+The workflow-template marketplace — the public-by-design surfaces only:
+browse, a single template with its full snapshot, and the free
+clone-into-my-project action. Creator and admin surfaces (publish, mine,
+favorites, metadata patch, tutorial flags) are deliberately not part of the
+public SDK contract.
+
+#### `browse(params?)`
+
+```ts
+browse(params?: BrowseTemplatesParams): Promise<BrowseTemplatesResult>
+```
+
+`GET /v1/templates/browse` → cursor-paginated marketplace cards (no auth
+required). `params`: `cursor`, `limit`, `category`, `outputType`, `tag`,
+`search` (full-text), `sort` (`"newest"` default | `"popular"` |
+`"most-favorited"`), `nodeType`, `provider`, `complexity`. Returns
+`{ data: TemplateBrowseCard[], nextCursor: string | null }` — pass
+`nextCursor` back as `cursor` for the next page.
+
+```ts
+const page = await client.templates.browse({ sort: "popular", search: "trailer" })
+```
+
+#### `get(slug)`
+
+```ts
+get(slug: string): Promise<Template>
+```
+
+`GET /v1/templates/:slug` → one public template including its full workflow
+snapshot (`snapshotNodes` / `snapshotEdges` / `snapshotSettings`) for
+read-only viewers. 404 when the slug is unknown, unlisted, or inactive.
+
+#### `clone(slug, params)`
+
+```ts
+clone(slug: string, params: CloneTemplateParams): Promise<CloneTemplateResult>
+```
+
+`POST /v1/templates/:slug/clone` → clone the template into one of the
+caller's projects. Free — no credits charged. `params`:
+`{ projectId, name? }` (name defaults to the template's). Returns
+`{ workflowId, projectId }`.
+
+```ts
+const { workflowId } = await client.templates.clone("noir-trailer", { projectId })
+```
+
+---
+
+### `client.tutorials`
+
+#### `list()`
+
+```ts
+list(): Promise<{ categories: TutorialCategory[] }>
+```
+
+`GET /v1/tutorials` → every enabled tutorial category with its video
+tutorials (`videos`) and flow tutorials (`flows` — workflow templates flagged
+as tutorials; each flow's `slug` feeds `client.templates.get`/`clone`).
+Public, read-only; curation is an admin surface outside the public SDK.
+
+---
+
 ## Type re-exports
 
 Every type used in a public method signature is re-exported from
@@ -3313,8 +3383,15 @@ Every type used in a public method signature is re-exported from
 
 ### Client identity
 
-- `UserIdentity` — return type of `client.me()`: `{ id, email, displayName: string | null, avatarUrl: string | null, tier }`
+- `UserIdentity` — return type of `client.me()`: `{ id, email, displayName: string | null, avatarUrl: string | null, tier, isAdmin }`
 - `ClientOptions` — `createClient` options: `{ baseUrl, auth, fetch?, timeoutMs?, clientLabel? }`
+
+### Templates & tutorials
+
+- `TemplateBrowseCard` / `BrowseTemplatesParams` / `BrowseTemplatesResult` / `TemplateSort` — marketplace browse
+- `Template` — full public template incl. `snapshotNodes` / `snapshotEdges` / `snapshotSettings`
+- `CloneTemplateParams` / `CloneTemplateResult` — `{ projectId, name? }` → `{ workflowId, projectId }`
+- `TutorialCategory` / `TutorialVideoItem` / `TutorialFlowItem` — grouped `client.tutorials.list()` response
 
 ### Workflows
 

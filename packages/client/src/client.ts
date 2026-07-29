@@ -25,6 +25,8 @@ import { LibraryResource } from "./resources/library.js"
 import { PresetsResource } from "./resources/node-presets.js"
 import { PickerCatalogsResource } from "./resources/picker-catalogs.js"
 import { CommunityResource } from "./resources/community.js"
+import { TemplatesResource } from "./resources/templates.js"
+import { TutorialsResource } from "./resources/tutorials.js"
 
 /** Replaced at build time by tsup `define` from package.json. The fallback
  *  keeps `tsx`/vitest runs of the source working, where no define applies. */
@@ -103,6 +105,12 @@ export interface UserIdentity {
   readonly avatarUrl: string | null
   /** Subscription tier (e.g. "free", "pro"). */
   readonly tier: string
+  /**
+   * Whether the user holds an admin role. DESCRIPTIVE only — use it to decide
+   * whether to render admin surfaces without capability-probing an admin
+   * endpoint; every admin API stays enforced server-side regardless.
+   */
+  readonly isAdmin: boolean
 }
 
 export class NodaroClient {
@@ -150,6 +158,8 @@ export class NodaroClient {
   readonly presets: PresetsResource
   readonly pickerCatalogs: PickerCatalogsResource
   readonly community: CommunityResource
+  readonly templates: TemplatesResource
+  readonly tutorials: TutorialsResource
 
   constructor(opts: ClientOptions) {
     this.baseUrl = opts.baseUrl.replace(/\/$/, "")  // strip trailing slash
@@ -186,6 +196,8 @@ export class NodaroClient {
     this.presets = new PresetsResource(this)
     this.pickerCatalogs = new PickerCatalogsResource(this)
     this.community = new CommunityResource(this)
+    this.templates = new TemplatesResource(this)
+    this.tutorials = new TutorialsResource(this)
   }
 
   async request<T>(method: string, path: string, options: RequestOptions = {}): Promise<T> {

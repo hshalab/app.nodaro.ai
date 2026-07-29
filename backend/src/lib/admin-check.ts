@@ -3,6 +3,11 @@ import { supabase } from "./supabase.js"
 const adminCache = new Map<string, { isAdmin: boolean; expiresAt: number }>()
 const CACHE_TTL_MS = 300_000 // 5 minutes — role changes are rare
 
+/** Single source of truth for which `profiles.role` values count as admin. */
+export function roleIsAdmin(role: string | null | undefined): boolean {
+  return role === "admin" || role === "super_admin"
+}
+
 export async function checkIsAdmin(userId: string): Promise<boolean> {
   const cached = adminCache.get(userId)
   if (cached && Date.now() < cached.expiresAt) return cached.isAdmin
@@ -18,7 +23,7 @@ export async function checkIsAdmin(userId: string): Promise<boolean> {
     throw new Error(`Admin check failed: ${error.message}`)
   }
 
-  const isAdmin = data?.role === "admin" || data?.role === "super_admin"
+  const isAdmin = roleIsAdmin(data?.role)
   adminCache.set(userId, { isAdmin, expiresAt: Date.now() + CACHE_TTL_MS })
   return isAdmin
 }
@@ -28,8 +33,7 @@ export async function checkIsAdmin(userId: string): Promise<boolean> {
  * Avoids a separate DB round-trip when the role is already known.
  */
 export function warmAdminCache(userId: string, role: string | null | undefined): void {
-  const isAdmin = role === "admin" || role === "super_admin"
-  adminCache.set(userId, { isAdmin, expiresAt: Date.now() + CACHE_TTL_MS })
+  adminCache.set(userId, { isAdmin: roleIsAdmin(role), expiresAt: Date.now() + CACHE_TTL_MS })
 }
 
 /**

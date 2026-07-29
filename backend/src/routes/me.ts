@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify"
 import { supabase } from "../lib/supabase.js"
+import { roleIsAdmin, warmAdminCache } from "../lib/admin-check.js"
 
 /**
  * GET /v1/me — the canonical identity / token-introspection endpoint.
@@ -12,8 +13,12 @@ import { supabase } from "../lib/supabase.js"
  * catalog has no identity/profile scope, and inventing one would be unwanted
  * surface. Finer PII scoping can be layered later if a real need appears.
  *
- * Returns IDENTITY, not settings — `{ id, email, displayName, avatarUrl, tier }`.
- * Mutable preferences live at `/v1/user/settings`; do not duplicate them here.
+ * Returns IDENTITY, not settings — `{ id, email, displayName, avatarUrl, tier,
+ * isAdmin }`. Mutable preferences live at `/v1/user/settings`; do not
+ * duplicate them here. `isAdmin` is DESCRIPTIVE only (lets clients decide
+ * whether to render admin surfaces instead of capability-probing an admin
+ * endpoint); every admin route stays enforced server-side by the admin
+ * middleware, which this flag never bypasses.
  */
 export async function meRoutes(app: FastifyInstance) {
   app.get("/v1/me", async (req, reply) => {
@@ -28,13 +33,17 @@ export async function meRoutes(app: FastifyInstance) {
     // nullable, so coalesce to "free" to keep `tier` a non-null string.
     const { data: profile, error } = await supabase
       .from("profiles")
-      .select("id, email, full_name, avatar_url, tier, subscription_tier")
+      .select("id, email, full_name, avatar_url, tier, subscription_tier, role")
       .eq("id", userId)
       .single()
 
     if (error || !profile) {
       return reply.status(404).send({ error: "Profile not found" })
     }
+
+    // The role is already in hand — pre-warm the admin cache so a subsequent
+    // admin-gated call skips its profile round-trip (mirrors creditGuard).
+    warmAdminCache(userId, profile.role)
 
     return reply.send({
       data: {
@@ -47,6 +56,7 @@ export async function meRoutes(app: FastifyInstance) {
         // Inlined rather than importing ee/billing/tier-columns.ts — core may
         // not statically import from ee/ (tools/check-ee-imports.mjs).
         tier: profile.tier ?? profile.subscription_tier ?? "free",
+        isAdmin: roleIsAdmin(profile.role),
       },
     })
   })
