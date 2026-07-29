@@ -301,9 +301,9 @@ function SpeechToVideoNodeComponent({ id, data, selected }: NodeProps) {
             onClick={(e) => { e.stopPropagation(); copyToClipboard(activeUrl!, "URL copied") }} title="Copy URL">
             <Link className="w-3.5 h-3.5" />
           </button>
-          <button type="button" aria-label="Edit in Nodaro"
+          <button type="button" aria-label="Edit in NodarCut"
             className="w-7 h-7 flex items-center justify-center bg-black/40 backdrop-blur-sm hover:bg-black/60 border border-white/10 text-white rounded-full shadow-sm"
-            onClick={(e) => { e.stopPropagation(); openFreeCut(id, activeUrl!, activeResult?.freecutProjectUrl) }} title="Edit in Nodaro">
+            onClick={(e) => { e.stopPropagation(); openFreeCut(id, activeUrl!, activeResult?.freecutProjectUrl) }} title="Edit in NodarCut">
             <Scissors className="w-3.5 h-3.5" />
           </button>
         </div>

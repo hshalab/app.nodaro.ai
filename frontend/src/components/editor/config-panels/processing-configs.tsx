@@ -1696,7 +1696,7 @@ export function ManualEditConfig({ data, onUpdate }: ConfigProps<ManualEditData>
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground mt-1">
-          {mode === "bypass" ? "Passes input through during workflow run. Open editor manually anytime." : "Pauses workflow until you finish editing in the Nodaro Editor."}
+          {mode === "bypass" ? "Passes input through during workflow run. Open editor manually anytime." : "Pauses workflow until you finish editing in the NodarCut Editor."}
         </p>
       </div>
 
@@ -1722,7 +1722,7 @@ export function ManualEditConfig({ data, onUpdate }: ConfigProps<ManualEditData>
       )}
 
       <p className="text-[10px] text-muted-foreground">
-        0 credits — connect videos, images, and audio. Open the Nodaro Editor to edit anytime.
+        0 credits — connect videos, images, and audio. Open the NodarCut Editor to edit anytime.
       </p>
     </div>
   )
