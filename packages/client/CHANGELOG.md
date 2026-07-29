@@ -1,5 +1,58 @@
 # @nodaro/sdk
 
+## 1.12.0
+
+### Minor Changes
+
+- 6cf8fc5: Identify the calling client to the backend, so job origin is recordable.
+
+  Both packages now send an `X-Nodaro-Client` header — `sdk/<version>` and
+  `cli/<version>` respectively — which the backend stores as the job's origin.
+  Until now an operator looking at a job could not tell a CLI run from an SDK
+  integration from a raw REST call: all three looked identical on the server.
+
+  `createClient` gains a `clientLabel` option for anyone building another wrapper
+  around the SDK; the CLI uses it to avoid reporting itself as plain SDK traffic.
+  Both versions are injected at build time from `package.json`, so the reported
+  version cannot drift from the released one.
+
+  The header is sent only where it adds information: in a browser the `Origin`
+  header already identifies the app and the backend prefers it, so the default
+  label is suppressed there. That also avoids making browser apps depend on the
+  header being present in the server's CORS `Access-Control-Allow-Headers` — a
+  lagging or self-hosted backend would otherwise fail the preflight and break
+  every call from the page.
+
+  No behaviour changes for existing callers, and older versions keep working —
+  they are simply recorded as generic API calls.
+
+### Patch Changes
+
+- 46e2def: Don't send `X-Nodaro-Client` from a browser, and let `Origin` identify the app.
+
+  The header was introduced (unreleased) so the backend could tell CLI and
+  server-side SDK traffic apart. In a browser it is both redundant and risky:
+
+  - Redundant — the browser already sends `Origin`, which names the actual product
+    (`studio.nodaro.ai`) rather than the library that made the call. The backend
+    now prefers `Origin`, so a browser-sent header is discarded on arrival.
+  - Risky — `X-Nodaro-Client` is not a CORS-safelisted request header, so sending
+    it from a page requires an exact match in the server's
+    `Access-Control-Allow-Headers`. Against a backend that predates that entry the
+    PREFLIGHT fails, breaking every API call from the app rather than just its
+    provenance. Self-hosted and lagging deployments make that a real risk.
+
+  The default label is therefore suppressed in browsers. An explicit `clientLabel`
+  is always sent — naming yourself is a deliberate act — which is how `@nodaro/cli`
+  stays distinguishable.
+
+  No action needed by browser apps: they are identified by `Origin`, which they
+  already send.
+
+- Updated dependencies [320ea3c]
+- Updated dependencies [320ea3c]
+  - @nodaro/shared@1.24.0
+
 ## 1.11.0
 
 ### Minor Changes
