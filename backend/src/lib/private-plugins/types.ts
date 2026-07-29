@@ -865,7 +865,22 @@ export interface PluginLlmRequest {
 export type PluginLlmContentBlock =
   | { type: "text"; text: string }
   | { type: "image"; url: string }
-  | { type: "video"; url: string; mimeType?: string }
+  | {
+      type: "video"
+      url: string
+      mimeType?: string
+      /**
+       * Frame sampling rate — Gemini's default is 1 fps, and this is the only
+       * way to give an analysis roll more frames of the same clip. Mirrors
+       * `LlmContentBlock`'s field; see there for the token cost (~66/frame).
+       *
+       * Additive-optional, so a plugin built before this field is unaffected and
+       * `CONTRACT_VERSION` does not move. Only meaningful on the direct lane —
+       * the KIE builder throws rather than silently sampling at 1 fps — which
+       * the multimodal path already pins by default.
+       */
+      fps?: number
+    }
 
 /**
  * Multimodal structured request — mirrors the subset of `lib/llm-client.ts`'s

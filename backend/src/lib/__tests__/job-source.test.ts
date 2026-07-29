@@ -35,6 +35,25 @@ describe("deriveJobSource", () => {
     expect(deriveJobSource(r)).toEqual({ source: "mcp", sourceDetail: "Claude" })
   })
 
+  it("a browser app using the SDK is its ORIGIN, not a generic \"sdk\"", () => {
+    // Every Nodaro client app (studio / person / voice / recast / recut /
+    // stitch) is a browser SPA built on @nodaro/sdk, so it sends BOTH signals.
+    // If the header won, all six would collapse into one undifferentiated
+    // "SDK" row and the per-app visibility this feature exists for would be
+    // gone. This is the test that pins it.
+    for (const host of ["studio.nodaro.ai", "person.nodaro.ai", "voice.nodaro.ai", "recast.nodaro.ai"]) {
+      expect(
+        deriveJobSource(req({ headers: { origin: `https://${host}`, "x-nodaro-client": "sdk/1.12.0" } })),
+        host,
+      ).toEqual({ source: "web", sourceDetail: host })
+    }
+  })
+
+  it("the CLI is unaffected by that ordering — Node sends no Origin", () => {
+    expect(deriveJobSource(req({ headers: { "x-nodaro-client": "cli/1.6.0" } })))
+      .toEqual({ source: "cli", sourceDetail: "cli/1.6.0" })
+  })
+
   it("a developer app beats the client header — which integration matters more than how", () => {
     const r = req({
       appAuthorization: { appId: "app_123", authorizationId: "auth_1", scopes: [] },

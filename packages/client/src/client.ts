@@ -41,6 +41,26 @@ const SDK_VERSION = typeof __SDK_VERSION__ === "string" ? __SDK_VERSION__ : "0.0
  */
 export const CLIENT_HEADER = "X-Nodaro-Client"
 
+/**
+ * In a browser the header is redundant AND a liability, so it is not sent.
+ *
+ * Redundant: the browser already sends `Origin`, which names the actual product
+ * (`studio.nodaro.ai`) rather than merely the library it used — and the backend
+ * deliberately prefers Origin over this header, so a browser-sent value is
+ * discarded on arrival.
+ *
+ * A liability: `X-Nodaro-Client` is not a CORS-safelisted request header, so a
+ * browser sending it requires an exact match in the server's
+ * `Access-Control-Allow-Headers`. Any deployment whose backend predates that
+ * allowlist entry would fail the PREFLIGHT — breaking every API call from the
+ * app, not just its provenance. Self-hosted and lagging deployments make that a
+ * real risk, and nothing in a browser app would reveal the cause.
+ *
+ * An EXPLICIT `clientLabel` is always sent regardless: a caller that names
+ * itself has opted in deliberately, and that intent outranks this default.
+ */
+const isBrowser = (): boolean => typeof window !== "undefined" && typeof window.document !== "undefined"
+
 export interface ClientOptions {
   /** Backend base URL, e.g. "https://nodaro.example.com" or empty string for same-origin. */
   baseUrl: string
@@ -91,6 +111,8 @@ export class NodaroClient {
   readonly timeoutMs: number
   /** Value sent as `X-Nodaro-Client`; recorded by the backend as job provenance. */
   readonly clientLabel: string
+  /** Whether to actually send it — see the note on {@link CLIENT_HEADER}. */
+  private readonly sendClientHeader: boolean
   private readonly fetchOverride: typeof fetch | undefined
 
   /**
@@ -135,6 +157,9 @@ export class NodaroClient {
     this.fetchOverride = opts.fetch
     this.timeoutMs = opts.timeoutMs ?? 60_000
     this.clientLabel = opts.clientLabel ?? `sdk/${SDK_VERSION}`
+    // Explicit label = deliberate opt-in, always sent. The default is suppressed
+    // in browsers — see the note on CLIENT_HEADER.
+    this.sendClientHeader = opts.clientLabel !== undefined || !isBrowser()
 
     this.workflows = new WorkflowsResource(this)
     this.projects = new ProjectsResource(this)
@@ -175,7 +200,7 @@ export class NodaroClient {
       typeof FormData !== "undefined" && options.body instanceof FormData
     const headers: Record<string, string> = {
       ...(isFormData ? {} : { "Content-Type": "application/json" }),
-      [CLIENT_HEADER]: this.clientLabel,
+      ...(this.sendClientHeader ? { [CLIENT_HEADER]: this.clientLabel } : {}),
       ...(options.headers ?? {}),
     }
     if (token) headers["Authorization"] = `Bearer ${token}`

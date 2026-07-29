@@ -212,6 +212,17 @@ export const LLM_MODELS: readonly LlmModelDef[] = [
     // Google documents low/medium/high for 3.1 Pro — no `minimal` tier, so
     // this ladder is deliberately shorter than the flash models'.
     directReasoningEfforts: ["low", "medium", "high"],
+    // NO `reasoningEfforts` (the proxied ladder) ON PURPOSE, not an omission.
+    // That endpoint accepts `reasoning_effort: low | high` and already DEFAULTS
+    // to "high", so leaving it unset gets its deepest setting and a ladder here
+    // would unlock nothing. The two lanes are NOT equivalent at their maxima:
+    // verified 2026-07-29 on identical input, the proxy's ceiling produces
+    // roughly a quarter of the reasoning tokens that the direct lane's
+    // `thinkingLevel: HIGH` does, and it does not expose Google's deeper tiers
+    // at all. That difference is visible in fine-detail reading (small on-screen
+    // text such as a name badge), which is exactly what video-analysis casts
+    // identities from — so adding an entry here would silently move analysis to
+    // the shallower lane. Don't. Full comparison lives with the analysis engine.
     // The ONE Gemini model routed direct-first. It is the premium/low-volume
     // tier (video-analysis `pro`, no LLM_FEATURE_DEFAULTS entry), so the ~4×
     // list-price premium lands on the smallest call volume — and it is where
@@ -666,7 +677,7 @@ export const VIDEO_ANALYSIS_LLM_MODELS: string[] = LLM_MODELS
  * VIDEO_ANALYSIS_LLM_MODELS member AND every such model is reachable by a tier,
  * so adding a video model forces a tier decision instead of silently leaking.
  */
-export const VIDEO_ANALYSIS_TIERS = { fast: "gemini-3.6-flash", pro: "gemini-3.1-pro" } as const
+export const VIDEO_ANALYSIS_TIERS = { fast: "gemini-3-flash", pro: "gemini-3.1-pro" } as const
 export type VideoAnalysisModelTier = keyof typeof VIDEO_ANALYSIS_TIERS
 /**
  * Models that PREVIOUSLY backed a tier, mapped to the tier they backed.
@@ -680,8 +691,13 @@ export type VideoAnalysisModelTier = keyof typeof VIDEO_ANALYSIS_TIERS
  * two-sided decision.
  */
 export const VIDEO_ANALYSIS_LEGACY_MODELS: Record<string, VideoAnalysisModelTier> = {
-  // fast tier's backing model until 2026-07 (superseded by gemini-3.6-flash)
-  "gemini-3-flash": "fast",
+  // Backed the fast tier from 2026-07 until 2026-07-29, when the economy tiers
+  // moved to the cheaper lane and the older, cheaper flash. It is now the engine
+  // behind the `smart` tier — but `smart` is a SENTINEL that never exposes a model
+  // id, so as far as this map is concerned it no longer backs a selectable tier and
+  // belongs here: stored raw `llmModel` values keep resolving and keep pricing
+  // under their own credit family.
+  "gemini-3.6-flash": "fast",
 }
 /**
  * MIXED tiers — advanced multi-engine analysis plans whose identifier resolves
@@ -692,15 +708,30 @@ export const VIDEO_ANALYSIS_LEGACY_MODELS: Record<string, VideoAnalysisModelTier
  * NOT published here (Apache irrevocability; only the wire vocabulary below is
  * contract — the engine lives in the private analysis plugin).
  */
-export const VIDEO_ANALYSIS_MIXED_TIERS = ["mixed", "mixed-fast"] as const
+export const VIDEO_ANALYSIS_MIXED_TIERS = ["mixed", "mixed-fast", "smart"] as const
 export type VideoAnalysisMixedTier = (typeof VIDEO_ANALYSIS_MIXED_TIERS)[number]
-/** UI/listing order — recommended (pro) first. */
-export const VIDEO_ANALYSIS_TIER_ORDER = ["pro", "fast", "mixed", "mixed-fast"] as const
+/**
+ * `smart` is an ENGINE-PLAN sentinel like the mixed tiers — it names a plan, not a
+ * model — but it is the opposite kind of plan, and the distinction is the whole
+ * reason it exists as a separate tier rather than a repricing of the others.
+ *
+ * The economy tiers (`fast`, `pro`, `mixed`, `mixed-fast`) run several passes on
+ * the cheaper proxied transport and vote. That transport is 3-4x cheaper per token
+ * and additionally does no deep reasoning, which is why they cost single-digit
+ * credits — and also why they are less accurate. `smart` runs ONE pass on the
+ * native transport with everything turned up, which is where the accuracy is.
+ *
+ * As with the mixed sentinels, what the plan does internally is deliberately not
+ * published here; only the wire vocabulary is contract.
+ */
+/** UI/listing order — recommended (smart) first. */
+export const VIDEO_ANALYSIS_TIER_ORDER = ["smart", "pro", "fast", "mixed", "mixed-fast"] as const
 export type VideoAnalysisTier = (typeof VIDEO_ANALYSIS_TIER_ORDER)[number]
 export const DEFAULT_VIDEO_ANALYSIS_TIER: VideoAnalysisTier = "pro"
 export const DEFAULT_VIDEO_ANALYSIS_MODEL: string = VIDEO_ANALYSIS_TIERS[DEFAULT_VIDEO_ANALYSIS_TIER]
 /** Neutral, vendor-free display labels for the UI. */
 export const VIDEO_ANALYSIS_TIER_LABELS: Record<VideoAnalysisTier, string> = {
+  smart: "Smart",
   fast: "Fast",
   pro: "Pro",
   mixed: "Mixed",

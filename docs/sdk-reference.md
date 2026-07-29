@@ -58,7 +58,7 @@ const client = createClient({
 | `auth` | `Auth` | yes | Auth provider — `StaticTokenAuth`, `supabaseAuth(...)`, or `CallbackAuth`. |
 | `fetch` | `typeof fetch` | no | Custom fetch implementation. Default: `globalThis.fetch`. |
 | `timeoutMs` | `number` | no | Per-request timeout. Default: `60_000`. |
-| `clientLabel` | `string` | no | Value sent as the `X-Nodaro-Client` header. Default `sdk/<version>`. The backend records it as the job's origin, so an operator can tell SDK traffic from CLI traffic from browser sessions. `@nodaro/cli` overrides it with `cli/<version>`; set it yourself only if you are building another wrapper. |
+| `clientLabel` | `string` | no | Value sent as the `X-Nodaro-Client` header. Default `sdk/<version>`. The backend records it as the job's origin, so an operator can tell SDK traffic from CLI traffic from browser sessions. `@nodaro/cli` overrides it with `cli/<version>`; set it yourself only if you are building another wrapper. The DEFAULT label is not sent from a browser (the `Origin` header already identifies the app, and Nodaro prefers it) — an explicit `clientLabel` is always sent. |
 
 The instance exposes 20 resource objects: `workflows`, `projects`, `jobs`,
 `executions`, `nodes`, `characters`, `locations`, `objects`, `pipelines`,

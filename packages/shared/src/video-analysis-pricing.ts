@@ -50,27 +50,35 @@ export const VIDEO_ANALYSIS_WINDOW = { LEN: WINDOW_LEN, STRIDE: WINDOW_STRIDE, O
  */
 export const VIDEO_ANALYSIS_BUCKET_CREDITS: Record<string, number> = {
   // Legacy fast-tier model (pre-2026-07) — kept for stored raw-id configs.
-  "video-analysis:gemini-3-flash:60s": 21,
-  "video-analysis:gemini-3-flash:180s": 24,
-  "video-analysis:gemini-3-flash:360s": 68,
-  "video-analysis:gemini-3-flash:600s": 112,
+  "video-analysis:gemini-3-flash:60s": 3,
+  "video-analysis:gemini-3-flash:180s": 4,
+  "video-analysis:gemini-3-flash:360s": 9,
+  "video-analysis:gemini-3-flash:600s": 14,
   // Current fast tier — regenerated from the private formula for its backing
   // model; higher than the legacy fast schedule but still ≤ pro per bucket.
-  "video-analysis:gemini-3.6-flash:60s": 54,
-  "video-analysis:gemini-3.6-flash:180s": 63,
-  "video-analysis:gemini-3.6-flash:360s": 175,
-  "video-analysis:gemini-3.6-flash:600s": 291,
-  "video-analysis:gemini-3.1-pro:60s": 84,
-  "video-analysis:gemini-3.1-pro:180s": 96,
-  "video-analysis:gemini-3.1-pro:360s": 269,
-  "video-analysis:gemini-3.1-pro:600s": 448,
+  "video-analysis:gemini-3.6-flash:60s": 7,
+  "video-analysis:gemini-3.6-flash:180s": 9,
+  "video-analysis:gemini-3.6-flash:360s": 23,
+  "video-analysis:gemini-3.6-flash:600s": 38,
+  "video-analysis:gemini-3.1-pro:60s": 9,
+  "video-analysis:gemini-3.1-pro:180s": 12,
+  "video-analysis:gemini-3.1-pro:360s": 30,
+  "video-analysis:gemini-3.1-pro:600s": 49,
   // Mixed tiers (`mixed` + `mixed-fast`) share ONE credit family — they are
   // variants of the same engine plan (plan internals live in the private
   // analysis plugin). Admin-tunable via model_pricing like every other row.
-  "video-analysis:mixed:60s": 137,
-  "video-analysis:mixed:180s": 158,
-  "video-analysis:mixed:360s": 443,
-  "video-analysis:mixed:600s": 739,
+  "video-analysis:mixed:60s": 11,
+  "video-analysis:mixed:180s": 15,
+  "video-analysis:mixed:360s": 38,
+  "video-analysis:mixed:600s": 63,
+  // SMART — the one native-transport plan: a single pass with reasoning and
+  // frame sampling turned all the way up. Priced well above the economy tiers
+  // because it genuinely costs more to run, and it is the only tier whose
+  // accuracy was measured against a hand-counted edit list.
+  "video-analysis:smart:60s": 42,
+  "video-analysis:smart:180s": 94,
+  "video-analysis:smart:360s": 207,
+  "video-analysis:smart:600s": 346,
 }
 
 /**

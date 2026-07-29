@@ -54,7 +54,7 @@ the VOD to become available). Any source is capped at **10 minutes (600s)**.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| Analysis Quality (`llmModel`) | Select | `pro` | `fast` (economy), `pro` (default — higher fidelity), or the mixed tiers `mixed` / `mixed-fast` — our most advanced analysis, built for maximum completeness and accuracy. See [Credit Cost](#credit-cost) |
+| Analysis Quality (`llmModel`) | Select | `pro` | `smart` (highest accuracy — a single deep pass that reads the footage frame by frame, finds its own shot boundaries and identifies the cast by appearance; pick this when the shot list will drive regeneration), `fast` (economy), `pro` (default), or `mixed` / `mixed-fast` (several economy passes combined for completeness). See [Credit Cost](#credit-cost) |
 | Result Selection (`selectionMode`) | Select | `choose` | `choose` — the standard result. `combine` — an enhanced result with additional verification for maximum captured detail (slightly slower, recommended) |
 | Translate speech (`translateSpeechToEnglish`) | Checkbox | off | On — spoken and sung words come back in English. See [Output language](#output-language) |
 | Translate on-screen text (`translateOnScreenTextToEnglish`) | Checkbox | off | On — signs, captions, and titles come back in English. Independent of the speech checkbox |
@@ -324,9 +324,10 @@ charged) — generated and drift-guarded internally, never hand-written.
 
 | Tier | ≤60s | ≤180s | ≤360s | ≤600s |
 |------|------|-------|-------|-------|
-| `fast` (economy) | 54 | 63 | 175 | 291 |
-| `pro` (default) | 84 | 96 | 269 | 448 |
-| `mixed` / `mixed-fast` | 137 | 158 | 443 | 739 |
+| `fast` (economy) | 3 | 4 | 9 | 14 |
+| `pro` (default) | 9 | 12 | 30 | 49 |
+| `mixed` / `mixed-fast` | 11 | 15 | 38 | 63 |
+| `smart` (highest accuracy) | 42 | 94 | 207 | 346 |
 
 The two mixed tiers are variants of the same advanced analysis and share one
 price: `mixed` is tuned for maximum result quality; `mixed-fast` for the most

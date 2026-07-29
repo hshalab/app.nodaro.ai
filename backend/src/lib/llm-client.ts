@@ -42,7 +42,26 @@ export type LlmContentBlock =
   | { type: "text"; text: string }
   | { type: "image"; url: string }
   | { type: "image_base64"; mediaType: string; data: string }
-  | { type: "video"; url: string; mimeType?: string }
+  | {
+      type: "video"
+      url: string
+      mimeType?: string
+      /**
+       * Frame sampling rate. Gemini samples at 1 fps by default; this raises it,
+       * and it is the only lever that gets a model MORE frames of the same clip.
+       *
+       * DIRECT LANE ONLY. KIE reaches Gemini through the `image_url`
+       * URL-smuggling hack, which has nowhere to carry this, so `buildChat-
+       * CompletionsMessages` THROWS on an fps-bearing block rather than quietly
+       * analysing at 1 fps — a silent downgrade here is indistinguishable from
+       * success and would mis-ground the analysis with no signal.
+       *
+       * Costs ~66 tokens per frame, so prompt tokens scale linearly in fps
+       * (measured 2026-07-29 against a 640x360 clip: 3,274 prompt tokens at
+       * fps 1, 8,026 at fps 3, 15,088 at fps 6, i.e. 66/frame + 25/sec of audio).
+       */
+      fps?: number
+    }
   | { type: "audio"; url: string; mimeType?: string }
 
 export interface LlmMessage {
@@ -461,7 +480,20 @@ function buildChatCompletionsMessages(req: LlmRequest): Array<Record<string, unk
         // This ONLY applies to the KIE chat-completions (Gemini) wire — the Claude
         // `messages` and GPT `responses` builders still THROW on video/audio, which
         // is correct (those providers genuinely cannot ingest it).
-        if (b.type === "video" || b.type === "audio") return { type: "image_url", image_url: { url: b.url } }
+        if (b.type === "video" || b.type === "audio") {
+          // A sampling rate cannot survive the URL-smuggling hack: KIE hands
+          // Gemini a bare URL and Gemini then samples at its 1 fps default.
+          // Throwing beats returning a block that looks accepted — the caller
+          // would get analysis grounded in a third of the frames it asked for,
+          // with a 200 and no way to tell. Analysis pins `requireLane: "direct"`
+          // (toolkit.ts), so this is only reachable by a genuine mistake.
+          if (b.type === "video" && b.fps !== undefined) {
+            throw new Error(
+              `llm-client: video fps=${b.fps} was requested but the KIE lane cannot carry a sampling rate — pin requireLane: "direct"`,
+            )
+          }
+          return { type: "image_url", image_url: { url: b.url } }
+        }
         const _exhaustive: never = b
         return _exhaustive
       })

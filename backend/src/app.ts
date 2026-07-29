@@ -4,6 +4,7 @@ import { createHash } from "node:crypto"
 import cors from "@fastify/cors"
 import { isOriginAllowedDynamic } from "./lib/dynamic-origins.js"
 import { hasAdmin, hasCredits, isMultiUser } from "./lib/config.js"
+import { CLIENT_HEADER } from "./lib/job-source.js"
 import { loadPrivatePlugins } from "./lib/private-plugins/load.js"
 import { healthRoutes } from "./routes/health.js"
 import { projectRoutes } from "./routes/projects.js"
@@ -293,7 +294,14 @@ export async function buildApp() {
       return isOriginAllowedDynamic(origin)
     },
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    // CLIENT_HEADER is load-bearing here, not cosmetic. `@nodaro/sdk` sends it
+    // on every request, and all six Nodaro client apps (studio / person / voice
+    // / recast / recut / stitch) are browser SPAs that call this API
+    // cross-origin. A custom request header they send must appear in this
+    // allowlist or the CORS PREFLIGHT fails and every one of their API calls
+    // breaks — not just the provenance, the whole app. Adding a header to the
+    // SDK without adding it here is a fleet-wide outage.
+    allowedHeaders: ["Content-Type", "Authorization", CLIENT_HEADER],
     credentials: true,
   })
 

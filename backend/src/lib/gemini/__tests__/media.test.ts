@@ -207,3 +207,86 @@ describe("blocksToGeminiParts", () => {
     expect(parts[1]).toEqual({ text: "describe it" })
   })
 })
+
+describe("video sampling rate (videoMetadata.fps)", () => {
+  const big = 20 * 1024 * 1024
+  const smallVideo = () =>
+    safeFetch.mockResolvedValue(
+      bodyResponse(Buffer.from("v"), { "content-type": "video/mp4", "content-length": "1" }),
+    )
+  const bigVideo = () =>
+    safeFetch.mockResolvedValue(
+      bodyResponse(Buffer.from("v"), { "content-type": "video/mp4", "content-length": String(big) }),
+    )
+
+  // fps must survive EVERY way a video part can be produced. The builder has
+  // four such paths and attaches metadata at one choke point precisely so a
+  // fifth path added later cannot silently drop it.
+  it("attaches fps on the inline path", async () => {
+    smallVideo()
+    const part = await blockToGeminiPart(fakeAi(), { type: "video", url: "https://r2.example/s.mp4", fps: 3 })
+    expect(part).toMatchObject({ inlineData: { mimeType: "video/mp4" }, videoMetadata: { fps: 3 } })
+  })
+
+  it("attaches fps on the Files API upload path", async () => {
+    bigVideo()
+    const part = await blockToGeminiPart(fakeAi(), { type: "video", url: "https://r2.example/b.mp4", fps: 6 })
+    expect(part).toMatchObject({ fileData: { mimeType: "video/mp4" }, videoMetadata: { fps: 6 } })
+  })
+
+  it("attaches fps on the cached-handle path", async () => {
+    bigVideo()
+    const ai = fakeAi()
+    await blockToGeminiPart(ai, { type: "video", url: "https://r2.example/c.mp4", fps: 2 })
+    const second = await blockToGeminiPart(ai, { type: "video", url: "https://r2.example/c.mp4", fps: 4 })
+
+    expect(ai.files.upload).toHaveBeenCalledOnce()
+    // The handle is cached; the sampling rate is per-request and must not be.
+    expect(second).toMatchObject({ videoMetadata: { fps: 4 } })
+  })
+
+  it("attaches fps on the YouTube passthrough path", async () => {
+    const part = await blockToGeminiPart(fakeAi(), {
+      type: "video",
+      url: "https://youtu.be/abc",
+      fps: 3,
+    })
+    expect(part).toEqual({ fileData: { fileUri: "https://youtu.be/abc" }, videoMetadata: { fps: 3 } })
+  })
+
+  it("emits no videoMetadata key at all when fps is unset", async () => {
+    smallVideo()
+    const part = await blockToGeminiPart(fakeAi(), { type: "video", url: "https://r2.example/s.mp4" })
+    expect(part).not.toHaveProperty("videoMetadata")
+  })
+
+  // google-gemini/cookbook#787 in one assertion: the field belongs on the Part,
+  // and nesting it inside the media object is silently wrong on the wire.
+  it("never nests videoMetadata inside inlineData or fileData", async () => {
+    smallVideo()
+    const inline = await blockToGeminiPart(fakeAi(), { type: "video", url: "https://r2.example/s.mp4", fps: 3 })
+    expect(inline.inlineData).not.toHaveProperty("videoMetadata")
+
+    bigVideo()
+    const uploaded = await blockToGeminiPart(fakeAi(), { type: "video", url: "https://r2.example/b.mp4", fps: 3 })
+    expect(uploaded.fileData).not.toHaveProperty("videoMetadata")
+  })
+
+  // Out of range is a 400 from Google AFTER the whole clip has been uploaded.
+  it.each([0, -1, 24.5, 30, Number.NaN, Number.POSITIVE_INFINITY])(
+    "rejects fps=%s before the upload round-trip",
+    async (fps) => {
+      smallVideo()
+      const ai = fakeAi()
+      await expect(
+        blockToGeminiPart(ai, { type: "video", url: "https://r2.example/s.mp4", fps }),
+      ).rejects.toThrow(/fps must be in \(0, 24\]/)
+    },
+  )
+
+  it.each([24, 0.5])("accepts fps=%s (the documented boundary, and sub-1 rates)", async (fps) => {
+    smallVideo()
+    const part = await blockToGeminiPart(fakeAi(), { type: "video", url: `https://r2.example/${fps}.mp4`, fps })
+    expect(part).toMatchObject({ videoMetadata: { fps } })
+  })
+})

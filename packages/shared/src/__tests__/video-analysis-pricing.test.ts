@@ -84,9 +84,14 @@ describe("video-analysis-pricing", () => {
     expect(DEFAULT_VIDEO_ANALYSIS_TIER).toBe("pro")
     expect(DEFAULT_VIDEO_ANALYSIS_MODEL).toBe("gemini-3.1-pro")
     expect(resolveVideoAnalysisModel("pro")).toBe("gemini-3.1-pro")
-    expect(resolveVideoAnalysisModel("fast")).toBe("gemini-3.6-flash")
+    // The economy tiers moved to the cheaper flash generation when they moved to
+    // the cheaper transport; the newer flash now sits behind the `smart` sentinel.
+    expect(resolveVideoAnalysisModel("fast")).toBe("gemini-3-flash")
     expect(resolveVideoAnalysisModel("mixed")).toBe("mixed") // roll-plan sentinel passthrough
     expect(resolveVideoAnalysisModel("mixed-fast")).toBe("mixed-fast")
+    // `smart` is a sentinel too — it names an engine plan, never a model id, so the
+    // engine behind it stays unpublished exactly as the mixed plans' does.
+    expect(resolveVideoAnalysisModel("smart")).toBe("smart")
     // Raw passthrough keeps LEGACY stored configs running (and priced) on the
     // exact model they were saved with — never silently re-tiered.
     expect(resolveVideoAnalysisModel("gemini-3-flash")).toBe("gemini-3-flash")
