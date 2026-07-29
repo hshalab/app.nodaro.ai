@@ -55,6 +55,12 @@ const generateCharacterBody = z
     // image URL to `characters.source_image_url` on this row after generation
     // succeeds. Lets the studio survive page closes mid-generation.
     attachToCharacterId: z.string().uuid().optional(),
+    // Auto-attach opt-out: keep the character linkage (job provenance, UI
+    // association) but skip the worker's portrait write. For callers whose
+    // single candidate is not a clean portrait (e.g. full-scene renders) and
+    // must not become the identity anchor future variant reference sets build
+    // on. Absent/false → unchanged behavior.
+    skipPortraitAttach: z.boolean().optional(),
 
     // Character Studio Identity Foundation (v2):
     seedPrompt: z.string().max(2000).optional(),
@@ -84,7 +90,12 @@ const generateCharacterBody = z
     (data) =>
       (data.seedPrompt !== undefined && data.seedPrompt.trim().length > 0) ||
       (data.referencePhotos !== undefined && data.referencePhotos.length > 0) ||
-      (data.description !== undefined && data.description.trim().length > 0),
+      (data.description !== undefined && data.description.trim().length > 0) ||
+      // Attach-and-regenerate: the row may carry a persisted description
+      // (e.g. rows created by the extension-reimagine composer, whose
+      // portrait is deliberately deferred). The handler re-checks after the
+      // row fetch and 400s with the same message when the row has nothing.
+      data.attachToCharacterId !== undefined,
     { message: "Provide seedPrompt, referencePhotos, or description" },
   )
 
@@ -151,16 +162,19 @@ export async function generateCharacterRoutes(app: FastifyInstance) {
       // the SAME resolver the preHandler ran on the raw body, so CHECK===DEBIT.
       const modelIdentifier = resolveEntityImageCreditIdentifier(data)
 
-      // Structured Person + Wardrobe selections live on the character row (this
-      // route builds the portrait prompt from the request body and otherwise
-      // never reads the row). When attaching to an existing character, fetch
-      // them so the derived hints get folded into the seed clause server-side.
+      // Structured Person + Wardrobe selections live on the character row.
+      // When attaching to an existing character, fetch them so the derived
+      // hints get folded into the seed clause server-side — plus the row's
+      // `description`, the LAST-RESORT regeneration seed for rows whose
+      // portrait was deliberately deferred (extension-reimagine persists the
+      // describe prose there at creation; body prompt fields always win).
       let characterPerson: Record<string, unknown> | null = null
       let characterWardrobe: Record<string, unknown> | null = null
+      let characterDescription: string | null = null
       if (data.attachToCharacterId) {
         const { data: char } = await supabase
           .from("characters")
-          .select("person, wardrobe")
+          .select("person, wardrobe, description")
           .eq("id", data.attachToCharacterId)
           .eq("user_id", userId)
           .is("deleted_at", null)
@@ -168,7 +182,31 @@ export async function generateCharacterRoutes(app: FastifyInstance) {
         if (char) {
           characterPerson = (char.person as Record<string, unknown> | null) ?? null
           characterWardrobe = (char.wardrobe as Record<string, unknown> | null) ?? null
+          const rowDescription = char.description
+          characterDescription =
+            typeof rowDescription === "string" && rowDescription.trim().length > 0
+              ? rowDescription
+              : null
         }
+      }
+
+      // Post-fetch completion of the relaxed Zod refine: an attach request
+      // must still have SOMETHING to generate from — a body prompt source or
+      // the row's persisted description. Same message as the schema refine so
+      // clients see one contract.
+      if (
+        !(data.seedPrompt !== undefined && data.seedPrompt.trim().length > 0) &&
+        data.userPrompt === undefined &&
+        !(data.description !== undefined && data.description.trim().length > 0) &&
+        !(data.referencePhotos !== undefined && data.referencePhotos.length > 0) &&
+        characterDescription === null
+      ) {
+        return reply.status(400).send({
+          error: {
+            code: "validation_error",
+            message: "Provide seedPrompt, referencePhotos, or description",
+          },
+        })
       }
 
       // Element/asset injection: P1's pre-resolved text (`injectedAssets`, from
@@ -182,8 +220,18 @@ export async function generateCharacterRoutes(app: FastifyInstance) {
         .filter((s): s is string => !!s && s.length > 0)
         .join(", ")
 
-      // Build portrait prompt — v2 path prefers seedPrompt with studio scaffolding;
-      // legacy path falls back to userPrompt → description → name.
+      // Build portrait prompt — v2 path prefers seedPrompt with studio
+      // scaffolding; legacy path falls back to userPrompt → description →
+      // name. One tier sits between them: an attach request with NO body
+      // prompt fields seeds the portrait from the ROW's persisted
+      // description, THROUGH buildPortraitPrompt — so a later "generate
+      // portrait" on a deferred-portrait row (extension-reimagine) yields a
+      // properly scaffolded portrait of that person, not an unscaffolded
+      // prose render. Body fields always win, preserving exact legacy
+      // semantics (including the empty-string edge `?? ` keeps) for every
+      // caller that sends them.
+      const hasBodyLegacyPrompt =
+        data.userPrompt !== undefined || data.description !== undefined
       const promptText = data.seedPrompt
         ? buildPortraitPrompt({
             seedPrompt: data.seedPrompt,
@@ -191,9 +239,20 @@ export async function generateCharacterRoutes(app: FastifyInstance) {
             wardrobe: characterWardrobe ?? undefined,
             injectedAssets,
           })
-        : [data.userPrompt ?? data.description ?? data.name, injectedAssets]
-            .filter((s): s is string => !!s && s.length > 0)
-            .join(", ")
+        : hasBodyLegacyPrompt
+          ? [data.userPrompt ?? data.description, injectedAssets]
+              .filter((s): s is string => !!s && s.length > 0)
+              .join(", ")
+          : characterDescription
+            ? buildPortraitPrompt({
+                seedPrompt: characterDescription,
+                person: characterPerson ?? undefined,
+                wardrobe: characterWardrobe ?? undefined,
+                injectedAssets,
+              })
+            : [data.name, injectedAssets]
+                .filter((s): s is string => !!s && s.length > 0)
+                .join(", ")
 
       const mcpClient = extractMcpClient(req.body)
       // Keep the raw `facetInjections` (up to 20 source descriptions) OUT of the
@@ -356,6 +415,7 @@ export async function generateCharacterRoutes(app: FastifyInstance) {
           sourceImageUrl: data.sourceImageUrl,
           provider: data.provider,
           attachToCharacterId: data.attachToCharacterId,
+          skipPortraitAttach: data.skipPortraitAttach,
           aspectRatio,
           resolution: data.resolution,
           quality: data.quality,

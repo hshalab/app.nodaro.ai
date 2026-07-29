@@ -453,6 +453,33 @@ export interface PluginStorageToolkit {
   readR2ObjectBuffer(key: string): Promise<Buffer | null>
   /** Mirrors `deleteFromR2` (`lib/storage.ts`) — deletes an R2 object by key. */
   deleteFromR2(key: string): Promise<void>
+  /**
+   * Mirrors `storeImportedImageBuffer` (`lib/media-import.ts`) — the buffer
+   * half of the image-import pipeline: sharp decode gate (HEIC→JPEG
+   * transcode), atomic storage-quota reservation, R2 upload, best-effort
+   * thumbnail, asset record. Returns the same discriminated result shape as
+   * `importImageFromUrl` — callers map `ok: false` onto their route's error
+   * envelope (`status`/`code`/`message` + optional `details`). Additive
+   * (2026-07-29, extension-reimagine's base64 image path).
+   */
+  storeImportedImageBuffer(args: {
+    userId: string
+    body: Buffer
+    uploadSource: "url_import" | "manual_upload"
+    sourceUrl?: string
+    filename?: string
+  }): Promise<
+    | {
+        ok: true
+        url: string
+        thumbnailUrl: string | null
+        assetId: string | null
+        mimeType: string
+        sizeBytes: number
+        filename: string
+      }
+    | { ok: false; status: 400 | 413 | 422; code: string; message: string; details?: Record<string, unknown> }
+  >
 }
 
 // ============================================================================

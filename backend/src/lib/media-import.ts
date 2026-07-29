@@ -127,6 +127,38 @@ export async function importImageFromUrl(
     }
   }
 
+  const lastPathSegment = new URL(url).pathname.split("/").pop()
+  return storeImportedImageBuffer({
+    userId,
+    body,
+    uploadSource: "url_import",
+    sourceUrl: url,
+    filename: lastPathSegment ? decodeURIComponent(lastPathSegment) : undefined,
+  })
+}
+
+/**
+ * The buffer half of the import pipeline — decode gate, HEIC transcode,
+ * atomic storage reservation, R2 upload, thumbnail, asset record. Split out
+ * of {@link importImageFromUrl} so callers that already hold the bytes (the
+ * extension reimagine route's base64 fallback) reuse the exact same
+ * validation + storage semantics without a fetch.
+ */
+export async function storeImportedImageBuffer(args: {
+  userId: string
+  body: Buffer
+  /** Asset-row provenance. `url_import` for remote fetches, `manual_upload`
+   *  for caller-supplied bytes — both already understood by the reaper /
+   *  delete paths (see migration 278 for why this value is load-bearing). */
+  uploadSource: "url_import" | "manual_upload"
+  /** Original remote URL when the bytes came from one — recorded in asset
+   *  metadata as `source_url`. */
+  sourceUrl?: string
+  /** Display filename; falls back to `imported-<fileId>.<ext>`. */
+  filename?: string
+}): Promise<MediaImportResult> {
+  const { userId, body } = args
+
   // ── Decode gate (authoritative) + HEIC transcode ──
   let buffer = body
   let format: string
@@ -209,9 +241,7 @@ export async function importImageFromUrl(
   }
 
   // ── Asset record ──
-  const filename = decodeURIComponent(
-    new URL(url).pathname.split("/").pop() || `imported-${fileId}.${accepted.ext}`,
-  )
+  const filename = args.filename ?? `imported-${fileId}.${accepted.ext}`
   let assetId: string | null = null
   const { data: asset, error: insertError } = await supabase
     .from("assets")
@@ -223,11 +253,11 @@ export async function importImageFromUrl(
       size_bytes: buffer.length,
       r2_key: r2Key,
       r2_url: publicUrl,
-      upload_source: "url_import",
+      upload_source: args.uploadSource,
       metadata: {
         ...metadata,
         thumbnail_url: thumbnailUrl,
-        source_url: url,
+        ...(args.sourceUrl ? { source_url: args.sourceUrl } : {}),
       },
     })
     .select("id")

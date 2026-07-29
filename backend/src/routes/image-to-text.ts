@@ -5,11 +5,10 @@ import { insertJob } from "../lib/insert-job.js"
 import { config } from "../lib/config.js"
 import { creditGuard, reserveCreditsForJob } from "../middleware/credit-guard.js"
 import { CreditsService } from "../ee/billing/credits.js"
-import { llmComplete, type LlmContentBlock } from "../lib/llm-client.js"
-import { LLM_ROUTE_DEFAULTS, LLM_MODEL_IDS, LLM_REASONING_EFFORTS, buildLlmCreditIdentifier, resolveLlmCreditId, LLM_FEATURE_DEFAULTS } from "@nodaro/shared"
-import { LLM_ADVANCED_SHAPE, advancedModeError, resolveLlmParams } from "../lib/llm-advanced-mode.js"
+import { LLM_MODEL_IDS, LLM_REASONING_EFFORTS, buildLlmCreditIdentifier, resolveLlmCreditId, LLM_FEATURE_DEFAULTS } from "@nodaro/shared"
+import { LLM_ADVANCED_SHAPE, advancedModeError } from "../lib/llm-advanced-mode.js"
+import { describeImageWithLlm } from "../lib/image-describe.js"
 import { safeUrlSchema } from "../lib/url-validator.js"
-import { safeFetch } from "../lib/safe-fetch.js"
 import { extractWorkflowId, extractNodeId, extractForcePrivate } from "../lib/request-helpers.js"
 import { extractMcpClient } from "../lib/extract-mcp-client.js"
 import { buildJobInputData } from "../lib/job-input-data.js"
@@ -29,15 +28,6 @@ const imageToTextBody = z.object({
   reasoningEffort: z.enum(LLM_REASONING_EFFORTS).optional(),
   ...LLM_ADVANCED_SHAPE,
 })
-
-const SYSTEM_PROMPTS: Record<string, string> = {
-  brief:
-    "You are an image description assistant. Describe the image in 1-2 concise sentences. Focus on the most important visual elements.",
-  detailed:
-    "You are an image description assistant. Provide a comprehensive description of the image including subjects, setting, colors, lighting, mood, composition, and notable details. Write in flowing prose, 3-6 sentences.",
-  structured:
-    "You are an image description assistant. Describe the image using these labeled sections:\n- Subject: Main subject(s)\n- Setting: Environment/background\n- Colors: Dominant colors and palette\n- Lighting: Light quality and direction\n- Mood: Overall atmosphere\n- Details: Notable secondary elements\n\nKeep each section to 1-2 sentences.",
-}
 
 export async function imageToTextRoutes(app: FastifyInstance) {
   app.post(
@@ -108,40 +98,16 @@ export async function imageToTextRoutes(app: FastifyInstance) {
       await markProviderCallStart(job.id, "anthropic-sync")
 
       try {
-        const systemPrompt = customPrompt || SYSTEM_PROMPTS[detailLevel]
-
-        // Pre-fetch image to base64 — external CDNs (Instagram, etc.) often
-        // block requests from LLM provider IPs, causing empty responses.
-        let imageBlock: LlmContentBlock = { type: "image", url: imageUrl }
-        try {
-          // safeFetch: imageUrl is user-supplied (safeUrlSchema-validated),
-          // but that's syntactic only. The fetched bytes are base64-encoded
-          // and sent to a vision LLM which describes them back to the
-          // caller — a read-oracle through text description for any internal
-          // endpoint whose response decodes as an image. Use safeFetch so
-          // hostnames resolving to private IPs are rejected at connect time.
-          const imgResp = await safeFetch(imageUrl, { timeoutMs: 30_000 })
-          if (imgResp.ok) {
-            const buf = Buffer.from(await imgResp.arrayBuffer())
-            const mediaType = (imgResp.headers.get("content-type") ?? "image/jpeg").split(";")[0].trim()
-            imageBlock = { type: "image_base64", mediaType, data: buf.toString("base64") }
-          }
-        } catch {
-          // Fall back to URL — might still work for public images
-        }
-
-        const response = await llmComplete({
-          modelId: llmModel,
-          system: systemPrompt,
-          messages: [{
-            role: "user",
-            content: [
-              imageBlock,
-              { type: "text", text: "Describe this image." },
-            ],
-          }],
-          ...resolveLlmParams(parsed.data, LLM_ROUTE_DEFAULTS["image-to-text"]),
+        // Shared describe core (lib/image-describe.ts) — same prompts, image
+        // pre-fetch, and LLM params as always; extracted so in-process
+        // composers reuse it without an HTTP self-call.
+        const response = await describeImageWithLlm({
+          imageUrl,
+          llmModel,
+          detailLevel,
+          customPrompt,
           reasoningEffort: parsed.data.reasoningEffort,
+          advanced: parsed.data,
         })
 
         const generatedText = response.text

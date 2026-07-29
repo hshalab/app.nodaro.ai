@@ -1188,3 +1188,60 @@ describe("multi-image reference set (assembledReferenceUrls + maxRefImages cap)"
     expect(mocks.mockGenerateImage.mock.calls[0][2]).toEqual(["https://portrait.png"])
   })
 })
+
+describe("generate-character handler — skipPortraitAttach (extension reimagine)", () => {
+  const handler = entityHandlers["generate-character"]
+
+  it("attaches the portrait by default when attachToCharacterId is set (flag absent)", async () => {
+    const job = makeJob("generate-character", { prompt: "a warrior", attachToCharacterId: "char-1" })
+    await handler(job as never, makeCtx())
+    expect(mocks.mockSetPortrait).toHaveBeenCalledWith({
+      characterId: "char-1",
+      userId: "user-1",
+      url: "https://r2.example.com/images/job-1.png",
+    })
+  })
+
+  it("skipPortraitAttach: true suppresses the portrait attach but still completes + commits", async () => {
+    const job = makeJob("generate-character", {
+      prompt: "a warrior",
+      attachToCharacterId: "char-1",
+      skipPortraitAttach: true,
+    })
+    await handler(job as never, makeCtx())
+    expect(mocks.mockSetPortrait).not.toHaveBeenCalled()
+    expect(mocks.mockMarkJobCompleted).toHaveBeenCalledWith(
+      "job-1",
+      expect.objectContaining({
+        output_data: { imageUrl: "https://r2.example.com/images/job-1.png" },
+      }),
+    )
+    expect(mocks.mockCommitJobCredits).toHaveBeenCalledWith("usage-1", "job-1", PROVIDER_RESULT.cost)
+  })
+
+  it("skipPortraitAttach: false behaves exactly like the flag being absent", async () => {
+    const job = makeJob("generate-character", {
+      prompt: "a warrior",
+      attachToCharacterId: "char-1",
+      skipPortraitAttach: false,
+    })
+    await handler(job as never, makeCtx())
+    expect(mocks.mockSetPortrait).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not affect asset-variant attaches (generate-character-asset path)", async () => {
+    const assetHandler = entityHandlers["generate-character-asset"]
+    const job = makeJob("generate-character-asset", {
+      prompt: "standing pose",
+      assetType: "poses",
+      attachToCharacterId: "char-1",
+      attachToColumn: "poses",
+      attachName: "standing",
+      skipPortraitAttach: true,
+    })
+    await assetHandler(job as never, makeCtx())
+    // The variant attach still fires — the flag only guards setCharacterPortrait.
+    expect(mocks.mockAttach).toHaveBeenCalledTimes(1)
+    expect(mocks.mockSetPortrait).not.toHaveBeenCalled()
+  })
+})

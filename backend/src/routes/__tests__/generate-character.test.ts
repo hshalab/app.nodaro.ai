@@ -147,8 +147,8 @@ afterEach(async () => {
  * object alongside `insert` so both the characters-select and jobs-insert chains
  * resolve off the same returned value.
  */
-function charSelectChain() {
-  const single = vi.fn().mockResolvedValue({ data: null, error: null })
+function charSelectChain(row: Record<string, unknown> | null = null) {
+  const single = vi.fn().mockResolvedValue({ data: row, error: null })
   const is = vi.fn().mockReturnValue({ single })
   const eq2 = vi.fn().mockReturnValue({ is })
   const eq1 = vi.fn().mockReturnValue({ eq: eq2 })
@@ -943,5 +943,167 @@ describe("POST /v1/generate-character", () => {
       expect(res.statusCode).toBe(200)
       expect(recordedOverrides).toEqual([PER_JOB_OVERRIDE])
     })
+  })
+})
+
+describe("skipPortraitAttach passthrough (auto-attach opt-out)", () => {
+  it("threads skipPortraitAttach: true into the queue payload and input_data", async () => {
+    const { insert } = mockJobsInsertChain()
+    vi.mocked(supabase.from).mockReturnValue({ insert, ...charSelectChain() } as never)
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/generate-character",
+      headers: { "x-user-id": TEST_USER_ID },
+      payload: {
+        name: "Kira",
+        seedPrompt: "young woman",
+        attachToCharacterId: TEST_CHARACTER_ID,
+        skipPortraitAttach: true,
+      },
+    })
+
+    expect(res.statusCode).toBe(200)
+    expect(videoQueue.add).toHaveBeenCalledWith(
+      "generate-character",
+      expect.objectContaining({
+        attachToCharacterId: TEST_CHARACTER_ID,
+        skipPortraitAttach: true,
+      }),
+    )
+    const inserted = insert.mock.calls[0][0] as { input_data: Record<string, unknown> }
+    expect(inserted.input_data.skipPortraitAttach).toBe(true)
+  })
+
+  it("omitted flag stays undefined in the queue payload (default behavior preserved)", async () => {
+    const { insert } = mockJobsInsertChain()
+    vi.mocked(supabase.from).mockReturnValue({ insert, ...charSelectChain() } as never)
+
+    await app.inject({
+      method: "POST",
+      url: "/v1/generate-character",
+      headers: { "x-user-id": TEST_USER_ID },
+      payload: { name: "Kira", seedPrompt: "young woman", attachToCharacterId: TEST_CHARACTER_ID },
+    })
+
+    const enqueued = vi.mocked(videoQueue.add).mock.calls[0][1] as Record<string, unknown>
+    expect(enqueued.skipPortraitAttach).toBeUndefined()
+  })
+
+  it("rejects a non-boolean skipPortraitAttach (validation_error)", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/generate-character",
+      headers: { "x-user-id": TEST_USER_ID },
+      payload: { name: "Kira", seedPrompt: "y w", skipPortraitAttach: "yes" },
+    })
+    expect(res.statusCode).toBe(400)
+    expect(res.json().error.code).toBe("validation_error")
+  })
+})
+
+// ───────────────────────────────────────────────────────────────────────────
+// Row-description fallback (attach-and-regenerate). Rows whose portrait was
+// deliberately deferred (extension-reimagine) persist the describe prose on
+// `characters.description`; a later promptless generate with
+// attachToCharacterId must seed a properly scaffolded portrait from it.
+// ───────────────────────────────────────────────────────────────────────────
+describe("row-description fallback (attach-and-regenerate)", () => {
+  const ROW_DESCRIPTION =
+    "- Subject: A tall knight in dented armor.\n- Setting: A misty castle courtyard."
+
+  it("promptless body + attachToCharacterId seeds a scaffolded portrait from the row description", async () => {
+    const { insert } = mockJobsInsertChain()
+    vi.mocked(supabase.from).mockReturnValue({
+      insert,
+      ...charSelectChain({ person: null, wardrobe: null, description: ROW_DESCRIPTION }),
+    } as never)
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/generate-character",
+      headers: { "x-user-id": TEST_USER_ID },
+      payload: { name: "Kira", attachToCharacterId: TEST_CHARACTER_ID },
+    })
+
+    expect(res.statusCode).toBe(200)
+    expect(res.json().jobIds).toHaveLength(1)
+    const inserted = insert.mock.calls[0][0] as { input_data: { prompt: string } }
+    expect(inserted.input_data.prompt).toContain("A tall knight in dented armor")
+    // THROUGH buildPortraitPrompt — the regeneration is a portrait, not an
+    // unscaffolded prose render.
+    expect(inserted.input_data.prompt).toContain("studio lighting")
+    expect(inserted.input_data.prompt).toContain("plain background")
+  })
+
+  it("promptless body + attach on a row with no description is a 400 (post-fetch refine completion)", async () => {
+    const { insert } = mockJobsInsertChain()
+    vi.mocked(supabase.from).mockReturnValue({ insert, ...charSelectChain() } as never)
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/generate-character",
+      headers: { "x-user-id": TEST_USER_ID },
+      payload: { name: "Kira", attachToCharacterId: TEST_CHARACTER_ID },
+    })
+
+    expect(res.statusCode).toBe(400)
+    expect(res.json().error.code).toBe("validation_error")
+    expect(insert).not.toHaveBeenCalled()
+    expect(videoQueue.add).not.toHaveBeenCalled()
+  })
+
+  it("a whitespace-only row description does not satisfy the fallback (400)", async () => {
+    const { insert } = mockJobsInsertChain()
+    vi.mocked(supabase.from).mockReturnValue({
+      insert,
+      ...charSelectChain({ person: null, wardrobe: null, description: "   " }),
+    } as never)
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/generate-character",
+      headers: { "x-user-id": TEST_USER_ID },
+      payload: { name: "Kira", attachToCharacterId: TEST_CHARACTER_ID },
+    })
+
+    expect(res.statusCode).toBe(400)
+    expect(res.json().error.code).toBe("validation_error")
+  })
+
+  it("body description still wins over the row description (legacy verbatim path, no scaffolding)", async () => {
+    const { insert } = mockJobsInsertChain()
+    vi.mocked(supabase.from).mockReturnValue({
+      insert,
+      ...charSelectChain({ person: null, wardrobe: null, description: ROW_DESCRIPTION }),
+    } as never)
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/generate-character",
+      headers: { "x-user-id": TEST_USER_ID },
+      payload: {
+        name: "Kira",
+        description: "short body prompt",
+        attachToCharacterId: TEST_CHARACTER_ID,
+      },
+    })
+
+    expect(res.statusCode).toBe(200)
+    const inserted = insert.mock.calls[0][0] as { input_data: { prompt: string } }
+    expect(inserted.input_data.prompt).toContain("short body prompt")
+    expect(inserted.input_data.prompt).not.toContain("tall knight")
+    expect(inserted.input_data.prompt).not.toContain("studio lighting")
+  })
+
+  it("promptless body WITHOUT attach still fails the schema refine (unchanged contract)", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/generate-character",
+      headers: { "x-user-id": TEST_USER_ID },
+      payload: { name: "Kira" },
+    })
+    expect(res.statusCode).toBe(400)
+    expect(res.json().error.code).toBe("validation_error")
   })
 })
