@@ -17,6 +17,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify"
 import { z } from "zod"
 import { hasCredits, config } from "../lib/config.js"
+import { insertJob } from "../lib/insert-job.js"
 import { supabase } from "../lib/supabase.js"
 import { creditGuard, reserveCreditsForJob } from "../middleware/credit-guard.js"
 import { formatZodError } from "../lib/zod-error.js"
@@ -150,17 +151,13 @@ export async function characterTrainingRoutes(app: FastifyInstance): Promise<voi
         zipKey = key
 
         // Step 4 — create job + reserve credits BEFORE dispatching to Replicate.
-        const { data: job, error: jobErr } = await supabase
-          .from("jobs")
-          .insert({
+        const { data: job, error: jobErr } = await insertJob(req, {
             user_id: req.userId,
             job_type: CHARACTER_LORA_TRAINING_JOB_TYPE,
             status: "pending",
             input_data: { characterId, imageCount },
             metadata: { credit_identifier: TRAINING_CREDIT_ID },
           })
-          .select("id")
-          .single()
         if (jobErr || !job) throw new Error("job_create_failed")
         jobId = job.id
 

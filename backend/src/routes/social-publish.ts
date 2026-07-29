@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify"
 import { z } from "zod"
 import { supabase } from "../lib/supabase.js"
+import { insertJob } from "../lib/insert-job.js"
 import { creditGuard, reserveCreditsForJob } from "../middleware/credit-guard.js"
 import { MEDIA_REQUIRED_ACTIONS as SHARED_MEDIA_REQUIRED, VALID_ACTIONS as SHARED_ACTIONS } from "../services/social/actions.js"
 import {
@@ -102,9 +103,7 @@ export async function socialPublishRoutes(app: FastifyInstance) {
     // caption + media URL in input_data and the platform post id/url in
     // output_data — not gallery media, never world-readable. Same rule in
     // the scheduled worker's ensureJobRow; migration 268 flips old rows.
-    const { data: job, error: jobErr } = await supabase
-      .from("jobs")
-      .insert({
+    const { data: job, error: jobErr } = await insertJob(req, {
         user_id: userId,
         workflow_id: workflowId || null,
         status: "processing",
@@ -113,8 +112,6 @@ export async function socialPublishRoutes(app: FastifyInstance) {
         job_type: "social-publish",
         is_public: false,
       })
-      .select("id")
-      .single()
 
     if (jobErr || !job) {
       return reply.status(500).send({ error: { code: "internal_error" } })

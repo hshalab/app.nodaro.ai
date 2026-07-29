@@ -12,31 +12,11 @@
 import { MODEL_CATALOG, NATIVE_ADAPTIVE_ASPECT } from "@nodaro/shared"
 import { probeVideoSource } from "./ffmpeg-utils.js"
 
-/**
- * Pick the aspect-ratio token closest to the source's real shape from the
- * provider's supported candidates. Non-ratio candidates (e.g. VEO's "Auto")
- * are skipped. Compared in log space so e.g. 16:9 and 9:16 are symmetric.
- */
-export function closestAspectRatio(
-  width: number,
-  height: number,
-  candidates: readonly string[],
-): string | undefined {
-  if (!width || !height) return undefined
-  const target = Math.log(width / height)
-  let best: string | undefined
-  let bestDist = Infinity
-  for (const candidate of candidates) {
-    const [w, h] = candidate.split(":").map(Number)
-    if (!w || !h) continue
-    const dist = Math.abs(Math.log(w / h) - target)
-    if (dist < bestDist) {
-      bestDist = dist
-      best = candidate
-    }
-  }
-  return best
-}
+// The ratio math itself lives in the dependency-free `aspect-ratio.ts` so
+// provider code can snap a ratio without loading this module's ffmpeg imports.
+// Re-exported here to keep the existing import path working.
+export { closestAspectRatio } from "./aspect-ratio.js"
+import { closestAspectRatio } from "./aspect-ratio.js"
 
 /**
  * Resolve the aspect-ratio token a generation call should pass so its output

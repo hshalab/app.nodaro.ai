@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify"
 import { z } from "zod"
 import { safeUrlSchema } from "../lib/url-validator.js"
+import { insertJob } from "../lib/insert-job.js"
 import { supabase } from "../lib/supabase.js"
 import { config } from "../lib/config.js"
 import { creditGuard, reserveCreditsForJob } from "../middleware/credit-guard.js"
@@ -84,9 +85,7 @@ export async function lottieOverlayAIRoutes(app: FastifyInstance) {
       const advancedError = advancedModeError(parsed.data, llmModel)
       if (advancedError) return reply.status(400).send({ error: advancedError })
 
-      const { data: job, error: jobError } = await supabase
-        .from("jobs")
-        .insert({
+      const { data: job, error: jobError } = await insertJob(req, {
           workflow_id: extractWorkflowId(req.body),
           node_id: extractNodeId(req.body),
         force_private: extractForcePrivate(req.body) || undefined,
@@ -94,8 +93,6 @@ export async function lottieOverlayAIRoutes(app: FastifyInstance) {
           status: "pending",
           input_data: { ...buildJobInputData(parsed.data, "lottie-overlay"), width, height },
         })
-        .select("id")
-        .single()
 
       if (jobError) {
         return sendInternalError(reply, req, jobError, "Failed to create job")

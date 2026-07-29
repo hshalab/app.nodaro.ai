@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify"
 import { z } from "zod"
 import { safeUrlSchema } from "../lib/url-validator.js"
+import { insertJob } from "../lib/insert-job.js"
 import { supabase } from "../lib/supabase.js"
 import { videoQueue } from "../lib/queue.js"
 import { creditGuard, reserveCreditsForJob } from "../middleware/credit-guard.js"
@@ -278,9 +279,7 @@ export async function sunoRoutes(app: FastifyInstance) {
 
       const mcpClient = extractMcpClient(req.body)
 
-      const { data: job, error } = await supabase
-        .from("jobs")
-        .insert({
+      const { data: job, error } = await insertJob(req, {
           workflow_id: extractWorkflowId(req.body),
           node_id: extractNodeId(req.body),
         force_private: extractForcePrivate(req.body) || undefined,
@@ -289,8 +288,6 @@ export async function sunoRoutes(app: FastifyInstance) {
           input_data: buildJobInputData(parsed.data, "suno-generate"),
           ...(mcpClient ? { mcp_client: mcpClient } : {}),
         })
-        .select("id")
-        .single()
 
       if (error) {
         return sendInternalError(reply, req, error, "Failed to create job")
@@ -356,9 +353,7 @@ export async function sunoRoutes(app: FastifyInstance) {
 
       const mcpClient = extractMcpClient(req.body)
 
-      const { data: job, error } = await supabase
-        .from("jobs")
-        .insert({
+      const { data: job, error } = await insertJob(req, {
           workflow_id: extractWorkflowId(req.body),
           node_id: extractNodeId(req.body),
         force_private: extractForcePrivate(req.body) || undefined,
@@ -367,8 +362,6 @@ export async function sunoRoutes(app: FastifyInstance) {
           input_data: buildJobInputData(parsed.data, "suno-cover"),
           ...(mcpClient ? { mcp_client: mcpClient } : {}),
         })
-        .select("id")
-        .single()
 
       if (error) {
         return sendInternalError(reply, req, error, "Failed to create job")
@@ -433,9 +426,7 @@ export async function sunoRoutes(app: FastifyInstance) {
 
       const mcpClient = extractMcpClient(req.body)
 
-      const { data: job, error } = await supabase
-        .from("jobs")
-        .insert({
+      const { data: job, error } = await insertJob(req, {
           workflow_id: extractWorkflowId(req.body),
           node_id: extractNodeId(req.body),
         force_private: extractForcePrivate(req.body) || undefined,
@@ -444,8 +435,6 @@ export async function sunoRoutes(app: FastifyInstance) {
           input_data: buildJobInputData(parsed.data, "suno-extend"),
           ...(mcpClient ? { mcp_client: mcpClient } : {}),
         })
-        .select("id")
-        .single()
 
       if (error) {
         return sendInternalError(reply, req, error, "Failed to create job")
@@ -504,9 +493,7 @@ export async function sunoRoutes(app: FastifyInstance) {
 
       const mcpClient = extractMcpClient(req.body)
 
-      const { data: job, error } = await supabase
-        .from("jobs")
-        .insert({
+      const { data: job, error } = await insertJob(req, {
           workflow_id: extractWorkflowId(req.body),
           node_id: extractNodeId(req.body),
         force_private: extractForcePrivate(req.body) || undefined,
@@ -515,8 +502,6 @@ export async function sunoRoutes(app: FastifyInstance) {
           input_data: buildJobInputData(parsed.data, "suno-lyrics"),
           ...(mcpClient ? { mcp_client: mcpClient } : {}),
         })
-        .select("id")
-        .single()
 
       if (error) {
         return sendInternalError(reply, req, error, "Failed to create job")
@@ -564,9 +549,7 @@ export async function sunoRoutes(app: FastifyInstance) {
 
       const mcpClient = extractMcpClient(req.body)
 
-      const { data: job, error } = await supabase
-        .from("jobs")
-        .insert({
+      const { data: job, error } = await insertJob(req, {
           workflow_id: extractWorkflowId(req.body),
           node_id: extractNodeId(req.body),
         force_private: extractForcePrivate(req.body) || undefined,
@@ -575,8 +558,6 @@ export async function sunoRoutes(app: FastifyInstance) {
           input_data: { ...buildJobInputData(parsed.data, "suno-separate"), separateType: type },
           ...(mcpClient ? { mcp_client: mcpClient } : {}),
         })
-        .select("id")
-        .single()
 
       if (error) {
         return sendInternalError(reply, req, error, "Failed to create job")
@@ -624,9 +605,7 @@ export async function sunoRoutes(app: FastifyInstance) {
 
       const mcpClient = extractMcpClient(req.body)
 
-      const { data: job, error } = await supabase
-        .from("jobs")
-        .insert({
+      const { data: job, error } = await insertJob(req, {
           workflow_id: extractWorkflowId(req.body),
           node_id: extractNodeId(req.body),
         force_private: extractForcePrivate(req.body) || undefined,
@@ -635,8 +614,6 @@ export async function sunoRoutes(app: FastifyInstance) {
           input_data: buildJobInputData(parsed.data, "suno-music-video"),
           ...(mcpClient ? { mcp_client: mcpClient } : {}),
         })
-        .select("id")
-        .single()
 
       if (error) {
         return sendInternalError(reply, req, error, "Failed to create job")
@@ -685,9 +662,7 @@ export async function sunoRoutes(app: FastifyInstance) {
 
       const mcpClient = extractMcpClient(req.body)
 
-      const { data: job, error } = await supabase
-        .from("jobs")
-        .insert({
+      const { data: job, error } = await insertJob(req, {
           workflow_id: extractWorkflowId(req.body),
           node_id: extractNodeId(req.body),
           force_private: extractForcePrivate(req.body) || undefined,
@@ -696,8 +671,6 @@ export async function sunoRoutes(app: FastifyInstance) {
           input_data: buildJobInputData(parsed.data, "suno-mashup"),
           ...(mcpClient ? { mcp_client: mcpClient } : {}),
         })
-        .select("id")
-        .single()
 
       if (error) {
         return sendInternalError(reply, req, error, "Failed to create job")
@@ -748,9 +721,7 @@ export async function sunoRoutes(app: FastifyInstance) {
 
       const mcpClient = extractMcpClient(req.body)
 
-      const { data: job, error } = await supabase
-        .from("jobs")
-        .insert({
+      const { data: job, error } = await insertJob(req, {
           workflow_id: extractWorkflowId(req.body),
           node_id: extractNodeId(req.body),
           force_private: extractForcePrivate(req.body) || undefined,
@@ -759,8 +730,6 @@ export async function sunoRoutes(app: FastifyInstance) {
           input_data: buildJobInputData(parsed.data, "suno-replace-section"),
           ...(mcpClient ? { mcp_client: mcpClient } : {}),
         })
-        .select("id")
-        .single()
 
       if (error) {
         return sendInternalError(reply, req, error, "Failed to create job")
@@ -812,9 +781,7 @@ export async function sunoRoutes(app: FastifyInstance) {
       // Create a job for credit tracking
       const mcpClient = extractMcpClient(req.body)
 
-      const { data: job, error } = await supabase
-        .from("jobs")
-        .insert({
+      const { data: job, error } = await insertJob(req, {
           workflow_id: extractWorkflowId(req.body),
           node_id: extractNodeId(req.body),
           force_private: extractForcePrivate(req.body) || undefined,
@@ -823,8 +790,6 @@ export async function sunoRoutes(app: FastifyInstance) {
           input_data: buildJobInputData(parsed.data, "suno-style-boost"),
           ...(mcpClient ? { mcp_client: mcpClient } : {}),
         })
-        .select("id")
-        .single()
 
       if (error) {
         return sendInternalError(reply, req, error, "Failed to create job")
@@ -896,9 +861,7 @@ export async function sunoRoutes(app: FastifyInstance) {
 
       const mcpClient = extractMcpClient(req.body)
 
-      const { data: job, error } = await supabase
-        .from("jobs")
-        .insert({
+      const { data: job, error } = await insertJob(req, {
           workflow_id: extractWorkflowId(req.body),
           node_id: extractNodeId(req.body),
           force_private: extractForcePrivate(req.body) || undefined,
@@ -907,8 +870,6 @@ export async function sunoRoutes(app: FastifyInstance) {
           input_data: buildJobInputData(parsed.data, "suno-add-instrumental"),
           ...(mcpClient ? { mcp_client: mcpClient } : {}),
         })
-        .select("id")
-        .single()
 
       if (error) {
         return sendInternalError(reply, req, error, "Failed to create job")
@@ -955,9 +916,7 @@ export async function sunoRoutes(app: FastifyInstance) {
 
       const mcpClient = extractMcpClient(req.body)
 
-      const { data: job, error } = await supabase
-        .from("jobs")
-        .insert({
+      const { data: job, error } = await insertJob(req, {
           workflow_id: extractWorkflowId(req.body),
           node_id: extractNodeId(req.body),
           force_private: extractForcePrivate(req.body) || undefined,
@@ -966,8 +925,6 @@ export async function sunoRoutes(app: FastifyInstance) {
           input_data: buildJobInputData(parsed.data, "suno-add-vocals"),
           ...(mcpClient ? { mcp_client: mcpClient } : {}),
         })
-        .select("id")
-        .single()
 
       if (error) {
         return sendInternalError(reply, req, error, "Failed to create job")
@@ -1014,9 +971,7 @@ export async function sunoRoutes(app: FastifyInstance) {
 
       const mcpClient = extractMcpClient(req.body)
 
-      const { data: job, error } = await supabase
-        .from("jobs")
-        .insert({
+      const { data: job, error } = await insertJob(req, {
           workflow_id: extractWorkflowId(req.body),
           node_id: extractNodeId(req.body),
           force_private: extractForcePrivate(req.body) || undefined,
@@ -1025,8 +980,6 @@ export async function sunoRoutes(app: FastifyInstance) {
           input_data: buildJobInputData(parsed.data, "suno-convert-wav"),
           ...(mcpClient ? { mcp_client: mcpClient } : {}),
         })
-        .select("id")
-        .single()
 
       if (error) {
         return sendInternalError(reply, req, error, "Failed to create job")
@@ -1075,9 +1028,7 @@ export async function sunoRoutes(app: FastifyInstance) {
 
       const mcpClient = extractMcpClient(req.body)
 
-      const { data: job, error } = await supabase
-        .from("jobs")
-        .insert({
+      const { data: job, error } = await insertJob(req, {
           workflow_id: extractWorkflowId(req.body),
           node_id: extractNodeId(req.body),
           force_private: extractForcePrivate(req.body) || undefined,
@@ -1086,8 +1037,6 @@ export async function sunoRoutes(app: FastifyInstance) {
           input_data: buildJobInputData(parsed.data, "suno-upload-extend"),
           ...(mcpClient ? { mcp_client: mcpClient } : {}),
         })
-        .select("id")
-        .single()
 
       if (error) {
         return sendInternalError(reply, req, error, "Failed to create job")
@@ -1158,23 +1107,23 @@ export async function sunoRoutes(app: FastifyInstance) {
     // still retry validate; nothing has been charged. The reconcile cron's
     // sync-sweep handles abandoned `kie-suno-voice-validate` rows past 24h.
     const nowIso = new Date().toISOString()
-    await supabase
-      .from("jobs")
-      .insert({
-        user_id: userId,
-        status: "processing",
-        provider: "kie",
-        model_identifier: SUNO_VOICE_VALIDATE_TAG,
-        started_at: nowIso,
-        provider_kind: "kie-suno-voice-validate",
-        provider_call_started_at: nowIso,
-        input_data: buildJobInputData(parsed.data, SUNO_VOICE_VALIDATE_TAG),
-        metadata: { kie_task_id: result.taskId },
-      })
-      .then(() => {}, (err) => {
-        // Best-effort — the modal flow can still proceed if the insert raced.
-        console.warn(`[suno-voice] validate ownership insert failed: ${err.message}`)
-      })
+    // Best-effort — the modal flow can still proceed if the insert raced, so the
+    // error is warned rather than surfaced. `insertJob` RETURNS the error
+    // instead of throwing, so this is a check, not a rejection handler.
+    const { error: validateOwnErr } = await insertJob(req, {
+      user_id: userId,
+      status: "processing",
+      provider: "kie",
+      model_identifier: SUNO_VOICE_VALIDATE_TAG,
+      started_at: nowIso,
+      provider_kind: "kie-suno-voice-validate",
+      provider_call_started_at: nowIso,
+      input_data: buildJobInputData(parsed.data, SUNO_VOICE_VALIDATE_TAG),
+      metadata: { kie_task_id: result.taskId },
+    })
+    if (validateOwnErr) {
+      console.warn(`[suno-voice] validate ownership insert failed: ${validateOwnErr.message}`)
+    }
     return result
   })
 
@@ -1236,20 +1185,18 @@ export async function sunoRoutes(app: FastifyInstance) {
       })
     }
     // Record ownership of the new taskId returned by regenerate.
-    await supabase
-      .from("jobs")
-      .insert({
-        user_id: userId,
-        status: "processing",
-        provider: "kie",
-        model_identifier: SUNO_VOICE_VALIDATE_TAG,
-        started_at: new Date().toISOString(),
-        input_data: { type: SUNO_VOICE_VALIDATE_TAG, regeneratedFrom: parsed.data.taskId },
-        metadata: { kie_task_id: result.taskId },
-      })
-      .then(() => {}, (err) => {
-        console.warn(`[suno-voice] regenerate ownership insert failed: ${err.message}`)
-      })
+    const { error: regenOwnErr } = await insertJob(req, {
+      user_id: userId,
+      status: "processing",
+      provider: "kie",
+      model_identifier: SUNO_VOICE_VALIDATE_TAG,
+      started_at: new Date().toISOString(),
+      input_data: { type: SUNO_VOICE_VALIDATE_TAG, regeneratedFrom: parsed.data.taskId },
+      metadata: { kie_task_id: result.taskId },
+    })
+    if (regenOwnErr) {
+      console.warn(`[suno-voice] regenerate ownership insert failed: ${regenOwnErr.message}`)
+    }
     return result
   })
 
@@ -1288,9 +1235,7 @@ export async function sunoRoutes(app: FastifyInstance) {
       // Step 1 — create a jobs row so credit lifecycle (reserve/commit/refund)
       // is consistent with the rest of the codebase.
       const mcpClient = extractMcpClient(req.body)
-      const { data: job, error: jobErr } = await supabase
-        .from("jobs")
-        .insert({
+      const { data: job, error: jobErr } = await insertJob(req, {
           workflow_id: extractWorkflowId(req.body),
           node_id: extractNodeId(req.body),
           force_private: extractForcePrivate(req.body) || undefined,
@@ -1299,8 +1244,6 @@ export async function sunoRoutes(app: FastifyInstance) {
           input_data: buildJobInputData(parsed.data, "suno-voice-create"),
           ...(mcpClient ? { mcp_client: mcpClient } : {}),
         })
-        .select("id")
-        .single()
       if (jobErr || !job) {
         return sendInternalError(reply, req, jobErr, "Failed to create job")
       }

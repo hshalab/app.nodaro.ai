@@ -152,6 +152,24 @@ The `inputs` object is keyed by **node ID** (or, as a convenience, by
 **unique node label**). The inner key is the input field for that node
 type — the schema endpoint tells you what to use.
 
+## 4b. Identifying your client (optional)
+
+Send an `X-Nodaro-Client` header and Nodaro records it as the origin of every
+job the request creates, which is what the admin jobs view groups by:
+
+```
+X-Nodaro-Client: sdk/1.10.0
+```
+
+Only `sdk/<version>` and `cli/<version>` are recognised; any other value is
+ignored rather than trusted, since the header is unauthenticated. `@nodaro/sdk`
+and `@nodaro/cli` send it automatically — you only need this when calling the
+REST API directly. Omitting it is fine; those jobs are simply recorded as
+generic API calls.
+
+Browser callers need do nothing: the `Origin` header already identifies the
+site, and jobs are attributed to that host automatically.
+
 ## 5. Sync vs async execution
 
 By default, `POST /v1/api/run` is **async**: it returns `202 Accepted`

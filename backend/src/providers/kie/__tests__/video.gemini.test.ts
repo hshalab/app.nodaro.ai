@@ -131,6 +131,70 @@ describe("KieVideoProvider — gemini-omni-video textToVideo", () => {
 })
 
 // ---------------------------------------------------------------------------
+// Gemini Omni Video — aspect_ratio is MANDATORY on the wire
+//
+// KIE 422s with "Aspect ratio only supports [16:9, 9:16]" when aspect_ratio is
+// absent — unlike every other KIE video model, which defaults it server-side.
+// The config panel only *displays* 16:9 as a placeholder and never writes it to
+// node data, so an untouched node reached the provider with nothing and EVERY
+// run failed (prod job e6dd780e, 2026-07-28). These pin that the provider now
+// always emits a value KIE accepts, whatever the caller supplies.
+// ---------------------------------------------------------------------------
+
+describe("KieVideoProvider — gemini-omni-video aspect_ratio", () => {
+  const aspectOf = () =>
+    (mocks.mockRunKieTask.mock.calls[0][1] as Record<string, unknown>).aspect_ratio
+
+  it("I2V: defaults to 16:9 when the caller supplies no aspect ratio", async () => {
+    await provider.imageToVideo(
+      "https://x/start.png", "a prompt", "gemini-omni-video", 10, undefined, {},
+    )
+    expect(aspectOf()).toBe("16:9")
+  })
+
+  it("T2V: defaults to 16:9 when the caller supplies no aspect ratio", async () => {
+    await provider.textToVideo("a prompt", "gemini-omni-video", 8, undefined, {})
+    expect(aspectOf()).toBe("16:9")
+  })
+
+  it("preserves an explicitly supported ratio", async () => {
+    await provider.imageToVideo(
+      "https://x/start.png", "a prompt", "gemini-omni-video", 8, undefined,
+      { aspectRatio: "9:16" },
+    )
+    expect(aspectOf()).toBe("9:16")
+  })
+
+  it.each([
+    ["1:1", "16:9"],
+    ["4:3", "16:9"],
+    ["21:9", "16:9"],
+    ["4:5", "9:16"],
+    ["3:4", "9:16"],
+    ["9:21", "9:16"],
+  ])("snaps unsupported %s to the nearest supported %s", async (requested, expected) => {
+    await provider.imageToVideo(
+      "https://x/start.png", "a prompt", "gemini-omni-video", 8, undefined,
+      { aspectRatio: requested },
+    )
+    expect(aspectOf()).toBe(expected)
+  })
+
+  it.each(["Auto", "adaptive"])("falls back to 16:9 for the non-ratio token %s", async (token) => {
+    await provider.textToVideo("a prompt", "gemini-omni-video", 8, token, {})
+    expect(aspectOf()).toBe("16:9")
+  })
+
+  it("V2V: still sends an aspect ratio alongside video_list", async () => {
+    await provider.imageToVideo(
+      "https://x/start.png", "a prompt", "gemini-omni-video", 8, undefined,
+      { referenceVideoUrls: ["https://x/v.mp4"] },
+    )
+    expect(aspectOf()).toBe("16:9")
+  })
+})
+
+// ---------------------------------------------------------------------------
 // Gemini Omni Video — imageToVideo
 // ---------------------------------------------------------------------------
 

@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify"
 import { z } from "zod"
 import { supabase } from "../lib/supabase.js"
+import { insertJob } from "../lib/insert-job.js"
 import { videoQueue } from "../lib/queue.js"
 import { config } from "../lib/config.js"
 import { creditGuard, reserveCreditsForJob } from "../middleware/credit-guard.js"
@@ -101,9 +102,7 @@ export async function motionGraphicsAIRoutes(app: FastifyInstance) {
         const advancedError = advancedModeError(parsed.data, lottieLlmModel)
         if (advancedError) return reply.status(400).send({ error: advancedError })
 
-        const { data: lottieJob, error: lottieJobError } = await supabase
-          .from("jobs")
-          .insert({
+        const { data: lottieJob, error: lottieJobError } = await insertJob(req, {
             workflow_id: extractWorkflowId(req.body),
             node_id: extractNodeId(req.body),
             force_private: extractForcePrivate(req.body) || undefined,
@@ -117,8 +116,6 @@ export async function motionGraphicsAIRoutes(app: FastifyInstance) {
               engine: "lottie",
             },
           })
-          .select("id")
-          .single()
 
         if (lottieJobError) {
           return sendInternalError(reply, req, lottieJobError, "Failed to create job")
@@ -153,9 +150,7 @@ export async function motionGraphicsAIRoutes(app: FastifyInstance) {
       if (advancedErrorElements) return reply.status(400).send({ error: advancedErrorElements })
 
       // Create job record
-      const { data: job, error: jobError } = await supabase
-        .from("jobs")
-        .insert({
+      const { data: job, error: jobError } = await insertJob(req, {
           workflow_id: extractWorkflowId(req.body),
           node_id: extractNodeId(req.body),
         force_private: extractForcePrivate(req.body) || undefined,
@@ -163,8 +158,6 @@ export async function motionGraphicsAIRoutes(app: FastifyInstance) {
           status: "pending",
           input_data: { ...buildJobInputData(parsed.data, "motion-graphics"), width, height, backgroundColor },
         })
-        .select("id")
-        .single()
 
       if (jobError) {
         return sendInternalError(reply, req, jobError, "Failed to create job")

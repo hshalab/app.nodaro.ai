@@ -58,6 +58,7 @@ const client = createClient({
 | `auth` | `Auth` | yes | Auth provider — `StaticTokenAuth`, `supabaseAuth(...)`, or `CallbackAuth`. |
 | `fetch` | `typeof fetch` | no | Custom fetch implementation. Default: `globalThis.fetch`. |
 | `timeoutMs` | `number` | no | Per-request timeout. Default: `60_000`. |
+| `clientLabel` | `string` | no | Value sent as the `X-Nodaro-Client` header. Default `sdk/<version>`. The backend records it as the job's origin, so an operator can tell SDK traffic from CLI traffic from browser sessions. `@nodaro/cli` overrides it with `cli/<version>`; set it yourself only if you are building another wrapper. |
 
 The instance exposes 20 resource objects: `workflows`, `projects`, `jobs`,
 `executions`, `nodes`, `characters`, `locations`, `objects`, `pipelines`,
@@ -3313,7 +3314,7 @@ Every type used in a public method signature is re-exported from
 ### Client identity
 
 - `UserIdentity` — return type of `client.me()`: `{ id, email, displayName: string | null, avatarUrl: string | null, tier }`
-- `ClientOptions` — `createClient` options: `{ baseUrl, auth, fetch?, timeoutMs? }`
+- `ClientOptions` — `createClient` options: `{ baseUrl, auth, fetch?, timeoutMs?, clientLabel? }`
 
 ### Workflows
 

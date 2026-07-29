@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify"
 import { z } from "zod"
 import { supabase } from "../lib/supabase.js"
+import { insertJob } from "../lib/insert-job.js"
 import { creditGuard, reserveCreditsForJob } from "../middleware/credit-guard.js"
 import { CreditsService } from "../ee/billing/credits.js"
 import { runScraper } from "../providers/apify/scraper.js"
@@ -66,9 +67,7 @@ export async function webScrapeRoutes(app: FastifyInstance) {
 
     const modelIdentifier = resolveScraperCreditId(req.body)
 
-    const { data: job, error: jobError } = await supabase
-      .from("jobs")
-      .insert({
+    const { data: job, error: jobError } = await insertJob(req, {
         workflow_id: extractWorkflowId(req.body),
         node_id: extractNodeId(req.body),
         force_private: extractForcePrivate(req.body) || undefined,
@@ -76,8 +75,6 @@ export async function webScrapeRoutes(app: FastifyInstance) {
         status: "pending",
         input_data: buildJobInputData(parsed.data, "web-scrape"),
       })
-      .select("id")
-      .single()
 
     if (jobError || !job) {
       return sendInternalError(reply, req, jobError, "Failed to create job")

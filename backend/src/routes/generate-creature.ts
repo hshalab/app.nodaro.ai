@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest } from "fastify"
 import { z } from "zod"
 import { safeUrlSchema } from "../lib/url-validator.js"
+import { insertJob } from "../lib/insert-job.js"
 import { supabase } from "../lib/supabase.js"
 import { videoQueue } from "../lib/queue.js"
 import { creditGuard, reserveCreditsForJob } from "../middleware/credit-guard.js"
@@ -195,9 +196,7 @@ export async function generateCreatureRoutes(app: FastifyInstance) {
 
       const insertedJobIds: string[] = []
       for (let i = 0; i < parsed.data.count; i++) {
-        const { data: job, error } = await supabase
-          .from("jobs")
-          .insert({
+        const { data: job, error } = await insertJob(req, {
             workflow_id: workflowId,
             force_private: forcePrivate,
             user_id: userId,
@@ -205,8 +204,6 @@ export async function generateCreatureRoutes(app: FastifyInstance) {
             input_data: inputDataForInsert,
             ...(mcpClient ? { mcp_client: mcpClient } : {}),
           })
-          .select("id")
-          .single()
 
         if (error || !job) {
           if (insertedJobIds.length > 0) {

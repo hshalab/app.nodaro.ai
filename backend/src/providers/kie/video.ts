@@ -29,6 +29,7 @@ import {
   MAX_POLL_ATTEMPTS_VIDEO,
   MAX_POLL_ATTEMPTS_LIP_SYNC_LONG,
 } from "./client.js"
+import { snapAspectRatioToken } from "../video/aspect-ratio.js"
 import { kling3Generate } from "./kling3-client.js"
 import { runRunwayTask, runAlephTask } from "./runway-client.js"
 import { runLumaModifyTask } from "./luma-client.js"
@@ -561,6 +562,34 @@ async function runKling3(
 /** KIE Gemini Omni Video accepted resolution values (lowercase, per the API). */
 const GEMINI_OMNI_RESOLUTIONS = ["720p", "1080p", "4k"]
 
+/** Aspect ratios KIE accepts for gemini-omni-video. Sourced from MODEL_CATALOG
+ *  so this can't drift from the dropdown the user actually sees. */
+const GEMINI_OMNI_ASPECT_RATIOS: readonly string[] =
+  getModel("gemini-omni-video")?.aspectRatios ?? ["16:9", "9:16"]
+
+/**
+ * Resolve the aspect_ratio Gemini Omni will accept — ALWAYS a value, never
+ * omitted.
+ *
+ * Unlike every other KIE video model (which defaults aspect_ratio server-side
+ * when it's absent), gemini-omni-video hard-rejects a missing one with
+ * `422 "Aspect ratio only supports [16:9, 9:16]"`. The video config panels
+ * render `data.aspectRatio || "16:9"` — a DISPLAY-only default that is never
+ * written to node data — so a node whose dropdown the user never touched
+ * arrived here with `undefined` and every single run failed (prod job
+ * e6dd780e, 2026-07-28). This is the one choke point both the single-node
+ * route and the orchestrator pass through, so fixing it here also covers
+ * API / SDK / MCP / imported-workflow callers.
+ *
+ * Off-list ratios (the route's Zod enum allows 1:1 / 4:3 / 21:9 / …) snap to
+ * the nearest supported one instead of 422-ing; non-ratio tokens ("Auto",
+ * "adaptive") and a missing value fall back to landscape — the same value the
+ * config panel displays, so what the user sees is what gets rendered.
+ */
+function resolveGeminiOmniAspect(requested: string | undefined): string {
+  return snapAspectRatioToken(requested, GEMINI_OMNI_ASPECT_RATIOS) ?? "16:9"
+}
+
 /** Wholesale USD cost for a Gemini Omni tier (KIE-published; KIE bills $0.005/credit).
  *  The provider MUST report the ACTUAL tier cost — like every other provider does — so the
  *  credit-commit charges that tier. Returning a flat cheapest-tier cost (the old behavior)
@@ -631,7 +660,8 @@ async function runGeminiOmni(
   const geminiInput: Record<string, unknown> = {
     prompt,
     resolution,
-    ...(aspectRatioValue ? { aspect_ratio: aspectRatioValue } : {}),
+    // Mandatory — see resolveGeminiOmniAspect. Never make this conditional again.
+    aspect_ratio: resolveGeminiOmniAspect(aspectRatioValue),
     // V2V auto-determines duration from the clip; for t2v/i2v send the snapped tier so the
     // value sent to KIE matches the tier the credit identifier billed.
     ...(videoList ? { video_list: videoList } : { duration: String(snappedDuration) }),

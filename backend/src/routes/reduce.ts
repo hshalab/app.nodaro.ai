@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify"
 import { z } from "zod"
 import { REDUCE_STRATEGY_IDS, type ReduceStrategyId } from "@nodaro/shared"
 import { supabase } from "../lib/supabase.js"
+import { insertJob } from "../lib/insert-job.js"
 import { creditGuard, reserveCreditsForJob } from "../middleware/credit-guard.js"
 import {
   commitReservedCreditsForJob,
@@ -56,9 +57,7 @@ export async function reduceRoutes(app: FastifyInstance) {
       const { strategyId, strategyConfig, inputs } = parsed.data
       const modelIdentifier = `reduce:${strategyId}`
 
-      const { data: job, error: jobError } = await supabase
-        .from("jobs")
-        .insert({
+      const { data: job, error: jobError } = await insertJob(req, {
           workflow_id: extractWorkflowId(req.body),
           node_id: extractNodeId(req.body),
           force_private: extractForcePrivate(req.body) || undefined,
@@ -69,8 +68,6 @@ export async function reduceRoutes(app: FastifyInstance) {
             "reduce",
           ),
         })
-        .select("id")
-        .single()
 
       if (jobError || !job) {
         return sendInternalError(reply, req, jobError, "Failed to create job")

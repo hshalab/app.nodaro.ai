@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify"
 import { sendInternalError } from "../lib/http-errors.js"
+import { insertJob } from "../lib/insert-job.js"
 import multipart from "@fastify/multipart"
 import { randomUUID } from "node:crypto"
 import { z } from "zod"
@@ -114,9 +115,7 @@ export async function voiceCloneRoutes(app: FastifyInstance) {
     const mimeType = data.mimetype
     const mcpClient = extractMcpClient(req.body)
 
-    const { data: job, error: jobError } = await supabase
-      .from("jobs")
-      .insert({
+    const { data: job, error: jobError } = await insertJob(req, {
         workflow_id: extractWorkflowId(req.body),
         node_id: extractNodeId(req.body),
         force_private: extractForcePrivate(req.body) || undefined,
@@ -125,8 +124,6 @@ export async function voiceCloneRoutes(app: FastifyInstance) {
         input_data: { type: "voice-clone", name },
         ...(mcpClient ? { mcp_client: mcpClient } : {}),
       })
-      .select("id")
-      .single()
 
     if (jobError) {
       return sendInternalError(reply, req, jobError, "Failed to create voice clone")
@@ -281,9 +278,7 @@ export async function voiceCloneRoutes(app: FastifyInstance) {
     const mimeType = fetched.headers.get("content-type")?.split(";")[0]?.trim() || "audio/mpeg"
     const mcpClient = extractMcpClient(req.body)
 
-    const { data: job, error: jobError } = await supabase
-      .from("jobs")
-      .insert({
+    const { data: job, error: jobError } = await insertJob(req, {
         workflow_id: extractWorkflowId(req.body),
         node_id: extractNodeId(req.body),
         force_private: extractForcePrivate(req.body) || undefined,
@@ -292,8 +287,6 @@ export async function voiceCloneRoutes(app: FastifyInstance) {
         input_data: { type: "voice-clone", name },
         ...(mcpClient ? { mcp_client: mcpClient } : {}),
       })
-      .select("id")
-      .single()
     if (jobError) {
       return sendInternalError(reply, req, jobError, "Failed to create voice clone")
     }

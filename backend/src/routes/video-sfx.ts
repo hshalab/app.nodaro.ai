@@ -3,6 +3,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify"
 import { z } from "zod"
 import { probeVideoSource } from "../providers/video/ffmpeg-utils.js"
 import { safeUrlSchema } from "../lib/url-validator.js"
+import { insertJob } from "../lib/insert-job.js"
 import { creditGuard, reserveCreditsForJob } from "../middleware/credit-guard.js"
 import { videoQueue } from "../lib/queue.js"
 import { supabase } from "../lib/supabase.js"
@@ -195,9 +196,7 @@ export default async function videoSfxRoutes(app: FastifyInstance): Promise<void
         iterationIndex: i,
         iterationTotal: versions,
       }
-      const { data: job, error } = await supabase
-        .from("jobs")
-        .insert({
+      const { data: job, error } = await insertJob(req, {
           user_id: userId,
           status: "pending",
           input_data: inputData,
@@ -205,8 +204,6 @@ export default async function videoSfxRoutes(app: FastifyInstance): Promise<void
           ...(forcePrivate !== undefined ? { force_private: forcePrivate } : {}),
           ...(mcpClient ? { mcp_client: mcpClient } : {}),
         })
-        .select("id")
-        .single()
       if (error || !job) {
         if (inserted.length > 0) {
           const orphanIds = inserted.map((r) => r.jobId)
