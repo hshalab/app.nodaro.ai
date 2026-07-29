@@ -13,7 +13,7 @@ import { extractMcpClient } from "../lib/extract-mcp-client.js"
 import { buildJobInputData } from "../lib/job-input-data.js"
 import { insertWithIdempotencyKey } from "../lib/idempotent-insert.js"
 import { sendInternalError } from "../lib/http-errors.js"
-import { VIDEO_GEN_PROVIDERS, SEEDANCE_2_REF_LIMITS, PROMPT_HARD_CEILING, isSeedance2Provider, estimateLoopTrimAddonCredits, seedance2AudioLimitSec, findSeedance2AudioOverLimit, videoModelCanSpeakDialogue, getVideoAudioCapability, TTS_PROVIDERS, buildVideoCreditModelIdentifier, applyDefaultVideoSelection, VIDEO_REF_LIMITS_BY_PROVIDER, type ConnectedReference } from "@nodaro/shared"
+import { VIDEO_GEN_PROVIDERS, SEEDANCE_2_REF_LIMITS, PROMPT_HARD_CEILING, isSeedance2Provider, isVeoProvider, estimateLoopTrimAddonCredits, seedance2AudioLimitSec, findSeedance2AudioOverLimit, videoModelCanSpeakDialogue, getVideoAudioCapability, TTS_PROVIDERS, buildVideoCreditModelIdentifier, applyDefaultVideoSelection, VIDEO_REF_LIMITS_BY_PROVIDER, type ConnectedReference } from "@nodaro/shared"
 import { resolveVideoReferenceCore, resolveReferenceTokens, type VideoExtraRef, type CharacterMeta } from "@nodaro/prompts"
 import { connectedReferenceSchema } from "../lib/connected-reference-schema.js"
 import { formatZodError } from "../lib/zod-error.js"
@@ -473,7 +473,7 @@ export async function generateVideoRoutes(app: FastifyInstance) {
       })
     }
 
-    const { audioUrl, prompt: rawPrompt, provider: rawProvider, generateAudio, duration: rawDuration, mode, sound, negativePrompt, motionPrompt, cfgScale, aspectRatio, multiShot, shots, elements, resolution, grokMode, videoSize, seed, cameraFixed, webSearch, nsfwChecker, generationType, autoLoopTrim, loopTrim: rawLoopTrim, enableTranslation, videoTrimStart, videoTrimEnd, characterVoices, dialogue } = parsed.data
+    const { audioUrl, prompt: rawPrompt, provider: rawProvider, generateAudio, duration: rawDuration, mode, sound, negativePrompt, motionPrompt, cfgScale, aspectRatio, multiShot, shots, elements, resolution, grokMode, videoSize, seed, cameraFixed, webSearch, nsfwChecker, generationType: rawGenerationType, autoLoopTrim, loopTrim: rawLoopTrim, enableTranslation, videoTrimStart, videoTrimEnd, characterVoices, dialogue } = parsed.data
     // Platform default when the request omits provider/duration — the SAME
     // helper the DAG payload builder uses, so the two paths cannot drift.
     const { provider, duration } = applyDefaultVideoSelection({ provider: rawProvider, duration: rawDuration })
@@ -485,7 +485,6 @@ export async function generateVideoRoutes(app: FastifyInstance) {
     // decision point that derives the mode from whatever inputs arrive — there is
     // no mutual-exclusivity to enforce here. (The deprecated seedance2InputMode
     // body field is accepted-but-ignored for back-compat.)
-    const isS2 = isSeedance2Provider(provider)
     const imageUrl = parsed.data.imageUrl
     const endFrameUrl = parsed.data.endFrameUrl
     let referenceImageUrls = parsed.data.referenceImageUrls
@@ -565,13 +564,36 @@ export async function generateVideoRoutes(app: FastifyInstance) {
       }
     }
 
-    const hasMultimodalRef = (isS2 || provider === "gemini-omni-video") && (
-      (referenceVideoUrls?.length ?? 0) > 0 ||
-      (referenceAudioUrls?.length ?? 0) > 0 ||
-      (referenceImageUrls?.length ?? 0) > 0
-    )
+    // Ref-only exemption from the imageUrl requirement is CATALOG-driven, not a
+    // hardcoded provider list: the run may proceed without a start frame when at
+    // least one reference kind that is PRESENT is also CARRYABLE by the provider
+    // (a positive VIDEO_REF_LIMITS_BY_PROVIDER cap for that kind). The previous
+    // hardcoded (Seedance-2 | gemini-omni-video) pair 400'd every references-only
+    // run for kling-3-omni / grok-i2v / happyhorse-ref2v once the catalog
+    // advertised their image-ref caps — the References UI is catalog-driven, so
+    // this guard must derive from the same source. Matching per KIND (not "any
+    // cap") keeps the guard meaningful: refs the provider would silently drop
+    // (e.g. audio-only refs on an images-only model) still 400 rather than
+    // degrade into an unanchored generation the user didn't ask for.
+    const refCaps = VIDEO_REF_LIMITS_BY_PROVIDER[provider]
+    const hasMultimodalRef =
+      ((refCaps?.images ?? 0) > 0 && (referenceImageUrls?.length ?? 0) > 0) ||
+      ((refCaps?.videos ?? 0) > 0 && (referenceVideoUrls?.length ?? 0) > 0) ||
+      ((refCaps?.audio ?? 0) > 0 && (referenceAudioUrls?.length ?? 0) > 0)
 
-    // imageUrl is required for all modes except VEO REFERENCE_2_VIDEO or Seedance 2 ref-only mode
+    // VEO picks its REFERENCE_2_VIDEO wire mode from an explicit generationType
+    // (the kie/video.ts i2v branch otherwise falls back to `[imageUrl!]`, which
+    // is [undefined] on a ref-only run). The orchestrator already normalizes
+    // this for ref-only workflow runs (payload-builder's refs-present arm);
+    // mirror it here so direct API/SDK callers get the same behavior without
+    // knowing the VEO-specific flag.
+    let generationType = rawGenerationType
+    if (!generationType && !imageUrl && isVeoProvider(provider) && (referenceImageUrls?.length ?? 0) > 0) {
+      generationType = "REFERENCE_2_VIDEO"
+      // Mirror into parsed.data so buildJobInputData records what the worker receives.
+      parsed.data.generationType = generationType
+    }
+
     if (!imageUrl && generationType !== "REFERENCE_2_VIDEO" && !hasMultimodalRef) {
       return reply.status(400).send({
         error: { code: "validation_error", message: "imageUrl is required" },
