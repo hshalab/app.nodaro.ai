@@ -1890,11 +1890,11 @@ const VIDEO_MODELS: Record<string, ModelCatalogEntry> = {
     description: "Highest-accuracy analysis — a single deep pass that reads the footage frame by frame, finds its own shot boundaries, and identifies the cast by appearance. Best choice when the shot list will drive regeneration. Billed per duration bucket.",
     useCases: ["video-analysis", "shot-list", "premium", "most-accurate"],
     pricing: [
-      { identifier: "video-analysis:smart", credits: 346, note: "10-min ceiling (no duration given)" },
-      { identifier: "video-analysis:smart:60s", credits: 42 },
-      { identifier: "video-analysis:smart:180s", credits: 94 },
-      { identifier: "video-analysis:smart:360s", credits: 207 },
-      { identifier: "video-analysis:smart:600s", credits: 346, note: "10-min ceiling" },
+      { identifier: "video-analysis:smart", credits: 350, note: "10-min ceiling (no duration given)" },
+      { identifier: "video-analysis:smart:60s", credits: 46 },
+      { identifier: "video-analysis:smart:180s", credits: 98 },
+      { identifier: "video-analysis:smart:360s", credits: 211 },
+      { identifier: "video-analysis:smart:600s", credits: 350, note: "10-min ceiling" },
     ],
   },
 }

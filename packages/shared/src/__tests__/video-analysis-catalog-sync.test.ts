@@ -87,9 +87,9 @@ describe("bare video-analysis node-type credit id", () => {
       expect(credits, `${id} exceeds the bare-id ceiling ${ceiling}`).toBeLessThanOrEqual(ceiling)
     }
     // The migration writes this number; keep them in lockstep (277 wrote 200,
-    // 279 wrote 739, 280 writes 346 — every tier now dispatches one identical
-    // analyzer pass, so the whole schedule flattened and the ceiling fell with it).
-    expect(ceiling).toBe(346)
+    // 279 wrote 739, 283 wrote 346, 284 writes 350 — `smart` owns the ceiling and
+    // gained the continuity pass).
+    expect(ceiling).toBe(350)
   })
 
   it("the bare id still bounds the default tier at the ceiling bucket", () => {
