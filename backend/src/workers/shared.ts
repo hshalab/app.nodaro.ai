@@ -291,14 +291,17 @@ export async function commitJobCredits(
 
   try {
     if (metered && providerCostUsd && providerCostUsd > 0) {
-      const [providerCredits, { data: usageLog }] = await Promise.all([
-        computeActualCredits(providerCostUsd),
-        supabase
-          .from("usage_logs")
-          .select("credits_used, user_id, action, provider")
-          .eq("id", usageLogId)
-          .single(),
-      ])
+      // usage_logs.action is the model identifier convention (checkAndLogAnomaly
+      // below relies on the same). Fetched first so computeActualCredits can
+      // apply the identifier's per-service margin — the same margin the reserve
+      // applied — instead of the global markup (settings are cached, so the
+      // sequential await costs nothing).
+      const { data: usageLog } = await supabase
+        .from("usage_logs")
+        .select("credits_used, user_id, action, provider")
+        .eq("id", usageLogId)
+        .single()
+      const providerCredits = await computeActualCredits(providerCostUsd, usageLog?.action ?? undefined)
       // Retained non-provider add-ons (e.g. loop-trim) are charged on top of
       // the provider-derived credits. This also makes the anomaly check
       // accurate (reserved included the add-on, so actual should too).

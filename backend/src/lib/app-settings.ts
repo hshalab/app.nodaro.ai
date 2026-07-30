@@ -3,6 +3,13 @@ import { supabase } from "./supabase.js"
 export interface AppSettings {
   ai_provider: "replicate" | "kie"
   cost_markup_percent: number
+  /**
+   * Per-service margin overrides: identifier-prefix -> percent. A matched
+   * prefix REPLACES the global cost_markup_percent for that identifier
+   * (see ee/billing/service-margin.ts). Data-driven on purpose — which
+   * services carry their own margin lives only in the DB, never in code.
+   */
+  service_margin_percent: Record<string, number>
   carousel_video_autoplay: boolean
   apps_page_video_autoplay: boolean
   featured_app_ids: string[]
@@ -45,12 +52,13 @@ async function refreshSettings(): Promise<AppSettings> {
   if (error) {
     console.error("[getAppSettings] Error fetching settings:", error.message)
     // Return defaults on error
-    return { ai_provider: "replicate", cost_markup_percent: 0, carousel_video_autoplay: true, apps_page_video_autoplay: true, featured_app_ids: [], featured_apps_limit: 20, apps_auto_scroll_seconds: 4 }
+    return { ai_provider: "replicate", cost_markup_percent: 0, service_margin_percent: {}, carousel_video_autoplay: true, apps_page_video_autoplay: true, featured_app_ids: [], featured_apps_limit: 20, apps_auto_scroll_seconds: 4 }
   }
 
   const settings: AppSettings = {
     ai_provider: "replicate",
     cost_markup_percent: 0,
+    service_margin_percent: {},
     carousel_video_autoplay: true,
     apps_page_video_autoplay: true,
     featured_app_ids: [],
@@ -63,6 +71,14 @@ async function refreshSettings(): Promise<AppSettings> {
       settings.ai_provider = row.value as "replicate" | "kie"
     } else if (row.key === "cost_markup_percent" && typeof row.value === "number") {
       settings.cost_markup_percent = row.value
+    } else if (row.key === "service_margin_percent" && row.value && typeof row.value === "object" && !Array.isArray(row.value)) {
+      const margins: Record<string, number> = {}
+      for (const [prefix, pct] of Object.entries(row.value as Record<string, unknown>)) {
+        if (prefix.length > 0 && typeof pct === "number" && Number.isFinite(pct) && pct >= 0 && pct <= 500) {
+          margins[prefix] = pct
+        }
+      }
+      settings.service_margin_percent = margins
     } else if (row.key === "carousel_video_autoplay" && typeof row.value === "boolean") {
       settings.carousel_video_autoplay = row.value
     } else if (row.key === "apps_page_video_autoplay" && typeof row.value === "boolean") {

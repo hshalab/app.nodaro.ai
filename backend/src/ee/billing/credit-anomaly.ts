@@ -1,6 +1,7 @@
 import { supabase } from "../../lib/supabase.js"
 import { getAppSettings } from "../../lib/app-settings.js"
 import { usdToCredits } from "@nodaro/shared"
+import { effectiveMarkupPercent } from "./service-margin.js"
 
 /**
  * Reserve-vs-actual mismatches below this DOLLAR value are noise, not anomalies.
@@ -30,11 +31,17 @@ export function anomalyToleranceCredits(): number {
  * integer — measured at 61 production jobs (55 lip-sync, 4 image-to-video,
  * 2 generate-character), always in the customer's disfavour.
  */
-export async function computeActualCredits(providerCostUsd: number): Promise<number> {
+export async function computeActualCredits(providerCostUsd: number, modelIdentifier?: string): Promise<number> {
   const baseCredits = usdToCredits(providerCostUsd)
   const settings = await getAppSettings()
-  if (settings.cost_markup_percent > 0) {
-    return Math.ceil(baseCredits * (1 + settings.cost_markup_percent / 100))
+  // Same margin the reserve applied: the identifier's per-service margin when
+  // configured, else the global markup. Without this, a margined metered
+  // service would have its margin silently refunded at commit (actual < reserved).
+  const markupPercent = modelIdentifier !== undefined
+    ? effectiveMarkupPercent(settings, modelIdentifier)
+    : settings.cost_markup_percent
+  if (markupPercent > 0) {
+    return Math.ceil(baseCredits * (1 + markupPercent / 100))
   }
   return baseCredits
 }
