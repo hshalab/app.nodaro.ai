@@ -83,6 +83,45 @@ if (has("--write")) {
   if (missing.length) console.error(`[emit] WARNING ${missing.length} ids not in sheet: ${missing.join(", ")}`)
 }
 
+// ── MODEL_CATALOG (packages/shared), from the SAME sheet ──
+// The catalog carries its own `{ identifier, credits }` rows and is what MCP
+// list_models and the public API expose as prices. A guard test asserts it
+// matches STATIC_CREDIT_COSTS exactly, so it has to move in lockstep — it is
+// emitted here rather than hand-edited for the same reason as the other two.
+const CATALOG_TS = new URL("../../packages/shared/src/model-catalog.ts", import.meta.url).pathname
+// Matches anywhere on the line, not just at its start: many entries are inline
+// (`pricing: [{ identifier: "nano-banana", credits: 1, note: "1K" }],`) and an
+// anchored pattern silently skipped 73 of them.
+const CAT_ENTRY = /identifier:\s*"([^"]+)"\s*,\s*credits:\s*(\d+)/g
+{
+  const csrc = readFileSync(CATALOG_TS, "utf8")
+  const clines = csrc.split("\n")
+  let cChanged = 0
+  const cMissing: string[] = []
+  for (let i = 0; i < clines.length; i++) {
+    if (!clines[i].includes("identifier:")) continue
+    clines[i] = clines[i].replace(CAT_ENTRY, (whole, id: string, cur: string) => {
+      const row = byId.get(id)
+      if (!row) { cMissing.push(id); return whole }
+      const next = useOld ? (row.old_credits ?? Number(cur)) : row.new_credits
+      if (String(next) !== cur) cChanged++
+      return whole.replace(new RegExp(`credits:\\s*${cur}$`), `credits: ${next}`)
+    })
+  }
+  const cresult = clines.join("\n")
+  if (useOld) {
+    const same = cresult === csrc
+    console.error(same
+      ? "[emit --check] MODEL_CATALOG round-trips byte-identical at the old base"
+      : "[emit --check] MODEL_CATALOG FAIL — rewriter does not reproduce the current file")
+    if (cMissing.length) console.error(`[emit --check] catalog ids not in sheet: ${cMissing.length} (${cMissing.slice(0, 5).join(", ")})`)
+    if (!same) process.exit(1)
+  } else if (has("--write")) {
+    writeFileSync(CATALOG_TS, cresult)
+    console.error(`[emit] model-catalog.ts rewritten: ${cChanged} values changed${cMissing.length ? `, ${cMissing.length} ids not in sheet` : ""}`)
+  }
+}
+
 // ── model_pricing migration, from the SAME sheet ──
 const migPath = arg("--migration")
 if (migPath) {
@@ -97,7 +136,9 @@ if (migPath) {
     "BEGIN;",
     "",
     ...rows.map(r =>
-      `INSERT INTO model_pricing (model_identifier, credit_cost) VALUES (${JSON.stringify(r.identifier)}, ${r.new_credits})\n` +
+      // Single quotes: Postgres reads a double-quoted token as an IDENTIFIER,
+      // not a string literal, so JSON.stringify here produced invalid SQL.
+      `INSERT INTO model_pricing (model_identifier, credit_cost) VALUES ('${r.identifier.replace(/'/g, "''")}', ${r.new_credits})\n` +
       `  ON CONFLICT (model_identifier) DO UPDATE SET credit_cost = EXCLUDED.credit_cost;`),
     "",
     "COMMIT;",

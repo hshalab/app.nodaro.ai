@@ -24,9 +24,9 @@ const BYPASS = /[*/]\s*0\.0{1,2}2\b/
 
 describe("CREDIT_BASE_USD is the single arithmetic source of truth", () => {
   it("pins the constant's value so a re-denomination is a deliberate, visible diff", () => {
-    // The credit re-denomination flips this to 0.002 and updates this
-    // expectation in the same PR. It must never move silently.
-    expect(CREDIT_BASE_USD).toBe(0.02)
+    // Flipped from 0.02 to 0.002 by the credit re-denomination (Phase 2).
+    // It must never move silently — a change here is always deliberate.
+    expect(CREDIT_BASE_USD).toBe(0.002)
   })
 
   it("has no credit<->USD arithmetic against a hardcoded base outside the helper", async () => {

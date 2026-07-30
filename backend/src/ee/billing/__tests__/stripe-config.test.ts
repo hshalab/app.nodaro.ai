@@ -116,7 +116,7 @@ describe("stripe-config", () => {
 
   describe("FREE_TIER_RESTRICTIONS", () => {
     it("dailyCreditCap is 50", () => {
-      expect(FREE_TIER_RESTRICTIONS.dailyCreditCap).toBe(50)
+      expect(FREE_TIER_RESTRICTIONS.dailyCreditCap).toBe(500)
     })
 
     it("blockedModels includes veo3", () => {
@@ -141,13 +141,13 @@ describe("stripe-config", () => {
   describe("getTopupCredits", () => {
     it("returns 150 for the first topup price", () => {
       const firstPriceId = Object.keys(TOP_UPS)[0]
-      expect(getTopupCredits(firstPriceId)).toBe(150)
+      expect(getTopupCredits(firstPriceId)).toBe(3300)
     })
 
     it("returns 2200 for the last topup price", () => {
       const keys = Object.keys(TOP_UPS)
       const lastPriceId = keys[keys.length - 1]
-      expect(getTopupCredits(lastPriceId)).toBe(2200)
+      expect(getTopupCredits(lastPriceId)).toBe(36000)
     })
 
     it("returns null for unknown price ID", () => {

@@ -1,8 +1,9 @@
 -- ============================================================================
 -- PHASE 2 (credit re-denomination) — DATA half: scale balances + history x10
 -- ============================================================================
--- NOT YET SCHEDULED. Lives under _phase2_pending/ so Supabase does NOT apply
--- it; renumber into supabase/migrations/ only when Phase 2 is approved.
+-- SCHEDULED as migration 289. The reverse lives at
+-- _phase2_pending/REVERSE_credit_redenomination_scale_x10.sql (never applied
+-- automatically — it is the manual rollback).
 --
 -- Pairs with 901_credit_redenomination_scale_x10_REVERSE.sql — audit A6/R10
 -- requires the reverse to exist and be tested BEFORE this ships.
@@ -85,15 +86,7 @@ UPDATE profiles SET
   daily_spent_credits   = daily_spent_credits   * 10,
   app_credits_allowance = app_credits_allowance * 10;
 
--- ── Tier config (BOTH sources of truth must move — migrations 067 and 281
---    are prior production incidents caused by updating only one) ──
-UPDATE tier_config SET monthly_credits = 1500  WHERE tier = 'free';
-UPDATE tier_config SET monthly_credits = 4500  WHERE tier = 'basic';
-UPDATE tier_config SET monthly_credits = 11000 WHERE tier = 'standard';
-UPDATE tier_config SET monthly_credits = 23000 WHERE tier = 'pro';
-UPDATE tier_config SET monthly_credits = 52000 WHERE tier = 'business';
-UPDATE tier_config SET daily_credit_limit = daily_credit_limit * 10
-  WHERE daily_credit_limit IS NOT NULL;
+-- Tier config is handled by 287_credit_redenomination_tier_config.sql.
 
 -- ── History (§3.4: backfill x10 so admin/reporting need no interpretation layer) ──
 UPDATE usage_logs SET

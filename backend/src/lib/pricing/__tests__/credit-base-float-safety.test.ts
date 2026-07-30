@@ -24,7 +24,7 @@ function countDivergences(base: number, maxUsd: number): number {
 describe("credit base float safety", () => {
   it("diverges at the current base — the guard is doing work today", () => {
     expect(countDivergences(0.02, 5)).toBe(10)
-    expect(usdToCredits(0.14)).toBe(7)
+    expect(usdToCredits(0.14)).toBe(70)
     expect(bare(0.14, 0.02)).toBe(8) // what an unguarded conversion would charge
   })
 
