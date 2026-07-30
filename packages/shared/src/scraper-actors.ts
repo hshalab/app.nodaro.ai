@@ -16,15 +16,20 @@ export const SCRAPER_ACTOR_LABELS: Record<ScraperActorId, string> = {
   "rss":             "RSS Feed",
 }
 
-/** Credit costs per composite SKU — must stay in sync with STATIC_CREDIT_COSTS in backend. */
+/** Credit costs per composite SKU — must stay in sync with STATIC_CREDIT_COSTS in backend.
+ *
+ * "Must stay in sync" was doing no work: these were left at the pre-2026-07-30
+ * credit base while the backend moved, so every SKU here read a tenth of the
+ * real price. Values below are copied from `model_pricing`, which is what the
+ * user is actually charged. */
 export const SCRAPER_CREDIT_COSTS: Record<string, number> = {
-  "web-scrape": 2,
-  "web-scrape:google-search": 3,
-  "web-scrape:content-crawler": 1,
-  "web-scrape:content-crawler:site": 5,
-  "web-scrape:instagram": 1,
-  "web-scrape:tiktok": 1,
-  "web-scrape:rss": 1,
+  "web-scrape": 20,
+  "web-scrape:google-search": 30,
+  "web-scrape:content-crawler": 10,
+  "web-scrape:content-crawler:site": 50,
+  "web-scrape:instagram": 10,
+  "web-scrape:tiktok": 10,
+  "web-scrape:rss": 10,
 }
 
 export function isScraperActor(value: unknown): value is ScraperActorId {

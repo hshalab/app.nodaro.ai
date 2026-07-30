@@ -765,7 +765,7 @@ generation routes:
   `generate-image`; the server-side composite + color-harmonization steps are
   not separately charged.
 - `POST /v1/generate-location-motion` — `creditCost(provider)` credits per
-  motion clip. Provider defaults to `kling` (~28 credits / 10-second clip (kling:5s = 14)).
+  motion clip. Provider defaults to `kling` (~275 credits / 10-second clip; `kling:5s` = 138).
   See `docs/nodes/ai-video/generate-video.md` for the full per-provider
   table.
 - `POST /v1/locations/:id/approve-main-image` — currently free; the LLM

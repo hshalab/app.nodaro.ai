@@ -144,11 +144,14 @@ export interface ModelRecommendation {
 export const MODEL_RECOMMENDATIONS: readonly ModelRecommendation[] = [
   // image
   { intent: "best for typography / logos / text-heavy", modelIds: ["nano-banana-pro", "gpt-image-2"], note: "Nano Banana Pro for diagrams / complex text; GPT Image 2 for logos and short copy." },
-  { intent: "cheapest realistic image", modelIds: ["z-image", "qwen", "imagen4-fast"], note: "Z-Image is the cheapest at 1 credit. Qwen / Imagen4 Fast for slightly higher quality." },
+  // Notes name the RANKING, not the price — the price sits in the generated
+  // table directly below them and in `pricing`, so restating it here just
+  // creates a copy that rots (this one said "1 credit" long after it was 2).
+  { intent: "cheapest realistic image", modelIds: ["z-image", "qwen", "imagen4-fast"], note: "Z-Image is the cheapest. Qwen / Imagen4 Fast for slightly higher quality." },
   { intent: "highest fidelity image", modelIds: ["nano-banana-pro", "imagen4-ultra", "flux-flex"], note: "Pick by family preference; all three are premium tiers." },
   { intent: "image edit / restyle", modelIds: ["flux-kontext", "ideogram-remix", "seedream-5-pro-i2i"], note: "Flux Kontext preserves identity; Ideogram Remix is character-aware; Seedream 5 Pro for instruction-based edits (5 Lite is the budget option)." },
   { intent: "highest-resolution image (4K / 8K)", modelIds: ["topaz-image-upscale", "nano-banana-pro", "gpt-image-2"], note: "Generate at native then Topaz upscale for 8K." },
-  { intent: "background removal / cutout", modelIds: ["recraft-remove-bg"], note: "1 credit, no prompt needed." },
+  { intent: "background removal / cutout", modelIds: ["recraft-remove-bg"], note: "Cheap, no prompt needed." },
   // video
   { intent: "best cinematic video", modelIds: ["veo3", "kling-3.0", "seedance-2"], note: "VEO 3.1 Quality for premium narrative; Kling 3.0 for music-synced motion; Seedance 2 for reference-driven consistency." },
   { intent: "cheap batch video clips", modelIds: ["veo3.1", "wan-turbo", "bytedance-lite"], note: "VEO 3.1 Fast is the best price/quality balance with native audio." },

@@ -9,7 +9,7 @@ import {
 beforeEach(() => vi.clearAllMocks())
 
 describe("estimateUpfrontCredits", () => {
-  it("includes Stage 1 baseline (30) + music (4) + editor (3) + final-merge (3) + storyboard cohesion (5) + video-critic default budget when music is enabled", () => {
+  it("includes Stage 1 baseline (300) + music (40) + editor (30) + final-merge (30) + storyboard cohesion (50) + video-critic default budget when music is enabled", () => {
     // Phase 1C.2: pipeline-level Stage 7 sub-steps add to the Stage 1 baseline.
     // Phase 1D.2c-b-i: Storyboard Cohesion critic adds 5 credits (all modes).
     // Phase 1D.2c-b-ii (G1): Video Critic per-shot budget — default
@@ -25,10 +25,10 @@ describe("estimateUpfrontCredits", () => {
         narrationEnabled: true,
         lipsyncEnabled: true,
       }),
-    ).toBe(75)
+    ).toBe(750)
   })
 
-  it("excludes the 4 cr music allocation when music is disabled", () => {
+  it("excludes the 40 cr music allocation when music is disabled", () => {
     // 30 (Stage 1) + 0 (music) + 3 (editor) + 3 (final merge) + 5 (cohesion)
     //   + 30 (video critic @ 60s first_last) = 71
     expect(
@@ -40,7 +40,7 @@ describe("estimateUpfrontCredits", () => {
         narrationEnabled: true,
         lipsyncEnabled: true,
       }),
-    ).toBe(71)
+    ).toBe(710)
   })
 
   it("auto mode currently costs the same as manual (no premium yet)", () => {
@@ -53,10 +53,10 @@ describe("estimateUpfrontCredits", () => {
         narrationEnabled: true,
         lipsyncEnabled: true,
       }),
-    ).toBe(75)
+    ).toBe(750)
   })
 
-  it("adds 56 credits for mode='guided' vs mode='manual' baseline (script + post_merge chat)", () => {
+  it("adds 560 credits for mode='guided' vs mode='manual' baseline (script + post_merge chat)", () => {
     const baseline = estimateUpfrontCredits({
       targetDurationSeconds: 30,
       format: "short_film",
@@ -76,10 +76,10 @@ describe("estimateUpfrontCredits", () => {
     // Phase 1D.2c: chat reservation now loops over ALL wired chat stages.
     // CHAT_TURN_CAPS.script (20) × 2 + CHAT_TURN_CAPS.post_merge (8) × 2
     //   = 40 + 16 = 56 credits.
-    expect(guided - baseline).toBe(56)
+    expect(guided - baseline).toBe(560)
   })
 
-  it("adds 5 credits for the Storyboard Cohesion critic to the baseline in all 3 modes", () => {
+  it("adds 50 credits for the Storyboard Cohesion critic to the baseline in all 3 modes", () => {
     // Phase 1D.2c-b-i: critic runs once during Stage 6 (scene_images) in manual/auto/guided.
     // Phase 1D.2c-b-ii (G1): video critic adds 16cr at 30s first_last (max(5, ceil(30/4)) = 8 shots × 2cr).
     const args = {
@@ -94,9 +94,9 @@ describe("estimateUpfrontCredits", () => {
     const guided = estimateUpfrontCredits({ ...args, mode: "guided" })
     // Manual + 5 cohesion + 16 video critic = 61; auto same; guided adds 56
     // chat-refine (script 40 + post_merge 16) = 117.
-    expect(manual).toBe(61)
-    expect(auto).toBe(61)
-    expect(guided).toBe(117)
+    expect(manual).toBe(610)
+    expect(auto).toBe(610)
+    expect(guided).toBe(1170)
   })
 
   // ─── Phase 1D.2c-b-ii G1 — Video Critic per-shot budget ─────────────
@@ -106,7 +106,7 @@ describe("estimateUpfrontCredits", () => {
   // `max(5, ceil(target_duration_seconds / 4))` — used for upfront
   // reservation; unused credits refund on completion.
 
-  it("G1 default (first_last) — 30s pipeline reserves 2cr × max(5, ceil(30/4)) = 2 × 8 = 16 extra credits", () => {
+  it("G1 default (first_last) — 30s pipeline reserves 20cr × max(5, ceil(30/4)) = 20 × 8 = 160 extra credits", () => {
     // Baseline: 30 + 4 + 3 + 3 + 5 = 45 (manual, music on).
     // Add: 16 (video critic, default mode).
     const credits = estimateUpfrontCredits({
@@ -118,10 +118,10 @@ describe("estimateUpfrontCredits", () => {
       lipsyncEnabled: true,
       // No videoCriticFrameCount → default to "first_last"
     })
-    expect(credits).toBe(45 + 16) // 61
+    expect(credits).toBe(450 + 160) // 610
   })
 
-  it("G1 first_middle_last — 3cr per shot × 8 shots = 24 extra credits over baseline", () => {
+  it("G1 first_middle_last — 30cr per shot × 8 shots = 240 extra credits over baseline", () => {
     const credits = estimateUpfrontCredits({
       targetDurationSeconds: 30,
       format: "short_film",
@@ -131,10 +131,10 @@ describe("estimateUpfrontCredits", () => {
       lipsyncEnabled: true,
       videoCriticFrameCount: "first_middle_last",
     })
-    expect(credits).toBe(45 + 24) // 69
+    expect(credits).toBe(450 + 240) // 690
   })
 
-  it("G1 five_evenly — 4cr per shot × 8 shots = 32 extra credits over baseline", () => {
+  it("G1 five_evenly — 40cr per shot × 8 shots = 320 extra credits over baseline", () => {
     const credits = estimateUpfrontCredits({
       targetDurationSeconds: 30,
       format: "short_film",
@@ -144,7 +144,7 @@ describe("estimateUpfrontCredits", () => {
       lipsyncEnabled: true,
       videoCriticFrameCount: "five_evenly",
     })
-    expect(credits).toBe(45 + 32) // 77
+    expect(credits).toBe(450 + 320) // 770
   })
 
   it("G1 minimum-shots floor: 5s pipeline still budgets for 5 shots (not duration/4=2)", () => {
@@ -160,7 +160,7 @@ describe("estimateUpfrontCredits", () => {
       videoCriticFrameCount: "first_last",
     })
     // Baseline 45 + 2cr × 5 shots = 55.
-    expect(credits).toBe(45 + 10)
+    expect(credits).toBe(450 + 100)
   })
 
   it("G1 scales linearly with duration — 60s pipeline budgets for 15 shots", () => {
@@ -175,7 +175,7 @@ describe("estimateUpfrontCredits", () => {
       videoCriticFrameCount: "first_last",
     })
     // Baseline 45 + 2cr × 15 shots = 75.
-    expect(credits).toBe(45 + 30)
+    expect(credits).toBe(450 + 300)
   })
 
   it("G1 guided mode combines chat budget AND video-critic budget", () => {
@@ -192,22 +192,22 @@ describe("estimateUpfrontCredits", () => {
       lipsyncEnabled: true,
       videoCriticFrameCount: "first_last",
     })
-    expect(credits).toBe(45 + 56 + 16)
+    expect(credits).toBe(450 + 560 + 160)
   })
 })
 
 describe("resolveMaxCostCredits", () => {
   it("returns tier cap when nothing requested", () => {
-    expect(resolveMaxCostCredits({ tier: "pro" })).toBe(2000)
+    expect(resolveMaxCostCredits({ tier: "pro" })).toBe(20000)
   })
   it("clamps requested to tier cap", () => {
-    expect(resolveMaxCostCredits({ requested: 10_000, tier: "basic" })).toBe(300)
+    expect(resolveMaxCostCredits({ requested: 10_000, tier: "basic" })).toBe(3000)
   })
   it("respects requested below tier cap", () => {
     expect(resolveMaxCostCredits({ requested: 100, tier: "pro" })).toBe(100)
   })
-  it("falls back to 300 for unknown tier", () => {
-    expect(resolveMaxCostCredits({ tier: "made_up" })).toBe(300)
+  it("falls back to 3000 for unknown tier", () => {
+    expect(resolveMaxCostCredits({ tier: "made_up" })).toBe(3000)
   })
 })
 
