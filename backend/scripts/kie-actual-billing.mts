@@ -93,6 +93,26 @@ const rows = [...byModel.values()]
     ),
   }))
 
+// --per-task: emit RAW per-task records instead of the aggregate. Joining these
+// to jobs.provider_task_id yields (duration, cost) pairs, which is the only way
+// to derive a per-second RATE for duration composites — the aggregate averages
+// across durations and jobs.provider_cost is just the reserve estimate.
+if (process.argv.includes("--per-task")) {
+  const tasks = records
+    .filter(r => isSuccess(r.state) && r.taskId)
+    .map(r => ({
+      taskId: r.taskId,
+      kieModel: r.model,
+      ourKeys: [...new Set((modelMap.get(r.model) ?? []).map(m => (m as { ourKey: string }).ourKey))],
+      kieCredits: r.consumeCredits,
+      usd: round(r.consumeCredits * KIE_USD_PER_CREDIT),
+    }))
+  console.error(`[kie-actual] per-task records with a taskId: ${tasks.length}`)
+  console.log(JSON.stringify({
+    collectedAt: new Date(endTime).toISOString(), lookbackMinutes,
+    kieUsdPerCredit: KIE_USD_PER_CREDIT, mode: "per-task", tasks,
+  }, null, 2))
+} else {
 console.log(JSON.stringify({
   collectedAt: new Date(endTime).toISOString(),
   lookbackMinutes,
@@ -103,3 +123,4 @@ console.log(JSON.stringify({
   errors,
   models: rows,
 }, null, 2))
+}

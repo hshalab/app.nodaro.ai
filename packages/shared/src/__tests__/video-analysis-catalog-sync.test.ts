@@ -87,9 +87,10 @@ describe("bare video-analysis node-type credit id", () => {
       expect(credits, `${id} exceeds the bare-id ceiling ${ceiling}`).toBeLessThanOrEqual(ceiling)
     }
     // The migration writes this number; keep them in lockstep (277 wrote 200,
-    // 279 wrote 739, 283 wrote 346, 284 writes 350 — `smart` owns the ceiling and
-    // gained the continuity pass).
-    expect(ceiling).toBe(350)
+    // 279 wrote 739, 283 wrote 346, 284 wrote 350 — `smart` owns the ceiling and
+    // gained the continuity pass — and the credit re-denomination scaled it x10
+    // to 3500, the value 288 now writes).
+    expect(ceiling).toBe(3500)
   })
 
   it("the bare id still bounds the default tier at the ceiling bucket", () => {

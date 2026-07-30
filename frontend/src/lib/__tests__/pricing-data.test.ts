@@ -240,7 +240,9 @@ describe("TOPUP_PACKAGES", () => {
       expect(pkg.priceId).toBeTruthy()
       expect(pkg.credits).toBeGreaterThan(0)
       expect(pkg.price).toBeGreaterThan(0)
-      expect(pkg.perCredit).toMatch(/^\$\d+\.\d{2,3}$/)
+      // 2-4 decimals: at the current credit base a top-up rate needs 4 to be
+      // meaningful ($0.0030), where the previous base only needed 3.
+      expect(pkg.perCredit).toMatch(/^\$\d+\.\d{2,4}$/)
     }
   })
 

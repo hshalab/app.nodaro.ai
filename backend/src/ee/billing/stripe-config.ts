@@ -41,18 +41,23 @@ export const PRICE_TO_PLAN: Record<string, { plan: string; interval: "monthly" |
 }
 
 export const TOP_UPS: Record<string, number> = {
-  "price_1T8T5M6EOX16l3P85i5sCtUs": 150,
-  "price_1T8T5k6EOX16l3P8a1goDXGm": 450,
-  "price_1T8T5w6EOX16l3P8mNU7sLkU": 1000,
-  "price_1T8T6B6EOX16l3P8CmcSaJyR": 2200,
+  // Re-rated onto the flattened curve (design §4.3, signed off 2026-07-30).
+  // Dollar amounts and Stripe price IDs are unchanged — only the grants move.
+  "price_1T8T5M6EOX16l3P85i5sCtUs": 3300,   // $10
+  "price_1T8T5k6EOX16l3P8a1goDXGm": 8500,   // $25
+  "price_1T8T5w6EOX16l3P8mNU7sLkU": 17500,  // $50
+  "price_1T8T6B6EOX16l3P8CmcSaJyR": 36000,  // $100
 }
 
 export const TIER_CREDITS: Record<string, number> = {
-  free: 150,
-  basic: 250,
-  standard: 850,
-  pro: 2000,
-  business: 4800,
+  // Tier flattening + x10 re-denomination. $/credit spread collapses 1.79x -> 1.08x.
+  // MUST stay in lockstep with tier_config.monthly_credits — migrations 067 and
+  // 281 are prior production incidents from updating only one of the two.
+  free: 1500,
+  basic: 4500,
+  standard: 11000,
+  pro: 23000,
+  business: 52000,
 }
 
 /** Max concurrent nodes per workflow execution, by tier. */
@@ -87,7 +92,7 @@ export const RETENTION_DAYS = {
 } as const
 
 export const FREE_TIER_RESTRICTIONS = {
-  dailyCreditCap: 50,
+  dailyCreditCap: 500,
   blockedModels: ["veo3", "veo3.1", "gemini-omni-video:4k:4", "gemini-omni-video:4k:6", "gemini-omni-video:4k:8", "gemini-omni-video:4k:10", "gemini-omni-video:4k:vref"],
   watermark: true,
 } as const

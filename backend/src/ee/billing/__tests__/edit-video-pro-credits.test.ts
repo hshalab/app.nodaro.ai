@@ -50,17 +50,17 @@ const probe720 = (durationSeconds: number) => ({ width: 720, height: 1280, durat
 
 describe("golden-table composite sanity (seedance-2 ref family + edit-video-pro fee, credits.ts)", () => {
   it("seedance-2 8s -ref composites by tier", () => {
-    expect(STATIC_CREDIT_COSTS["seedance-2:8s:480p-ref"]).toBe(23) // 2.875/sec
-    expect(STATIC_CREDIT_COSTS["seedance-2:8s:720p-ref"]).toBe(50) // 6.25/sec
-    expect(STATIC_CREDIT_COSTS["seedance-2:8s:1080p-ref"]).toBe(124) // 15.5/sec
-    expect(STATIC_CREDIT_COSTS["seedance-2:8s:4k-ref"]).toBe(256) // 32/sec
+    expect(STATIC_CREDIT_COSTS["seedance-2:8s:480p-ref"]).toBe(230) // 2.875/sec
+    expect(STATIC_CREDIT_COSTS["seedance-2:8s:720p-ref"]).toBe(500) // 6.25/sec
+    expect(STATIC_CREDIT_COSTS["seedance-2:8s:1080p-ref"]).toBe(1240) // 15.5/sec
+    expect(STATIC_CREDIT_COSTS["seedance-2:8s:4k-ref"]).toBe(2560) // 32/sec
   })
   it("edit-video-pro fee row is seeded and matches the migration value (10)", () => {
     // Simplified stand-in for "fee missing -> PriceNotConfiguredError": rather
     // than reaching into module internals to delete the key, pin the seeded
     // value here so the migration-sync test (which reads this same export)
     // and this pricing helper can never silently drift apart.
-    expect(STATIC_CREDIT_COSTS["edit-video-pro"]).toBe(10)
+    expect(STATIC_CREDIT_COSTS["edit-video-pro"]).toBe(100)
   })
 })
 
@@ -92,7 +92,7 @@ describe("computeEditVideoProPricing — golden table (seedance-2, 720p bridge u
     expect(result.refsSecReserve).toBe(4)
     expect(result.reserveResolution).toBe("720p")
     // feeBase(10) + ceil(6.25 × (11 + 4)) = 10 + ceil(93.75) = 10 + 94 = 104
-    expect(result.reserveBase).toBe(104)
+    expect(result.reserveBase).toBe(1038)
     expect(result.spanExceedsSource).toBe(false)
   })
 
@@ -113,7 +113,7 @@ describe("computeEditVideoProPricing — golden table (seedance-2, 720p bridge u
     expect(result.refsSecReserve).toBe(2)
     expect(result.reserveResolution).toBe("720p")
     // 10 + ceil(6.25 × (10 + 2)) = 10 + 75 = 85
-    expect(result.reserveBase).toBe(85)
+    expect(result.reserveBase).toBe(850)
   })
 
   it("B==D (A=10,B=20,D=20) -> reserveBase 85 (probe makes the tail edge knowable)", async () => {
@@ -132,7 +132,7 @@ describe("computeEditVideoProPricing — golden table (seedance-2, 720p bridge u
     // (refOut=1 (A>=MIN_REF) + (n-1)=0 + refIn=0 (no tail)) × MIN_REF(2) = 2 -- SAME total
     // as the A=0 row above (which had refOut=0+refIn=1), landing on the same 85.
     expect(result.refsSecReserve).toBe(2)
-    expect(result.reserveBase).toBe(85)
+    expect(result.reserveBase).toBe(850)
     expect(result.spanExceedsSource).toBe(false)
   })
 
@@ -152,7 +152,7 @@ describe("computeEditVideoProPricing — golden table (seedance-2, 720p bridge u
     // (refOut=0 (0.5 < MIN_REF=2, the "floor") + (n-1)=0 + refIn=1) × MIN_REF(2) = 2
     expect(result.refsSecReserve).toBe(2)
     // 10 + ceil(6.25 × (11 + 2)) = 10 + ceil(81.25) = 10 + 82 = 92
-    expect(result.reserveBase).toBe(92)
+    expect(result.reserveBase).toBe(913)
   })
 
   it("span 20 mid (A=10,B=30,D=40) -> reserveBase 185", async () => {
@@ -172,7 +172,7 @@ describe("computeEditVideoProPricing — golden table (seedance-2, 720p bridge u
     // (refOut=1 + (n-1)=1 + refIn=1) × MIN_REF(2) = 6
     expect(result.refsSecReserve).toBe(6)
     // 10 + ceil(6.25 × (22 + 6)) = 10 + 175 = 185
-    expect(result.reserveBase).toBe(185)
+    expect(result.reserveBase).toBe(1850)
   })
 
   it("span 4, mid-video (A=8,B=12,D=20) -> reserveBase 67", async () => {
@@ -191,7 +191,7 @@ describe("computeEditVideoProPricing — golden table (seedance-2, 720p bridge u
     // (refOut=1 + (n-1)=0 + refIn=1) × MIN_REF(2) = 4
     expect(result.refsSecReserve).toBe(4)
     // 10 + ceil(6.25 × (5 + 4)) = 10 + ceil(56.25) = 10 + 57 = 67
-    expect(result.reserveBase).toBe(67)
+    expect(result.reserveBase).toBe(663)
   })
 })
 
@@ -245,7 +245,7 @@ describe("probe failure / missing sourceUrl -> worst-case fallback (over-reserve
     expect(topTier).toBe("4k")
     expect(result.reserveResolution).toBe("4k")
     // feeBase(10) + ceil(rate_4k(32) × (S'=11 + refsSecReserve=4)) = 10 + ceil(32×15) = 10 + 480 = 490
-    expect(result.reserveBase).toBe(490)
+    expect(result.reserveBase).toBe(4900)
     expect(result.spanExceedsSource).toBe(false) // unknowable without a probe -- never flagged
   })
 
@@ -258,7 +258,7 @@ describe("probe failure / missing sourceUrl -> worst-case fallback (over-reserve
     expect(probeMock).not.toHaveBeenCalled()
     expect(result.probe).toBeNull()
     expect(result.reserveResolution).toBe("4k")
-    expect(result.reserveBase).toBe(490)
+    expect(result.reserveBase).toBe(4900)
     expect(result.spanExceedsSource).toBe(false)
   })
 })
@@ -282,7 +282,7 @@ describe("source-duration clamp (spanEnd vs probed duration)", () => {
     expect(result.spanExceedsSource).toBe(true)
     expect(result.spanEndSec).toBe(20) // clamped to the probed duration
     expect(result.clampedSpanSec).toBe(18)
-    expect(result.reserveBase).toBe(154)
+    expect(result.reserveBase).toBe(1538)
   })
 
   it("spanEnd within tolerance of D (A=2,B=19.98,D=20) -> tail treated absent, no flag", async () => {
@@ -298,7 +298,7 @@ describe("source-duration clamp (spanEnd vs probed duration)", () => {
     // tail treated absent (D-B=0.02 <= tolerance) -> only the head edge counts
     // toward outerSeamLossReserve (0.3*(1+0)=0.3, not 0.6).
     expect(result.outerSeamLossReserve).toBe(0.3)
-    expect(result.reserveBase).toBe(154) // same split/refs as the row above -- rounds identically
+    expect(result.reserveBase).toBe(1538) // same split/refs as the row above -- rounds identically
   })
 })
 

@@ -205,46 +205,46 @@ export const STATIC_CREDIT_COSTS: Record<string, number> = {
   // Base entries = default/cheapest setting. Composite entries = specific setting.
   //
   // ── Image Generation ──
-  "nano-banana": 1,
-  "nano-banana-2": 4,             // (1K default)
-  "nano-banana-2:2K": 5,
-  "nano-banana-2:4K": 5,
-  "nano-banana-2-lite": 2,        // 1K only, flat
-  "nano-banana-pro": 5,          // (1K/2K default)
-  "nano-banana-pro:4K": 6,
-  "flux": 2,                     // (1K default)
-  "flux:2K": 2,
-  "grok": 1,
-  "gpt-image": 4,                // (medium default)
-  "gpt-image:high": 6,
-  "gpt-image-2": 1,              // (1K default; estimated, recalibrate from anomalies)
-  "gpt-image-2:2K": 3,           // (estimated)
-  "gpt-image-2:4K": 6,           // (estimated)
-  "reference-sheet:assembly": 4, // Flat sheet-assembly fee; per-panel gen priced separately (bare provider key)
-  "reference-sheet:assembly-motion": 6, // Flat FFmpeg-assembly fee for motion sheets; motion clips priced separately by the motion routes
-  "imagen4": 2,
-  "imagen4-fast": 1,
-  "imagen4-ultra": 3,
-  "qwen": 1,
-  "seedream": 2,
-  "seedream:high": 4,            // estimated (4K)
-  "seedream-5-lite": 2,
-  "seedream-5-lite:high": 5,     // estimated (4K)
-  "seedream-5-pro": 3,           // (basic / 1K default)
-  "seedream-5-pro:high": 6,      // high / 2K
-  "flux-flex": 4,                // (1K default)
-  "flux-flex:2K": 6,
-  "z-image": 1,
-  "flux-kontext": 2,
-  "flux-kontext-max": 4,
+  "nano-banana": 10,
+  "nano-banana-2": 20,             // (1K default)
+  "nano-banana-2:2K": 50,
+  "nano-banana-2:4K": 50,
+  "nano-banana-2-lite": 10,        // 1K only, flat
+  "nano-banana-pro": 45,          // (1K/2K default)
+  "nano-banana-pro:4K": 60,
+  "flux": 13,                     // (1K default)
+  "flux:2K": 20,
+  "grok": 10,
+  "gpt-image": 10,                // (medium default)
+  "gpt-image:high": 60,
+  "gpt-image-2": 15,              // (1K default; estimated, recalibrate from anomalies)
+  "gpt-image-2:2K": 30,           // (estimated)
+  "gpt-image-2:4K": 60,           // (estimated)
+  "reference-sheet:assembly": 40, // Flat sheet-assembly fee; per-panel gen priced separately (bare provider key)
+  "reference-sheet:assembly-motion": 60, // Flat FFmpeg-assembly fee for motion sheets; motion clips priced separately by the motion routes
+  "imagen4": 20,
+  "imagen4-fast": 10,
+  "imagen4-ultra": 30,
+  "qwen": 10,
+  "seedream": 16,
+  "seedream:high": 40,            // estimated (4K)
+  "seedream-5-lite": 14,
+  "seedream-5-lite:high": 50,     // estimated (4K)
+  "seedream-5-pro": 18,           // (basic / 1K default)
+  "seedream-5-pro:high": 60,      // high / 2K
+  "flux-flex": 35,                // (1K default)
+  "flux-flex:2K": 60,
+  "z-image": 2,
+  "flux-kontext": 13,
+  "flux-kontext-max": 25,
   // ── Replicate "Open" (uncensored) — run direct via Replicate, not KIE ──
   // Base rows (representative default-resolution 0-ref) — for admin display and
   // single-node runs where no :MP:ref composite is available yet.
   // Per-MP×ref composites are spread below via FLUX2_STATIC.
-  "flux-2-klein": 1,             // default 1MP 0ref — BFL Flux 2 9B Klein via Replicate
-  "kontext-multi": 3,            // multi-image-kontext-pro via Replicate
-  "flux-2-pro": 3,               // default 2MP 0ref — BFL Flux 2 Pro via Replicate, safety_tolerance=5
-  "flux-2-max": 7,               // default 2MP 0ref — BFL Flux 2 Max via Replicate, safety_tolerance=5
+  "flux-2-klein": 10,             // default 1MP 0ref — BFL Flux 2 9B Klein via Replicate
+  "kontext-multi": 30,            // multi-image-kontext-pro via Replicate
+  "flux-2-pro": 30,               // default 2MP 0ref — BFL Flux 2 Pro via Replicate, safety_tolerance=5
+  "flux-2-max": 70,               // default 2MP 0ref — BFL Flux 2 Max via Replicate, safety_tolerance=5
   // Full per-MP×ref grid for Flux 2 family (108 entries, see flux2BaseCredits formula).
   // Identifier format: `<model>:<mp>MP:<n>ref` (mp ∈ {0.5,1,2,4}, n ∈ 0..8).
   ...FLUX2_STATIC,
@@ -272,328 +272,328 @@ export const STATIC_CREDIT_COSTS: Record<string, number> = {
   // `video-analysis-catalog-sync.test.ts` and written by migration 277.
   "video-analysis": Math.max(...Object.values(VIDEO_ANALYSIS_BUCKET_CREDITS)),
   ...VIDEO_ANALYSIS_STATIC,
-  "flux-lora-character": 2,      // flux-dev-lora inference via Replicate. Internal-only id selected by payload-builder when a single trained @character is mentioned.
-  "character-lora-training": 150, // Replicate ostris/flux-dev-lora-trainer (1000 steps, one-shot). Refunded by webhook on failure/cancel.
+  "flux-lora-character": 20,      // flux-dev-lora inference via Replicate. Internal-only id selected by payload-builder when a single trained @character is mentioned.
+  "character-lora-training": 1500, // Replicate ostris/flux-dev-lora-trainer (1000 steps, one-shot). Refunded by webhook on failure/cancel.
   // ── Image Editing ──
-  "recraft-upscale": 1,
-  "recraft-remove-bg": 1,
-  "nano-banana-edit": 2,
-  "topaz-image-upscale": 3,      // (2K default)
-  "topaz-image-upscale:4K": 5,
-  "topaz-image-upscale:8K": 10,
-  "grok-upscale": 3,
+  "recraft-upscale": 2,
+  "recraft-remove-bg": 3,
+  "nano-banana-edit": 10,
+  "topaz-image-upscale": 25,      // (2K default)
+  "topaz-image-upscale:4K": 50,
+  "topaz-image-upscale:8K": 100,
+  "grok-upscale": 25,
   // ── Image-to-Image ──
-  "flux-i2i": 4,                 // (1K default)
-  "flux-i2i:2K": 6,
-  "flux-pro-i2i": 2,             // (1K default)
-  "flux-pro-i2i:2K": 2,
-  "grok-i2i": 1,
-  "gpt-image-i2i": 4,            // (medium default)
-  "gpt-image-i2i:high": 6,
-  "gpt-image-2-i2i": 1,          // (1K default; estimated)
-  "gpt-image-2-i2i:2K": 3,       // (estimated)
-  "gpt-image-2-i2i:4K": 6,       // (estimated)
-  "ideogram-edit": 5,            // (BALANCED default)
-  "ideogram-edit:TURBO": 3,
-  "ideogram-edit:QUALITY": 6,
-  "ideogram-remix": 5,           // (BALANCED default)
-  "ideogram-remix:TURBO": 3,
-  "ideogram-remix:QUALITY": 6,
-  "ideogram-reframe": 2,         // (V3 Reframe BALANCED)
-  "ideogram-reframe:TURBO": 1,
-  "ideogram-reframe:QUALITY": 3,
-  "ideogram-v3": 2,              // (BALANCED default)
-  "ideogram-v3:TURBO": 1,
-  "ideogram-v3:QUALITY": 3,
-  "qwen-i2i": 1,
-  "qwen-edit": 2,
-  "seedream-edit": 2,
-  "seedream-edit:high": 4,       // estimated (4K)
-  "seedream-5-lite-i2i": 2,
-  "seedream-5-lite-i2i:high": 5, // estimated (4K)
-  "seedream-5-pro-i2i": 3,       // (basic / 1K default)
-  "seedream-5-pro-i2i:high": 6,  // high / 2K
+  "flux-i2i": 60,                 // (1K default)
+  "flux-i2i:2K": 60,
+  "flux-pro-i2i": 13,             // (1K default)
+  "flux-pro-i2i:2K": 20,
+  "grok-i2i": 10,
+  "gpt-image-i2i": 10,            // (medium default)
+  "gpt-image-i2i:high": 60,
+  "gpt-image-2-i2i": 15,          // (1K default; estimated)
+  "gpt-image-2-i2i:2K": 30,       // (estimated)
+  "gpt-image-2-i2i:4K": 60,       // (estimated)
+  "ideogram-edit": 45,            // (BALANCED default)
+  "ideogram-edit:TURBO": 30,
+  "ideogram-edit:QUALITY": 60,
+  "ideogram-remix": 45,           // (BALANCED default)
+  "ideogram-remix:TURBO": 30,
+  "ideogram-remix:QUALITY": 60,
+  "ideogram-reframe": 18,         // (V3 Reframe BALANCED)
+  "ideogram-reframe:TURBO": 18,
+  "ideogram-reframe:QUALITY": 18,
+  "ideogram-v3": 18,              // (BALANCED default)
+  "ideogram-v3:TURBO": 18,
+  "ideogram-v3:QUALITY": 18,
+  "qwen-i2i": 10,
+  "qwen-edit": 13,
+  "seedream-edit": 16,
+  "seedream-edit:high": 40,       // estimated (4K)
+  "seedream-5-lite-i2i": 14,
+  "seedream-5-lite-i2i:high": 50, // estimated (4K)
+  "seedream-5-pro-i2i": 19,       // (basic / 1K default)
+  "seedream-5-pro-i2i:high": 60,  // high / 2K
   // ── Video Generation (I2V / T2V) ──
-  "minimax": 15,                 // (6s, 1080p)
-  "veo3": 63,                    // (VEO 3.1 Quality)
-  "veo3.1": 15,                  // (VEO 3.1 Fast @ 720p)
-  "veo3.1:1080p": 17,            // (VEO 3.1 Fast @ 1080p)
-  "veo3_lite": 8,               // (VEO 3.1 Lite @ 720p)
-  "veo3_lite:1080p": 9,         // (VEO 3.1 Lite @ 1080p)
+  "minimax": 143,                 // (6s, 1080p)
+  "veo3": 1000,                    // (VEO 3.1 Quality)
+  "veo3.1": 150,                  // (VEO 3.1 Fast @ 720p)
+  "veo3.1:1080p": 170,            // (VEO 3.1 Fast @ 1080p)
+  "veo3_lite": 75,               // (VEO 3.1 Lite @ 720p)
+  "veo3_lite:1080p": 90,         // (VEO 3.1 Lite @ 1080p)
   // Direct-4K generation (base 1080p → chained get-4k-video). Base cost, NO markup
   // (admin panel applies markup). KIE: ceil(KIE_cr/4). docs.kie.ai VEO 3.1 4K.
-  "veo3:4k": 93,                 // (VEO 3.1 Quality @ 4K)
-  "veo3.1:4k": 45,               // (VEO 3.1 Fast @ 4K)
-  "veo3_lite:4k": 38,           // (VEO 3.1 Lite @ 4K)
-  "kling": 28,                   // (10s no-audio fallback)
+  "veo3:4k": 930,                 // (VEO 3.1 Quality @ 4K)
+  "veo3.1:4k": 450,               // (VEO 3.1 Fast @ 4K)
+  "veo3_lite:4k": 380,           // (VEO 3.1 Lite @ 4K)
+  "kling": 280,                   // (10s no-audio fallback)
   // Kling 2.6 duration-tiered pricing (5s/10s, audio doubles cost)
-  "kling:5s": 14,                // (5s no audio)
-  "kling:10s": 28,               // (10s no audio)
-  "kling:5s:audio": 28,          // (5s with audio)
-  "kling:10s:audio": 55,         // (10s with audio)
-  "kling-turbo": 11,             // (5s fallback)
+  "kling:5s": 138,                // (5s no audio)
+  "kling:10s": 275,               // (10s no audio)
+  "kling:5s:audio": 275,          // (5s with audio)
+  "kling:10s:audio": 550,         // (10s with audio)
+  "kling-turbo": 125,             // (5s fallback)
   // Kling Turbo duration-tiered pricing
-  "kling-turbo:5s": 11,
-  "kling-turbo:10s": 21,
-  "kling-3.0": 50,               // (5s, audio, 1080P — 40 cr/sec) — fallback only
+  "kling-turbo:5s": 110,
+  "kling-turbo:10s": 210,
+  "kling-3.0": 500,               // (5s, audio, 1080P — 40 cr/sec) — fallback only
   // Kling 3.0 duration-tiered pricing (1080P, per-second: 27 no audio, 40 with audio)
-  "kling-3.0:5s": 34,            // (1080P, no audio, 5s)
-  "kling-3.0:10s": 68,           // (1080P, no audio, 10s)
-  "kling-3.0:15s": 102,          // (1080P, no audio, 15s)
-  "kling-3.0:5s:audio": 50,      // (1080P, audio, 5s)
-  "kling-3.0:10s:audio": 100,    // (1080P, audio, 10s)
-  "kling-3.0:15s:audio": 150,    // (1080P, audio, 15s)
-  "grok-i2v": 5,                 // (6s fallback)
+  "kling-3.0:5s": 270,            // (1080P, no audio, 5s)
+  "kling-3.0:10s": 680,           // (1080P, no audio, 10s)
+  "kling-3.0:15s": 1020,          // (1080P, no audio, 15s)
+  "kling-3.0:5s:audio": 338,      // (1080P, audio, 5s)
+  "kling-3.0:10s:audio": 1000,    // (1080P, audio, 10s)
+  "kling-3.0:15s:audio": 1500,    // (1080P, audio, 15s)
+  "grok-i2v": 150,                 // (6s fallback)
   // Grok I2V duration-tiered pricing (shared with grok T2V)
-  "grok-i2v:6s": 5,
-  "grok-i2v:10s": 8,
-  "grok-i2v:15s": 10,
+  "grok-i2v:6s": 50,
+  "grok-i2v:10s": 80,
+  "grok-i2v:15s": 100,
   // ── Grok Imagine Video 1.5 (KIE) — per-second billing, 480p/720p, image-to-video. ──
   // KIE 14.5 cr/s @480p, 25 cr/s @720p, +2 cr/image (always 1 image → +2 in every tier).
   // Nodaro = ceil(KIE_total / 4) — priced at cost, like Seedance-2. Base = 8s/480p.
-  "grok-imagine-video-1.5": 30,
+  "grok-imagine-video-1.5": 295,
   // 480p (KIE 14.5 cr/s + 2)
-  "grok-imagine-video-1.5:1s:480p": 5,
-  "grok-imagine-video-1.5:2s:480p": 8,
-  "grok-imagine-video-1.5:3s:480p": 12,
-  "grok-imagine-video-1.5:4s:480p": 15,
-  "grok-imagine-video-1.5:5s:480p": 19,
-  "grok-imagine-video-1.5:6s:480p": 23,
-  "grok-imagine-video-1.5:7s:480p": 26,
-  "grok-imagine-video-1.5:8s:480p": 30,
-  "grok-imagine-video-1.5:9s:480p": 34,
-  "grok-imagine-video-1.5:10s:480p": 37,
-  "grok-imagine-video-1.5:11s:480p": 41,
-  "grok-imagine-video-1.5:12s:480p": 44,
-  "grok-imagine-video-1.5:13s:480p": 48,
-  "grok-imagine-video-1.5:14s:480p": 52,
-  "grok-imagine-video-1.5:15s:480p": 55,
+  "grok-imagine-video-1.5:1s:480p": 50,
+  "grok-imagine-video-1.5:2s:480p": 80,
+  "grok-imagine-video-1.5:3s:480p": 120,
+  "grok-imagine-video-1.5:4s:480p": 150,
+  "grok-imagine-video-1.5:5s:480p": 190,
+  "grok-imagine-video-1.5:6s:480p": 230,
+  "grok-imagine-video-1.5:7s:480p": 260,
+  "grok-imagine-video-1.5:8s:480p": 300,
+  "grok-imagine-video-1.5:9s:480p": 340,
+  "grok-imagine-video-1.5:10s:480p": 370,
+  "grok-imagine-video-1.5:11s:480p": 410,
+  "grok-imagine-video-1.5:12s:480p": 440,
+  "grok-imagine-video-1.5:13s:480p": 480,
+  "grok-imagine-video-1.5:14s:480p": 520,
+  "grok-imagine-video-1.5:15s:480p": 550,
   // 720p (KIE 25 cr/s + 2)
-  "grok-imagine-video-1.5:1s:720p": 7,
-  "grok-imagine-video-1.5:2s:720p": 13,
-  "grok-imagine-video-1.5:3s:720p": 20,
-  "grok-imagine-video-1.5:4s:720p": 26,
-  "grok-imagine-video-1.5:5s:720p": 32,
-  "grok-imagine-video-1.5:6s:720p": 38,
-  "grok-imagine-video-1.5:7s:720p": 45,
-  "grok-imagine-video-1.5:8s:720p": 51,
-  "grok-imagine-video-1.5:9s:720p": 57,
-  "grok-imagine-video-1.5:10s:720p": 63,
-  "grok-imagine-video-1.5:11s:720p": 70,
-  "grok-imagine-video-1.5:12s:720p": 76,
-  "grok-imagine-video-1.5:13s:720p": 82,
-  "grok-imagine-video-1.5:14s:720p": 88,
-  "grok-imagine-video-1.5:15s:720p": 95,
-  "seedance": 7,                 // (8s default; actual 3.5 KIE/sec)
+  "grok-imagine-video-1.5:1s:720p": 70,
+  "grok-imagine-video-1.5:2s:720p": 130,
+  "grok-imagine-video-1.5:3s:720p": 200,
+  "grok-imagine-video-1.5:4s:720p": 260,
+  "grok-imagine-video-1.5:5s:720p": 320,
+  "grok-imagine-video-1.5:6s:720p": 380,
+  "grok-imagine-video-1.5:7s:720p": 450,
+  "grok-imagine-video-1.5:8s:720p": 510,
+  "grok-imagine-video-1.5:9s:720p": 570,
+  "grok-imagine-video-1.5:10s:720p": 630,
+  "grok-imagine-video-1.5:11s:720p": 700,
+  "grok-imagine-video-1.5:12s:720p": 760,
+  "grok-imagine-video-1.5:13s:720p": 820,
+  "grok-imagine-video-1.5:14s:720p": 880,
+  "grok-imagine-video-1.5:15s:720p": 950,
+  "seedance": 250,                 // (8s default; actual 3.5 KIE/sec)
   // Seedance duration-tiered pricing (/sec)
-  "seedance:4s": 4,
-  "seedance:8s": 7,
-  "seedance:12s": 15,            // (actual from audit)
+  "seedance:4s": 40,
+  "seedance:8s": 70,
+  "seedance:12s": 150,            // (actual from audit)
   // ── Seedance 2.0 — per-second billing, resolution × video-ref dimensions ──
   // Base fallback (8s/480p/no-ref)
-  "seedance-2": 38,
+  "seedance-2": 380,
   // 480p no video ref (/s)
-  "seedance-2:4s:480p": 19,
-  "seedance-2:8s:480p": 38,
-  "seedance-2:12s:480p": 57,
-  "seedance-2:15s:480p": 72,
+  "seedance-2:4s:480p": 190,
+  "seedance-2:8s:480p": 380,
+  "seedance-2:12s:480p": 570,
+  "seedance-2:15s:480p": 720,
   // 480p with video ref (/s)
-  "seedance-2:4s:480p-ref": 12,
-  "seedance-2:8s:480p-ref": 23,
-  "seedance-2:12s:480p-ref": 35,
-  "seedance-2:15s:480p-ref": 44,
+  "seedance-2:4s:480p-ref": 120,
+  "seedance-2:8s:480p-ref": 230,
+  "seedance-2:12s:480p-ref": 350,
+  "seedance-2:15s:480p-ref": 440,
   // 720p no video ref (/s)
-  "seedance-2:4s:720p": 41,
-  "seedance-2:8s:720p": 82,
-  "seedance-2:12s:720p": 123,
-  "seedance-2:15s:720p": 154,
+  "seedance-2:4s:720p": 410,
+  "seedance-2:8s:720p": 820,
+  "seedance-2:12s:720p": 1230,
+  "seedance-2:15s:720p": 1540,
   // 720p with video ref (/s)
-  "seedance-2:4s:720p-ref": 25,
-  "seedance-2:8s:720p-ref": 50,
-  "seedance-2:12s:720p-ref": 75,
-  "seedance-2:15s:720p-ref": 94,
+  "seedance-2:4s:720p-ref": 250,
+  "seedance-2:8s:720p-ref": 500,
+  "seedance-2:12s:720p-ref": 750,
+  "seedance-2:15s:720p-ref": 940,
   // 1080p — authoritative KIE rate is /s (no video) / 62 (with video)
   // ~2.49× the 720p rate (the original 1.5× estimate under-billed ~40%; KIE pricing
   // page verified 2026-06-25).
-  "seedance-2:4s:1080p": 102,
-  "seedance-2:8s:1080p": 204,
-  "seedance-2:12s:1080p": 306,
-  "seedance-2:15s:1080p": 383,   // → ceil
+  "seedance-2:4s:1080p": 1020,
+  "seedance-2:8s:1080p": 2040,
+  "seedance-2:12s:1080p": 3060,
+  "seedance-2:15s:1080p": 3830,   // → ceil
   // 1080p with video ref (/s)
-  "seedance-2:4s:1080p-ref": 62,
-  "seedance-2:8s:1080p-ref": 124,
-  "seedance-2:12s:1080p-ref": 186,
-  "seedance-2:15s:1080p-ref": 233, // → ceil
+  "seedance-2:4s:1080p-ref": 620,
+  "seedance-2:8s:1080p-ref": 1240,
+  "seedance-2:12s:1080p-ref": 1860,
+  "seedance-2:15s:1080p-ref": 2330, // → ceil
   // 4K (/s no video / 128 with video) — full seedance-2 only.
-  "seedance-2:4s:4k": 208,
-  "seedance-2:8s:4k": 416,
-  "seedance-2:12s:4k": 624,
-  "seedance-2:15s:4k": 780,
-  "seedance-2:4s:4k-ref": 128,
-  "seedance-2:8s:4k-ref": 256,
-  "seedance-2:12s:4k-ref": 384,
-  "seedance-2:15s:4k-ref": 480,
+  "seedance-2:4s:4k": 2080,
+  "seedance-2:8s:4k": 4160,
+  "seedance-2:12s:4k": 6240,
+  "seedance-2:15s:4k": 7800,
+  "seedance-2:4s:4k-ref": 1280,
+  "seedance-2:8s:4k-ref": 2560,
+  "seedance-2:12s:4k-ref": 3840,
+  "seedance-2:15s:4k-ref": 4800,
   // ── Seedance 2.0 Fast — same matrix, lower rates ──
-  "seedance-2-fast": 31,
+  "seedance-2-fast": 310,
   // 480p no video ref (/s)
-  "seedance-2-fast:4s:480p": 16,
-  "seedance-2-fast:8s:480p": 31,
-  "seedance-2-fast:12s:480p": 47,
-  "seedance-2-fast:15s:480p": 59,
+  "seedance-2-fast:4s:480p": 160,
+  "seedance-2-fast:8s:480p": 310,
+  "seedance-2-fast:12s:480p": 470,
+  "seedance-2-fast:15s:480p": 590,
   // 480p with video ref (/s)
-  "seedance-2-fast:4s:480p-ref": 9,
-  "seedance-2-fast:8s:480p-ref": 18,
-  "seedance-2-fast:12s:480p-ref": 27,
-  "seedance-2-fast:15s:480p-ref": 34,
+  "seedance-2-fast:4s:480p-ref": 90,
+  "seedance-2-fast:8s:480p-ref": 180,
+  "seedance-2-fast:12s:480p-ref": 270,
+  "seedance-2-fast:15s:480p-ref": 340,
   // 720p no video ref (/s)
-  "seedance-2-fast:4s:720p": 33,
-  "seedance-2-fast:8s:720p": 66,
-  "seedance-2-fast:12s:720p": 99,
-  "seedance-2-fast:15s:720p": 124,
+  "seedance-2-fast:4s:720p": 330,
+  "seedance-2-fast:8s:720p": 660,
+  "seedance-2-fast:12s:720p": 990,
+  "seedance-2-fast:15s:720p": 1240,
   // 720p with video ref (/s)
-  "seedance-2-fast:4s:720p-ref": 20,
-  "seedance-2-fast:8s:720p-ref": 40,
-  "seedance-2-fast:12s:720p-ref": 60,
-  "seedance-2-fast:15s:720p-ref": 75,
+  "seedance-2-fast:4s:720p-ref": 200,
+  "seedance-2-fast:8s:720p-ref": 400,
+  "seedance-2-fast:12s:720p-ref": 600,
+  "seedance-2-fast:15s:720p-ref": 750,
   // NOTE: seedance-2-fast has NO 1080p tier — KIE sells it at 480p/720p only
   // (verified KIE pricing page 2026-06-25, 4 SKUs). The full seedance-2 has 1080p/4K.
   // ── Seedance 2.0 Mini — budget tier, 480p/720p only, per-second × video-ref ──
   // Base fallback (8s/480p/no-ref)
-  "seedance-2-mini": 19,
+  "seedance-2-mini": 190,
   // 480p no video ref (/s)
-  "seedance-2-mini:4s:480p": 10,
-  "seedance-2-mini:8s:480p": 19,
-  "seedance-2-mini:12s:480p": 29,
-  "seedance-2-mini:15s:480p": 36,
+  "seedance-2-mini:4s:480p": 100,
+  "seedance-2-mini:8s:480p": 190,
+  "seedance-2-mini:12s:480p": 290,
+  "seedance-2-mini:15s:480p": 360,
   // 480p with video ref (/s)
-  "seedance-2-mini:4s:480p-ref": 6,
-  "seedance-2-mini:8s:480p-ref": 12,
-  "seedance-2-mini:12s:480p-ref": 18,
-  "seedance-2-mini:15s:480p-ref": 23,
+  "seedance-2-mini:4s:480p-ref": 60,
+  "seedance-2-mini:8s:480p-ref": 120,
+  "seedance-2-mini:12s:480p-ref": 180,
+  "seedance-2-mini:15s:480p-ref": 230,
   // 720p no video ref (/s)
-  "seedance-2-mini:4s:720p": 21,
-  "seedance-2-mini:8s:720p": 41,
-  "seedance-2-mini:12s:720p": 62,
-  "seedance-2-mini:15s:720p": 77,
+  "seedance-2-mini:4s:720p": 210,
+  "seedance-2-mini:8s:720p": 410,
+  "seedance-2-mini:12s:720p": 620,
+  "seedance-2-mini:15s:720p": 770,
   // 720p with video ref (/s)
-  "seedance-2-mini:4s:720p-ref": 13,
-  "seedance-2-mini:8s:720p-ref": 25,
-  "seedance-2-mini:12s:720p-ref": 38,
-  "seedance-2-mini:15s:720p-ref": 47,
+  "seedance-2-mini:4s:720p-ref": 130,
+  "seedance-2-mini:8s:720p-ref": 250,
+  "seedance-2-mini:12s:720p-ref": 380,
+  "seedance-2-mini:15s:720p-ref": 470,
   // ── Gemini Omni Video (KIE) —; Nodaro. Lowercase 4k. ──
-  "gemini-omni-video": 23,         // base = 720p/1080p 4s
-  "gemini-omni-video:4": 23,
-  "gemini-omni-video:6": 30,
-  "gemini-omni-video:8": 38,
-  "gemini-omni-video:10": 45,
-  "gemini-omni-video:4k:4": 53,
-  "gemini-omni-video:4k:6": 60,
-  "gemini-omni-video:4k:8": 68,
-  "gemini-omni-video:4k:10": 75,
-  "gemini-omni-video:vref": 60,    // (video-edit, flat)
-  "gemini-omni-video:4k:vref": 90,// (video-edit 4K, flat)
-  "wan-i2v": 18,                 // (5s 720p fallback)
+  "gemini-omni-video": 315,         // base = 720p/1080p 4s
+  "gemini-omni-video:4": 230,
+  "gemini-omni-video:6": 300,
+  "gemini-omni-video:8": 380,
+  "gemini-omni-video:10": 450,
+  "gemini-omni-video:4k:4": 530,
+  "gemini-omni-video:4k:6": 600,
+  "gemini-omni-video:4k:8": 680,
+  "gemini-omni-video:4k:10": 750,
+  "gemini-omni-video:vref": 600,    // (video-edit, flat)
+  "gemini-omni-video:4k:vref": 900,// (video-edit 4K, flat)
+  "wan-i2v": 175,                 // (5s 720p fallback)
   // Wan I2V duration-tiered pricing (720p default)
-  "wan-i2v:5s": 18,
-  "wan-i2v:10s": 35,
-  "wan-i2v:15s": 53,
-  "wan-turbo": 10,               // (5s, 480p I2V default)
-  "hailuo-2.3-pro": 20,          // (10s fallback, actual from audit)
+  "wan-i2v:5s": 180,
+  "wan-i2v:10s": 350,
+  "wan-i2v:15s": 530,
+  "wan-turbo": 100,               // (5s, 480p I2V default)
+  "hailuo-2.3-pro": 200,          // (10s fallback, actual from audit)
   // Hailuo 2.3 Pro duration-tiered pricing (768p default)
-  "hailuo-2.3-pro:6s": 13,       // (estimated from audit)
-  "hailuo-2.3-pro:10s": 20,      // (actual from audit)
-  "hailuo-2.3": 8,              // (6s fallback)
+  "hailuo-2.3-pro:6s": 130,       // (estimated from audit)
+  "hailuo-2.3-pro:10s": 200,      // (actual from audit)
+  "hailuo-2.3": 75,              // (6s fallback)
   // Hailuo 2.3 duration-tiered pricing
-  "hailuo-2.3:6s": 8,
-  "hailuo-2.3:10s": 13,
-  "hailuo-standard": 8,         // (6s fallback)
+  "hailuo-2.3:6s": 80,
+  "hailuo-2.3:10s": 130,
+  "hailuo-standard": 75,         // (6s fallback)
   // Hailuo Standard duration-tiered pricing
-  "hailuo-standard:6s": 8,
-  "hailuo-standard:10s": 13,
-  "bytedance-lite": 6,            // (actual from audit)
-  "bytedance-pro": 18,            // (actual from audit)
-  "bytedance-pro-fast": 9,       // (actual from audit)
-  "kling-master": 40,            // (5s fallback)
+  "hailuo-standard:6s": 80,
+  "hailuo-standard:10s": 130,
+  "bytedance-lite": 57,            // (actual from audit)
+  "bytedance-pro": 175,            // (actual from audit)
+  "bytedance-pro-fast": 90,       // (actual from audit)
+  "kling-master": 400,            // (5s fallback)
   // Kling Master duration-tiered pricing
-  "kling-master:5s": 40,
-  "kling-master:10s": 80,
-  "kling-3-omni": 25,            // Replicate, est (5s 720p fallback)
+  "kling-master:5s": 400,
+  "kling-master:10s": 800,
+  "kling-3-omni": 250,            // Replicate, est (5s 720p fallback)
   // Kling 3 Omni duration-tiered pricing (Replicate, estimated — actual cost tracked via predict_time)
-  "kling-3-omni:5s": 25,         // est
-  "kling-3-omni:10s": 50,        // est
-  "kling-3-omni:15s": 75,        // est
+  "kling-3-omni:5s": 250,         // est
+  "kling-3-omni:10s": 500,        // est
+  "kling-3-omni:15s": 750,        // est
   // ── Lightricks LTX 2.3 (Replicate) — official pricing from replicate.com/lightricks/ltx-2.3-{pro,fast} ──
   // Per-second of output video: Pro (1080p/2k/4k), Fast
   // Formula: per second × duration → cr/sec: Pro Fast
   // Pro: text/image/audio→video, 1080p/2k/4k, durations s. Base = 1080p:6s.
-  "ltx-2.3-pro": 24,             // default = 1080p:6s
-  "ltx-2.3-pro:1080p:6s": 24,    // → ceil = 30
-  "ltx-2.3-pro:1080p:8s": 32,
-  "ltx-2.3-pro:1080p:10s": 40,
-  "ltx-2.3-pro:2k:6s": 48,
-  "ltx-2.3-pro:2k:8s": 64,
-  "ltx-2.3-pro:2k:10s": 80,
-  "ltx-2.3-pro:4k:6s": 96,
-  "ltx-2.3-pro:4k:8s": 128,
-  "ltx-2.3-pro:4k:10s": 160,
+  "ltx-2.3-pro": 240,             // default = 1080p:6s
+  "ltx-2.3-pro:1080p:6s": 240,    // → ceil = 30
+  "ltx-2.3-pro:1080p:8s": 320,
+  "ltx-2.3-pro:1080p:10s": 400,
+  "ltx-2.3-pro:2k:6s": 480,
+  "ltx-2.3-pro:2k:8s": 640,
+  "ltx-2.3-pro:2k:10s": 800,
+  "ltx-2.3-pro:4k:6s": 960,
+  "ltx-2.3-pro:4k:8s": 1280,
+  "ltx-2.3-pro:4k:10s": 1600,
   // Fast: text/image→video, 1080p/2k/4k, durations 6–20s (1080p only past 10s). Base = 1080p:6s.
-  "ltx-2.3-fast": 18,            // default = 1080p:6s
-  "ltx-2.3-fast:1080p:6s": 18,   // ceil = ceil(22.5)
-  "ltx-2.3-fast:1080p:8s": 24,
-  "ltx-2.3-fast:1080p:10s": 30,
-  "ltx-2.3-fast:1080p:12s": 36,
-  "ltx-2.3-fast:1080p:14s": 42,
-  "ltx-2.3-fast:1080p:16s": 48,
-  "ltx-2.3-fast:1080p:18s": 54,
-  "ltx-2.3-fast:1080p:20s": 60,
-  "ltx-2.3-fast:2k:6s": 36,      // ceil = 45
-  "ltx-2.3-fast:2k:8s": 48,
-  "ltx-2.3-fast:2k:10s": 60,
-  "ltx-2.3-fast:4k:6s": 72,      // = 90
-  "ltx-2.3-fast:4k:8s": 96,
-  "ltx-2.3-fast:4k:10s": 120,
+  "ltx-2.3-fast": 180,            // default = 1080p:6s
+  "ltx-2.3-fast:1080p:6s": 180,   // ceil = ceil(22.5)
+  "ltx-2.3-fast:1080p:8s": 240,
+  "ltx-2.3-fast:1080p:10s": 300,
+  "ltx-2.3-fast:1080p:12s": 360,
+  "ltx-2.3-fast:1080p:14s": 420,
+  "ltx-2.3-fast:1080p:16s": 480,
+  "ltx-2.3-fast:1080p:18s": 540,
+  "ltx-2.3-fast:1080p:20s": 600,
+  "ltx-2.3-fast:2k:6s": 360,      // ceil = 45
+  "ltx-2.3-fast:2k:8s": 480,
+  "ltx-2.3-fast:2k:10s": 600,
+  "ltx-2.3-fast:4k:6s": 720,      // = 90
+  "ltx-2.3-fast:4k:8s": 960,
+  "ltx-2.3-fast:4k:10s": 1200,
   // LTX extend + retake (Pro only, 1080p): per-second × duration at credit-guard time.
   // 5 cr/sec matches Pro:1080p rate (extend output is at the input's resolution; retake is locked 1080p).
-  "ltx-2.3-pro-extend:per-second": 4,
+  "ltx-2.3-pro-extend:per-second": 40,
   // ── Seedance 2 Extend — trim-stitch continuation of ANY video (rates =
   //    seedance-2 -ref matrix + 3cr ffmpeg stitch; spike findings 2026-06-11) ──
-  "seedance-2-extend": 53,             // default 8s 720p
-  "seedance-2-extend:4s:480p": 15,
-  "seedance-2-extend:8s:480p": 26,
-  "seedance-2-extend:12s:480p": 38,
-  "seedance-2-extend:15s:480p": 47,
-  "seedance-2-extend:4s:720p": 28,
-  "seedance-2-extend:8s:720p": 53,
-  "seedance-2-extend:12s:720p": 78,
-  "seedance-2-extend:15s:720p": 97,
-  "seedance-2-extend:4s:1080p": 41,
-  "seedance-2-extend:8s:1080p": 78,
-  "seedance-2-extend:12s:1080p": 116,
-  "seedance-2-extend:15s:1080p": 144,
-  "ltx-2.3-pro-retake:per-second": 4,
-  "runway-kie": 3,               // (5s, 720p)
+  "seedance-2-extend": 530,             // default 8s 720p
+  "seedance-2-extend:4s:480p": 150,
+  "seedance-2-extend:8s:480p": 260,
+  "seedance-2-extend:12s:480p": 380,
+  "seedance-2-extend:15s:480p": 470,
+  "seedance-2-extend:4s:720p": 280,
+  "seedance-2-extend:8s:720p": 530,
+  "seedance-2-extend:12s:720p": 780,
+  "seedance-2-extend:15s:720p": 970,
+  "seedance-2-extend:4s:1080p": 410,
+  "seedance-2-extend:8s:1080p": 780,
+  "seedance-2-extend:12s:1080p": 1160,
+  "seedance-2-extend:15s:1080p": 1440,
+  "ltx-2.3-pro-retake:per-second": 40,
+  "runway-kie": 30,               // (5s, 720p)
   // ── Video Extend ──
-  "veo-extend": 19,              // (VEO 3.1 Fast default)
-  "veo-extend:quality": 79,      // (VEO 3.1 Quality)
-  "runway-extend": 32,           // (Runway extend)
+  "veo-extend": 190,              // (VEO 3.1 Fast default)
+  "veo-extend:quality": 790,      // (VEO 3.1 Quality)
+  "runway-extend": 320,           // (Runway extend)
   // ── VEO Upscale ──
-  "veo-1080p": 2,                // (VEO 3.1 1080p)
-  "veo-4k": 38,                  // (VEO 3.1 4K)
+  "veo-1080p": 20,                // (VEO 3.1 1080p)
+  "veo-4k": 380,                  // (VEO 3.1 4K)
   // ── Video-to-Video / Motion ──
-  "wan": 18,                     // (V2V 5s 720p)
-  "wan-flash": 13,               // est (Flash V2V, faster)
-  "wan-videoedit": 32,
-  "wan-t2v": 27,                 // (T2V 5s 1080p default)
-  "wan-turbo-t2v": 20,           // (T2V 5s 720p default)
+  "wan": 175,                     // (V2V 5s 720p)
+  "wan-flash": 100,               // est (Flash V2V, faster)
+  "wan-videoedit": 320,
+  "wan-t2v": 270,                 // (T2V 5s 1080p default)
+  "wan-turbo-t2v": 200,           // (T2V 5s 720p default)
   // Wan 2.7 T2I — 1K/2K/4K (estimated, adjust after audit-credits post-ship)
-  "wan-2.7": 2,        // (1K default)
-  "wan-2.7:2K": 4,     // ( est.)
-  "wan-2.7:4K": 8,    // ( est.)
+  "wan-2.7": 20,        // (1K default)
+  "wan-2.7:2K": 40,     // ( est.)
+  "wan-2.7:4K": 80,    // ( est.)
 
   // Wan 2.7 Pro T2I — 1K/2K/4K (estimated)
-  "wan-2.7-pro": 3,        // (1K)
-  "wan-2.7-pro:2K": 6,     // ( est.)
-  "wan-2.7-pro:4K": 12,    // ( est.)
+  "wan-2.7-pro": 120,        // (1K)
+  "wan-2.7-pro:2K": 60,     // ( est.)
+  "wan-2.7-pro:4K": 120,    // ( est.)
 
   // ⚠️ UNDERCHARGE (deferred — needs owner cost data): the wan-2.7-i2v/t2v
   // entries below are FLAT prices for "5s 720p", but the nodes expose 2–15s
@@ -609,50 +609,50 @@ export const STATIC_CREDIT_COSTS: Record<string, number> = {
   // confirmed, then run `audit-credits`.
 
   // Wan 2.7 I2V (estimated)
-  "wan-2.7-i2v": 19,    // (5s 720p)
+  "wan-2.7-i2v": 188,    // (5s 720p)
 
   // Wan 2.7 T2V (estimated)
-  "wan-2.7-t2v": 19,    // (5s 720p)
+  "wan-2.7-t2v": 188,    // (5s 720p)
 
   // HappyHorse 1.1 (t2v / i2v / ref2v) — true per-second billing, published on
   // kie.ai/happyhorse-1-1: 22.5 KIE cr/s @720p, 29 KIE cr/s @1080p, identical
   // across all three modes. Seeded per (duration × resolution) like
   // grok-imagine-video-1.5; base fallback = 5s @720p.
-  "happyhorse": 29,        // (5s 720p fallback)
+  "happyhorse": 282,        // (5s 720p fallback)
   // 720p — ceil(22.5 × s ÷ 4)
   "happyhorse:3s:720p": 17, "happyhorse:4s:720p": 23, "happyhorse:5s:720p": 29,
   "happyhorse:6s:720p": 34, "happyhorse:7s:720p": 40, "happyhorse:8s:720p": 45,
   "happyhorse:9s:720p": 51, "happyhorse:10s:720p": 57, "happyhorse:11s:720p": 62,
   "happyhorse:12s:720p": 68, "happyhorse:13s:720p": 74, "happyhorse:14s:720p": 79,
-  "happyhorse:15s:720p": 85,
+  "happyhorse:15s:720p": 850,
   // 1080p — ceil(29 × s ÷ 4)
   "happyhorse:3s:1080p": 22, "happyhorse:4s:1080p": 29, "happyhorse:5s:1080p": 37,
   "happyhorse:6s:1080p": 44, "happyhorse:7s:1080p": 51, "happyhorse:8s:1080p": 58,
   "happyhorse:9s:1080p": 66, "happyhorse:10s:1080p": 73, "happyhorse:11s:1080p": 80,
   "happyhorse:12s:1080p": 87, "happyhorse:13s:1080p": 95, "happyhorse:14s:1080p": 102,
-  "happyhorse:15s:1080p": 109,
-  "happyhorse-i2v": 29,    // (5s 720p fallback)
+  "happyhorse:15s:1080p": 1090,
+  "happyhorse-i2v": 282,    // (5s 720p fallback)
   "happyhorse-i2v:3s:720p": 17, "happyhorse-i2v:4s:720p": 23, "happyhorse-i2v:5s:720p": 29,
   "happyhorse-i2v:6s:720p": 34, "happyhorse-i2v:7s:720p": 40, "happyhorse-i2v:8s:720p": 45,
   "happyhorse-i2v:9s:720p": 51, "happyhorse-i2v:10s:720p": 57, "happyhorse-i2v:11s:720p": 62,
   "happyhorse-i2v:12s:720p": 68, "happyhorse-i2v:13s:720p": 74, "happyhorse-i2v:14s:720p": 79,
-  "happyhorse-i2v:15s:720p": 85,
+  "happyhorse-i2v:15s:720p": 850,
   "happyhorse-i2v:3s:1080p": 22, "happyhorse-i2v:4s:1080p": 29, "happyhorse-i2v:5s:1080p": 37,
   "happyhorse-i2v:6s:1080p": 44, "happyhorse-i2v:7s:1080p": 51, "happyhorse-i2v:8s:1080p": 58,
   "happyhorse-i2v:9s:1080p": 66, "happyhorse-i2v:10s:1080p": 73, "happyhorse-i2v:11s:1080p": 80,
   "happyhorse-i2v:12s:1080p": 87, "happyhorse-i2v:13s:1080p": 95, "happyhorse-i2v:14s:1080p": 102,
-  "happyhorse-i2v:15s:1080p": 109,
-  "happyhorse-ref2v": 29,  // (5s 720p fallback)
+  "happyhorse-i2v:15s:1080p": 1090,
+  "happyhorse-ref2v": 282,  // (5s 720p fallback)
   "happyhorse-ref2v:3s:720p": 17, "happyhorse-ref2v:4s:720p": 23, "happyhorse-ref2v:5s:720p": 29,
   "happyhorse-ref2v:6s:720p": 34, "happyhorse-ref2v:7s:720p": 40, "happyhorse-ref2v:8s:720p": 45,
   "happyhorse-ref2v:9s:720p": 51, "happyhorse-ref2v:10s:720p": 57, "happyhorse-ref2v:11s:720p": 62,
   "happyhorse-ref2v:12s:720p": 68, "happyhorse-ref2v:13s:720p": 74, "happyhorse-ref2v:14s:720p": 79,
-  "happyhorse-ref2v:15s:720p": 85,
+  "happyhorse-ref2v:15s:720p": 850,
   "happyhorse-ref2v:3s:1080p": 22, "happyhorse-ref2v:4s:1080p": 29, "happyhorse-ref2v:5s:1080p": 37,
   "happyhorse-ref2v:6s:1080p": 44, "happyhorse-ref2v:7s:1080p": 51, "happyhorse-ref2v:8s:1080p": 58,
   "happyhorse-ref2v:9s:1080p": 66, "happyhorse-ref2v:10s:1080p": 73, "happyhorse-ref2v:11s:1080p": 80,
   "happyhorse-ref2v:12s:1080p": 87, "happyhorse-ref2v:13s:1080p": 95, "happyhorse-ref2v:14s:1080p": 102,
-  "happyhorse-ref2v:15s:1080p": 109,
+  "happyhorse-ref2v:15s:1080p": 1090,
   // HappyHorse Edit stays on the 1.0 endpoint (1.1 has no video-edit mode).
   // KIE bills per second (published: 28 cr/s @720p, 48 cr/s @1080p) but the
   // input clip's duration isn't known at reservation time (the v2v route has
@@ -660,207 +660,207 @@ export const STATIC_CREDIT_COSTS: Record<string, number> = {
   // The render default is pinned to 720p in kie/models.ts to match. Longer
   // inputs still under-bill — wiring duration-aware pricing needs an input
   // probe (deferred; watch `audit-credits`).
-  "happyhorse-edit": 35,
-  "luma-modify": 32,             // (not in KIE pricing data)
-  "runway-aleph": 35,             // (V2V conversion)
-  "topaz-video": 19,             // (12 cr/sec * ~5s)
+  "happyhorse-edit": 350,
+  "luma-modify": 320,             // (not in KIE pricing data)
+  "runway-aleph": 350,             // (V2V conversion)
+  "topaz-video": 190,             // (12 cr/sec * ~5s)
   // ── Motion Transfer (per-second pricing, duration-tiered) ──
   // Kling 3.0 720p: /sec
-  "kling-3.0-motion": 30,        // 10s default
-  "kling-3.0-motion:5s": 15,
-  "kling-3.0-motion:10s": 30,
-  "kling-3.0-motion:15s": 45,
-  "kling-3.0-motion:30s": 90,
+  "kling-3.0-motion": 300,        // 10s default
+  "kling-3.0-motion:5s": 150,
+  "kling-3.0-motion:10s": 300,
+  "kling-3.0-motion:15s": 450,
+  "kling-3.0-motion:30s": 900,
   // Kling 3.0 1080p: /sec
-  "kling-3.0-motion:1080p": 50,  // 10s default
-  "kling-3.0-motion:1080p:5s": 25,
-  "kling-3.0-motion:1080p:10s": 50,
-  "kling-3.0-motion:1080p:15s": 75,
-  "kling-3.0-motion:1080p:30s": 150,
+  "kling-3.0-motion:1080p": 500,  // 10s default
+  "kling-3.0-motion:1080p:5s": 250,
+  "kling-3.0-motion:1080p:10s": 500,
+  "kling-3.0-motion:1080p:15s": 750,
+  "kling-3.0-motion:1080p:30s": 1500,
   // Kling 2.6 720p: /sec
-  "motion-transfer": 15,         // 10s default:, (Kling 2.6 720p)
-  "kling-motion": 15,            // alias
-  "motion-transfer:5s": 8,
-  "motion-transfer:10s": 15,
-  "motion-transfer:15s": 23,
-  "motion-transfer:30s": 45,
+  "motion-transfer": 150,         // 10s default:, (Kling 2.6 720p)
+  "kling-motion": 150,            // alias
+  "motion-transfer:5s": 80,
+  "motion-transfer:10s": 150,
+  "motion-transfer:15s": 230,
+  "motion-transfer:30s": 450,
   // Kling 2.6 1080p: /sec
-  "motion-transfer:1080p": 23,   // 10s default
-  "motion-transfer:1080p:5s": 12,
-  "motion-transfer:1080p:10s": 23,
-  "motion-transfer:1080p:15s": 34,
-  "motion-transfer:1080p:30s": 68,
+  "motion-transfer:1080p": 230,   // 10s default
+  "motion-transfer:1080p:5s": 120,
+  "motion-transfer:1080p:10s": 230,
+  "motion-transfer:1080p:15s": 340,
+  "motion-transfer:1080p:30s": 680,
   // Wan Animate (Move + Replace) — resolution-tiered pricing
-  "wan-animate-move": 26,         // (480p default, actual from audit)
-  "wan-animate-move:580p": 33,    // (interpolated from audit)
-  "wan-animate-move:720p": 41,    // (actual from audit)
-  "wan-animate-replace": 26,      // (480p default, same as move)
-  "wan-animate-replace:580p": 33, // (interpolated)
-  "wan-animate-replace:720p": 41, // (same as move)
+  "wan-animate-move": 255,         // (480p default, actual from audit)
+  "wan-animate-move:580p": 330,    // (interpolated from audit)
+  "wan-animate-move:720p": 410,    // (actual from audit)
+  "wan-animate-replace": 255,      // (480p default, same as move)
+  "wan-animate-replace:580p": 330, // (interpolated)
+  "wan-animate-replace:720p": 410, // (same as move)
   // ── Lip Sync ──
   // Kling AI Avatar 2.0 (May 2026) supports up to 5min audio, billed per-second
   // by KIE at 8 cr/sec (Standard, 720p) and 16 cr/sec (Pro, 1080p).
   // Composite identifiers `<provider>:<bucket>s` map to ceil(bucket × Nodaro-rate).
   // Nodaro rates: 2 cr/sec Standard, 4 cr/sec Pro (matches pre-upgrade ~14s flat).
   // Bare keys remain for back-compat — callers without audioDurationSec hit them.
-  "kling-avatar": 28,             // legacy default ~14s
-  "kling-avatar:15s": 30,         // 15s × 2 cr/sec
-  "kling-avatar:30s": 60,         // 30s × 2 cr/sec
-  "kling-avatar:60s": 120,        // 60s × 2 cr/sec
-  "kling-avatar:120s": 240,       // 120s × 2 cr/sec
-  "kling-avatar:300s": 600,       // 300s × 2 cr/sec — 5-min ceiling
-  "kling-avatar-pro": 56,         // legacy default ~14s
-  "kling-avatar-pro:15s": 60,     // 15s × 4 cr/sec
-  "kling-avatar-pro:30s": 120,    // 30s × 4 cr/sec
-  "kling-avatar-pro:60s": 240,    // 60s × 4 cr/sec
-  "kling-avatar-pro:120s": 480,   // 120s × 4 cr/sec
-  "kling-avatar-pro:300s": 1200,  // 300s × 4 cr/sec — 5-min ceiling
+  "kling-avatar": 280,             // legacy default ~14s
+  "kling-avatar:15s": 300,         // 15s × 2 cr/sec
+  "kling-avatar:30s": 600,         // 30s × 2 cr/sec
+  "kling-avatar:60s": 1200,        // 60s × 2 cr/sec
+  "kling-avatar:120s": 2400,       // 120s × 2 cr/sec
+  "kling-avatar:300s": 6000,       // 300s × 2 cr/sec — 5-min ceiling
+  "kling-avatar-pro": 560,         // legacy default ~14s
+  "kling-avatar-pro:15s": 600,     // 15s × 4 cr/sec
+  "kling-avatar-pro:30s": 1200,    // 30s × 4 cr/sec
+  "kling-avatar-pro:60s": 2400,    // 60s × 4 cr/sec
+  "kling-avatar-pro:120s": 4800,   // 120s × 4 cr/sec
+  "kling-avatar-pro:300s": 12000,  // 300s × 4 cr/sec — 5-min ceiling
   // OmniHuman 1.5 — /sec → ceil(27×s/4). Bare = worst-case 60s
   // (reserved on unknown-duration workflow runs; reconciled down by the worker).
-  "omnihuman-1-5": 405,
-  "omnihuman-1-5:15s": 102,
-  "omnihuman-1-5:30s": 203,
-  "omnihuman-1-5:60s": 405,
+  "omnihuman-1-5": 4050,
+  "omnihuman-1-5:15s": 1020,
+  "omnihuman-1-5:30s": 2030,
+  "omnihuman-1-5:60s": 4050,
   // HeyGen Lipsync Precision + Sync Lipsync 2 Pro (Replicate, video-input dubbing).
   // Billed per second of output; bucketed like kling-avatar via buildLipSyncCreditId.
   // At-cost (0% markup): credits. lip-sync
   // sets no meteredCost, so the worker commits the reserved bucket as the charge.
-  "heygen-lipsync-precision": 1001,      // bare = 300s ceiling
-  "heygen-lipsync-precision:15s": 51,    // 15s ×
-  "heygen-lipsync-precision:30s": 101,   // 30s ×
-  "heygen-lipsync-precision:60s": 201,   // 60s ×
-  "heygen-lipsync-precision:120s": 401,  // 120s ×
-  "heygen-lipsync-precision:300s": 1001, // 300s × — 5-min ceiling
-  "lipsync-2-pro": 1249,                 // bare = 300s ceiling
-  "lipsync-2-pro:15s": 63,               // 15s ×
-  "lipsync-2-pro:30s": 125,              // 30s ×
-  "lipsync-2-pro:60s": 250,              // 60s ×
-  "lipsync-2-pro:120s": 500,             // 120s ×
-  "lipsync-2-pro:300s": 1249,            // 300s × — 5-min ceiling
+  "heygen-lipsync-precision": 10010,      // bare = 300s ceiling
+  "heygen-lipsync-precision:15s": 510,    // 15s ×
+  "heygen-lipsync-precision:30s": 1010,   // 30s ×
+  "heygen-lipsync-precision:60s": 2010,   // 60s ×
+  "heygen-lipsync-precision:120s": 4010,  // 120s ×
+  "heygen-lipsync-precision:300s": 10010, // 300s × — 5-min ceiling
+  "lipsync-2-pro": 12490,                 // bare = 300s ceiling
+  "lipsync-2-pro:15s": 630,               // 15s ×
+  "lipsync-2-pro:30s": 1250,              // 30s ×
+  "lipsync-2-pro:60s": 2500,              // 60s ×
+  "lipsync-2-pro:120s": 5000,             // 120s ×
+  "lipsync-2-pro:300s": 12490,            // 300s × — 5-min ceiling
   // Sync Lipsync v3 (fal.ai). /min, billed per output second
   // bucketed via buildLipSyncCreditId. At-cost (0% markup): credits =
   // . lip-sync sets no meteredCost, so the
   // reserved bucket is committed verbatim as the charge.
-  "sync-lipsync-v3": 2000,               // bare = 300s ceiling
-  "sync-lipsync-v3:15s": 100,            // 15s ×
-  "sync-lipsync-v3:30s": 200,            // 30s ×
-  "sync-lipsync-v3:60s": 400,            // 60s ×
-  "sync-lipsync-v3:120s": 800,           // 120s ×
-  "sync-lipsync-v3:300s": 2000,          // 300s × — 5-min ceiling
+  "sync-lipsync-v3": 20000,               // bare = 300s ceiling
+  "sync-lipsync-v3:15s": 1000,            // 15s ×
+  "sync-lipsync-v3:30s": 2000,            // 30s ×
+  "sync-lipsync-v3:60s": 4000,            // 60s ×
+  "sync-lipsync-v3:120s": 8000,           // 120s ×
+  "sync-lipsync-v3:300s": 20000,          // 300s × — 5-min ceiling
   // Volcengine video-to-video lip sync (KIE). (/sec) — identical
   // to kling-avatar — billed per output second, bucketed via buildLipSyncCreditId.
   // At-cost (matches kling-avatar + the per-second lip-sync family): credits =
   // = 2 cr/sec. lip-sync sets no meteredCost, so
   // the reserved bucket is committed verbatim as the charge.
-  "volcengine-lipsync": 600,             // bare = 300s ceiling
-  "volcengine-lipsync:15s": 30,          // 15s ×
-  "volcengine-lipsync:30s": 60,          // 30s ×
-  "volcengine-lipsync:60s": 120,         // 60s ×
-  "volcengine-lipsync:120s": 240,        // 120s ×
-  "volcengine-lipsync:300s": 600,        // 300s × — 5-min ceiling
+  "volcengine-lipsync": 6000,             // bare = 300s ceiling
+  "volcengine-lipsync:15s": 300,          // 15s ×
+  "volcengine-lipsync:30s": 600,          // 30s ×
+  "volcengine-lipsync:60s": 1200,         // 60s ×
+  "volcengine-lipsync:120s": 2400,        // 120s ×
+  "volcengine-lipsync:300s": 6000,        // 300s × — 5-min ceiling
   // ── Replicate MMAudio (video-sfx node) ──
   // BASE credits (pre-markup). creditGuard applies cost_markup_percent at request time.
-  "replicate-mmaudio":       1,  // base/legacy default (8s bucket)
-  "replicate-mmaudio:8s":    1,
-  "replicate-mmaudio:15s":   1,
-  "replicate-mmaudio:30s":   2,
-  "replicate-mmaudio:60s":   3,
-  "replicate-mmaudio:120s":  5,
-  "replicate-mmaudio:300s": 11,
-  "hailuo-avatar": 19,           // estimated (not in KIE pricing data)
+  "replicate-mmaudio":       10,  // base/legacy default (8s bucket)
+  "replicate-mmaudio:8s":    10,
+  "replicate-mmaudio:15s":   10,
+  "replicate-mmaudio:30s":   20,
+  "replicate-mmaudio:60s":   30,
+  "replicate-mmaudio:120s":  50,
+  "replicate-mmaudio:300s": 110,
+  "hailuo-avatar": 190,           // estimated (not in KIE pricing data)
   // ── Audio / TTS / Music ──
-  "elevenlabs-v3": 3,             // direct ElevenLabs API
-  "elevenlabs-turbo": 2,         // per 1K chars
-  "elevenlabs-multilingual": 3,  // per 1K chars
-  "elevenlabs": 2,               // alias for turbo
-  "elevenlabs-sfx": 1,           // 0.24 cr/sec * ~5s
+  "elevenlabs-v3": 30,             // direct ElevenLabs API
+  "elevenlabs-turbo": 15,         // per 1K chars
+  "elevenlabs-multilingual": 30,  // per 1K chars
+  "elevenlabs": 15,               // alias for turbo
+  "elevenlabs-sfx": 3,           // 0.24 cr/sec * ~5s
   // Replicate disabled
   // "tangoflux": 4, // Replicate SFX, estimated
-  "suno": 3,                     // (V4 default) — 0%-base
-  "suno-v5": 3,                  // (V5)
-  "suno-v5_5": 3,                // (V5.5)
-  "suno-generate": 3,            // (V4 default)
-  "suno-cover": 3,
-  "suno-extend": 3,
-  "suno-lyrics": 1,
-  "suno-separate": 4,            // matches model_pricing (mig 059); held by re-baseline (unclear)
-  "suno-separate-stem": 13,      // 0%-base
-  "audio-separation": 3,         // Demucs (ryan5453) on Replicate, fixed reserved tier (Auto/Fast)
-  "audio-separation:best": 8,    // htdemucs_ft (~4× compute), fixed reserved tier
-  "audio-separation:stems": 6,   // htdemucs_6s (6-stem, heavier than base) — conservative estimate, tune via audit-credits
-  "suno-music-video": 1,         // matches model_pricing (mig 059)
-  "suno-mashup": 3,
-  "suno-replace-section": 2,
-  "suno-style-boost": 1,
-  "suno-add-instrumental": 3,
-  "suno-add-vocals": 3,
-  "suno-convert-wav": 1,
-  "suno-upload-extend": 3,
-  "suno-voice-create": 20,       // One-time persona creation (validate + generate); KIE does not publish pricing — flat conservative default
+  "suno": 30,                     // (V4 default) — 0%-base
+  "suno-v5": 30,                  // (V5)
+  "suno-v5_5": 30,                // (V5.5)
+  "suno-generate": 30,            // (V4 default)
+  "suno-cover": 30,
+  "suno-extend": 30,
+  "suno-lyrics": 10,
+  "suno-separate": 40,            // matches model_pricing (mig 059); held by re-baseline (unclear)
+  "suno-separate-stem": 130,      // 0%-base
+  "audio-separation": 30,         // Demucs (ryan5453) on Replicate, fixed reserved tier (Auto/Fast)
+  "audio-separation:best": 80,    // htdemucs_ft (~4× compute), fixed reserved tier
+  "audio-separation:stems": 60,   // htdemucs_6s (6-stem, heavier than base) — conservative estimate, tune via audit-credits
+  "suno-music-video": 10,         // matches model_pricing (mig 059)
+  "suno-mashup": 30,
+  "suno-replace-section": 20,
+  "suno-style-boost": 10,
+  "suno-add-instrumental": 30,
+  "suno-add-vocals": 30,
+  "suno-convert-wav": 10,
+  "suno-upload-extend": 30,
+  "suno-voice-create": 200,       // One-time persona creation (validate + generate); KIE does not publish pricing — flat conservative default
   // Replicate disabled
   // "musicgen": 7,                 // Replicate Meta MusicGen
   // "lyria": 7,                    // Replicate Google Lyria 2
   // "bark": 7,                     // Replicate Suno Bark
-  "elevenlabs-isolation": 8,     // /sec, variable; ~148s avg = (from audit)
+  "elevenlabs-isolation": 74,     // /sec, variable; ~148s avg = (from audit)
   // Replicate disabled
   // "whisper": 4,                   // Replicate whisper transcription
   // "incredibly-fast-whisper": 4,   // Replicate fast whisper
-  "elevenlabs-stt": 3,           // avg (from audit)
-  "elevenlabs-dialogue": 4,     // per 1K chars
-  "voice-clone": 5,              // ElevenLabs instant voice clone
-  "elevenlabs-voice-changer": 4,  // ElevenLabs speech-to-speech
-  "elevenlabs-dubbing": 8,        // ElevenLabs dubbing (async)
-  "elevenlabs-voice-remix": 4,    // ElevenLabs voice remix/preview
-  "elevenlabs-voice-design": 5,   // ElevenLabs voice design (full controls)
-  "elevenlabs-forced-alignment": 3, // ElevenLabs forced alignment
-  "infinitalk": 42,              // fallback (720p default)
-  "infinitalk:480p": 11,         // (3 cr/sec * ~14s)
-  "infinitalk:720p": 42,         // (12 cr/sec * ~14s)
+  "elevenlabs-stt": 22,           // avg (from audit)
+  "elevenlabs-dialogue": 25,     // per 1K chars
+  "voice-clone": 50,              // ElevenLabs instant voice clone
+  "elevenlabs-voice-changer": 40,  // ElevenLabs speech-to-speech
+  "elevenlabs-dubbing": 80,        // ElevenLabs dubbing (async)
+  "elevenlabs-voice-remix": 40,    // ElevenLabs voice remix/preview
+  "elevenlabs-voice-design": 50,   // ElevenLabs voice design (full controls)
+  "elevenlabs-forced-alignment": 30, // ElevenLabs forced alignment
+  "infinitalk": 420,              // fallback (720p default)
+  "infinitalk:480p": 110,         // (3 cr/sec * ~14s)
+  "infinitalk:720p": 420,         // (12 cr/sec * ~14s)
   // ── Speech-to-Video ──
-  "speech-to-video": 3,           // (480p)
-  "speech-to-video:580p": 5,
-  "speech-to-video:720p": 6,
+  "speech-to-video": 30,           // (480p)
+  "speech-to-video:580p": 50,
+  "speech-to-video:720p": 60,
   // ── Processing ──
-  "topaz": 1,                     // processing
-  "ffmpeg": 1,
-  "render-video": 5,            // Remotion compute
+  "topaz": 120,                     // processing
+  "ffmpeg": 10,
+  "render-video": 50,            // Remotion compute
   // Replicate disabled
   // "runway": 20, // Replicate, typical
   // "pika": 20, // Replicate, typical
   // ── LLM (standard tier = base entry, economy = 0.5x min 1, premium = 3x) ──
-  "prompt-helper": 2,            // standard
+  "prompt-helper": 7,            // standard
   "prompt-helper:economy": 1,
-  "prompt-helper:premium": 3,    // 0%-base (Opus 4.7)
-  "ai-writer": 3,                // standard (0%-base)
+  "prompt-helper:premium": 7,    // 0%-base (Opus 4.7)
+  "ai-writer": 4,                // standard (0%-base)
   "ai-writer:economy": 1,
-  "ai-writer:premium": 4,        // Opus 4.7
+  "ai-writer:premium": 2,        // Opus 4.7
   "llm-chat": 2,                 // standard (0%-base)
   "llm-chat:economy": 1,
-  "llm-chat:premium": 3,         // Opus 4.7
-  "translate": 1,                // internal utility (replicate i2i prompt translation)
-  "translate:economy": 1,
-  "translate:premium": 1,
-  "scene-graph-ai": 3,          // standard
-  "scene-graph-ai:economy": 1,
-  "scene-graph-ai:premium": 4,
-  "video-composer": 3,          // standard
-  "video-composer:economy": 1,
-  "video-composer:premium": 4,
-  "after-effects": 2,           // standard
-  "after-effects:economy": 1,
-  "after-effects:premium": 2,
-  "lottie-overlay": 2,          // standard
-  "lottie-overlay:economy": 1,
-  "lottie-overlay:premium": 2,
-  "3d-title": 2,                // standard
-  "3d-title:economy": 1,
-  "3d-title:premium": 4,
-  "motion-graphics": 2,         // standard
-  "motion-graphics:economy": 1,
-  "motion-graphics:premium": 3,
-  "motion-graphics-lottie": 5,         // standard (Sonnet 4.6, ~3K in + 4K out)
+  "llm-chat:premium": 6,         // Opus 4.7
+  "translate": 10,                // internal utility (replicate i2i prompt translation)
+  "translate:economy": 10,
+  "translate:premium": 10,
+  "scene-graph-ai": 30,          // standard
+  "scene-graph-ai:economy": 10,
+  "scene-graph-ai:premium": 40,
+  "video-composer": 30,          // standard
+  "video-composer:economy": 10,
+  "video-composer:premium": 40,
+  "after-effects": 20,           // standard
+  "after-effects:economy": 10,
+  "after-effects:premium": 20,
+  "lottie-overlay": 5,          // standard
+  "lottie-overlay:economy": 10,
+  "lottie-overlay:premium": 20,
+  "3d-title": 20,                // standard
+  "3d-title:economy": 10,
+  "3d-title:premium": 40,
+  "motion-graphics": 10,         // standard
+  "motion-graphics:economy": 10,
+  "motion-graphics:premium": 30,
+  "motion-graphics-lottie": 33,         // standard (Sonnet 4.6, ~3K in + 4K out)
   "motion-graphics-lottie:economy": 1,
-  "motion-graphics-lottie:premium": 8, // Opus 4.7 at the lottie token profile
+  "motion-graphics-lottie:premium": 80, // Opus 4.7 at the lottie token profile
   ...PINNABLE_SCRIPT_LLM_STATIC,
   "composite": 0,
   "sub-workflow": 0,
@@ -889,131 +889,131 @@ export const STATIC_CREDIT_COSTS: Record<string, number> = {
   // The composite key is built from the node's `data.strategyId` via the
   // CREDIT_COSTS["reduce"] resolver below. There is no base "reduce" entry —
   // the route always reads strategyId and resolves to a composite identifier.
-  "reduce:pick-best-llm": 1,
+  "reduce:pick-best-llm": 10,
   "reduce:concat": 0,
   "reduce:first-non-empty": 0,
   "reduce:count": 0,
   "reduce:vote": 0,
   "reduce:merge-json": 0,
   // ── Node types (additional entries for workflow estimation by node.type) ──
-  "generate-script": 2,
-  "generate-script:economy": 1,
-  "generate-script:premium": 3,
+  "generate-script": 20,
+  "generate-script:economy": 10,
+  "generate-script:premium": 30,
   // ── Video Director (HyperFrames Phase 1) — fixed model: claude-sonnet-4.6 (standard) ──
   // No :economy/:premium composites — the authoring model is not user-selectable.
   // Math: ~6K input × /M + ~8K output × /M = → × → ceil = 9
-  "video-director": 9,
-  "generate-image": 2,
-  "edit-image": 2,
-  "image-to-image": 2,
-  "modify-image": 2,
-  "upscale-image": 1,
-  "remove-background": 1,
+  "video-director": 90,
+  "generate-image": 20,
+  "edit-image": 20,
+  "image-to-image": 20,
+  "modify-image": 20,
+  "upscale-image": 10,
+  "remove-background": 10,
   // Bare-id fallback reserves (fire only when no duration-composite matches).
   // Re-sized 2026-07-30 to cover observed composite actuals (29-47 cr) — the
   // old 25 sat below the real worst case. Commit meters down to actual.
-  "image-to-video": 50,
-  "video-to-video": 25,
-  "text-to-video": 50,
-  "text-to-speech": 3,
-  "generate-music": 18,
-  "text-to-audio": 3,
-  "lip-sync": 13,
-  "latentsync": 4,
-  "wav2lip": 1,
-  "video-retalking": 20,
-  "sadtalker": 5,
-  "video-upscale": 15,
-  "extend-video": 40,
+  "image-to-video": 500,
+  "video-to-video": 250,
+  "text-to-video": 500,
+  "text-to-speech": 30,
+  "generate-music": 180,
+  "text-to-audio": 30,
+  "lip-sync": 130,
+  "latentsync": 7,
+  "wav2lip": 10,
+  "video-retalking": 200,
+  "sadtalker": 50,
+  "video-upscale": 150,
+  "extend-video": 400,
   // LTX 2.3 Pro retake — fallback for node-registry display and any
   // defensive lookups when the route's computeCredits hook isn't reached.
   // Real reservation uses `ltx-2.3-pro-retake:per-second × retakeDuration`.
-  "video-retake": 100,
-  "roop-face-swap": 13,           // Replicate ×
-  "generate-mask": 5,             // adirik/grounded-sam (Replicate) — segmentation mask
-  "transcribe": 1,
+  "video-retake": 1000,
+  "roop-face-swap": 130,           // Replicate ×
+  "generate-mask": 50,             // adirik/grounded-sam (Replicate) — segmentation mask
+  "transcribe": 10,
   // ── Web Scrape (Apify + direct RSS) ──
-  "web-scrape": 2,
-  "web-scrape:google-search": 3,
-  "web-scrape:content-crawler": 1,
-  "web-scrape:content-crawler:site": 5,
-  "web-scrape:instagram": 1,
-  "web-scrape:tiktok": 1,
-  "web-scrape:rss": 1,
-  "qa-check": 1,
+  "web-scrape": 20,
+  "web-scrape:google-search": 30,
+  "web-scrape:content-crawler": 10,
+  "web-scrape:content-crawler:site": 50,
+  "web-scrape:instagram": 10,
+  "web-scrape:tiktok": 10,
+  "web-scrape:rss": 10,
+  "qa-check": 10,
   "qa-check:economy": 1,
-  "qa-check:premium": 1,
+  "qa-check:premium": 10,
   // ── Dynamic-priced video utilities (NOT used by routes, but kept as
   //    safety-net fallback). The three rows below are unreachable when
   //    routes/loop-video.ts, routes/trim-video.ts, routes/combine-videos.ts
   //    use the computeCredits hook in creditGuard. Their model_pricing rows
   //    (also 0) are likewise unreachable.
-  "combine-videos": 3,
+  "combine-videos": 30,
   // Image Collage — composites N images into one 2K/4K image (local ffmpeg,
   // no provider cost). Priced by resolution. Base + resolution composites;
   // the single-node route uses computeCredits, workflow runs reserve the
   // composite via the payload-builder modelIdentifier. See migration 244.
-  "image-collage": 2,
-  "image-collage:2K": 2,
-  "image-collage:4K": 4,
+  "image-collage": 20,
+  "image-collage:2K": 20,
+  "image-collage:4K": 40,
   // Assemble Narrated Video — fits N ordered (clip, voice) blocks into one
   // MP4 via ffmpeg (local compute, no external provider cost). BASE credits
   // (pre-markup) is the 6-block case: 3 + ceil = 4. The route scales
   // with block count via computeCredits (assembleNarratedVideoCredits).
   // See migration 246.
-  "assemble-narrated-video": 4,
-  "merge-video-audio": 2,
-  "add-captions": 3,
-  "add-captions:kinetic": 5,
-  "resize-video": 2,
-  "trim-audio": 1,
-  "split-media": 2,
-  "extract-audio": 1,
-  "remove-audio": 2,
-  "mix-audio": 2,
-  "combine-audio": 1,
-  "adjust-volume": 1,
-  "audio-fx": 2,                  // Demucs-free FFmpeg audio effects (reverb/EQ/echo)
-  "trim-video": 1,
-  "extract-frame": 1,
-  "speed-ramp": 2,
-  "speed-ramp:smooth": 5, // motion-compensated interpolation (minterpolate) — 5-20x slower than fast
-  "loop-video": 1,
-  "fade-video": 1,
-  "transcode-video": 1,
-  "audio-isolation": 8,          // alias for elevenlabs-isolation
-  "text-to-dialogue": 4,
-  "image-to-text": 1,
+  "assemble-narrated-video": 40,
+  "merge-video-audio": 20,
+  "add-captions": 30,
+  "add-captions:kinetic": 50,
+  "resize-video": 20,
+  "trim-audio": 10,
+  "split-media": 20,
+  "extract-audio": 10,
+  "remove-audio": 20,
+  "mix-audio": 20,
+  "combine-audio": 10,
+  "adjust-volume": 10,
+  "audio-fx": 20,                  // Demucs-free FFmpeg audio effects (reverb/EQ/echo)
+  "trim-video": 10,
+  "extract-frame": 10,
+  "speed-ramp": 20,
+  "speed-ramp:smooth": 50, // motion-compensated interpolation (minterpolate) — 5-20x slower than fast
+  "loop-video": 10,
+  "fade-video": 10,
+  "transcode-video": 10,
+  "audio-isolation": 80,          // alias for elevenlabs-isolation
+  "text-to-dialogue": 40,
+  "image-to-text": 3,
   "image-to-text:economy": 1,
-  "image-to-text:premium": 1,
-  "describe-to-picker": 1,
-  "describe-to-picker:economy": 1,
-  "describe-to-picker:premium": 1,
-  "image-critic": 1,
-  "image-critic:economy": 1,
-  "image-critic:premium": 2,
-  "character": 2,
-  "object": 2,
-  "location": 2,
-  "voice-changer": 4,
-  "voice-changer-pro": 4,
-  "generate-video-pro": 10,       // multi-segment stitch fee-base (flat, on top of per-second segment cost — see ee/billing/generate-video-pro-credits.ts)
-  "edit-video-pro": 10,           // replace-span bridge fee-base (flat, on top of per-second ref-rate segment cost — see ee/billing/edit-video-pro-credits.ts)
-  "dubbing": 8,
-  "voice-remix": 4,
-  "voice-design": 5,
-  "forced-alignment": 3,
-  "social-media-format": 2,
-  "social-publish": 1,
-  "instagram-post": 1,
-  "tiktok-post": 1,
-  "youtube-upload": 1,
-  "linkedin-post": 1,
-  "x-post": 1,
-  "facebook-post": 1,
-  "telegram-post": 1,
-  "publish-social": 1,
-  "telegram-channel-feed": 1,
+  "image-to-text:premium": 4,
+  "describe-to-picker": 10,
+  "describe-to-picker:economy": 10,
+  "describe-to-picker:premium": 10,
+  "image-critic": 5,
+  "image-critic:economy": 10,
+  "image-critic:premium": 20,
+  "character": 20,
+  "object": 20,
+  "location": 20,
+  "voice-changer": 40,
+  "voice-changer-pro": 40,
+  "generate-video-pro": 100,       // multi-segment stitch fee-base (flat, on top of per-second segment cost — see ee/billing/generate-video-pro-credits.ts)
+  "edit-video-pro": 100,           // replace-span bridge fee-base (flat, on top of per-second ref-rate segment cost — see ee/billing/edit-video-pro-credits.ts)
+  "dubbing": 80,
+  "voice-remix": 40,
+  "voice-design": 50,
+  "forced-alignment": 30,
+  "social-media-format": 20,
+  "social-publish": 10,
+  "instagram-post": 10,
+  "tiktok-post": 10,
+  "youtube-upload": 10,
+  "linkedin-post": 10,
+  "x-post": 10,
+  "facebook-post": 10,
+  "telegram-post": 10,
+  "publish-social": 10,
+  "telegram-channel-feed": 10,
   "save-to-storage": 0,
   "router": 0,
   "component": 0,               // Component node itself is free; inner nodes have their own costs
@@ -1022,8 +1022,8 @@ export const STATIC_CREDIT_COSTS: Record<string, number> = {
   // These are FALLBACK costs the credit-guard uses when an estimate isn't supplied
   // (defensive — the route always supplies one). Number chosen as the median Phase 1A
   // Stage 1-only run (Detection + Showrunner + 2 critics ≈ 30 credits).
-  "pipeline-orchestration": 30,
-  "pipeline-orchestration:stage_1_only": 30,
+  "pipeline-orchestration": 300,
+  "pipeline-orchestration:stage_1_only": 300,
   // The editor's GenerativePipelineConfig + node-toolbar call POST
   // /v1/credits/model-costs with the node-type slug ("generative-pipeline")
   // to display the credit estimate. Without an entry here OR a DB row the
@@ -1031,23 +1031,23 @@ export const STATIC_CREDIT_COSTS: Record<string, number> = {
   // is computed by estimateUpfrontCredits (duration × format × mode), so
   // this static row is a UI display fallback only — it's NOT the value
   // charged at run time.
-  "generative-pipeline": 30,
+  "generative-pipeline": 300,
   // Phase 2 (granular-pipeline-control): per-call Showrunner refine of a
   // single scene from the ScriptPanel "Regenerate this scene" button.
   // Charged per click — flat 3 credits (1 LLM call, single-SceneSpec emit,
   // actual cost @ Sonnet 4.6 + buffer).
-  "regenerate-scene": 3,
+  "regenerate-scene": 30,
   // ── Scene-Context Helpers (Phase 1B.3, §6.11) ──
   // Per-call LLM micro-actions invoked from a SceneNode's context panel.
   // Reserve/refund via backend/src/ee/pipelines/scene-helper-credits.ts.
   // DB source-of-truth: supabase/migrations/130_seed_scene_helper_pricing.sql.
-  "scene-helper:audit_prompt": 1,
-  "scene-helper:improve_prompt": 2,
-  "scene-helper:generate_motion": 1,
-  "scene-helper:optimize_for_model": 2,
-  "scene-helper:add_broll": 2,
-  "scene-helper:bridge_to_next_scene": 2,
-  "scene-helper:anchor_scene_style": 2,
+  "scene-helper:audit_prompt": 10,
+  "scene-helper:improve_prompt": 20,
+  "scene-helper:generate_motion": 10,
+  "scene-helper:optimize_for_model": 20,
+  "scene-helper:add_broll": 20,
+  "scene-helper:bridge_to_next_scene": 20,
+  "scene-helper:anchor_scene_style": 20,
   // Phase 1C.1 vision-keyframe helpers — DB row in migration 134.
   // Audit Images: 1 Sonnet vision call per shot (≤8 shots). 3cr covers the
   // amortized average. Validate Match Cut: 1 Sonnet vision call with 2 images.
@@ -1056,9 +1056,9 @@ export const STATIC_CREDIT_COSTS: Record<string, number> = {
   // image_model regen (e.g. nano-banana). All 3 entries are added together
   // so the credit-pricing-migration-sync REVERSE-direction test stays green
   // (migration 134 seeds all 3 model_pricing rows in one statement).
-  "scene-helper:audit_images": 1,
-  "scene-helper:fix_continuity": 1,
-  "scene-helper:validate_match_cut": 1,
+  "scene-helper:audit_images": 10,
+  "scene-helper:fix_continuity": 10,
+  "scene-helper:validate_match_cut": 10,
   // Phase 1C.2 Stage 7 sub-steps — DB rows in migration 135.
   // Editor LLM: one Sonnet vision call per pipeline (3cr). Beat-grid extract:
   // pure FFmpeg/aubio post-process, no LLM/provider cost (0cr). Music timeline:
@@ -1066,10 +1066,10 @@ export const STATIC_CREDIT_COSTS: Record<string, number> = {
   // separately via the Suno worker). Final merge: 3cr for the FFmpeg combine
   // pass with cut decisions + music overlay. FreeCut export: pure JSON
   // generation, no provider cost (0cr).
-  "pipeline-editor-llm": 3,
+  "pipeline-editor-llm": 30,
   "pipeline-beat-grid-extract": 0,
-  "pipeline-music-timeline": 4,
-  "pipeline-final-merge": 3,
+  "pipeline-music-timeline": 40,
+  "pipeline-final-merge": 30,
   "pipeline-freecut-export": 0,
   // ── Beeble SwitchX relight — 30-frame-block × resolution reserve holds ──
   // 17 ids: bare (= 240f/1080p worst-case) + 8 block tiers (30/60/90/120/150/
@@ -1079,23 +1079,23 @@ export const STATIC_CREDIT_COSTS: Record<string, number> = {
   // (no platform margin): block credits = blockUSD / @720p, 15 @1080p.
   // Tiers are 30-frame multiples so each snaps to the exact block Beeble bills
   // (ceil(frames/30)). Mirrors migration 241 rows (credit-pricing-migration-sync).
-  "beeble-switchx": 120,
-  "beeble-switchx:30f:1080p": 15,
-  "beeble-switchx:30f:720p": 5,
-  "beeble-switchx:60f:1080p": 30,
-  "beeble-switchx:60f:720p": 10,
-  "beeble-switchx:90f:1080p": 45,
-  "beeble-switchx:90f:720p": 15,
-  "beeble-switchx:120f:1080p": 60,
-  "beeble-switchx:120f:720p": 20,
-  "beeble-switchx:150f:1080p": 75,
-  "beeble-switchx:150f:720p": 25,
-  "beeble-switchx:180f:1080p": 90,
-  "beeble-switchx:180f:720p": 30,
-  "beeble-switchx:210f:1080p": 105,
-  "beeble-switchx:210f:720p": 35,
-  "beeble-switchx:240f:1080p": 120,
-  "beeble-switchx:240f:720p": 40,
+  "beeble-switchx": 1200,
+  "beeble-switchx:30f:1080p": 150,
+  "beeble-switchx:30f:720p": 50,
+  "beeble-switchx:60f:1080p": 300,
+  "beeble-switchx:60f:720p": 100,
+  "beeble-switchx:90f:1080p": 450,
+  "beeble-switchx:90f:720p": 150,
+  "beeble-switchx:120f:1080p": 600,
+  "beeble-switchx:120f:720p": 200,
+  "beeble-switchx:150f:1080p": 750,
+  "beeble-switchx:150f:720p": 250,
+  "beeble-switchx:180f:1080p": 900,
+  "beeble-switchx:180f:720p": 300,
+  "beeble-switchx:210f:1080p": 1050,
+  "beeble-switchx:210f:720p": 350,
+  "beeble-switchx:240f:1080p": 1200,
+  "beeble-switchx:240f:720p": 400,
 }
 
 /**

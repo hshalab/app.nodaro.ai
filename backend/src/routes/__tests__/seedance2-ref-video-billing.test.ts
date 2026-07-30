@@ -154,7 +154,7 @@ describe("/v1/generate-video Seedance 2 reference-video billing", () => {
     // total = ceil(6.25 × (5 + 8)) = ceil(81.25) = 82  (NOT the output-only 50)
     expect(reserveSpy).toHaveBeenCalledWith(
       "u-1", "job-1", expect.any(String), 0, 0,
-      expect.objectContaining({ creditOverride: 82 }),
+      expect.objectContaining({ creditOverride: 813 }),
     )
     expect(probeSpy).toHaveBeenCalledTimes(1)
     expect(probeSpy).toHaveBeenCalledWith("https://r2.example.com/ref.mp4")
@@ -182,11 +182,11 @@ describe("/v1/generate-video Seedance 2 reference-video billing", () => {
       },
     })
     expect(res.statusCode).toBe(200)
-    // No ref videos → hasVideoRef=false → identifier "seedance-2:8s:720p" → STATIC 82.
+    // No ref videos → hasVideoRef=false → identifier "seedance-2:8s:720p" → STATIC 820.
     // The scaling branch must NOT run, and ffprobe must NOT be called.
     expect(reserveSpy).toHaveBeenCalledWith(
       "u-1", "job-1", expect.any(String), 0, 0,
-      expect.objectContaining({ creditOverride: 82 }),
+      expect.objectContaining({ creditOverride: 820 }),
     )
     expect(refCreditsSpy).not.toHaveBeenCalled()
     expect(probeSpy).not.toHaveBeenCalled()
@@ -211,7 +211,7 @@ describe("/v1/text-to-video Seedance 2 reference-video billing", () => {
     expect(res.statusCode).toBe(200)
     expect(reserveSpy).toHaveBeenCalledWith(
       "u-1", "job-1", expect.any(String), 0, 0,
-      expect.objectContaining({ creditOverride: 82 }),
+      expect.objectContaining({ creditOverride: 813 }),
     )
     expect(refCreditsSpy).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -237,10 +237,10 @@ describe("/v1/text-to-video Seedance 2 reference-video billing", () => {
       },
     })
     expect(res.statusCode).toBe(200)
-    // identifier "seedance-2:8s:720p" → STATIC 82 (no -ref scaling).
+    // identifier "seedance-2:8s:720p" → STATIC 820 (no -ref scaling).
     expect(reserveSpy).toHaveBeenCalledWith(
       "u-1", "job-1", expect.any(String), 0, 0,
-      expect.objectContaining({ creditOverride: 82 }),
+      expect.objectContaining({ creditOverride: 820 }),
     )
     expect(refCreditsSpy).not.toHaveBeenCalled()
     expect(probeSpy).not.toHaveBeenCalled()

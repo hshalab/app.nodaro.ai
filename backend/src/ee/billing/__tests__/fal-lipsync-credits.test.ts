@@ -15,12 +15,12 @@ const atCost = (bucketSec: number): number =>
 
 describe("sync-lipsync-v3 STATIC_CREDIT_COSTS (at-cost, no ×1.25)", () => {
   const cases: Array<[string, number, number | undefined]> = [
-    ["sync-lipsync-v3", 2000, 300], // bare = 300s ceiling
-    ["sync-lipsync-v3:15s", 100, 15],
-    ["sync-lipsync-v3:30s", 200, 30],
-    ["sync-lipsync-v3:60s", 400, 60],
-    ["sync-lipsync-v3:120s", 800, 120],
-    ["sync-lipsync-v3:300s", 2000, 300],
+    ["sync-lipsync-v3", 20000, 300], // bare = 300s ceiling
+    ["sync-lipsync-v3:15s", 1000, 15],
+    ["sync-lipsync-v3:30s", 2000, 30],
+    ["sync-lipsync-v3:60s", 4000, 60],
+    ["sync-lipsync-v3:120s", 8000, 120],
+    ["sync-lipsync-v3:300s", 20000, 300],
   ]
 
   it.each(cases)("%s resolves to %i credits", (id, expected) => {

@@ -16,10 +16,10 @@ describe("flux2CostUsd", () => {
     expect(flux2CostUsd("flux-2-max", 4, 0)).toBeCloseTo(0.28, 5)
   })
   it("flux2BaseCredits = usdToCredits(cost)", () => {
-    expect(flux2BaseCredits("flux-2-max", 2, 0)).toBe(7)
-    expect(flux2BaseCredits("flux-2-pro", 2, 0)).toBe(3)
-    expect(flux2BaseCredits("flux-2-max", 1, 0)).toBe(4)
-    expect(flux2BaseCredits("flux-2-klein", 1, 0)).toBe(1)
+    expect(flux2BaseCredits("flux-2-max", 2, 0)).toBe(70)
+    expect(flux2BaseCredits("flux-2-pro", 2, 0)).toBe(23)
+    expect(flux2BaseCredits("flux-2-max", 1, 0)).toBe(35)
+    expect(flux2BaseCredits("flux-2-klein", 1, 0)).toBe(3)
   })
 })
 
@@ -42,9 +42,13 @@ describe("flux2BaseCredits — single-sourced on usdToCredits", () => {
   })
 
   it("still absorbs the float-noise case the inline guard was written for", () => {
-    // flux-2-max @ 2MP, 0 refs = $0.14 exactly; a bare ceil would give 8.
+    // flux-2-max @ 2MP, 0 refs = $0.14 exactly. The 0.02 below is deliberately
+    // a LITERAL, not CREDIT_BASE_USD: it reproduces the historical bug this
+    // guard was written for — 0.14 / 0.02 = 7.000000000000001, so a bare ceil
+    // charged 8 instead of 7. Keeping the literal keeps the illustration
+    // meaningful now that the base has moved.
     expect(flux2CostUsd("flux-2-max", 2, 0)).toBeCloseTo(0.14, 10)
-    expect(Math.ceil(flux2CostUsd("flux-2-max", 2, 0) / 0.02)).toBe(8)
-    expect(flux2BaseCredits("flux-2-max", 2, 0)).toBe(7)
+    expect(Math.ceil(flux2CostUsd("flux-2-max", 2, 0) / 0.02)).toBe(8) // the historical bug
+    expect(flux2BaseCredits("flux-2-max", 2, 0)).toBe(usdToCredits(0.14)) // guarded
   })
 })

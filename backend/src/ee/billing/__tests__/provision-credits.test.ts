@@ -426,17 +426,18 @@ describe("provision-credits", () => {
       expect(mockInvalidateBalanceCache).toHaveBeenCalledWith("user-001")
     })
 
-    it("caps subscription_credits at min(current, 50)", async () => {
+    it("caps subscription_credits at min(current, the free grant)", async () => {
       mockSelect("stripe_customers", { user_id: "user-001" })
-      // User has 400 credits — should be capped to free tier (150)
-      mockSelect("profiles", { subscription_credits: 400 })
+      // User holds more than the free grant, so cancelling must claw back down.
+      const held = TIER_CREDITS.free + 2500
+      mockSelect("profiles", { subscription_credits: held })
 
       await handleSubscriptionCanceled(baseCanceledData)
 
-      const freeCredits = TIER_CREDITS.free // 150
+      const freeCredits = TIER_CREDITS.free
       expect(mockLogTransaction).toHaveBeenCalledWith(
         expect.objectContaining({
-          amount: freeCredits - 400, // negative (credits removed)
+          amount: freeCredits - held, // negative (credits removed)
           balanceAfter: freeCredits,
         })
       )
@@ -486,7 +487,7 @@ describe("provision-credits", () => {
       // Claim + grant happen atomically inside the RPC (no separate JS insert).
       expect(mockRpc).toHaveBeenCalledWith("grant_topup_credits_idempotent", {
         p_user_id: "user-001",
-        p_credits: 450,
+        p_credits: 8500,
         p_stripe_transaction_id: "txn_001",
         p_amount_usd: 25, // 2500 cents / 100
       })

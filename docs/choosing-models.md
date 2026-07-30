@@ -46,45 +46,45 @@ Text-to-image, image-to-image, editing, upscaling, and background removal. For e
 <!-- AUTO-GEN:START model-table-image -->
 | Model | Family | Tier | Credits | Modes | Best for |
 | --- | --- | --- | --- | --- | --- |
-| Flux 2 Klein (Open) | Black Forest Labs | Everyday | 1 | t2i | Open Flux 2 9B from BFL — fast, no safety filter. Runs direct on Replicate. |
-| GPT Image 2 | OpenAI | Everyday | 1 | t2i | Next-gen GPT Image — broader aspect ratios, resolution-based pricing (1K/2K/4K). |
-| GPT Image 2 (I2I) | OpenAI | Everyday | 1 | i2i | Image-to-image with GPT Image 2. |
-| Grok Imagine | xAI | Everyday | 1 | t2i, t2v | Expressive, high-contrast output. Supports both image and video. |
-| Grok Imagine (I2I) | xAI | Everyday | 1 | i2i | Image-to-image with Grok. |
-| Imagen 4 Fast | Google | Everyday | 1 | t2i | Cheaper / quicker Imagen 4 tier. |
-| Qwen | Alibaba | Everyday | 1 | t2i | Cheap, fast, decent quality. Native negative-prompt support. |
-| Qwen (I2I) | Alibaba | Everyday | 1 | i2i | Image-to-image with Qwen. |
-| Recraft Crisp Upscale | Recraft | Everyday | 1 | upscale | Light-weight image upscale (Recraft Crisp). |
-| Recraft Remove BG | Recraft | Everyday | 1 | remove-bg | Remove image background. Cheap utility. |
-| ⭐ Z-Image | Tongyi-MAI | Everyday | 1 | t2i | Cheapest model in catalog. Fast, stylized output. Limited aspect ratios. |
-| Flux 2 Pro | Black Forest Labs | Everyday | 2 | t2i | Flux 2 Pro text-to-image. Strong realism, fast. Resolution lever to 2K. |
-| Flux 2 Pro (I2I) | Black Forest Labs | Everyday | 2 | i2i | Image-to-image with Flux Pro. Cheaper than Flex variant, good general edits. |
-| Flux Kontext Pro | Black Forest Labs | Everyday | 2 | t2i, edit | Context-aware editing and style transfer. Strong at preserving subject identity through edits. |
-| Ideogram Reframe | Ideogram | Everyday | 2 | edit | Outpaint / reframe to a new aspect ratio while preserving subject. |
-| Ideogram V3 | Ideogram | Everyday | 2 | t2i | Strong typography and stylized illustration. Speed/quality tiered (TURBO/BALANCED/QUALITY). |
-| Imagen 4 | Google | Everyday | 2 | t2i | Google's Imagen 4 — strong photographic quality and prompt fidelity. |
-| Nano Banana 2 Lite | Google | Everyday | 2 | t2i, i2i | Lightweight Nano Banana 2 (Gemini 3.1 Flash-Lite) — fast, low-cost 1K generation and editing. |
-| Nano Banana Edit | Google | Everyday | 2 | edit | Image-to-image edits via Google's Nano Banana family. Good general-purpose editor. |
-| Qwen Edit | Alibaba | Everyday | 2 | edit | Qwen image edit endpoint with native negative prompt. |
-| Seedream 5 Lite | Bytedance | Everyday | 2 | t2i | Newer Seedream 5 Lite — instruction-based generation, visual reasoning. |
-| Seedream 5 Lite (I2I) | Bytedance | Everyday | 2 | i2i | Image-to-image with Seedream 5 Lite. |
-| Wan 2.7 | Alibaba | Everyday | 2 | t2i | Wan 2.7 text-to-image — 1K/2K/4K, up to 9 optional style/character reference images. |
-| Flux 2 Pro (Safety Tolerance) | Black Forest Labs | Standard | 3 | t2i, i2i | BFL Flux 2 Pro flagship via Replicate — exposes the `safety_tolerance` lever pinned to 5 (max for Pro). Accepts up to 4 reference images. |
-| Grok Upscale | xAI | Standard | 3 | upscale | Upscale a previously-generated Grok image. Requires the prior task id. |
-| Imagen 4 Ultra | Google | Standard | 3 | t2i | Premium Imagen 4 — highest fidelity, slower / more credits. |
-| Kontext Multi (Open) | Black Forest Labs | Standard | 3 | i2i, edit | Multi-image Flux Kontext Pro via Replicate — up to 4 input images, no safety filter. |
-| Seedream 5 Pro | Bytedance | Standard | 3 | t2i | Flagship Seedream 5 Pro — strongest instruction following and visual reasoning. Basic = 1K, high = 2K. |
-| Seedream 5 Pro (I2I) | Bytedance | Standard | 3 | i2i | Image-to-image with Seedream 5 Pro — multi-reference instruction edits. Basic = 1K, high = 2K. |
-| Topaz Image Upscale | Topaz | Standard | 3 | upscale | High-quality image upscale up to 8K. Best for production-ready output. |
-| Wan 2.7 Pro | Alibaba | Standard | 3 | t2i | Wan 2.7 Pro text-to-image — higher quality, 1K/2K/4K, no image input. |
-| Flux 2 Flex | Black Forest Labs | Standard | 4 | t2i | Flux 2 Flex — premium fidelity, more flexible composition. Pricier than Pro. |
-| Flux 2 Flex (I2I) | Black Forest Labs | Standard | 4 | i2i | Image-to-image with Flux Flex. Honors source image structure while applying prompt. |
-| Flux Kontext Max | Black Forest Labs | Standard | 4 | t2i, edit | Premium Kontext — highest fidelity context-aware edits. |
-| Nano Banana 2 | Google | Standard | 4 | t2i, i2i | Newer Nano Banana with native resolution control (1K/2K/4K) and Google Search context. |
-| Ideogram Edit | Ideogram | Premium | 5 | edit | Inpainting / mask-based editing with Ideogram. Pair with a mask URL. |
-| Ideogram Remix | Ideogram | Premium | 5 | i2i | Ideogram remix — character-aware restyling driven by reference images. |
-| ⭐ Nano Banana Pro | Google | Premium | 5 | t2i, i2i | Top-tier Nano Banana — best for text rendering, diagrams, and complex compositions. |
-| Flux 2 Max (Safety Tolerance) | Black Forest Labs | Premium | 7 | t2i, i2i | BFL Flux 2 Max — even larger sibling of Pro via Replicate, safety_tolerance=5, up to 8 reference images. Variable pricing by MP and ref count. |
+| Recraft Crisp Upscale | Recraft | Everyday | 2 | upscale | Light-weight image upscale (Recraft Crisp). |
+| ⭐ Z-Image | Tongyi-MAI | Everyday | 2 | t2i | Cheapest model in catalog. Fast, stylized output. Limited aspect ratios. |
+| Recraft Remove BG | Recraft | Standard | 3 | remove-bg | Remove image background. Cheap utility. |
+| Flux 2 Klein (Open) | Black Forest Labs | Premium | 10 | t2i | Open Flux 2 9B from BFL — fast, no safety filter. Runs direct on Replicate. |
+| Grok Imagine | xAI | Premium | 10 | t2i, t2v | Expressive, high-contrast output. Supports both image and video. |
+| Grok Imagine (I2I) | xAI | Premium | 10 | i2i | Image-to-image with Grok. |
+| Imagen 4 Fast | Google | Premium | 10 | t2i | Cheaper / quicker Imagen 4 tier. |
+| Nano Banana 2 Lite | Google | Premium | 10 | t2i, i2i | Lightweight Nano Banana 2 (Gemini 3.1 Flash-Lite) — fast, low-cost 1K generation and editing. |
+| Nano Banana Edit | Google | Premium | 10 | edit | Image-to-image edits via Google's Nano Banana family. Good general-purpose editor. |
+| Qwen | Alibaba | Premium | 10 | t2i | Cheap, fast, decent quality. Native negative-prompt support. |
+| Qwen (I2I) | Alibaba | Premium | 10 | i2i | Image-to-image with Qwen. |
+| Flux 2 Pro | Black Forest Labs | Premium | 13 | t2i | Flux 2 Pro text-to-image. Strong realism, fast. Resolution lever to 2K. |
+| Flux 2 Pro (I2I) | Black Forest Labs | Premium | 13 | i2i | Image-to-image with Flux Pro. Cheaper than Flex variant, good general edits. |
+| Flux Kontext Pro | Black Forest Labs | Premium | 13 | t2i, edit | Context-aware editing and style transfer. Strong at preserving subject identity through edits. |
+| Qwen Edit | Alibaba | Premium | 13 | edit | Qwen image edit endpoint with native negative prompt. |
+| Seedream 5 Lite | Bytedance | Premium | 14 | t2i | Newer Seedream 5 Lite — instruction-based generation, visual reasoning. |
+| Seedream 5 Lite (I2I) | Bytedance | Premium | 14 | i2i | Image-to-image with Seedream 5 Lite. |
+| GPT Image 2 | OpenAI | Premium | 15 | t2i | Next-gen GPT Image — broader aspect ratios, resolution-based pricing (1K/2K/4K). |
+| GPT Image 2 (I2I) | OpenAI | Premium | 15 | i2i | Image-to-image with GPT Image 2. |
+| Ideogram Reframe | Ideogram | Premium | 18 | edit | Outpaint / reframe to a new aspect ratio while preserving subject. |
+| Ideogram V3 | Ideogram | Premium | 18 | t2i | Strong typography and stylized illustration. Speed/quality tiered (TURBO/BALANCED/QUALITY). |
+| Seedream 5 Pro | Bytedance | Premium | 18 | t2i | Flagship Seedream 5 Pro — strongest instruction following and visual reasoning. Basic = 1K, high = 2K. |
+| Seedream 5 Pro (I2I) | Bytedance | Premium | 19 | i2i | Image-to-image with Seedream 5 Pro — multi-reference instruction edits. Basic = 1K, high = 2K. |
+| Imagen 4 | Google | Premium | 20 | t2i | Google's Imagen 4 — strong photographic quality and prompt fidelity. |
+| Nano Banana 2 | Google | Premium | 20 | t2i, i2i | Newer Nano Banana with native resolution control (1K/2K/4K) and Google Search context. |
+| Wan 2.7 | Alibaba | Premium | 20 | t2i | Wan 2.7 text-to-image — 1K/2K/4K, up to 9 optional style/character reference images. |
+| Flux Kontext Max | Black Forest Labs | Premium | 25 | t2i, edit | Premium Kontext — highest fidelity context-aware edits. |
+| Grok Upscale | xAI | Premium | 25 | upscale | Upscale a previously-generated Grok image. Requires the prior task id. |
+| Topaz Image Upscale | Topaz | Premium | 25 | upscale | High-quality image upscale up to 8K. Best for production-ready output. |
+| Flux 2 Pro (Safety Tolerance) | Black Forest Labs | Premium | 30 | t2i, i2i | BFL Flux 2 Pro flagship via Replicate — exposes the `safety_tolerance` lever pinned to 5 (max for Pro). Accepts up to 4 reference images. |
+| Imagen 4 Ultra | Google | Premium | 30 | t2i | Premium Imagen 4 — highest fidelity, slower / more credits. |
+| Kontext Multi (Open) | Black Forest Labs | Premium | 30 | i2i, edit | Multi-image Flux Kontext Pro via Replicate — up to 4 input images, no safety filter. |
+| Flux 2 Flex | Black Forest Labs | Premium | 35 | t2i | Flux 2 Flex — premium fidelity, more flexible composition. Pricier than Pro. |
+| Ideogram Edit | Ideogram | Premium | 45 | edit | Inpainting / mask-based editing with Ideogram. Pair with a mask URL. |
+| Ideogram Remix | Ideogram | Premium | 45 | i2i | Ideogram remix — character-aware restyling driven by reference images. |
+| ⭐ Nano Banana Pro | Google | Premium | 45 | t2i, i2i | Top-tier Nano Banana — best for text rendering, diagrams, and complex compositions. |
+| Flux 2 Flex (I2I) | Black Forest Labs | Premium | 60 | i2i | Image-to-image with Flux Flex. Honors source image structure while applying prompt. |
+| Flux 2 Max (Safety Tolerance) | Black Forest Labs | Premium | 70 | t2i, i2i | BFL Flux 2 Max — even larger sibling of Pro via Replicate, safety_tolerance=5, up to 8 reference images. Variable pricing by MP and ref count. |
+| Wan 2.7 Pro | Alibaba | Premium | 120 | t2i | Wan 2.7 Pro text-to-image — higher quality, 1K/2K/4K, no image input. |
 <!-- AUTO-GEN:END model-table-image -->
 
 ## Video models
@@ -94,59 +94,59 @@ Many video models support **both** `t2v` and `i2v` from the same id — the Gene
 <!-- AUTO-GEN:START model-table-video -->
 | Model | Family | Tier | Credits | Modes | Best for |
 | --- | --- | --- | --- | --- | --- |
-| VEO 1080p Upscale | Google | Everyday | 2 | video-upscale | Upscale VEO output to 1080p. |
-| Runway (via KIE) | Runway | Everyday | 3 | i2v, t2v | Runway Gen-3 routed through KIE. 5/10s at 720p/1080p. |
-| Grok Imagine (I2V) | xAI | Everyday | 5 | i2v | Grok image-to-video — stylized motion. Up to 15s. |
-| Bytedance Lite I2V | Bytedance | Everyday | 6 | i2v, t2v | Cheapest Bytedance video tier with end-frame support. |
-| Hailuo 02 Standard | MiniMax | Everyday | 8 | i2v, t2v | Hailuo 02 Standard — economical option with end-frame support. |
-| Hailuo 2.3 Standard | MiniMax | Everyday | 8 | i2v | Cheaper Hailuo 2.3 tier — good baseline quality. |
-| VEO 3.1 Lite | Google | Everyday | 8 | i2v, t2v | VEO 3.1 Lite — most cost-effective VEO tier for high-volume generation. 4/6/8s with audio, supports first+last frame. |
-| Bytedance Pro Fast I2V | Bytedance | Everyday | 9 | i2v | Faster Bytedance Pro variant. |
-| Wan 2.2 Turbo | Alibaba | Everyday | 10 | i2v, t2v | Cheap, fast Wan turbo — 5s. Serves both i2v and t2v under one id. |
-| Kling 2.5 Turbo Pro | Kuaishou | Everyday | 11 | i2v, t2v | Faster Kling — good quality at lower cost. Supports end frame. |
-| Wan Flash V2V | Alibaba | Everyday | 13 | v2v | Faster Wan V2V variant. |
-| Video Analysis (Fast — legacy) | Nodaro | Everyday | 14 | video-analysis | Legacy fast-tier analysis model (pre-2026-07). Kept so stored raw-model configs keep running and keep pricing under their own identifier; new fast-tier runs use the current fast model. |
-| Hailuo 02 I2V Pro | MiniMax | Everyday | 15 | i2v, t2v | Hailuo 02 Pro — strong photoreal motion, fixed 5-second clips. Supports end frame. |
-| Kling 2.6 Motion Transfer | Kuaishou | Everyday | 15 | motion-transfer | Transfer the motion from a driving video onto a still subject. Kling 2.6 base. |
-| ⭐ VEO 3.1 Fast | Google | Everyday | 15 | i2v, t2v | VEO 3.1 Fast — cheaper VEO 3.1 tier, 4/6/8s with audio. Good balance for most uses. Flat per-generation pricing across durations. |
-| Bytedance Pro I2V | Bytedance | Standard | 18 | i2v, t2v | Pro Bytedance video tier — better quality. |
-| Wan 2.6 | Alibaba | Standard | 18 | v2v, t2v | Wan 2.6 — text-to-video and video-to-video under a single id. |
-| Wan 2.6 I2V | Alibaba | Standard | 18 | i2v | Wan 2.6 image-to-video — 5/10/15s at 720p/1080p. |
-| Seedance 2 Mini | Bytedance | Standard | 19 | i2v, t2v | Budget Seedance 2 tier — 480p/720p only, per-second pricing by resolution. |
-| Topaz Video Upscale | Topaz | Standard | 19 | video-upscale | High-quality video upscale and enhancement. |
-| VEO Extend | Google | Standard | 19 | extend | Extend an existing VEO 3.1 clip by another segment. |
-| Wan 2.7 I2V | Alibaba | Standard | 19 | i2v | Wan 2.7 image-to-video — 2–15s at 720p/1080p, supports start+end frame. |
-| Wan 2.7 T2V | Alibaba | Standard | 19 | t2v | Wan 2.7 text-to-video — 2–15s at 720p/1080p. |
-| Hailuo 2.3 Pro | MiniMax | Standard | 20 | i2v | Hailuo 2.3 Pro — newer Hailuo with 768P / 1080P resolutions. |
-| Gemini Omni | Google | Standard | 23 | i2v, t2v | Google multimodal video with native audio; text/image-to-video + video-edit. |
-| Kling 3 Omni | Kuaishou | Standard | 25 | i2v | Kling 3 Omni via Replicate — 3-15s, 720p/1080p, end frame + reference images, native audio. |
-| Kling 2.6 | Kuaishou | Standard | 28 | i2v, t2v | Kling 2.6 I2V — strong motion realism. 5s/10s, optional native audio. |
-| Kling Avatar Standard | Kuaishou | Standard | 28 | lip-sync | Lip-sync a still portrait to driving audio. Standard quality. |
-| HappyHorse 1.1 | HappyHorse | Standard | 29 | t2v | HappyHorse 1.1 text-to-video — 3–15s at 720p/1080p, 9 aspect ratios incl. 21:9/9:21, per-second pricing. |
-| HappyHorse 1.1 I2V | HappyHorse | Standard | 29 | i2v | HappyHorse 1.1 image-to-video — 3–15s at 720p/1080p, aspect ratio inferred from input image, per-second pricing. |
-| HappyHorse 1.1 Ref2V | HappyHorse | Standard | 29 | i2v | HappyHorse 1.1 reference-to-video — 1–9 reference images, 3–15s at 720p/1080p, per-second pricing. |
-| Grok Imagine Video 1.5 | xAI | Standard | 30 | i2v | Grok Imagine 1.5 image-to-video — 1–15s, 480p/720p, per-second pricing. Requires an input image. |
-| Kling 3.0 Motion Transfer | Kuaishou | Standard | 30 | motion-transfer | Premium motion transfer via Kling 3.0. |
-| Seedance 2 Fast | Bytedance | Standard | 31 | i2v, t2v | Cheaper / quicker Seedance 2 tier. |
-| Runway Extend | Runway | Standard | 32 | extend | Extend a Runway video by another clip. |
-| Wan 2.7 VideoEdit | Alibaba | Standard | 32 | v2v | Guided video editing with optional reference image, audio control, and prompt expansion. |
-| HappyHorse Edit | HappyHorse | Standard | 35 | v2v | HappyHorse video-edit — video-to-video transformation, up to 60s input, 720p/1080p output. |
-| Runway Aleph V2V | Runway | Standard | 35 | v2v | Runway Aleph — video-to-video conversion. |
-| Seedance 2 | Bytedance | Standard | 38 | i2v, t2v | Seedance 2 — premium tier with native audio. Per-second pricing by resolution. |
-| VEO 4K Upscale | Google | Standard | 38 | video-upscale | Upscale VEO output to 4K. |
-| Video Analysis (Fast) | Nodaro | Standard | 38 | video-analysis | Analyze a video into a structured shot list (scenes, camera, audio) — fast, economy tier. Billed per duration bucket. |
-| Kling 2.1 Master | Kuaishou | Standard | 40 | i2v | Master tier I2V — strong cinematic quality. |
-| InfiniTalk | InfiniTalk | Standard | 42 | lip-sync | Audio-driven talking-head from a still image. 480p / 720p. |
-| Video Analysis (Pro) | Nodaro | Standard | 49 | video-analysis | Analyze a video into a structured shot list (scenes, camera, audio) — higher-fidelity, default tier. Billed per duration bucket. |
-| ⭐ Kling 3.0 | Kuaishou | Premium | 50 | i2v, t2v | Premium Kling 3.0 — variable 3-15s duration, native audio, 720P/1080P. |
-| Seedance 2 Extend | Bytedance | Premium | 53 | extend | Extend ANY video: generates the continuation (audio included) and trim-stitches it into one seamless clip. |
-| Kling Avatar Pro | Kuaishou | Premium | 56 | lip-sync | Premium lip-sync — better mouth shape and timing. |
-| ⭐ VEO 3.1 Quality | Google | Premium | 63 | i2v, t2v | Google VEO 3.1 Quality — premium cinematic video. 4/6/8s clips, optional end frame, native audio. Flat per-generation pricing across durations. |
-| Video Analysis (Mixed) | Nodaro | Premium | 63 | video-analysis | Our most advanced analysis tier — multiple analysis engines combined into one result for maximum completeness and accuracy. Billed per duration bucket. |
-| Video Analysis (Smart) | Nodaro | Premium | 350 | video-analysis | Highest-accuracy analysis — a single deep pass that reads the footage frame by frame, finds its own shot boundaries, and identifies the cast by appearance. Best choice when the shot list will drive regeneration. Billed per duration bucket. |
-| OmniHuman 1.5 | ByteDance | Premium | 405 | lip-sync | Premium prompt-directed talking avatar from a still image + audio. 720p / 1080p, up to 60s. People, pets, anime. |
-| Volcengine Lip Sync | Volcengine | Premium | 600 | lip-sync | Video-to-video AI dubbing — re-syncs lips to a new vocal track. Multi-speaker (scene detection + speaker ID) in basic mode. Video input, billed per second. |
-| Sync Lipsync v3 | Sync | Premium | 2000 | lip-sync | Dub existing footage — re-syncs lips to a new audio track. Video input, billed per second. |
+| VEO 1080p Upscale | Google | Standard | 20 | video-upscale | Upscale VEO output to 1080p. |
+| Runway (via KIE) | Runway | Standard | 30 | i2v, t2v | Runway Gen-3 routed through KIE. 5/10s at 720p/1080p. |
+| Bytedance Lite I2V | Bytedance | Premium | 57 | i2v, t2v | Cheapest Bytedance video tier with end-frame support. |
+| Hailuo 02 Standard | MiniMax | Premium | 75 | i2v, t2v | Hailuo 02 Standard — economical option with end-frame support. |
+| Hailuo 2.3 Standard | MiniMax | Premium | 75 | i2v | Cheaper Hailuo 2.3 tier — good baseline quality. |
+| VEO 3.1 Lite | Google | Premium | 75 | i2v, t2v | VEO 3.1 Lite — most cost-effective VEO tier for high-volume generation. 4/6/8s with audio, supports first+last frame. |
+| Bytedance Pro Fast I2V | Bytedance | Premium | 90 | i2v | Faster Bytedance Pro variant. |
+| Wan 2.2 Turbo | Alibaba | Premium | 100 | i2v, t2v | Cheap, fast Wan turbo — 5s. Serves both i2v and t2v under one id. |
+| Wan Flash V2V | Alibaba | Premium | 100 | v2v | Faster Wan V2V variant. |
+| Kling 2.5 Turbo Pro | Kuaishou | Premium | 125 | i2v, t2v | Faster Kling — good quality at lower cost. Supports end frame. |
+| Video Analysis (Fast — legacy) | Nodaro | Premium | 140 | video-analysis | Legacy fast-tier analysis model (pre-2026-07). Kept so stored raw-model configs keep running and keep pricing under their own identifier; new fast-tier runs use the current fast model. |
+| Hailuo 02 I2V Pro | MiniMax | Premium | 143 | i2v, t2v | Hailuo 02 Pro — strong photoreal motion, fixed 5-second clips. Supports end frame. |
+| Grok Imagine (I2V) | xAI | Premium | 150 | i2v | Grok image-to-video — stylized motion. Up to 15s. |
+| Kling 2.6 Motion Transfer | Kuaishou | Premium | 150 | motion-transfer | Transfer the motion from a driving video onto a still subject. Kling 2.6 base. |
+| ⭐ VEO 3.1 Fast | Google | Premium | 150 | i2v, t2v | VEO 3.1 Fast — cheaper VEO 3.1 tier, 4/6/8s with audio. Good balance for most uses. Flat per-generation pricing across durations. |
+| Bytedance Pro I2V | Bytedance | Premium | 175 | i2v, t2v | Pro Bytedance video tier — better quality. |
+| Wan 2.6 | Alibaba | Premium | 175 | v2v, t2v | Wan 2.6 — text-to-video and video-to-video under a single id. |
+| Wan 2.6 I2V | Alibaba | Premium | 175 | i2v | Wan 2.6 image-to-video — 5/10/15s at 720p/1080p. |
+| Wan 2.7 I2V | Alibaba | Premium | 188 | i2v | Wan 2.7 image-to-video — 2–15s at 720p/1080p, supports start+end frame. |
+| Wan 2.7 T2V | Alibaba | Premium | 188 | t2v | Wan 2.7 text-to-video — 2–15s at 720p/1080p. |
+| Seedance 2 Mini | Bytedance | Premium | 190 | i2v, t2v | Budget Seedance 2 tier — 480p/720p only, per-second pricing by resolution. |
+| Topaz Video Upscale | Topaz | Premium | 190 | video-upscale | High-quality video upscale and enhancement. |
+| VEO Extend | Google | Premium | 190 | extend | Extend an existing VEO 3.1 clip by another segment. |
+| Hailuo 2.3 Pro | MiniMax | Premium | 200 | i2v | Hailuo 2.3 Pro — newer Hailuo with 768P / 1080P resolutions. |
+| Kling 3 Omni | Kuaishou | Premium | 250 | i2v | Kling 3 Omni via Replicate — 3-15s, 720p/1080p, end frame + reference images, native audio. |
+| Kling 2.6 | Kuaishou | Premium | 280 | i2v, t2v | Kling 2.6 I2V — strong motion realism. 5s/10s, optional native audio. |
+| Kling Avatar Standard | Kuaishou | Premium | 280 | lip-sync | Lip-sync a still portrait to driving audio. Standard quality. |
+| HappyHorse 1.1 | HappyHorse | Premium | 282 | t2v | HappyHorse 1.1 text-to-video — 3–15s at 720p/1080p, 9 aspect ratios incl. 21:9/9:21, per-second pricing. |
+| HappyHorse 1.1 I2V | HappyHorse | Premium | 282 | i2v | HappyHorse 1.1 image-to-video — 3–15s at 720p/1080p, aspect ratio inferred from input image, per-second pricing. |
+| HappyHorse 1.1 Ref2V | HappyHorse | Premium | 282 | i2v | HappyHorse 1.1 reference-to-video — 1–9 reference images, 3–15s at 720p/1080p, per-second pricing. |
+| Grok Imagine Video 1.5 | xAI | Premium | 295 | i2v | Grok Imagine 1.5 image-to-video — 1–15s, 480p/720p, per-second pricing. Requires an input image. |
+| Kling 3.0 Motion Transfer | Kuaishou | Premium | 300 | motion-transfer | Premium motion transfer via Kling 3.0. |
+| Seedance 2 Fast | Bytedance | Premium | 310 | i2v, t2v | Cheaper / quicker Seedance 2 tier. |
+| Gemini Omni | Google | Premium | 315 | i2v, t2v | Google multimodal video with native audio; text/image-to-video + video-edit. |
+| Runway Extend | Runway | Premium | 320 | extend | Extend a Runway video by another clip. |
+| Wan 2.7 VideoEdit | Alibaba | Premium | 320 | v2v | Guided video editing with optional reference image, audio control, and prompt expansion. |
+| HappyHorse Edit | HappyHorse | Premium | 350 | v2v | HappyHorse video-edit — video-to-video transformation, up to 60s input, 720p/1080p output. |
+| Runway Aleph V2V | Runway | Premium | 350 | v2v | Runway Aleph — video-to-video conversion. |
+| Seedance 2 | Bytedance | Premium | 380 | i2v, t2v | Seedance 2 — premium tier with native audio. Per-second pricing by resolution. |
+| VEO 4K Upscale | Google | Premium | 380 | video-upscale | Upscale VEO output to 4K. |
+| Video Analysis (Fast) | Nodaro | Premium | 380 | video-analysis | Analyze a video into a structured shot list (scenes, camera, audio) — fast, economy tier. Billed per duration bucket. |
+| Kling 2.1 Master | Kuaishou | Premium | 400 | i2v | Master tier I2V — strong cinematic quality. |
+| InfiniTalk | InfiniTalk | Premium | 420 | lip-sync | Audio-driven talking-head from a still image. 480p / 720p. |
+| Video Analysis (Pro) | Nodaro | Premium | 490 | video-analysis | Analyze a video into a structured shot list (scenes, camera, audio) — higher-fidelity, default tier. Billed per duration bucket. |
+| ⭐ Kling 3.0 | Kuaishou | Premium | 500 | i2v, t2v | Premium Kling 3.0 — variable 3-15s duration, native audio, 720P/1080P. |
+| Seedance 2 Extend | Bytedance | Premium | 530 | extend | Extend ANY video: generates the continuation (audio included) and trim-stitches it into one seamless clip. |
+| Kling Avatar Pro | Kuaishou | Premium | 560 | lip-sync | Premium lip-sync — better mouth shape and timing. |
+| Video Analysis (Mixed) | Nodaro | Premium | 630 | video-analysis | Our most advanced analysis tier — multiple analysis engines combined into one result for maximum completeness and accuracy. Billed per duration bucket. |
+| ⭐ VEO 3.1 Quality | Google | Premium | 1000 | i2v, t2v | Google VEO 3.1 Quality — premium cinematic video. 4/6/8s clips, optional end frame, native audio. Flat per-generation pricing across durations. |
+| Video Analysis (Smart) | Nodaro | Premium | 3500 | video-analysis | Highest-accuracy analysis — a single deep pass that reads the footage frame by frame, finds its own shot boundaries, and identifies the cast by appearance. Best choice when the shot list will drive regeneration. Billed per duration bucket. |
+| OmniHuman 1.5 | ByteDance | Premium | 4050 | lip-sync | Premium prompt-directed talking avatar from a still image + audio. 720p / 1080p, up to 60s. People, pets, anime. |
+| Volcengine Lip Sync | Volcengine | Premium | 6000 | lip-sync | Video-to-video AI dubbing — re-syncs lips to a new vocal track. Multi-speaker (scene detection + speaker ID) in basic mode. Video input, billed per second. |
+| Sync Lipsync v3 | Sync | Premium | 20000 | lip-sync | Dub existing footage — re-syncs lips to a new audio track. Video input, billed per second. |
 <!-- AUTO-GEN:END model-table-video -->
 
 ## Audio, voice & music models
@@ -156,20 +156,20 @@ Text-to-speech, voice cloning/design/changing, dubbing, sound effects, transcrip
 <!-- AUTO-GEN:START model-table-audio -->
 | Model | Family | Tier | Credits | Modes | Best for |
 | --- | --- | --- | --- | --- | --- |
-| ElevenLabs Sound Effects | ElevenLabs | Everyday | 1 | sfx | Generate short sound effects from a text prompt. |
-| ElevenLabs Turbo v2.5 | ElevenLabs | Everyday | 2 | tts | Fast, cheap ElevenLabs TTS via the direct ElevenLabs API. Good for narration. |
-| ElevenLabs Forced Alignment | ElevenLabs | Everyday | 3 | forced-alignment | Align an existing transcript to audio with word-level timestamps. |
-| ElevenLabs Multilingual v2 | ElevenLabs | Everyday | 3 | tts | Multi-language ElevenLabs TTS via the direct ElevenLabs API. |
-| ElevenLabs STT | ElevenLabs | Everyday | 3 | stt | Speech-to-text — transcribe audio with timestamps. |
-| ⭐ ElevenLabs v3 | ElevenLabs | Everyday | 3 | tts | Latest ElevenLabs TTS — supports [audio tags] for emotion / pacing. Direct API. |
-| Suno v4 | Suno | Everyday | 3 | music | Suno v4 music generation — full songs with vocals, multiple genres. |
-| Suno v5 | Suno | Everyday | 3 | music | Newer Suno v5 — better vocal quality, more genres. Same price as v4. |
-| ⭐ Suno v5.5 | Suno | Everyday | 3 | music | Suno v5.5 — latest model with improved audio quality and expressiveness. |
-| ElevenLabs Voice Changer | ElevenLabs | Standard | 4 | voice-changer | Speech-to-speech: convert one voice to another while preserving prosody. |
-| ElevenLabs Voice Design | ElevenLabs | Standard | 5 | voice-design | Design a synthetic voice from a description (no reference clip needed). |
-| Voice Clone (Instant) | ElevenLabs | Standard | 5 | voice-clone | Clone a voice from a short reference clip. Instant clone via direct ElevenLabs API. |
-| ElevenLabs Dubbing | ElevenLabs | Premium | 8 | dubbing | Translate + dub a video into a new language. Async. |
-| ElevenLabs Voice Isolation | ElevenLabs | Premium | 8 | isolation | Strip background noise / music from a vocal track. |
+| ElevenLabs Sound Effects | ElevenLabs | Everyday | 3 | sfx | Generate short sound effects from a text prompt. |
+| ElevenLabs Turbo v2.5 | ElevenLabs | Premium | 15 | tts | Fast, cheap ElevenLabs TTS via the direct ElevenLabs API. Good for narration. |
+| ElevenLabs STT | ElevenLabs | Premium | 22 | stt | Speech-to-text — transcribe audio with timestamps. |
+| ElevenLabs Forced Alignment | ElevenLabs | Premium | 30 | forced-alignment | Align an existing transcript to audio with word-level timestamps. |
+| ElevenLabs Multilingual v2 | ElevenLabs | Premium | 30 | tts | Multi-language ElevenLabs TTS via the direct ElevenLabs API. |
+| ⭐ ElevenLabs v3 | ElevenLabs | Premium | 30 | tts | Latest ElevenLabs TTS — supports [audio tags] for emotion / pacing. Direct API. |
+| Suno v4 | Suno | Premium | 30 | music | Suno v4 music generation — full songs with vocals, multiple genres. |
+| Suno v5 | Suno | Premium | 30 | music | Newer Suno v5 — better vocal quality, more genres. Same price as v4. |
+| ⭐ Suno v5.5 | Suno | Premium | 30 | music | Suno v5.5 — latest model with improved audio quality and expressiveness. |
+| ElevenLabs Voice Changer | ElevenLabs | Premium | 40 | voice-changer | Speech-to-speech: convert one voice to another while preserving prosody. |
+| ElevenLabs Voice Design | ElevenLabs | Premium | 50 | voice-design | Design a synthetic voice from a description (no reference clip needed). |
+| Voice Clone (Instant) | ElevenLabs | Premium | 50 | voice-clone | Clone a voice from a short reference clip. Instant clone via direct ElevenLabs API. |
+| ElevenLabs Voice Isolation | ElevenLabs | Premium | 74 | isolation | Strip background noise / music from a vocal track. |
+| ElevenLabs Dubbing | ElevenLabs | Premium | 80 | dubbing | Translate + dub a video into a new language. Async. |
 <!-- AUTO-GEN:END model-table-audio -->
 
 ## Text & LLM models
