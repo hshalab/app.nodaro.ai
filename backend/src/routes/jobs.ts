@@ -333,8 +333,10 @@ export async function jobRoutes(app: FastifyInstance) {
     }
   })
 
-  app.get<{ Querystring: { userId?: string; limit?: string; cursor?: string } }>("/v1/jobs", async (req, reply) => {
-    const { userId: queryUserId, limit = "50", cursor } = req.query
+  app.get<{
+    Querystring: { userId?: string; limit?: string; cursor?: string; attachToCharacterId?: string }
+  }>("/v1/jobs", async (req, reply) => {
+    const { userId: queryUserId, limit = "50", cursor, attachToCharacterId } = req.query
     const limitNum = Math.min(parseInt(limit, 10) || 50, 100)
     const isAdmin = req.userRole === "admin" || req.userRole === "super_admin"
     const currentUserId = req.userId
@@ -362,6 +364,21 @@ export async function jobRoutes(app: FastifyInstance) {
 
     query = query.eq("user_id", filterUserId)
 
+    // Durable per-character listing. `characters.previousCandidates` is a
+    // 7-day / 5-item PORTRAIT-CANDIDATE strip, not an archive — and images
+    // from `skipPortraitAttach` runs attach to no characters JSONB bucket at
+    // all, so the jobs row is their only home. This filter makes every image
+    // ever generated FOR a character reachable for as long as the job row
+    // lives, with the list endpoint's own pagination.
+    //
+    // Scene renders are INCLUDED here on purpose (that is the gap this
+    // closes), and are marked per-item below so a client can render them
+    // without offering "promote to portrait" — the promotion path stays
+    // closed by the characters-route predicate.
+    if (attachToCharacterId) {
+      query = query.filter("input_data->>attachToCharacterId", "eq", attachToCharacterId)
+    }
+
     // Cursor-based pagination (use created_at as cursor)
     if (cursor) {
       query = query.lt("created_at", cursor)
@@ -371,7 +388,19 @@ export async function jobRoutes(app: FastifyInstance) {
 
     // Strip the joined workflow_executions data (only used for filtering)
     const cleanedJobs = (jobs ?? []).map(({ workflow_executions: _we, ...job }) => job)
-    const sanitizedJobs = cleanedJobs.map((job) => sanitizeJobForPublic(job as JobRecord, isAdmin))
+    const sanitizedJobs = cleanedJobs.map((job) => {
+      const sanitized = sanitizeJobForPublic(job as JobRecord, isAdmin)
+      if (!attachToCharacterId) return sanitized
+      // Derived, not stored. The raw flag does reach the client inside
+      // input_data today, but that blob is a free-form payload whose keys
+      // `sanitizeJobForPublic` already prunes — an explicit boolean is the
+      // contract a client should bind to.
+      const input = (job as { input_data?: unknown }).input_data
+      const skip =
+        !!input && typeof input === "object" &&
+        (input as Record<string, unknown>).skipPortraitAttach === true
+      return { ...sanitized, isSceneRender: skip }
+    })
 
     // Determine next cursor
     const nextCursor = jobs && jobs.length === limitNum ? jobs[jobs.length - 1]?.created_at : null

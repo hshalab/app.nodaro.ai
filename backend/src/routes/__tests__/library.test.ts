@@ -205,6 +205,54 @@ describe("GET /v1/library", () => {
     expect(body.data).toEqual([])
     expect(supabase.from).toHaveBeenCalledWith("assets")
   })
+
+  it("surfaces per-asset origin (source / sourceDetail), null for pre-tracking rows", async () => {
+    const rows = [
+      {
+        id: "asset-ext", user_id: TEST_USER_ID, type: "image", filename: "clip.png",
+        mime_type: "image/png", size_bytes: 10, r2_key: "k1", r2_url: "https://r2/k1",
+        metadata: {}, is_library_item: false, upload_source: "generated",
+        source: "extension", source_detail: "extension/recut-clipper",
+        created_at: "2026-07-30T00:00:00Z",
+      },
+      {
+        id: "asset-legacy", user_id: TEST_USER_ID, type: "image", filename: "old.png",
+        mime_type: "image/png", size_bytes: 10, r2_key: "k2", r2_url: "https://r2/k2",
+        metadata: {}, is_library_item: false, upload_source: "manual_upload",
+        source: null, source_detail: null,
+        created_at: "2026-01-01T00:00:00Z",
+      },
+    ]
+    vi.mocked(supabase.from).mockReturnValue(createChainMock({ data: rows, error: null }) as never)
+
+    const res = await app.inject({ method: "GET", url: `/v1/library?userId=${TEST_USER_ID}` })
+
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.data[0].source).toBe("extension")
+    expect(body.data[0].sourceDetail).toBe("extension/recut-clipper")
+    // Pre-migration rows read as unknown rather than being guessed into a bucket.
+    expect(body.data[1].source).toBeNull()
+    expect(body.data[1].sourceDetail).toBeNull()
+  })
+
+  it("accepts a known source filter and rejects an unknown one with 400", async () => {
+    vi.mocked(supabase.from).mockReturnValue(createChainMock({ data: [], error: null }) as never)
+
+    const ok = await app.inject({
+      method: "GET",
+      url: `/v1/library?userId=${TEST_USER_ID}&source=extension`,
+    })
+    expect(ok.statusCode).toBe(200)
+
+    // A typo must be a loud 400, not a silently empty page.
+    const bad = await app.inject({
+      method: "GET",
+      url: `/v1/library?userId=${TEST_USER_ID}&source=extenshun`,
+    })
+    expect(bad.statusCode).toBe(400)
+    expect(bad.json().error.code).toBe("validation_error")
+  })
 })
 
 // ---------------------------------------------------------------------------

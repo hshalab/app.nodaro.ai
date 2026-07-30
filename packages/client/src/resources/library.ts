@@ -23,6 +23,16 @@ export interface LibraryAsset {
   readonly isLibraryItem: boolean
   /** How the asset entered storage (e.g. "manual_upload" | "generated"). */
   readonly uploadSource: string
+  /**
+   * WHICH SURFACE the media came from — `"internal" | "mcp" | "app" | "cli" |
+   * "sdk" | "extension" | "web" | "api"`. Distinct from `uploadSource`, which
+   * says how it entered storage (uploaded vs generated), not who was calling.
+   * `null` on assets created before origin tracking existed — render as
+   * "unknown", don't infer.
+   */
+  readonly source: string | null
+  /** Specific identity within `source` (origin host, `extension/<name>`, `sdk/<version>`, MCP client, app id). */
+  readonly sourceDetail: string | null
   readonly createdAt: string
 }
 
@@ -42,6 +52,13 @@ export interface ListLibraryParams {
    * Media Library picker).
    */
   readonly owned?: boolean
+  /**
+   * Filter to media that originated from one surface (see
+   * {@link LibraryAsset.source}) — e.g. `"extension"` for everything a
+   * browser extension produced. Assets predating origin tracking have a null
+   * source and match no value, so they appear only when this is omitted.
+   */
+  readonly source?: "internal" | "mcp" | "app" | "cli" | "sdk" | "extension" | "web" | "api"
 }
 
 export interface ListLibraryResult {
@@ -78,6 +95,7 @@ export class LibraryResource {
     if (params.limit !== undefined) qs.set("limit", String(params.limit))
     if (params.cursor) qs.set("cursor", params.cursor)
     if (params.owned !== undefined) qs.set("owned", String(params.owned))
+    if (params.source) qs.set("source", params.source)
     const query = qs.toString()
     return this.client.request("GET", `/v1/library${query ? `?${query}` : ""}`)
   }

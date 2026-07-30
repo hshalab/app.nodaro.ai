@@ -198,3 +198,15 @@ export function jobSourceColumns(req: FastifyRequest): { source: JobSource; sour
   const { source, sourceDetail } = deriveJobSource(req)
   return { source, source_detail: sourceDetail }
 }
+
+/**
+ * The same two columns for an `assets` row (migration 285), for asset paths
+ * that have NO originating job — a direct upload, a library save-from-URL.
+ * Assets created BY a job copy the job's stored values instead
+ * (`createAssetFromJob`), so the recorded origin is always the surface that
+ * actually produced the media, not whoever happened to touch it later.
+ *
+ * A separate export rather than a reuse of `jobSourceColumns` purely so the
+ * call sites read honestly: the column names coincide, the SUBJECT does not.
+ */
+export const assetSourceColumns = jobSourceColumns

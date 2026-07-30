@@ -5,6 +5,7 @@ import { supabase } from "../lib/supabase.js"
 import { config, isCloud } from "../lib/config.js"
 import { permanentlyDeleteAsset } from "../lib/asset-delete.js"
 import { checkIsAdmin } from "../lib/admin-check.js"
+import { assetSourceColumns, JOB_SOURCES } from "../lib/job-source.js"
 import { formatZodError } from "../lib/zod-error.js"
 import { sendInternalError } from "../lib/http-errors.js"
 
@@ -18,6 +19,12 @@ const listLibraryQuery = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional().default(40),
   cursor: z.string().uuid().optional(),
   owned: z.coerce.boolean().optional().default(false),
+  // Origin filter (migration 285). Validated against the shared vocabulary
+  // rather than a free string, so a typo is a 400 instead of a silently empty
+  // page. Rows predating 285 have source NULL and match no value — they are
+  // reachable only by omitting the filter, which is the honest behaviour for
+  // "unknown origin".
+  source: z.enum(JOB_SOURCES).optional(),
 })
 
 const assetIdParams = z.object({
@@ -56,7 +63,7 @@ export async function libraryRoutes(app: FastifyInstance) {
       })
     }
 
-    const { type, search, limit, cursor, owned } = parsed.data
+    const { type, search, limit, cursor, owned, source } = parsed.data
 
     // Count query (only on first page — when no cursor). Built here but NOT
     // awaited yet so it can run concurrently with the page fetch below
@@ -82,12 +89,16 @@ export async function libraryRoutes(app: FastifyInstance) {
         cq = cq.ilike("filename", `%${search}%`)
       }
 
+      if (source) {
+        cq = cq.eq("source", source)
+      }
+
       countPromise = cq
     }
 
     let query = supabase
       .from("assets")
-      .select("id, user_id, type, filename, mime_type, size_bytes, r2_key, r2_url, metadata, is_library_item, upload_source, created_at")
+      .select("id, user_id, type, filename, mime_type, size_bytes, r2_key, r2_url, metadata, is_library_item, upload_source, source, source_detail, created_at")
 
     if (owned) {
       // Storage page: show ALL user assets (regardless of in_library flag)
@@ -107,6 +118,10 @@ export async function libraryRoutes(app: FastifyInstance) {
 
     if (search) {
       query = query.ilike("filename", `%${search}%`)
+    }
+
+    if (source) {
+      query = query.eq("source", source)
     }
 
     if (cursor) {
@@ -152,6 +167,10 @@ export async function libraryRoutes(app: FastifyInstance) {
       metadata: a.metadata ?? {},
       isLibraryItem: a.is_library_item ?? false,
       uploadSource: a.upload_source ?? "manual_upload",
+      // Origin of the media (migration 285). `null` = created before the
+      // column existed; render as "unknown" rather than guessing.
+      source: a.source ?? null,
+      sourceDetail: a.source_detail ?? null,
       createdAt: a.created_at,
     }))
 
@@ -422,6 +441,9 @@ export async function libraryRoutes(app: FastifyInstance) {
           metadata: metadata ?? {},
           is_library_item: isLibraryItem,
           upload_source: "generated",
+          // Which surface saved this into the library (migration 285). There
+          // is no job row on this path — the request IS the origin.
+          ...assetSourceColumns(req),
           in_library: true,
         })
         .select("id")
