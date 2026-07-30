@@ -297,24 +297,35 @@ All use **lowercase with hyphens** except VEO which uses **dot notation**: `veo3
 - `topup_credits` — never expire
 - **Deduction order:** subscription first -> then topup
 - `deduct_credits` RPC handles atomic deduction with FOR UPDATE lock
-- Free tier: **150** credits, 50/day cap, veo3/sora2-pro blocked, outputs watermarked
+- Free tier: **1,500** credits, 500/day cap, veo3/sora2-pro blocked, outputs watermarked
 
 ### Pricing
 - Credits are the Cloud-edition billing unit; the USD-per-credit conversion is an admin-configurable runtime setting, not a fixed rate in code
-- Tiers: Free ($0/150cr), Basic ($12mo/$10yr/250cr), Standard ($29mo/$24yr/850cr), Pro ($59mo/$49yr/2000cr), Business ($129mo/$109yr/4800cr)
-- Top-ups: $10/150cr, $25/450cr, $50/1000cr, $100/2200cr (never expire)
+- Tiers: Free ($0/1,500cr), Basic ($12mo/$10yr/4,500cr), Standard ($29mo/$24yr/11,000cr), Pro ($59mo/$49yr/23,000cr), Business ($129mo/$109yr/52,000cr)
+- Top-ups: $10/3,300cr, $25/8,500cr, $50/17,500cr, $100/36,000cr (never expire)
+- **Authority is `ee/billing/stripe-config.ts`** (`TIER_CREDITS`, `TOP_UPS`) and the
+  `tier_config` table — the figures above are a convenience copy. The 2026-07-30
+  ×10 re-denomination left this section reading the old grants for a day, so
+  confirm against the code before quoting these anywhere that matters.
 
 ### Variable Credit Pricing (Composite Model Identifiers)
 Some models cost different credits based on quality/resolution settings.
 Composite identifiers use `:` separator: `{provider}:{setting_value}`.
 
-| Model | Default | Higher Setting | Credits (default → higher) |
-|-------|---------|----------------|----------------------------|
-| gpt-image | medium | high | 4 → 6 |
-| nano-banana-pro | 1K/2K | 4K | 5 → 6 |
-| flux | 1K | 2K | 2 → 2 (2K no longer surcharges) |
-| flux-flex | 1K | 2K | 4 → 6 |
-| ideogram-v3 | BALANCED | TURBO/QUALITY | 2 → 1/3 |
+| Model | Default | Higher Setting |
+|-------|---------|----------------|
+| gpt-image | medium | high |
+| nano-banana-pro | 1K/2K | 4K |
+| flux | 1K | 2K |
+| flux-flex | 1K | 2K |
+| ideogram-v3 | BALANCED | TURBO/QUALITY |
+
+**Credit values are deliberately NOT listed here.** They live in `model_pricing`
+(admin-editable at runtime) with `STATIC_CREDIT_COSTS` as the code fallback, and
+the DB wins — so any number written here is a third copy that can only rot. This
+table had `gpt-image 4 → 6` and `ideogram-v3 2 → 1/3` long after the real values
+became 10 → 60 and a flat 18. Read the price from `/admin/models`, the
+`GET /v1/credits/model-cost` endpoint, or `STATIC_CREDIT_COSTS` — never from a doc.
 
 **Implementation:**
 - Backend: `buildCreditModelIdentifier()` in `generate-image.ts` / `image-to-image.ts` builds composite ID from request body
@@ -326,25 +337,32 @@ Composite identifiers use `:` separator: `{provider}:{setting_value}`.
 
 Per-model costs are stored in the `model_pricing` DB table and fetched at runtime. Static fallbacks in `credits.ts` (`STATIC_CREDIT_COSTS`) are used when the DB is unavailable.
 
-| Node Type | Credits | Notes |
-|-----------|---------|-------|
-| generate-script | 2 | Gemini Flash (economy 1 / standard 2 / premium 3) |
-| generate-image | 1-6 | z-image=1, nano-banana=1, flux=2, grok=1, gpt-image=4 (medium) / 6 (high), nano-banana-pro=5/6, ideogram-v3=1-3 |
-| image-to-image | 1-6 | flux-pro-i2i=2/2, gpt-image-i2i=4/6, flux-i2i=4/6, ideogram variants=1-6 |
-| edit-image | 1-3 | recraft-remove-bg=1, recraft-upscale=1, nano-banana-edit=2, topaz=3 |
-| image-to-video | 5-63 | kling-turbo=11, minimax=15, kling=28, grok-i2v=5, veo3.1=15, veo3=63 — most are duration/resolution-tiered composites |
-| text-to-video | 5-63 | Same as image-to-video |
-| text-to-speech | 3 | ElevenLabs v3 (default), Turbo v2.5, Multilingual v2 — ALL direct ElevenLabs API (never KIE); `stripAudioTags()` removes `[...]` for v2 |
-| voice-clone | 5 | ElevenLabs instant voice clone (direct API) |
-| generate-music | 18 | node-type id reserves 18, metered down to the provider actual at commit (Suno v4/v5 = 3) |
-| text-to-audio | 3 | ElevenLabs SFX |
-| ai-writer | 3 | Claude Sonnet (standard LLM tier); varies by tier via `ai-writer:economy` / `ai-writer:premium` |
-| lottie-overlay | 2 | Claude Sonnet → Lottie overlay plan |
-| 3d-title | 2 | Claude Sonnet → 3D title plan (camera, lighting, text, particles) |
-| voice-design | 5 | ElevenLabs `/v1/text-to-voice/design` (direct API), full controls: model, loudness, guidance, seed, quality, enhance |
-| qa-check | 1 | Gemini Flash |
-| render-video | 5 | Remotion cloud render |
-| FFmpeg nodes | dynamic (duration-based) | combine-videos/merge-video-audio/add-captions/resize/trim/extract-audio/mix-audio/adjust-volume — computed at runtime; static fallbacks 1-3 |
+**Prices are deliberately omitted below.** They are admin-editable in
+`model_pricing` at runtime, so a table here is a copy that cannot be kept true —
+this one sat at the pre-2026-07-30 credit base after the ×10 re-denomination and
+would have mis-taught anyone who read it. For a real number use `/admin/models`,
+`GET /v1/credits/model-cost`, or `STATIC_CREDIT_COSTS`. What follows is the part
+that IS stable: which provider serves each node, and how its price is *shaped*.
+
+| Node Type | Pricing shape | Notes |
+|-----------|---------------|-------|
+| generate-script | tiered by LLM | Gemini Flash; economy / standard / premium ids |
+| generate-image | per-model, some composite | z-image, nano-banana, flux, grok, gpt-image (`:high`), nano-banana-pro (`:4K`), ideogram-v3 |
+| image-to-image | per-model, some composite | flux-pro-i2i, gpt-image-i2i, flux-i2i, ideogram variants |
+| edit-image | per-model | recraft-remove-bg, recraft-upscale, nano-banana-edit, topaz |
+| image-to-video | duration/resolution composites | kling-turbo, minimax, kling, grok-i2v, veo3.1, veo3 — most are `:<dur>s[:<res>]` tiered |
+| text-to-video | duration/resolution composites | Same shape as image-to-video |
+| text-to-speech | flat | ElevenLabs v3 / Turbo v2.5 / Multilingual v2 — ALL direct ElevenLabs API (never KIE); `stripAudioTags()` strips `[...]` for v2 |
+| voice-clone | flat | ElevenLabs instant voice clone (direct API) |
+| generate-music | reserve-then-meter | node-type id reserves worst case, metered down to the provider actual at commit |
+| text-to-audio | flat | ElevenLabs SFX |
+| ai-writer | tiered by LLM | Claude Sonnet default; `ai-writer:economy` / `ai-writer:premium` |
+| lottie-overlay | flat | Claude Sonnet → Lottie overlay plan |
+| 3d-title | flat | Claude Sonnet → 3D title plan (camera, lighting, text, particles) |
+| voice-design | flat | ElevenLabs `/v1/text-to-voice/design` (direct API) |
+| qa-check | flat | Gemini Flash |
+| render-video | flat | Remotion cloud render |
+| FFmpeg nodes | dynamic (duration-based) | combine-videos/merge-video-audio/add-captions/resize/trim/extract-audio/mix-audio/adjust-volume — computed at runtime |
 
 ### Credit Flow
 1. Job created -> Reserve credits (estimate based on model)

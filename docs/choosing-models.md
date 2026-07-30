@@ -6,7 +6,7 @@ Every table on this page is **generated from Nodaro's model catalog** — it nev
 
 ## How credits and tiers work
 
-- **1 credit = $0.02.** Per-generation cost depends on the model, resolution, duration, and quality. The number in each table is the **default variant** (the bare model with no resolution/quality upgrade); higher settings cost more.
+- **1 credit = $0.002.** Per-generation cost depends on the model, resolution, duration, and quality. The number in each table is the **default variant** (the bare model with no resolution/quality upgrade); higher settings cost more.
 - The **Tier** column is a quick budget signal, **relative within each modality**:
   - **Everyday** — cheap and fast; the right default for drafts, iteration, and most work.
   - **Standard** — a step up in quality for a moderate cost.
@@ -24,11 +24,11 @@ Don't know where to start? Find your goal here, then jump to the model in the ta
 | I want… | Models | Notes |
 | --- | --- | --- |
 | best for typography / logos / text-heavy | Nano Banana Pro, GPT Image 2 | Nano Banana Pro for diagrams / complex text; GPT Image 2 for logos and short copy. |
-| cheapest realistic image | Z-Image, Qwen, Imagen 4 Fast | Z-Image is the cheapest at 1 credit. Qwen / Imagen4 Fast for slightly higher quality. |
+| cheapest realistic image | Z-Image, Qwen, Imagen 4 Fast | Z-Image is the cheapest. Qwen / Imagen4 Fast for slightly higher quality. |
 | highest fidelity image | Nano Banana Pro, Imagen 4 Ultra, Flux 2 Flex | Pick by family preference; all three are premium tiers. |
 | image edit / restyle | Flux Kontext Pro, Ideogram Remix, Seedream 5 Pro (I2I) | Flux Kontext preserves identity; Ideogram Remix is character-aware; Seedream 5 Pro for instruction-based edits (5 Lite is the budget option). |
 | highest-resolution image (4K / 8K) | Topaz Image Upscale, Nano Banana Pro, GPT Image 2 | Generate at native then Topaz upscale for 8K. |
-| background removal / cutout | Recraft Remove BG | 1 credit, no prompt needed. |
+| background removal / cutout | Recraft Remove BG | Cheap, no prompt needed. |
 | best cinematic video | VEO 3.1 Quality, Kling 3.0, Seedance 2 | VEO 3.1 Quality for premium narrative; Kling 3.0 for music-synced motion; Seedance 2 for reference-driven consistency. |
 | cheap batch video clips | VEO 3.1 Fast, Wan 2.2 Turbo, Bytedance Lite I2V | VEO 3.1 Fast is the best price/quality balance with native audio. |
 | video with start + end frame | VEO 3.1 Quality, VEO 3.1 Fast, Kling 2.5 Turbo Pro, Hailuo 02 I2V Pro, Hailuo 02 Standard, Seedance 2 | All listed support an end frame; VEO uses imageUrls[start, end]. |
