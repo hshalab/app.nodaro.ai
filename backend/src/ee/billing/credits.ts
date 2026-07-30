@@ -908,9 +908,12 @@ export const STATIC_CREDIT_COSTS: Record<string, number> = {
   "modify-image": 2,
   "upscale-image": 1,
   "remove-background": 1,
-  "image-to-video": 25,
+  // Bare-id fallback reserves (fire only when no duration-composite matches).
+  // Re-sized 2026-07-30 to cover observed composite actuals (29-47 cr) — the
+  // old 25 sat below the real worst case. Commit meters down to actual.
+  "image-to-video": 50,
   "video-to-video": 25,
-  "text-to-video": 25,
+  "text-to-video": 50,
   "text-to-speech": 3,
   "generate-music": 18,
   "text-to-audio": 3,
