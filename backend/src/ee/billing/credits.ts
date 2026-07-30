@@ -90,7 +90,11 @@ for (const resolution of Object.keys(CINEMATIC_RATE_USD_PER_SEC) as CinematicRes
 const PINNABLE_SCRIPT_LLM_STATIC: Record<string, number> = Object.fromEntries(
   PIPELINE_PINNABLE_SCRIPT_LLMS.map((id) => {
     const tier = getLlmTier(id) // dash-form ids resolve via the registry's alias fallback
-    return [id, tier === "economy" ? 1 : tier === "premium" ? 3 : 2]
+    // Gate-only sentinel values at the current credit base (never deducted —
+    // the stage's real charge rides the feature identifiers). Scaled x10 with
+    // the re-denomination so they stay consistent with model_pricing; the
+    // parity check compares them.
+    return [id, tier === "economy" ? 10 : tier === "premium" ? 30 : 20]
   }),
 )
 
@@ -620,38 +624,38 @@ export const STATIC_CREDIT_COSTS: Record<string, number> = {
   // grok-imagine-video-1.5; base fallback = 5s @720p.
   "happyhorse": 282,        // (5s 720p fallback)
   // 720p — ceil(22.5 × s ÷ 4)
-  "happyhorse:3s:720p": 17, "happyhorse:4s:720p": 23, "happyhorse:5s:720p": 29,
-  "happyhorse:6s:720p": 34, "happyhorse:7s:720p": 40, "happyhorse:8s:720p": 45,
-  "happyhorse:9s:720p": 51, "happyhorse:10s:720p": 57, "happyhorse:11s:720p": 62,
-  "happyhorse:12s:720p": 68, "happyhorse:13s:720p": 74, "happyhorse:14s:720p": 79,
+  "happyhorse:3s:720p": 170, "happyhorse:4s:720p": 230, "happyhorse:5s:720p": 290,
+  "happyhorse:6s:720p": 340, "happyhorse:7s:720p": 400, "happyhorse:8s:720p": 450,
+  "happyhorse:9s:720p": 510, "happyhorse:10s:720p": 570, "happyhorse:11s:720p": 620,
+  "happyhorse:12s:720p": 680, "happyhorse:13s:720p": 740, "happyhorse:14s:720p": 790,
   "happyhorse:15s:720p": 850,
   // 1080p — ceil(29 × s ÷ 4)
-  "happyhorse:3s:1080p": 22, "happyhorse:4s:1080p": 29, "happyhorse:5s:1080p": 37,
-  "happyhorse:6s:1080p": 44, "happyhorse:7s:1080p": 51, "happyhorse:8s:1080p": 58,
-  "happyhorse:9s:1080p": 66, "happyhorse:10s:1080p": 73, "happyhorse:11s:1080p": 80,
-  "happyhorse:12s:1080p": 87, "happyhorse:13s:1080p": 95, "happyhorse:14s:1080p": 102,
+  "happyhorse:3s:1080p": 220, "happyhorse:4s:1080p": 290, "happyhorse:5s:1080p": 370,
+  "happyhorse:6s:1080p": 440, "happyhorse:7s:1080p": 510, "happyhorse:8s:1080p": 580,
+  "happyhorse:9s:1080p": 660, "happyhorse:10s:1080p": 730, "happyhorse:11s:1080p": 800,
+  "happyhorse:12s:1080p": 870, "happyhorse:13s:1080p": 950, "happyhorse:14s:1080p": 1020,
   "happyhorse:15s:1080p": 1090,
   "happyhorse-i2v": 282,    // (5s 720p fallback)
-  "happyhorse-i2v:3s:720p": 17, "happyhorse-i2v:4s:720p": 23, "happyhorse-i2v:5s:720p": 29,
-  "happyhorse-i2v:6s:720p": 34, "happyhorse-i2v:7s:720p": 40, "happyhorse-i2v:8s:720p": 45,
-  "happyhorse-i2v:9s:720p": 51, "happyhorse-i2v:10s:720p": 57, "happyhorse-i2v:11s:720p": 62,
-  "happyhorse-i2v:12s:720p": 68, "happyhorse-i2v:13s:720p": 74, "happyhorse-i2v:14s:720p": 79,
+  "happyhorse-i2v:3s:720p": 170, "happyhorse-i2v:4s:720p": 230, "happyhorse-i2v:5s:720p": 290,
+  "happyhorse-i2v:6s:720p": 340, "happyhorse-i2v:7s:720p": 400, "happyhorse-i2v:8s:720p": 450,
+  "happyhorse-i2v:9s:720p": 510, "happyhorse-i2v:10s:720p": 570, "happyhorse-i2v:11s:720p": 620,
+  "happyhorse-i2v:12s:720p": 680, "happyhorse-i2v:13s:720p": 740, "happyhorse-i2v:14s:720p": 790,
   "happyhorse-i2v:15s:720p": 850,
-  "happyhorse-i2v:3s:1080p": 22, "happyhorse-i2v:4s:1080p": 29, "happyhorse-i2v:5s:1080p": 37,
-  "happyhorse-i2v:6s:1080p": 44, "happyhorse-i2v:7s:1080p": 51, "happyhorse-i2v:8s:1080p": 58,
-  "happyhorse-i2v:9s:1080p": 66, "happyhorse-i2v:10s:1080p": 73, "happyhorse-i2v:11s:1080p": 80,
-  "happyhorse-i2v:12s:1080p": 87, "happyhorse-i2v:13s:1080p": 95, "happyhorse-i2v:14s:1080p": 102,
+  "happyhorse-i2v:3s:1080p": 220, "happyhorse-i2v:4s:1080p": 290, "happyhorse-i2v:5s:1080p": 370,
+  "happyhorse-i2v:6s:1080p": 440, "happyhorse-i2v:7s:1080p": 510, "happyhorse-i2v:8s:1080p": 580,
+  "happyhorse-i2v:9s:1080p": 660, "happyhorse-i2v:10s:1080p": 730, "happyhorse-i2v:11s:1080p": 800,
+  "happyhorse-i2v:12s:1080p": 870, "happyhorse-i2v:13s:1080p": 950, "happyhorse-i2v:14s:1080p": 1020,
   "happyhorse-i2v:15s:1080p": 1090,
   "happyhorse-ref2v": 282,  // (5s 720p fallback)
-  "happyhorse-ref2v:3s:720p": 17, "happyhorse-ref2v:4s:720p": 23, "happyhorse-ref2v:5s:720p": 29,
-  "happyhorse-ref2v:6s:720p": 34, "happyhorse-ref2v:7s:720p": 40, "happyhorse-ref2v:8s:720p": 45,
-  "happyhorse-ref2v:9s:720p": 51, "happyhorse-ref2v:10s:720p": 57, "happyhorse-ref2v:11s:720p": 62,
-  "happyhorse-ref2v:12s:720p": 68, "happyhorse-ref2v:13s:720p": 74, "happyhorse-ref2v:14s:720p": 79,
+  "happyhorse-ref2v:3s:720p": 170, "happyhorse-ref2v:4s:720p": 230, "happyhorse-ref2v:5s:720p": 290,
+  "happyhorse-ref2v:6s:720p": 340, "happyhorse-ref2v:7s:720p": 400, "happyhorse-ref2v:8s:720p": 450,
+  "happyhorse-ref2v:9s:720p": 510, "happyhorse-ref2v:10s:720p": 570, "happyhorse-ref2v:11s:720p": 620,
+  "happyhorse-ref2v:12s:720p": 680, "happyhorse-ref2v:13s:720p": 740, "happyhorse-ref2v:14s:720p": 790,
   "happyhorse-ref2v:15s:720p": 850,
-  "happyhorse-ref2v:3s:1080p": 22, "happyhorse-ref2v:4s:1080p": 29, "happyhorse-ref2v:5s:1080p": 37,
-  "happyhorse-ref2v:6s:1080p": 44, "happyhorse-ref2v:7s:1080p": 51, "happyhorse-ref2v:8s:1080p": 58,
-  "happyhorse-ref2v:9s:1080p": 66, "happyhorse-ref2v:10s:1080p": 73, "happyhorse-ref2v:11s:1080p": 80,
-  "happyhorse-ref2v:12s:1080p": 87, "happyhorse-ref2v:13s:1080p": 95, "happyhorse-ref2v:14s:1080p": 102,
+  "happyhorse-ref2v:3s:1080p": 220, "happyhorse-ref2v:4s:1080p": 290, "happyhorse-ref2v:5s:1080p": 370,
+  "happyhorse-ref2v:6s:1080p": 440, "happyhorse-ref2v:7s:1080p": 510, "happyhorse-ref2v:8s:1080p": 580,
+  "happyhorse-ref2v:9s:1080p": 660, "happyhorse-ref2v:10s:1080p": 730, "happyhorse-ref2v:11s:1080p": 800,
+  "happyhorse-ref2v:12s:1080p": 870, "happyhorse-ref2v:13s:1080p": 950, "happyhorse-ref2v:14s:1080p": 1020,
   "happyhorse-ref2v:15s:1080p": 1090,
   // HappyHorse Edit stays on the 1.0 endpoint (1.1 has no video-edit mode).
   // KIE bills per second (published: 28 cr/s @720p, 48 cr/s @1080p) but the

@@ -41,11 +41,16 @@ let end = -1
 for (let i = start + 1; i < lines.length; i++) if (lines[i] === "}") { end = i; break }
 if (end < 0) throw new Error("literal end not found")
 
-/** `  "some-id": 12,   // comment` — number-valued literal entries only.
- *  The gap after the colon is captured, not normalised: several blocks in this
- *  file column-align their values (`"replicate-mmaudio":       1,`) and
- *  collapsing that whitespace made the --check round-trip fail. */
-const ENTRY = /^(\s*)"([^"]+)":(\s*)(\d+)(,?)(\s*\/\/.*)?$/
+/** `"some-id": 12` — number-valued literal entries, ANYWHERE on the line.
+ *
+ *  Global and unanchored on purpose: several blocks pack multiple entries onto
+ *  one line (`"happyhorse:3s:720p": 17, "happyhorse:4s:720p": 23, ...`). An
+ *  anchored one-per-line pattern silently skipped all of them, which left 98
+ *  composites at the old base while the DB had the new one.
+ *
+ *  Whitespace after the colon is preserved rather than normalised: several
+ *  blocks column-align their values (`"replicate-mmaudio":       1,`). */
+const ENTRY = /"([^"]+)":(\s*)(\d+)\b/g
 
 const useOld = has("--check")
 let rewritten = 0, unchanged = 0
@@ -53,15 +58,21 @@ const missing: string[] = []
 const out = [...lines]
 
 for (let i = start + 1; i < end; i++) {
-  const m = ENTRY.exec(lines[i])
-  if (!m) continue // spread, comment, computed expression — leave alone
-  const [, indent, id, gap, cur, comma, comment] = m
-  const row = byId.get(id)
-  if (!row) { missing.push(id); continue }
-  const next = useOld ? (row.old_credits ?? Number(cur)) : row.new_credits
-  if (String(next) === cur) unchanged++
-  else rewritten++
-  out[i] = `${indent}"${id}":${gap}${next}${comma}${comment ?? ""}`
+  const line = lines[i]
+  if (!line.includes('":')) continue // spread, comment, computed expression
+  // Strip a trailing line comment first so prose like `// was 12` is never rewritten.
+  const cut = line.indexOf("//")
+  const code = cut >= 0 ? line.slice(0, cut) : line
+  const tail = cut >= 0 ? line.slice(cut) : ""
+  const rewrittenCode = code.replace(ENTRY, (whole, id: string, gap: string, cur: string) => {
+    const row = byId.get(id)
+    if (!row) { missing.push(id); return whole }
+    const next = useOld ? (row.old_credits ?? Number(cur)) : row.new_credits
+    if (String(next) === cur) unchanged++
+    else rewritten++
+    return `"${id}":${gap}${next}`
+  })
+  out[i] = rewrittenCode + tail
 }
 
 const result = out.join("\n")
