@@ -19,7 +19,7 @@ import {
   type RunConfirmInfo,
 } from "./types";
 import { estimateRunCredits } from "./estimate-run-credits";
-import { COMPOSER_PLAN_MAP, expandItemsWithRepeat, TRANSIENT_RUNTIME_KEYS, isExpandedClone } from "@nodaro/shared"
+import { COMPOSER_PLAN_MAP, CREDIT_BASE_USD, expandItemsWithRepeat, TRANSIENT_RUNTIME_KEYS, isExpandedClone } from "@nodaro/shared"
 import { collapseExpandedClones } from "./execution-graph";
 import { shouldAbandonNode } from "./abandon-guard";
 import { getListInputForNode } from "./node-input-resolver";
@@ -214,10 +214,23 @@ function getDownstreamNodeIds(startId: string, edges: WorkflowEdge[]): Set<strin
 }
 
 /**
+ * The spend a run has to exceed before we interrupt the user to confirm it.
+ *
+ * Expressed in DOLLARS and converted, not written as a credit count: the credit
+ * count is meaningless on its own once `CREDIT_BASE_USD` can change. It was a
+ * bare `100` through the 2026-07-30 ×10 re-denomination, which silently turned a
+ * $2.00 speed bump into a $0.20 one and made the dialog fire on almost every run.
+ */
+const RUN_CONFIRM_USD = 2
+/** Exported so tests bracket the real gate instead of restating a literal that
+ *  goes stale the next time the credit base moves. */
+export const RUN_CONFIRM_CREDITS = Math.round(RUN_CONFIRM_USD / CREDIT_BASE_USD)
+
+/**
  * Run-confirmation gate. Returns true to proceed, false to abort. Estimate is
  * computed read-only (cached costs, no API) so callers can confirm BEFORE any
  * mutation. Execute-All (`alwaysConfirm`) confirms regardless of cost; other
- * triggers confirm only when the estimate exceeds 100 credits. `skip` bypasses
+ * triggers confirm only when the estimate exceeds RUN_CONFIRM_CREDITS. `skip` bypasses
  * (e.g. "Run instead", which already confirmed via its discard dialog). A no-op
  * (proceed) when there's no `confirmRun` provider or nothing executable.
  */
@@ -232,7 +245,7 @@ async function confirmRunOrAbort(
 ): Promise<boolean> {
   if (skip || !ctx.confirmRun || executable.length === 0) return true;
   const estimatedCredits = hasCredits() ? estimateRunCredits(executable, allNodes, edges, getCachedCredits) : null;
-  if (!alwaysConfirm && (estimatedCredits === null || estimatedCredits <= 100)) return true;
+  if (!alwaysConfirm && (estimatedCredits === null || estimatedCredits <= RUN_CONFIRM_CREDITS)) return true;
   return ctx.confirmRun({ trigger, nodeCount: executable.length, estimatedCredits, alwaysConfirm });
 }
 

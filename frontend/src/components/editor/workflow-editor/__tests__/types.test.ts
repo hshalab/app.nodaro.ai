@@ -87,40 +87,40 @@ describe("isExecutableNode", () => {
 // ---------------------------------------------------------------------------
 
 describe("NODE_CREDIT_COSTS", () => {
-  it("has generate-image at 2 credits", () => {
-    expect(NODE_CREDIT_COSTS["generate-image"]).toBe(2)
+  it("has generate-image at 20 credits", () => {
+    expect(NODE_CREDIT_COSTS["generate-image"]).toBe(20)
   })
 
-  it("has generate-script at 10 credits", () => {
-    expect(NODE_CREDIT_COSTS["generate-script"]).toBe(10)
+  it("has generate-script at 20 credits", () => {
+    expect(NODE_CREDIT_COSTS["generate-script"]).toBe(20)
   })
 
-  it("has trim-video at 1 credit", () => {
-    expect(NODE_CREDIT_COSTS["trim-video"]).toBe(1)
+  it("has trim-video at 10 credit", () => {
+    expect(NODE_CREDIT_COSTS["trim-video"]).toBe(10)
   })
 
-  it("has 3d-title at 15 credits", () => {
-    expect(NODE_CREDIT_COSTS["3d-title"]).toBe(15)
+  it("has 3d-title at 20 credits", () => {
+    expect(NODE_CREDIT_COSTS["3d-title"]).toBe(20)
   })
 
-  it("has motion-graphics at 5 credits (lottie engine standard tier — the default)", () => {
-    expect(NODE_CREDIT_COSTS["motion-graphics"]).toBe(5)
+  it("has motion-graphics at 10 credits (lottie engine standard tier — the default)", () => {
+    expect(NODE_CREDIT_COSTS["motion-graphics"]).toBe(10)
   })
 
   it("has composite at 0 credits", () => {
     expect(NODE_CREDIT_COSTS["composite"]).toBe(0)
   })
 
-  it("has image-to-video at 50 credits (worst-case fallback reserve)", () => {
-    expect(NODE_CREDIT_COSTS["image-to-video"]).toBe(50)
+  it("has image-to-video at 500 credits (worst-case fallback reserve)", () => {
+    expect(NODE_CREDIT_COSTS["image-to-video"]).toBe(500)
   })
 
-  it("has lip-sync at 13 credits", () => {
-    expect(NODE_CREDIT_COSTS["lip-sync"]).toBe(13)
+  it("has lip-sync at 130 credits", () => {
+    expect(NODE_CREDIT_COSTS["lip-sync"]).toBe(130)
   })
 
-  it("has render-video at 15 credits", () => {
-    expect(NODE_CREDIT_COSTS["render-video"]).toBe(15)
+  it("has render-video at 50 credits", () => {
+    expect(NODE_CREDIT_COSTS["render-video"]).toBe(50)
   })
 
   it("returns undefined for a non-existent node type", () => {
@@ -246,36 +246,36 @@ describe("EXECUTABLE_TYPES — new nodes", () => {
 // ---------------------------------------------------------------------------
 
 describe("NODE_CREDIT_COSTS — new nodes", () => {
-  it("has suno-mashup at 4 credits", () => {
-    expect(NODE_CREDIT_COSTS["suno-mashup"]).toBe(4)
+  it("has suno-mashup at 30 credits", () => {
+    expect(NODE_CREDIT_COSTS["suno-mashup"]).toBe(30)
   })
 
-  it("has suno-replace-section at 2 credits", () => {
-    expect(NODE_CREDIT_COSTS["suno-replace-section"]).toBe(2)
+  it("has suno-replace-section at 20 credits", () => {
+    expect(NODE_CREDIT_COSTS["suno-replace-section"]).toBe(20)
   })
 
-  it("has suno-style-boost at 1 credit", () => {
-    expect(NODE_CREDIT_COSTS["suno-style-boost"]).toBe(1)
+  it("has suno-style-boost at 10 credit", () => {
+    expect(NODE_CREDIT_COSTS["suno-style-boost"]).toBe(10)
   })
 
-  it("has suno-add-instrumental at 4 credits", () => {
-    expect(NODE_CREDIT_COSTS["suno-add-instrumental"]).toBe(4)
+  it("has suno-add-instrumental at 30 credits", () => {
+    expect(NODE_CREDIT_COSTS["suno-add-instrumental"]).toBe(30)
   })
 
-  it("has suno-add-vocals at 4 credits", () => {
-    expect(NODE_CREDIT_COSTS["suno-add-vocals"]).toBe(4)
+  it("has suno-add-vocals at 30 credits", () => {
+    expect(NODE_CREDIT_COSTS["suno-add-vocals"]).toBe(30)
   })
 
-  it("has suno-convert-wav at 1 credit", () => {
-    expect(NODE_CREDIT_COSTS["suno-convert-wav"]).toBe(1)
+  it("has suno-convert-wav at 10 credit", () => {
+    expect(NODE_CREDIT_COSTS["suno-convert-wav"]).toBe(10)
   })
 
-  it("has suno-upload-extend at 4 credits", () => {
-    expect(NODE_CREDIT_COSTS["suno-upload-extend"]).toBe(4)
+  it("has suno-upload-extend at 30 credits", () => {
+    expect(NODE_CREDIT_COSTS["suno-upload-extend"]).toBe(30)
   })
 
-  it("has speech-to-video at 4 credits", () => {
-    expect(NODE_CREDIT_COSTS["speech-to-video"]).toBe(4)
+  it("has speech-to-video at 30 credits", () => {
+    expect(NODE_CREDIT_COSTS["speech-to-video"]).toBe(30)
   })
 
 })

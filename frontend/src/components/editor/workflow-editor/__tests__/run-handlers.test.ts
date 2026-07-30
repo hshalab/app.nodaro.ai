@@ -159,6 +159,7 @@ import {
   handleRunSelected,
   clearConnectedListRows,
   resetNodeAccumulation,
+  RUN_CONFIRM_CREDITS,
 } from "../run-handlers"
 import { getCachedCredits } from "@/ee/hooks/use-model-credits"
 
@@ -1200,10 +1201,10 @@ describe("run confirmation gate", () => {
     expect(confirmRun).not.toHaveBeenCalled()
   })
 
-  it("handleRunSingleNode confirms only when estimate > 100", async () => {
+  it("handleRunSingleNode confirms only when the estimate exceeds RUN_CONFIRM_CREDITS", async () => {
     mockNodes = [makeNode("n1", "generate-image")]
     mockHasCredits.mockReturnValue(true)
-    vi.mocked(getCachedCredits).mockReturnValue(150)
+    vi.mocked(getCachedCredits).mockReturnValue(RUN_CONFIRM_CREDITS + 1)
     const confirmRun = vi.fn().mockResolvedValue(false)
     const ctx = makeCtx({ confirmRun })
     await handleRunSingleNode("n1", ctx, "p1", vi.fn().mockResolvedValue(undefined), vi.fn(), { current: new Set() } as any)
@@ -1211,10 +1212,12 @@ describe("run confirmation gate", () => {
     expect(mockMarkNodesStatus).not.toHaveBeenCalled()
   })
 
-  it("handleRunSingleNode does NOT confirm when estimate <= 100", async () => {
+  it("handleRunSingleNode does NOT confirm at exactly RUN_CONFIRM_CREDITS", async () => {
     mockNodes = [makeNode("n1", "generate-image")]
     mockHasCredits.mockReturnValue(true)
-    vi.mocked(getCachedCredits).mockReturnValue(5)
+    // Boundary, not an arbitrary small number: the gate is `<=`, so the
+    // threshold itself must NOT prompt.
+    vi.mocked(getCachedCredits).mockReturnValue(RUN_CONFIRM_CREDITS)
     const confirmRun = vi.fn().mockResolvedValue(false)
     await handleRunSingleNode("n1", makeCtx({ confirmRun }), "p1", vi.fn().mockResolvedValue(undefined), vi.fn(), { current: new Set() } as any)
     expect(confirmRun).not.toHaveBeenCalled()
