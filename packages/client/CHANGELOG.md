@@ -1,5 +1,13 @@
 # @nodaro/sdk
 
+## 1.13.1
+
+### Patch Changes
+
+- Updated dependencies [c6487c9]
+- Updated dependencies [fec478a]
+  - @nodaro/shared@2.0.0
+
 ## 1.13.0
 
 ### Minor Changes

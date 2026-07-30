@@ -1,5 +1,14 @@
 # @nodaro/cli
 
+## 1.8.1
+
+### Patch Changes
+
+- Updated dependencies [c6487c9]
+- Updated dependencies [fec478a]
+  - @nodaro/shared@2.0.0
+  - @nodaro/sdk@1.13.1
+
 ## 1.8.0
 
 ### Minor Changes
