@@ -49,10 +49,11 @@ BEGIN
 END $$;
 
 -- ── Balances: exact restore from the snapshot ──
+-- total_credits is generated (migration 099) and re-derives from the two
+-- restored columns; assigning it directly is rejected by Postgres.
 UPDATE profiles p SET
   subscription_credits  = s.subscription_credits,
   topup_credits         = s.topup_credits,
-  total_credits         = s.total_credits,
   daily_spent_credits   = s.daily_spent_credits,
   app_credits_allowance = s.app_credits_allowance
 FROM credit_redenomination_snapshot s
@@ -63,7 +64,6 @@ WHERE p.id = s.profile_id;
 UPDATE profiles p SET
   subscription_credits  = subscription_credits  / 10,
   topup_credits         = topup_credits         / 10,
-  total_credits         = total_credits         / 10,
   daily_spent_credits   = daily_spent_credits   / 10,
   app_credits_allowance = app_credits_allowance / 10
 WHERE NOT EXISTS (SELECT 1 FROM credit_redenomination_snapshot s WHERE s.profile_id = p.id);

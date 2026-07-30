@@ -1,5 +1,25 @@
 # @nodaro/shared
 
+## 2.0.0
+
+### Major Changes
+
+- fec478a: **BREAKING: `CREDIT_BASE_USD` changes from `0.02` to `0.002`.**
+
+  One credit is now worth $0.002 instead of $0.02, so every credit quantity in the platform is ten times larger for the same dollar value. Balances, grants and historical records were migrated ×10 in the same release; nothing changed in what anything costs in dollars.
+
+  Anything that converts between credits and USD — or that hardcodes an assumption about a credit's worth — must be re-checked. Use `usdToCredits()` / `creditsToUsd()` rather than dividing by the constant yourself; they carry a rounding guard and will keep working across any future change.
+
+  The motivation was rounding: at $0.02 a credit, `ceil()` charged a 1-credit minimum for work costing a fraction of that. Replayed across 12,809 real jobs, the median small job was paying 2.0× its true cost and now pays 1.20×.
+
+### Minor Changes
+
+- c6487c9: feat: `usdToCredits(usd)` / `creditsToUsd(credits)` — the single place credit⇄USD arithmetic is written, derived from the existing `CREDIT_BASE_USD`.
+
+  Additive only; `CREDIT_BASE_USD` itself is unchanged at `$0.02`, so no consumer behaviour moves. Both helpers carry a milli-credit intermediate rounding guard: a bare `Math.ceil(usd / base)` over-charges a full credit whenever IEEE-754 division lands just above an integer (`0.14 / 0.02 = 7.000000000000001`).
+
+  Prefer these over dividing by the constant yourself — the conversion then stays correct and defined in one place.
+
 ## 1.24.1
 
 ### Patch Changes

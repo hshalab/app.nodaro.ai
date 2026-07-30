@@ -6,7 +6,11 @@ CREATE TABLE profiles (
   tier TEXT,
   subscription_credits INTEGER NOT NULL DEFAULT 0,
   topup_credits INTEGER NOT NULL DEFAULT 0,
-  total_credits INTEGER,
+  -- GENERATED, exactly as migration 099 defines it in production. The first
+  -- version of this fixture declared it a plain INTEGER, so the harness happily
+  -- UPDATEd it and the real migration then failed in prod with SQLSTATE 428C9.
+  -- A fixture that does not mirror the real schema cannot catch schema errors.
+  total_credits INTEGER GENERATED ALWAYS AS (COALESCE(subscription_credits,0) + COALESCE(topup_credits,0)) STORED,
   daily_spent_credits INTEGER,
   app_credits_allowance INTEGER NOT NULL DEFAULT 0,
   credits_balance INTEGER DEFAULT 50,      -- dead column: must stay untouched
@@ -56,14 +60,15 @@ CREATE TABLE credit_anomalies (
 );
 
 -- Production-shaped seed
-INSERT INTO profiles (tier, subscription_credits, topup_credits, total_credits, daily_spent_credits, app_credits_allowance) VALUES
-  ('free',     150,  0,   150,  0,    0),
-  ('basic',    250,  0,   250,  0,    0),
-  ('free',     244,  0,   244,  6,    0),   -- non-zero daily spend
-  ('free',       0, 24,    24,  0,  175),   -- topup-only + allowance
-  ('pro',     2000,  0,  2000, 13,    0),
-  ('business', 4800, 500, 5300, 0,    0),
-  ('free',     150,  0,  NULL, NULL,  0);   -- NULL-tolerance case
+-- total_credits omitted: it is GENERATED and cannot be inserted into.
+INSERT INTO profiles (tier, subscription_credits, topup_credits, daily_spent_credits, app_credits_allowance) VALUES
+  ('free',     150,  0,   0,    0),
+  ('basic',    250,  0,   0,    0),
+  ('free',     244,  0,   6,    0),   -- non-zero daily spend
+  ('free',       0, 24,   0,  175),   -- topup-only + allowance
+  ('pro',     2000,  0,  13,    0),
+  ('business', 4800, 500, 0,    0),
+  ('free',     150,  0, NULL,   0);   -- NULL-tolerance case
 
 INSERT INTO tier_config (tier, monthly_credits, daily_credit_limit, price_usd) VALUES
   ('free', 150, 50, 0.00),
