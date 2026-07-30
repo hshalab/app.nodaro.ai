@@ -1,5 +1,13 @@
 # @nodaro/sdk
 
+## 1.13.0
+
+### Minor Changes
+
+- 1cd6bc1: feat: `Job.source` / `Job.source_detail` — job provenance (which kind of caller created the job: `internal | mcp | app | cli | sdk | extension | web | api` + a narrowing detail) is now exposed on owner-facing job reads, so library views can label and filter media by origin. Browser extensions are recognized as their own source kind (extension-scheme `Origin`, optionally refined by an `X-Nodaro-Client: extension/<name>` label).
+- 44b4556: feat: `LibraryAsset.source` / `sourceDetail` + a `source` filter on `client.library.list()` — media can now be labeled and filtered by the surface that produced it (browser extension, studio, CLI, MCP, …) without hydrating each item's job.
+- 26c067e: feat: `UserIdentity.isAdmin` on `client.me()` (descriptive only — server-side `requireAdmin` stays the enforcement), plus public marketplace resources: `client.templates.{browse,get,clone}` and `client.tutorials.list()`. Admin/creator template surfaces stay deliberately outside the public SDK.
+
 ## 1.12.0
 
 ### Minor Changes
