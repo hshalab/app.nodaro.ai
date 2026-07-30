@@ -48,26 +48,27 @@ export const VIDEO_ANALYSIS_WINDOW = { LEN: WINDOW_LEN, STRIDE: WINDOW_STRIDE, O
  * Keep in sync with
  * `docs/nodes/processing-video/video-analysis.md`.
  */
-// Scaled x10 for the credit re-denomination. The cloud-plugins formula that
-// GENERATES this table produces the same values once its USD_PER_CREDIT flips;
-// a CI cross-check asserts the two match, so the plugin must be released after
-// app main (design §8 ordering).
+// RE-DERIVED from the cloud-plugins formula at the new credit base — NOT a
+// mechanical x10 of the old table. The formula ceils USD into credits, so a
+// 10x finer base rounds LESS: the 60s flash bucket is 23, where x10 of the old
+// 3 would have been 30 (a ~30% over-charge). A CI cross-check in the plugin
+// asserts this table equals what its videoAnalysisBucketCredits produces.
 export const VIDEO_ANALYSIS_BUCKET_CREDITS: Record<string, number> = {
   // Legacy fast-tier model (pre-2026-07) — kept for stored raw-id configs.
-  "video-analysis:gemini-3-flash:60s": 30,
-  "video-analysis:gemini-3-flash:180s": 40,
-  "video-analysis:gemini-3-flash:360s": 90,
-  "video-analysis:gemini-3-flash:600s": 140,
+  "video-analysis:gemini-3-flash:60s": 23,
+  "video-analysis:gemini-3-flash:180s": 32,
+  "video-analysis:gemini-3-flash:360s": 81,
+  "video-analysis:gemini-3-flash:600s": 136,
   // Current fast tier — regenerated from the private formula for its backing
   // model; higher than the legacy fast schedule but still ≤ pro per bucket.
-  "video-analysis:gemini-3.6-flash:60s": 70,
-  "video-analysis:gemini-3.6-flash:180s": 90,
-  "video-analysis:gemini-3.6-flash:360s": 230,
-  "video-analysis:gemini-3.6-flash:600s": 380,
-  "video-analysis:gemini-3.1-pro:60s": 90,
-  "video-analysis:gemini-3.1-pro:180s": 120,
-  "video-analysis:gemini-3.1-pro:360s": 300,
-  "video-analysis:gemini-3.1-pro:600s": 490,
+  "video-analysis:gemini-3.6-flash:60s": 61,
+  "video-analysis:gemini-3.6-flash:180s": 88,
+  "video-analysis:gemini-3.6-flash:360s": 224,
+  "video-analysis:gemini-3.6-flash:600s": 374,
+  "video-analysis:gemini-3.1-pro:60s": 82,
+  "video-analysis:gemini-3.1-pro:180s": 111,
+  "video-analysis:gemini-3.1-pro:360s": 291,
+  "video-analysis:gemini-3.1-pro:600s": 486,
   // Mixed tiers (`mixed` + `mixed-fast`) share ONE credit family — they are
   // variants of the same engine plan (plan internals live in the private
   // analysis plugin). Admin-tunable via model_pricing like every other row.
