@@ -324,16 +324,23 @@ charged) — generated and drift-guarded internally, never hand-written.
 
 | Tier | ≤60s | ≤180s | ≤360s | ≤600s |
 |------|------|-------|-------|-------|
-| `fast` (economy) | 3 | 4 | 9 | 14 |
-| `pro` (default) | 9 | 12 | 30 | 49 |
-| `mixed` / `mixed-fast` | 11 | 15 | 38 | 63 |
-| `smart` (highest accuracy) | 46 | 98 | 211 | 350 |
+| `fast` (economy) | 23 | 32 | 81 | 136 |
+| `pro` (default) | 82 | 111 | 291 | 486 |
+| `mixed` / `mixed-fast` | 104 | 142 | 372 | 621 |
+| `smart` (highest accuracy) | 454 | 975 | 2105 | 3496 |
 
 The two mixed tiers are variants of the same advanced analysis and share one
 price: `mixed` is tuned for maximum result quality; `mixed-fast` for the most
 consistent output character run-to-run.
 
 > These values are the internal pricing formula's current outputs.
+
+> **Credit re-denomination, 2026-07-30.** A credit is now worth a tenth of what
+> it was, so every number in this table is ~10× its old value — the price in
+> real terms did not rise. It is not exactly 10× because the formula rounds up
+> to a whole credit: with finer credits there is less to round away, so each
+> bucket was re-derived from the formula rather than multiplied. That rounding
+> is why the ≤60s `fast` bucket is 23 rather than 30.
 
 > **Repriced 2026-07-28.** Video Analysis now runs on the model provider's own
 > API rather than through a reseller, which is what lets it send real media to

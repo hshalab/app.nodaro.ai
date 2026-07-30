@@ -1869,11 +1869,11 @@ const VIDEO_MODELS: Record<string, ModelCatalogEntry> = {
     description: "Our most advanced analysis tier — multiple analysis engines combined into one result for maximum completeness and accuracy. Billed per duration bucket.",
     useCases: ["video-analysis", "shot-list", "premium", "most-complete"],
     pricing: [
-      { identifier: "video-analysis:mixed", credits: 630, note: "10-min ceiling (no duration given)" },
-      { identifier: "video-analysis:mixed:60s", credits: 110 },
-      { identifier: "video-analysis:mixed:180s", credits: 150 },
-      { identifier: "video-analysis:mixed:360s", credits: 380 },
-      { identifier: "video-analysis:mixed:600s", credits: 630, note: "10-min ceiling" },
+      { identifier: "video-analysis:mixed", credits: 621, note: "10-min ceiling (no duration given)" },
+      { identifier: "video-analysis:mixed:60s", credits: 104 },
+      { identifier: "video-analysis:mixed:180s", credits: 142 },
+      { identifier: "video-analysis:mixed:360s", credits: 372 },
+      { identifier: "video-analysis:mixed:600s", credits: 621, note: "10-min ceiling" },
     ],
   },
   // SMART — the accuracy tier, and the only one that does not rely on voting.
@@ -1890,11 +1890,11 @@ const VIDEO_MODELS: Record<string, ModelCatalogEntry> = {
     description: "Highest-accuracy analysis — a single deep pass that reads the footage frame by frame, finds its own shot boundaries, and identifies the cast by appearance. Best choice when the shot list will drive regeneration. Billed per duration bucket.",
     useCases: ["video-analysis", "shot-list", "premium", "most-accurate"],
     pricing: [
-      { identifier: "video-analysis:smart", credits: 3500, note: "10-min ceiling (no duration given)" },
-      { identifier: "video-analysis:smart:60s", credits: 460 },
-      { identifier: "video-analysis:smart:180s", credits: 980 },
-      { identifier: "video-analysis:smart:360s", credits: 2110 },
-      { identifier: "video-analysis:smart:600s", credits: 3500, note: "10-min ceiling" },
+      { identifier: "video-analysis:smart", credits: 3496, note: "10-min ceiling (no duration given)" },
+      { identifier: "video-analysis:smart:60s", credits: 454 },
+      { identifier: "video-analysis:smart:180s", credits: 975 },
+      { identifier: "video-analysis:smart:360s", credits: 2105 },
+      { identifier: "video-analysis:smart:600s", credits: 3496, note: "10-min ceiling" },
     ],
   },
 }
