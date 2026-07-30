@@ -5,6 +5,7 @@ import sharp from "sharp"
 import { PutObjectCommand } from "@aws-sdk/client-s3"
 import { config } from "../lib/config.js"
 import { supabase } from "../lib/supabase.js"
+import { assetSourceColumns } from "../lib/job-source.js"
 import { s3 } from "../lib/storage.js"
 import {
   validateFile,
@@ -229,6 +230,10 @@ export async function uploadRoutes(app: FastifyInstance) {
           r2_key: r2Key,
           r2_url: publicUrl,
           upload_source: "manual_upload",
+          // Which surface uploaded this (migration 285). The same derivation
+          // jobs use, so a library filtered to "extension" catches BOTH the
+          // media an extension generated and the media it uploaded.
+          ...assetSourceColumns(req),
           metadata: {
             ...(metadata ?? {}),
             thumbnail_url: thumbnailUrl,

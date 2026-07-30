@@ -259,3 +259,109 @@ describe("GET /v1/jobs/status", () => {
     expect(res.json().error.code).toBe("unauthorized")
   })
 })
+
+// ---------------------------------------------------------------------------
+// GET /v1/jobs — durable per-character listing
+// ---------------------------------------------------------------------------
+
+/**
+ * Chainable mock for the LIST route. Records every filter call so a test can
+ * assert which predicates were applied, and resolves with the seeded rows.
+ */
+function seedJobsList(rows: Array<Record<string, unknown>>) {
+  const calls: Array<{ method: string; args: unknown[] }> = []
+  vi.mocked(supabase.from).mockImplementation((table: string) => {
+    if (table !== "jobs") throw new Error(`Unexpected table "${table}"`)
+    const handler: ProxyHandler<Record<string, unknown>> = {
+      get(_t, prop) {
+        if (prop === "then") {
+          return (resolve: (v: unknown) => void) => resolve({ data: rows, error: null })
+        }
+        return (...args: unknown[]) => {
+          calls.push({ method: String(prop), args })
+          return proxy
+        }
+      },
+    }
+    const proxy: Record<string, unknown> = new Proxy({}, handler)
+    return proxy as never
+  })
+  return calls
+}
+
+const CHARACTER_ID = "00000000-0000-4000-8000-0000000000aa"
+
+function characterJob(id: string, skipPortraitAttach?: boolean) {
+  return {
+    id,
+    status: "completed",
+    progress: 100,
+    input_data: {
+      type: "generate-character",
+      attachToCharacterId: CHARACTER_ID,
+      ...(skipPortraitAttach === undefined ? {} : { skipPortraitAttach }),
+    },
+    output_data: { imageUrl: `https://r2/${id}.png` },
+    error_message: null,
+    created_at: "2026-07-30T00:00:00Z",
+    started_at: null,
+    completed_at: "2026-07-30T00:00:05Z",
+    user_id: TEST_USER_ID,
+    credits: 2,
+    job_type: "generate-character",
+  }
+}
+
+describe("GET /v1/jobs — attachToCharacterId (durable per-character listing)", () => {
+  it("filters by the character id via the input_data JSONB path", async () => {
+    const calls = seedJobsList([])
+
+    const res = await app.inject({
+      method: "GET",
+      url: `/v1/jobs?__userId=${TEST_USER_ID}&attachToCharacterId=${CHARACTER_ID}`,
+    })
+
+    expect(res.statusCode).toBe(200)
+    expect(calls).toContainEqual({
+      method: "filter",
+      args: ["input_data->>attachToCharacterId", "eq", CHARACTER_ID],
+    })
+  })
+
+  it("does NOT apply the filter when the param is absent (plain job list unchanged)", async () => {
+    const calls = seedJobsList([])
+
+    const res = await app.inject({ method: "GET", url: `/v1/jobs?__userId=${TEST_USER_ID}` })
+
+    expect(res.statusCode).toBe(200)
+    expect(calls.filter((c) => c.method === "filter")).toEqual([])
+  })
+
+  it("INCLUDES scene renders — this listing is the archive the portrait strip is not — and flags them", async () => {
+    // The characters route deliberately hides skipPortraitAttach jobs so they
+    // can never be promoted to the identity anchor; that left them with no
+    // per-character path at all. They belong here, marked so a client renders
+    // them without a promote affordance.
+    seedJobsList([characterJob("job-portrait"), characterJob("job-scene", true)])
+
+    const res = await app.inject({
+      method: "GET",
+      url: `/v1/jobs?__userId=${TEST_USER_ID}&attachToCharacterId=${CHARACTER_ID}`,
+    })
+
+    expect(res.statusCode).toBe(200)
+    const data = res.json().data as Array<Record<string, unknown>>
+    expect(data.map((j) => j.id)).toEqual(["job-portrait", "job-scene"])
+    expect(data[0].isSceneRender).toBe(false)
+    expect(data[1].isSceneRender).toBe(true)
+  })
+
+  it("omits isSceneRender entirely on an unfiltered list (no new field for existing callers)", async () => {
+    seedJobsList([characterJob("job-1")])
+
+    const res = await app.inject({ method: "GET", url: `/v1/jobs?__userId=${TEST_USER_ID}` })
+
+    expect(res.statusCode).toBe(200)
+    expect(res.json().data[0]).not.toHaveProperty("isSceneRender")
+  })
+})

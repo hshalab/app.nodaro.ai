@@ -677,7 +677,7 @@ export async function createAssetFromJob(
   try {
     const { data: job } = await supabase
       .from("jobs")
-      .select("output_data, status")
+      .select("output_data, status, source, source_detail")
       .eq("id", jobId)
       .single()
 
@@ -730,6 +730,11 @@ export async function createAssetFromJob(
         mime_type: mime,
         size_bytes: sizeBytes,
         upload_source: "generated",
+        // Provenance copied from the originating job (migration 285) so the
+        // library can filter by origin without hydrating each item's job.
+        // Immutable once written — a job's calling surface never changes.
+        source: job.source ?? null,
+        source_detail: job.source_detail ?? null,
         metadata: thumbnailUrl ? { thumbnail_url: thumbnailUrl } : {},
       })
     }
