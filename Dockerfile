@@ -202,14 +202,18 @@ RUN npm ci --omit=dev
 # to the root (avoids COPY failures in the runner stage).
 RUN mkdir -p /app/backend/node_modules
 
-# Built @nodaro/shared dist, mirroring the runner stage's own COPY: npm
-# dedupes the private plugin's `@nodaro/shared` dependency onto the workspace
-# symlink (node_modules/@nodaro/shared -> ../packages/shared), which in THIS
-# stage otherwise holds only package.json — the plugin import-smoke below
-# then fails on a missing dist even though the runner image resolves it fine
-# (staging deploy 7eccf973 failed exactly here). Copying the dist makes the
-# smoke exercise the same resolution path production uses.
+# Built workspace-package dists, mirroring the runner stage's own COPYs: npm
+# dedupes the private plugin's `@nodaro/*` dependencies onto the workspace
+# symlinks (node_modules/@nodaro/shared -> ../packages/shared, and the same
+# for prompts), which in THIS stage otherwise hold only package.json — the
+# plugin import-smoke below then fails on a missing dist even though the
+# runner image resolves it fine (staging deploys 7eccf973 and d1f0406f failed
+# exactly here, on shared and prompts respectively). Copying the dists makes
+# the smoke exercise the same resolution path production uses.
+#
+# Any workspace package a cloud plugin depends on needs its line here.
 COPY --from=shared-build /app/packages/shared/dist ./packages/shared/dist
+COPY --from=shared-build /app/packages/prompts/dist ./packages/prompts/dist
 
 # Optional Cloud-only private plugin (@nodaroai/cloud-plugins, proprietary —
 # see backend/src/lib/private-plugins/load.ts). This MUST install in THIS
