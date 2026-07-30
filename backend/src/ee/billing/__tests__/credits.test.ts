@@ -111,11 +111,11 @@ describe("CreditsService", () => {
     })
 
     it("returns correct cost for a known node type (generate-image)", () => {
-      expect(CreditsService.estimateWorkflowCredits([{ type: "generate-image" }])).toBe(2)
+      expect(CreditsService.estimateWorkflowCredits([{ type: "generate-image" }])).toBe(20)
     })
 
     it("returns correct cost for veo3", () => {
-      expect(CreditsService.estimateWorkflowCredits([{ type: "veo3" }])).toBe(63) // 0%-base ($1.25); markup applied at runtime
+      expect(CreditsService.estimateWorkflowCredits([{ type: "veo3" }])).toBe(1000) // 0%-base ($1.25); markup applied at runtime
     })
 
     it("returns 0 for an unknown node type", () => {
@@ -129,7 +129,7 @@ describe("CreditsService", () => {
         { type: "text-to-speech" },   // 3 (0%-base)
         { type: "ffmpeg" },           // 1
       ]
-      expect(CreditsService.estimateWorkflowCredits(nodes)).toBe(69)
+      expect(CreditsService.estimateWorkflowCredits(nodes)).toBe(1060)
     })
 
     it("returns correct cost for FFmpeg nodes", () => {
@@ -139,7 +139,7 @@ describe("CreditsService", () => {
         { type: "speed-ramp" },      // 2
         { type: "combine-videos" },  // 3
       ]
-      expect(CreditsService.estimateWorkflowCredits(nodes)).toBe(7)
+      expect(CreditsService.estimateWorkflowCredits(nodes)).toBe(70)
     })
   })
 
@@ -249,8 +249,8 @@ describe("CreditsService", () => {
 
     const paidProfile: CreditProfile = {
       tier: "pro",
-      subscription_credits: 100,
-      topup_credits: 50,
+      subscription_credits: 1000,
+      topup_credits: 500,
       daily_spent_credits: 0,
       last_daily_reset: new Date().toISOString(),
     }
@@ -315,7 +315,7 @@ describe("CreditsService", () => {
 
     it("returns not allowed when balance is insufficient", async () => {
       mockTable("model_pricing", {
-        credit_cost: 200,
+        credit_cost: 2000,
         is_enabled: true,
         tier_restriction: null,
       })
@@ -323,8 +323,8 @@ describe("CreditsService", () => {
       const result = await CreditsService.checkCreditsWithProfile(userId, paidProfile, "expensive-model")
       expect(result.allowed).toBe(false)
       expect(result.error).toContain("Insufficient credits")
-      expect(result.balance).toBe(150) // 100 + 50
-      expect(result.required).toBe(200)
+      expect(result.balance).toBe(1500) // 1000 + 500
+      expect(result.required).toBe(2000)
     })
 
     it("returns not allowed when free tier daily cap is exceeded", async () => {
@@ -338,15 +338,15 @@ describe("CreditsService", () => {
         tier: "free",
         subscription_credits: 50,
         topup_credits: 10,
-        daily_spent_credits: 50, // already at cap of 50
+        daily_spent_credits: 500, // already at cap of 500
         last_daily_reset: new Date().toISOString(), // today, so no reset
       }
 
       const result = await CreditsService.checkCreditsWithProfile(userId, dailyCapProfile, "flux")
       expect(result.allowed).toBe(false)
       expect(result.error).toContain("Daily credit limit reached")
-      expect(result.dailyLimit).toBe(50)
-      expect(result.dailySpent).toBe(50)
+      expect(result.dailyLimit).toBe(500)
+      expect(result.dailySpent).toBe(500)
       expect(result.watermark).toBe(true)
     })
 
@@ -365,7 +365,7 @@ describe("CreditsService", () => {
 
       const result = await CreditsService.checkCreditsWithProfile(userId, paidProfile, "flux")
       expect(result.allowed).toBe(true)
-      expect(result.balance).toBe(150) // 100 + 50
+      expect(result.balance).toBe(1500) // 1000 + 500
       expect(result.required).toBe(5)
       expect(result.watermark).toBe(false)
     })
@@ -426,7 +426,7 @@ describe("CreditsService", () => {
       // "flux" has STATIC_CREDIT_COSTS["flux"] = 2
       const result = await CreditsService.checkCreditsWithProfile(userId, paidProfile, "flux")
       expect(result.allowed).toBe(true)
-      expect(result.required).toBe(2)
+      expect(result.required).toBe(13)
     })
 
     it("falls back to static cost for ideogram-v3 (2 credits)", async () => {
@@ -434,7 +434,7 @@ describe("CreditsService", () => {
       mockTable("tier_config", { daily_credit_limit: null, monthly_credits: 530, features: {} })
       const result = await CreditsService.checkCreditsWithProfile(userId, paidProfile, "ideogram-v3")
       expect(result.allowed).toBe(true)
-      expect(result.required).toBe(2)
+      expect(result.required).toBe(18)
     })
 
     it("falls back to static cost for ideogram-v3:TURBO (1 credit)", async () => {
@@ -442,7 +442,7 @@ describe("CreditsService", () => {
       mockTable("tier_config", { daily_credit_limit: null, monthly_credits: 530, features: {} })
       const result = await CreditsService.checkCreditsWithProfile(userId, paidProfile, "ideogram-v3:TURBO")
       expect(result.allowed).toBe(true)
-      expect(result.required).toBe(1)
+      expect(result.required).toBe(18)
     })
 
     it("falls back to static cost for ideogram-v3:QUALITY (3 credits)", async () => {
@@ -450,7 +450,7 @@ describe("CreditsService", () => {
       mockTable("tier_config", { daily_credit_limit: null, monthly_credits: 530, features: {} })
       const result = await CreditsService.checkCreditsWithProfile(userId, paidProfile, "ideogram-v3:QUALITY")
       expect(result.allowed).toBe(true)
-      expect(result.required).toBe(3)
+      expect(result.required).toBe(18)
     })
 
     it("falls back to static cost for kling-3.0-motion (0%-base, 10s default)", async () => {
@@ -458,7 +458,7 @@ describe("CreditsService", () => {
       mockTable("tier_config", { daily_credit_limit: null, monthly_credits: 530, features: {} })
       const result = await CreditsService.checkCreditsWithProfile(userId, paidProfile, "kling-3.0-motion")
       expect(result.allowed).toBe(true)
-      expect(result.required).toBe(30)
+      expect(result.required).toBe(300)
     })
 
     it("falls back to static cost for kling-3.0-motion:1080p (0%-base, 10s default)", async () => {
@@ -466,7 +466,7 @@ describe("CreditsService", () => {
       mockTable("tier_config", { daily_credit_limit: null, monthly_credits: 530, features: {} })
       const result = await CreditsService.checkCreditsWithProfile(userId, paidProfile, "kling-3.0-motion:1080p")
       expect(result.allowed).toBe(true)
-      expect(result.required).toBe(50)
+      expect(result.required).toBe(500)
     })
 
     it("falls back to static cost for topaz-image-upscale:4K (0%-base)", async () => {
@@ -474,7 +474,7 @@ describe("CreditsService", () => {
       mockTable("tier_config", { daily_credit_limit: null, monthly_credits: 530, features: {} })
       const result = await CreditsService.checkCreditsWithProfile(userId, paidProfile, "topaz-image-upscale:4K")
       expect(result.allowed).toBe(true)
-      expect(result.required).toBe(5)
+      expect(result.required).toBe(50)
     })
 
     it("falls back to static cost for topaz-image-upscale:8K (0%-base)", async () => {
@@ -482,7 +482,7 @@ describe("CreditsService", () => {
       mockTable("tier_config", { daily_credit_limit: null, monthly_credits: 530, features: {} })
       const result = await CreditsService.checkCreditsWithProfile(userId, paidProfile, "topaz-image-upscale:8K")
       expect(result.allowed).toBe(true)
-      expect(result.required).toBe(10)
+      expect(result.required).toBe(100)
     })
 
     it("falls back to static cost for suno-mashup (0%-base)", async () => {
@@ -490,7 +490,7 @@ describe("CreditsService", () => {
       mockTable("tier_config", { daily_credit_limit: null, monthly_credits: 530, features: {} })
       const result = await CreditsService.checkCreditsWithProfile(userId, paidProfile, "suno-mashup")
       expect(result.allowed).toBe(true)
-      expect(result.required).toBe(3)
+      expect(result.required).toBe(30)
     })
 
     it("falls back to static cost for suno-replace-section (2 credits)", async () => {
@@ -498,7 +498,7 @@ describe("CreditsService", () => {
       mockTable("tier_config", { daily_credit_limit: null, monthly_credits: 530, features: {} })
       const result = await CreditsService.checkCreditsWithProfile(userId, paidProfile, "suno-replace-section")
       expect(result.allowed).toBe(true)
-      expect(result.required).toBe(2)
+      expect(result.required).toBe(20)
     })
 
     it("falls back to static cost for suno-style-boost (1 credit)", async () => {
@@ -506,7 +506,7 @@ describe("CreditsService", () => {
       mockTable("tier_config", { daily_credit_limit: null, monthly_credits: 530, features: {} })
       const result = await CreditsService.checkCreditsWithProfile(userId, paidProfile, "suno-style-boost")
       expect(result.allowed).toBe(true)
-      expect(result.required).toBe(1)
+      expect(result.required).toBe(10)
     })
 
     it("falls back to static cost for suno-add-instrumental (4 credits)", async () => {
@@ -514,7 +514,7 @@ describe("CreditsService", () => {
       mockTable("tier_config", { daily_credit_limit: null, monthly_credits: 530, features: {} })
       const result = await CreditsService.checkCreditsWithProfile(userId, paidProfile, "suno-add-instrumental")
       expect(result.allowed).toBe(true)
-      expect(result.required).toBe(3)
+      expect(result.required).toBe(30)
     })
 
     it("falls back to static cost for suno-add-vocals (4 credits)", async () => {
@@ -522,7 +522,7 @@ describe("CreditsService", () => {
       mockTable("tier_config", { daily_credit_limit: null, monthly_credits: 530, features: {} })
       const result = await CreditsService.checkCreditsWithProfile(userId, paidProfile, "suno-add-vocals")
       expect(result.allowed).toBe(true)
-      expect(result.required).toBe(3)
+      expect(result.required).toBe(30)
     })
 
     it("falls back to static cost for suno-convert-wav (1 credit)", async () => {
@@ -530,7 +530,7 @@ describe("CreditsService", () => {
       mockTable("tier_config", { daily_credit_limit: null, monthly_credits: 530, features: {} })
       const result = await CreditsService.checkCreditsWithProfile(userId, paidProfile, "suno-convert-wav")
       expect(result.allowed).toBe(true)
-      expect(result.required).toBe(1)
+      expect(result.required).toBe(10)
     })
 
     it("falls back to static cost for suno-upload-extend (4 credits)", async () => {
@@ -538,7 +538,7 @@ describe("CreditsService", () => {
       mockTable("tier_config", { daily_credit_limit: null, monthly_credits: 530, features: {} })
       const result = await CreditsService.checkCreditsWithProfile(userId, paidProfile, "suno-upload-extend")
       expect(result.allowed).toBe(true)
-      expect(result.required).toBe(3)
+      expect(result.required).toBe(30)
     })
 
     it("falls back to static cost for speech-to-video (0%-base)", async () => {
@@ -546,7 +546,7 @@ describe("CreditsService", () => {
       mockTable("tier_config", { daily_credit_limit: null, monthly_credits: 530, features: {} })
       const result = await CreditsService.checkCreditsWithProfile(userId, paidProfile, "speech-to-video")
       expect(result.allowed).toBe(true)
-      expect(result.required).toBe(3)
+      expect(result.required).toBe(30)
     })
 
     it("falls back to static cost for speech-to-video:580p (0%-base)", async () => {
@@ -554,7 +554,7 @@ describe("CreditsService", () => {
       mockTable("tier_config", { daily_credit_limit: null, monthly_credits: 530, features: {} })
       const result = await CreditsService.checkCreditsWithProfile(userId, paidProfile, "speech-to-video:580p")
       expect(result.allowed).toBe(true)
-      expect(result.required).toBe(5)
+      expect(result.required).toBe(50)
     })
 
     it("falls back to static cost for speech-to-video:720p (0%-base)", async () => {
@@ -562,7 +562,7 @@ describe("CreditsService", () => {
       mockTable("tier_config", { daily_credit_limit: null, monthly_credits: 530, features: {} })
       const result = await CreditsService.checkCreditsWithProfile(userId, paidProfile, "speech-to-video:720p")
       expect(result.allowed).toBe(true)
-      expect(result.required).toBe(6)
+      expect(result.required).toBe(60)
     })
 
     it("uses subscription_tier when tier is missing", async () => {
@@ -700,223 +700,223 @@ describe("CreditsService", () => {
     it("resolves gpt-image:high", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "generate-image", data: { provider: "gpt-image", quality: "high" } },
-      ])).toBe(6)
+      ])).toBe(60)
     })
 
     it("resolves gpt-image with medium quality (base)", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "generate-image", data: { provider: "gpt-image", quality: "medium" } },
-      ])).toBe(4)
+      ])).toBe(10)
     })
 
     it("resolves flux:2K", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "generate-image", data: { provider: "flux", resolution: "2K" } },
-      ])).toBe(2)
+      ])).toBe(20)
     })
 
     it("resolves flux with 1K (base)", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "generate-image", data: { provider: "flux", resolution: "1K" } },
-      ])).toBe(2)
+      ])).toBe(13)
     })
 
     it("resolves nano-banana-2:2K", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "generate-image", data: { provider: "nano-banana-2", resolution: "2K" } },
-      ])).toBe(5)
+      ])).toBe(50)
     })
 
     it("resolves nano-banana-2:4K", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "generate-image", data: { provider: "nano-banana-2", resolution: "4K" } },
-      ])).toBe(5)
+      ])).toBe(50)
     })
 
     it("resolves nano-banana-pro:4K", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "generate-image", data: { provider: "nano-banana-pro", resolution: "4K" } },
-      ])).toBe(6)
+      ])).toBe(60)
     })
 
     it("resolves ideogram-edit:TURBO", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "image-to-image", data: { provider: "ideogram-edit", renderingSpeed: "TURBO" } },
-      ])).toBe(3)
+      ])).toBe(30)
     })
 
     it("resolves ideogram-edit:QUALITY", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "image-to-image", data: { provider: "ideogram-edit", renderingSpeed: "QUALITY" } },
-      ])).toBe(6)
+      ])).toBe(60)
     })
 
     it("resolves topaz-image-upscale:4K", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "edit-image", data: { provider: "topaz-image-upscale", targetResolution: "4K" } },
-      ])).toBe(5)
+      ])).toBe(50)
     })
 
     it("resolves topaz-image-upscale:8K", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "edit-image", data: { provider: "topaz-image-upscale", targetResolution: "8K" } },
-      ])).toBe(10)
+      ])).toBe(100)
     })
 
     it("resolves topaz-image-upscale at default 2K (base)", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "edit-image", data: { provider: "topaz-image-upscale", targetResolution: "2K" } },
-      ])).toBe(3)
+      ])).toBe(25)
     })
 
     it("resolves seedream:high", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "generate-image", data: { provider: "seedream", quality: "high" } },
-      ])).toBe(4)
+      ])).toBe(40)
     })
 
     it("resolves ai-writer directly", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "ai-writer", data: { provider: "claude" } },
-      ])).toBe(3) // 0%-base (Sonnet ~$0.041/call)
+      ])).toBe(4) // 0%-base (Sonnet ~$0.041/call)
     })
 
     it("resolves suno-separate split_stem", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "suno-separate", data: { type: "split_stem" } },
-      ])).toBe(13) // 0%-base
+      ])).toBe(130) // 0%-base
     })
 
     it("resolves suno-separate default type", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "suno-separate", data: { type: "separate" } },
-      ])).toBe(4) // matches model_pricing (mig 059); STATIC was a stale 5
+      ])).toBe(40) // matches model_pricing (mig 059); STATIC was a stale 5
     })
 
     it("resolves suno-generate V5", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "suno-generate", data: { model: "V5" } },
-      ])).toBe(3) // 0%-base
+      ])).toBe(30) // 0%-base
     })
 
     it("resolves suno-generate V4", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "suno-generate", data: { model: "V4" } },
-      ])).toBe(3) // 0%-base
+      ])).toBe(30) // 0%-base
     })
 
     it("resolves suno-cover V5", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "suno-cover", data: { model: "V5" } },
-      ])).toBe(3) // 0%-base
+      ])).toBe(30) // 0%-base
     })
 
     it("resolves suno-lyrics (exempted from V5 check)", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "suno-lyrics", data: { model: "V5" } },
-      ])).toBe(1) // 0%-base
+      ])).toBe(10) // 0%-base
     })
 
     it("resolves suno-music-video (exempted from V5 check)", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "suno-music-video", data: { model: "V5" } },
-      ])).toBe(1) // matches model_pricing (mig 059); STATIC was a stale 5
+      ])).toBe(10) // matches model_pricing (mig 059); STATIC was a stale 5
     })
 
     it("resolves extend-video veo-extend:quality", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "extend-video", data: { provider: "veo-extend", model: "quality" } },
-      ])).toBe(79)
+      ])).toBe(790)
     })
 
     it("resolves extend-video veo-extend fast (base)", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "extend-video", data: { provider: "veo-extend", model: "fast" } },
-      ])).toBe(19)
+      ])).toBe(190)
     })
 
     it("resolves extend-video seedance-2-extend default (8s 720p = ref-mode 50 + 3 stitch)", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "extend-video", data: { provider: "seedance-2-extend" } },
-      ])).toBe(53)
+      ])).toBe(530)
     })
 
     it("resolves extend-video seedance-2-extend:12s:1080p", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "extend-video", data: { provider: "seedance-2-extend", duration: 12, resolution: "1080p" } },
-      ])).toBe(116)
+      ])).toBe(1160)
     })
 
     it("snaps off-tier seedance-2-extend durations into the next tier (6s → 8s 480p)", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "extend-video", data: { provider: "seedance-2-extend", duration: 6, resolution: "480p" } },
-      ])).toBe(26)
+      ])).toBe(260)
     })
 
     it("resolves I2V kling-3.0:5s — no sound field estimates the :audio tier (model default is audio ON)", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "image-to-video", data: { provider: "kling-3.0", duration: 5 } },
-      ])).toBe(50) // 0%-base — capability defaultOn mirrors the provider's sound default
+      ])).toBe(338) // 0%-base — capability defaultOn mirrors the provider's sound default
     })
 
     it("resolves I2V kling-3.0:5s with sound explicitly off", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "image-to-video", data: { provider: "kling-3.0", duration: 5, sound: false } },
-      ])).toBe(34) // 0%-base
+      ])).toBe(270) // 0%-base
     })
 
     it("resolves I2V kling-3.0:5s:audio", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "image-to-video", data: { provider: "kling-3.0", duration: 5, sound: true } },
-      ])).toBe(50) // 0%-base
+      ])).toBe(338) // 0%-base
     })
 
     it("resolves T2V grok (override to grok-i2v)", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "text-to-video", data: { provider: "grok" } },
-      ])).toBe(5)
+      ])).toBe(50)
     })
 
     it("resolves T2V wan (override to wan-t2v)", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "text-to-video", data: { provider: "wan" } },
-      ])).toBe(27) // 0%-base (wan-t2v)
+      ])).toBe(270) // 0%-base (wan-t2v)
     })
 
     it("resolves motion-transfer kling-3.0 1080p 5s", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "motion-transfer", data: { provider: "kling-3.0", resolution: "1080p", videoDuration: 5 } },
-      ])).toBe(25) // 0%-base (kling-3.0-motion:1080p:5s)
+      ])).toBe(250) // 0%-base (kling-3.0-motion:1080p:5s)
     })
 
     it("resolves motion-transfer wan-animate-move 720p", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "motion-transfer", data: { provider: "wan-animate-move", resolution: "720p" } },
-      ])).toBe(41)
+      ])).toBe(410)
     })
 
     it("resolves motion-transfer wan-animate-move default 480p", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "motion-transfer", data: { provider: "wan-animate-move", resolution: "480p" } },
-      ])).toBe(26)
+      ])).toBe(255)
     })
 
     it("resolves I2V seedance:12s", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "image-to-video", data: { provider: "seedance", duration: 12 } },
-      ])).toBe(15)
+      ])).toBe(150)
     })
 
     it("falls back for unknown provider", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "generate-image", data: { provider: "future-provider" } },
-      ])).toBe(2)
+      ])).toBe(20)
     })
 
     it("handles nodes with empty data object", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "generate-image", data: {} },
-      ])).toBe(2)
+      ])).toBe(20)
     })
 
     it("sums mixed composite and simple nodes", () => {
@@ -926,7 +926,7 @@ describe("CreditsService", () => {
         { type: "image-to-video", data: { provider: "kling-3.0", duration: 10, sound: true } }, // 100 (0%-base)
         { type: "suno-separate", data: { type: "split_stem" } },                        // 13 (0%-base)
       ]
-      expect(CreditsService.estimateWorkflowCredits(nodes)).toBe(122)
+      expect(CreditsService.estimateWorkflowCredits(nodes)).toBe(1220)
     })
   })
 
@@ -954,7 +954,7 @@ describe("CreditsService", () => {
     it("bumps llm-chat gpt-5.6-terra to the premium price at max reasoning effort (estimator/billing parity)", () => {
       expect(CreditsService.estimateWorkflowCredits([
         { type: "llm-chat", data: { llmModel: "gpt-5.6-terra", reasoningEffort: "max" } },
-      ])).toBe(3)
+      ])).toBe(6)
     })
   })
 
@@ -974,14 +974,14 @@ describe("CreditsService", () => {
       // Authoritative KIE rates: 1080p = 102 KIE cr/s (no video) / 62 (with video).
       // (Corrected from the original 1.5×-of-720p estimate, which under-billed ~40%.)
       // 4K coverage lives in the dedicated seedance-2-pricing.test.ts.
-      ["seedance-2:4s:1080p", 102],
-      ["seedance-2:8s:1080p", 204],
-      ["seedance-2:12s:1080p", 306],
-      ["seedance-2:15s:1080p", 383],
-      ["seedance-2:4s:1080p-ref", 62],
-      ["seedance-2:8s:1080p-ref", 124],
-      ["seedance-2:12s:1080p-ref", 186],
-      ["seedance-2:15s:1080p-ref", 233],
+      ["seedance-2:4s:1080p", 1020],
+      ["seedance-2:8s:1080p", 2040],
+      ["seedance-2:12s:1080p", 3060],
+      ["seedance-2:15s:1080p", 3830],
+      ["seedance-2:4s:1080p-ref", 620],
+      ["seedance-2:8s:1080p-ref", 1240],
+      ["seedance-2:12s:1080p-ref", 1860],
+      ["seedance-2:15s:1080p-ref", 2330],
       // NOTE: seedance-2-fast has NO 1080p tier (KIE sells it at 480p/720p only,
       // verified 2026-06-25). The previously-seeded fast 1080p composites were
       // guessed (1.5×-of-720p) and were removed in migration 239.
@@ -1008,8 +1008,12 @@ describe("CreditsService", () => {
       expect(k480).toBeDefined()
       expect(k720).toBeDefined()
       expect(k1080).toBeDefined()
-      expect(k720!).toBeGreaterThan(k480!)
-      expect(k1080!).toBeGreaterThan(k720!)
+      // >= not >: the per-task KIE join showed 480p's real cost is higher than
+      // the old table assumed, so after re-derivation some 480p cells now equal
+      // their 720p sibling. The invariant that matters is that a HIGHER
+      // resolution is never CHEAPER.
+      expect(k720!).toBeGreaterThanOrEqual(k480!)
+      expect(k1080!).toBeGreaterThanOrEqual(k720!)
     })
   })
 
@@ -1073,7 +1077,7 @@ describe("CreditsService", () => {
       mockTable("model_pricing", null, { code: "PGRST116" })
       // "flux" has a STATIC_CREDIT_COSTS entry of 2 — should NOT throw
       const cost = await CreditsService.getModelCreditCost("flux")
-      expect(cost).toBe(2)
+      expect(cost).toBe(13)
     })
 
     it("does NOT throw when model_pricing has a row (DB hit)", async () => {
@@ -1121,11 +1125,11 @@ describe("registerStaticCreditCosts", () => {
   it("does NOT overwrite an identifier that already exists (core pricing wins)", () => {
     // "flux" is a real core STATIC_CREDIT_COSTS entry (value 2). A plugin
     // must never be able to override core-defined pricing.
-    expect(STATIC_CREDIT_COSTS["flux"]).toBe(2)
+    expect(STATIC_CREDIT_COSTS["flux"]).toBe(13)
 
     registerStaticCreditCosts({ flux: 999 })
 
-    expect(STATIC_CREDIT_COSTS["flux"]).toBe(2)
+    expect(STATIC_CREDIT_COSTS["flux"]).toBe(13)
   })
 
   it("is idempotent — calling twice with the same map has no additional effect", () => {

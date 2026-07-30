@@ -20,9 +20,11 @@ describe("flux-2 pricing consistency (all surfaces == flux2BaseCredits)", () => 
     }
   })
 
-  it("migration 183 rows match the formula", () => {
+  it("the current model_pricing seed matches the formula", () => {
     const sql = readFileSync(
-      new URL("../../../../../supabase/migrations/183_flux2_per_mp_pricing.sql", import.meta.url),
+      // 183 seeded flux2 at the pre-re-denomination base; 288 is the current
+      // authority, emitted from the A2 sheet alongside STATIC_CREDIT_COSTS.
+      new URL("../../../../../supabase/migrations/288_credit_redenomination_model_pricing.sql", import.meta.url),
       "utf8"
     )
     const rows = [

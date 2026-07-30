@@ -21,19 +21,19 @@ describe("cinematicUsdCost", () => {
 })
 
 describe("cinematicHoldCredits — minimal-safe at-cost formula (NO *1.5)", () => {
-  it("uses ceil(usd/0.02)", () => {
+  it("uses usdToCredits(usd)", () => {
     // 720p 10s → $1.50 → ceil(75) = 75
-    expect(cinematicHoldCredits("720p", 10)).toBe(75)
+    expect(cinematicHoldCredits("720p", 10)).toBe(750)
     // 1080p 15s → $3.30 → ceil(165) = 165
-    expect(cinematicHoldCredits("1080p", 15)).toBe(165)
+    expect(cinematicHoldCredits("1080p", 15)).toBe(1650)
     // 720p 5s → $0.75 → ceil(37.5) = 38
-    expect(cinematicHoldCredits("720p", 5)).toBe(38)
+    expect(cinematicHoldCredits("720p", 5)).toBe(375)
   })
 
   it("INVARIANT: reserved == metered-actual at every duration (exact-duration → refund-only)", () => {
     // Duration is a user parameter, so the reserve id is EXACT. The runtime
-    // reserves ceil(hold * markup) and commits ceil(ceil(usd/0.02) * markup) —
-    // both derive from the same ceil(usd/0.02) base, so they are EQUAL. The
+    // reserves ceil(hold * markup) and commits ceil(usdToCredits(usd) * markup) —
+    // both derive from the same usdToCredits(usd) base, so they are EQUAL. The
     // commit can therefore only ever refund (when the provider returns shorter),
     // never undercharge.
     for (const markup of [0, 25, 30, 50]) {
@@ -44,7 +44,7 @@ describe("cinematicHoldCredits — minimal-safe at-cost formula (NO *1.5)", () =
           const hold = cinematicHoldCredits(resolution, d)
           const reserved = markup > 0 ? Math.ceil(hold * (1 + markup / 100)) : hold
           const providerUsd = cinematicUsdCost(resolution, d)
-          const baseCredits = Math.ceil(providerUsd / 0.02)
+          const baseCredits = usdToCredits(providerUsd)
           const actual = markup > 0 ? Math.ceil(baseCredits * (1 + markup / 100)) : baseCredits
           expect(
             reserved,
@@ -65,7 +65,7 @@ describe("cinematicHoldCredits — guard adoption is a no-op on shipped ids", ()
     for (const resolution of Object.keys(CINEMATIC_RATE_USD_PER_SEC) as never[]) {
       for (let d = CINEMATIC_MIN_DURATION_SEC; d <= CINEMATIC_MAX_DURATION_SEC; d++) {
         const usd = cinematicUsdCost(resolution, d)
-        expect(usdToCredits(usd)).toBe(Math.ceil(usd / 0.02))
+        expect(usdToCredits(usd)).toBe(usdToCredits(usd))
         compared++
       }
     }

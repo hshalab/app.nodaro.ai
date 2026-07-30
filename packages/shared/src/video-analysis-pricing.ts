@@ -48,37 +48,41 @@ export const VIDEO_ANALYSIS_WINDOW = { LEN: WINDOW_LEN, STRIDE: WINDOW_STRIDE, O
  * Keep in sync with
  * `docs/nodes/processing-video/video-analysis.md`.
  */
+// Scaled x10 for the credit re-denomination. The cloud-plugins formula that
+// GENERATES this table produces the same values once its USD_PER_CREDIT flips;
+// a CI cross-check asserts the two match, so the plugin must be released after
+// app main (design §8 ordering).
 export const VIDEO_ANALYSIS_BUCKET_CREDITS: Record<string, number> = {
   // Legacy fast-tier model (pre-2026-07) — kept for stored raw-id configs.
-  "video-analysis:gemini-3-flash:60s": 3,
-  "video-analysis:gemini-3-flash:180s": 4,
-  "video-analysis:gemini-3-flash:360s": 9,
-  "video-analysis:gemini-3-flash:600s": 14,
+  "video-analysis:gemini-3-flash:60s": 30,
+  "video-analysis:gemini-3-flash:180s": 40,
+  "video-analysis:gemini-3-flash:360s": 90,
+  "video-analysis:gemini-3-flash:600s": 140,
   // Current fast tier — regenerated from the private formula for its backing
   // model; higher than the legacy fast schedule but still ≤ pro per bucket.
-  "video-analysis:gemini-3.6-flash:60s": 7,
-  "video-analysis:gemini-3.6-flash:180s": 9,
-  "video-analysis:gemini-3.6-flash:360s": 23,
-  "video-analysis:gemini-3.6-flash:600s": 38,
-  "video-analysis:gemini-3.1-pro:60s": 9,
-  "video-analysis:gemini-3.1-pro:180s": 12,
-  "video-analysis:gemini-3.1-pro:360s": 30,
-  "video-analysis:gemini-3.1-pro:600s": 49,
+  "video-analysis:gemini-3.6-flash:60s": 70,
+  "video-analysis:gemini-3.6-flash:180s": 90,
+  "video-analysis:gemini-3.6-flash:360s": 230,
+  "video-analysis:gemini-3.6-flash:600s": 380,
+  "video-analysis:gemini-3.1-pro:60s": 90,
+  "video-analysis:gemini-3.1-pro:180s": 120,
+  "video-analysis:gemini-3.1-pro:360s": 300,
+  "video-analysis:gemini-3.1-pro:600s": 490,
   // Mixed tiers (`mixed` + `mixed-fast`) share ONE credit family — they are
   // variants of the same engine plan (plan internals live in the private
   // analysis plugin). Admin-tunable via model_pricing like every other row.
-  "video-analysis:mixed:60s": 11,
-  "video-analysis:mixed:180s": 15,
-  "video-analysis:mixed:360s": 38,
-  "video-analysis:mixed:600s": 63,
+  "video-analysis:mixed:60s": 110,
+  "video-analysis:mixed:180s": 150,
+  "video-analysis:mixed:360s": 380,
+  "video-analysis:mixed:600s": 630,
   // SMART — the one native-transport plan: a single pass with reasoning and
   // frame sampling turned all the way up. Priced well above the economy tiers
   // because it genuinely costs more to run, and it is the only tier whose
   // accuracy was measured against a hand-counted edit list.
-  "video-analysis:smart:60s": 46,
-  "video-analysis:smart:180s": 98,
-  "video-analysis:smart:360s": 211,
-  "video-analysis:smart:600s": 350,
+  "video-analysis:smart:60s": 460,
+  "video-analysis:smart:180s": 980,
+  "video-analysis:smart:360s": 2110,
+  "video-analysis:smart:600s": 3500,
 }
 
 /**

@@ -284,7 +284,21 @@ for (const id of ids) {
       ? kie
       : undefined
 
-    const exact = exactCells.get(id)
+    // NEVER price a duration composite from jobs.provider_cost: it is the
+    // reserve estimate, flat across durations AND resolutions, so it inverts
+    // orderings when a sibling has real per-task data. Verified: it priced
+    // seedance-2:4s:480p at its true $0.82 while giving 4s:1080p the estimate
+    // $0.41 — making 480p dearer than 1080p. Duration composites take exact
+    // per-task cost or the value-preserving x10, nothing in between.
+    // seedance-2* duration composites are EXCLUDED from exact per-task pricing:
+    // the join produced 12s:480p = $2.46 against 12s:720p = $2.05, i.e. a lower
+    // resolution costing MORE. The composite label evidently does not always
+    // reflect what was sent to the provider, so the (variant, duration) pairing
+    // is unreliable for this family. Value-preserving x10 keeps the existing
+    // monotonic ordering until the labels can be trusted; shipping an inverted
+    // price table would be worse than shipping today's.
+    const labelUntrusted = /^seedance-2/.test(base)
+    const exact = labelUntrusted ? undefined : exactCells.get(id)
     if (exact) {
       usd = exact.usd
       authority = "0-kie-per-task"
@@ -306,7 +320,7 @@ for (const id of ids) {
       authority = "1-kie-actual"
       flag = "VARIANT-SPLIT"
       note = `${kieTrusted.buckets.length} cost buckets vs shipped variants — assign per variant explicitly. Buckets: ${kieTrusted.buckets.map(b => `$${b.usd.toFixed(4)}x${b.n}`).join(" ")}`
-    } else if (obs && obs.n >= 3) {
+    } else if (obs && obs.n >= 3 && basis !== "duration-composite") {
       usd = obs.p50Usd
       authority = "2-observed"
       flag = "OK"

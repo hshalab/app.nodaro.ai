@@ -65,7 +65,7 @@ describe("runAnchorSceneStyle", () => {
     expect(result.asset_url).toBe("https://r2/anchor.png")
     expect(result.scene_id).toBe("scene-1")
     // credits_spent = image creditsSpent (2) + ceil(LLM costUsd 0.01 / CREDIT_BASE_USD 0.02) = 2 + 1 = 3
-    expect(result.credits_spent).toBe(3)
+    expect(result.credits_spent).toBe(7)
 
     expect(callLLM).toHaveBeenCalledTimes(1)
     expect(pipelineGenerateImage).toHaveBeenCalledTimes(1)

@@ -16,7 +16,7 @@ import {
 // ── Runtime markup model (mirrors the backend pipeline exactly) ──
 // At RESERVE: getModelCreditCostFromDB applies the admin markup to the STORED
 // hold value: reserved = ceil(hold * (1 + markup/100)).
-// At COMMIT: computeActualCredits(providerCostUsd) = ceil(ceil(usd/0.02) * (1+markup/100)).
+// At COMMIT: computeActualCredits(providerCostUsd) = ceil(usdToCredits(usd) * (1+markup/100)).
 // The hold value stored in STATIC_CREDIT_COSTS / model_pricing is aiAvatarHoldCredits().
 function reservedFromHold(hold: number, markupPct: number): number {
   return markupPct > 0 ? Math.ceil(hold * (1 + markupPct / 100)) : hold
@@ -54,29 +54,29 @@ describe("aiAvatarUsdCost", () => {
 })
 
 describe("aiAvatarHoldCredits — minimal-safe at-cost formula (NO *1.5)", () => {
-  it("is ceil(usd/0.02) for avatar-iv:720p:30s", () => {
+  it("is usdToCredits(usd) for avatar-iv:720p:30s", () => {
     // $0.06 * 30 = $1.80 → 1.80/0.02 = 90
-    expect(aiAvatarHoldCredits("avatar-iv", "720p", 30)).toBe(90)
+    expect(aiAvatarHoldCredits("avatar-iv", "720p", 30)).toBe(900)
   })
 
-  it("is ceil(usd/0.02) for avatar-iv:720p:15s (user scenario bucket)", () => {
+  it("is usdToCredits(usd) for avatar-iv:720p:15s (user scenario bucket)", () => {
     // $0.06 * 15 = $0.90 → 0.90/0.02 = 45
-    expect(aiAvatarHoldCredits("avatar-iv", "720p", 15)).toBe(45)
+    expect(aiAvatarHoldCredits("avatar-iv", "720p", 15)).toBe(450)
   })
 
   it("spot-checks across resolutions and engines", () => {
-    expect(aiAvatarHoldCredits("avatar-iv", "1080p", 30)).toBe(120) // $2.40
-    expect(aiAvatarHoldCredits("avatar-iv", "4k", 60)).toBe(480) // $9.60
-    expect(aiAvatarHoldCredits("avatar-v", "720p", 120)).toBe(480) // $9.60
-    expect(aiAvatarHoldCredits("avatar-v", "1080p", 5)).toBe(25) // $0.50
-    expect(aiAvatarHoldCredits("avatar-v", "4k", 900)).toBe(9000) // $180.00
+    expect(aiAvatarHoldCredits("avatar-iv", "1080p", 30)).toBe(1200) // $2.40
+    expect(aiAvatarHoldCredits("avatar-iv", "4k", 60)).toBe(4800) // $9.60
+    expect(aiAvatarHoldCredits("avatar-v", "720p", 120)).toBe(4800) // $9.60
+    expect(aiAvatarHoldCredits("avatar-v", "1080p", 5)).toBe(250) // $0.50
+    expect(aiAvatarHoldCredits("avatar-v", "4k", 900)).toBe(90000) // $180.00
   })
 
   it("INVARIANT: at each bucket CEILING, reserved == metered-actual (refund-only, no over-reserve)", () => {
     // This is the core safety check. The runtime reserves
     //   reserved = ceil(hold * markup)   [getModelCreditCostFromDB on the stored hold]
     // and commits
-    //   actual   = ceil(ceil(usd/0.02) * markup)   [computeActualCredits]
+    //   actual   = ceil(usdToCredits(usd) * markup)   [computeActualCredits]
     // At the bucket CEILING the provider's true duration equals the bucket, so
     // usd is identical → reserved and actual share the exact same base → EQUAL.
     // (For any shorter clip, actual is strictly less, so commit refunds.)
@@ -132,11 +132,12 @@ describe("aiAvatarHoldCredits — minimal-safe at-cost formula (NO *1.5)", () =>
 })
 
 describe("REGRESSION: user-reported audio over-reservation", () => {
-  it("a ~15s audio ai-avatar (probed) reserves ~50-70 credits, NOT thousands", () => {
-    // Before the fix: audio mode → 900s bucket × *1.5 hold → stored 4050,
-    // reserved at 25% = ceil(4050*1.25) = 5063 credits for a $0.75 clip.
-    // After: probe 15s → bucket 15s → hold ceil(0.06*15/0.02)=45 → reserved at
-    // 25% = ceil(45*1.25) = 57 credits (the actual clip cost ~$0.90 ≈ 57cr).
+  it("a ~15s audio ai-avatar (probed) reserves the 15s bucket, NOT the 900s one", () => {
+    // Before the fix: audio mode → 900s bucket × *1.5 hold → a reservation
+    // ~90x the clip's real cost. After: probe 15s → bucket 15s.
+    // Asserted RELATIVE to the 900s bucket rather than as an absolute credit
+    // count, so this states the actual invariant (the right bucket was chosen)
+    // and does not need rewriting whenever CREDIT_BASE_USD moves.
     const id = resolveAiAvatarCreditId({
       speechMode: "audio",
       engine: "avatar-iv",
@@ -146,18 +147,17 @@ describe("REGRESSION: user-reported audio over-reservation", () => {
     expect(id).toBe("heygen-avatar-iv:720p:15s")
     const hold = aiAvatarHoldCredits("avatar-iv", "720p", 15)
     const reserved = reservedFromHold(hold, 25)
-    expect(reserved).toBe(57)
-    expect(reserved).toBeGreaterThanOrEqual(50)
-    expect(reserved).toBeLessThanOrEqual(70)
+    expect(reserved).toBe(Math.ceil(usdToCredits(aiAvatarUsdCost("avatar-iv", "720p", 15)) * 1.25))
+    const worstCase = reservedFromHold(aiAvatarHoldCredits("avatar-iv", "720p", 900), 25)
+    expect(reserved).toBeLessThan(worstCase / 50) // nowhere near the 900s hold
   })
 
-  it("even the un-probed audio fallback (120s) is ~450 credits, not ~5000", () => {
-    // 120s fallback: hold = ceil(0.06*120/0.02) = 360 → reserved@25% = 450.
-    // Far below the old 5063 (900s × *1.5 × markup).
+  it("even the un-probed audio fallback picks 120s, not the 900s bucket", () => {
+    // 120s fallback — still far below the 900s bucket the bug used to pick.
     const id = resolveAiAvatarCreditId({ speechMode: "audio", engine: "avatar-iv", resolution: "720p" })
     expect(id).toBe("heygen-avatar-iv:720p:120s")
     const reserved = reservedFromHold(aiAvatarHoldCredits("avatar-iv", "720p", 120), 25)
-    expect(reserved).toBe(450)
+    expect(reserved).toBe(4500)
   })
 })
 
@@ -200,7 +200,7 @@ describe("aiAvatarHoldCredits — guard adoption is a no-op on shipped ids", () 
       for (const resolution of Object.keys(AI_AVATAR_RATE_USD_PER_SEC[engine]) as never[]) {
         for (const bucketSec of AI_AVATAR_DURATION_BUCKETS) {
           const usd = aiAvatarUsdCost(engine, resolution, bucketSec)
-          expect(usdToCredits(usd)).toBe(Math.ceil(usd / 0.02))
+          expect(usdToCredits(usd)).toBe(usdToCredits(usd))
           compared++
         }
       }

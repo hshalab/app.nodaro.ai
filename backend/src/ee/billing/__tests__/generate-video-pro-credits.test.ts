@@ -51,19 +51,19 @@ beforeEach(() => {
 // loudly here instead of silently invalidating the golden numbers.
 describe("golden-table composite sanity (seedance-2 family, credits.ts)", () => {
   it("seedance-2 @ 720p 8s composites", () => {
-    expect(STATIC_CREDIT_COSTS["seedance-2:8s:720p"]).toBe(82)
-    expect(STATIC_CREDIT_COSTS["seedance-2:8s:720p-ref"]).toBe(50)
+    expect(STATIC_CREDIT_COSTS["seedance-2:8s:720p"]).toBe(820)
+    expect(STATIC_CREDIT_COSTS["seedance-2:8s:720p-ref"]).toBe(500)
   })
   it("seedance-2 @ 4k 8s composites", () => {
-    expect(STATIC_CREDIT_COSTS["seedance-2:8s:4k"]).toBe(416)
-    expect(STATIC_CREDIT_COSTS["seedance-2:8s:4k-ref"]).toBe(256)
+    expect(STATIC_CREDIT_COSTS["seedance-2:8s:4k"]).toBe(4160)
+    expect(STATIC_CREDIT_COSTS["seedance-2:8s:4k-ref"]).toBe(2560)
   })
   it("seedance-2-mini @ 720p 8s composites", () => {
-    expect(STATIC_CREDIT_COSTS["seedance-2-mini:8s:720p"]).toBe(41)
-    expect(STATIC_CREDIT_COSTS["seedance-2-mini:8s:720p-ref"]).toBe(25)
+    expect(STATIC_CREDIT_COSTS["seedance-2-mini:8s:720p"]).toBe(410)
+    expect(STATIC_CREDIT_COSTS["seedance-2-mini:8s:720p-ref"]).toBe(250)
   })
   it("generate-video-pro fee row", () => {
-    expect(STATIC_CREDIT_COSTS["generate-video-pro"]).toBe(10)
+    expect(STATIC_CREDIT_COSTS["generate-video-pro"]).toBe(100)
   })
 })
 
@@ -81,7 +81,7 @@ describe("computeGenerateVideoProPricing — golden table (seedance-2 @ 720p unl
     expect(result.segmentDurations).toEqual([8])
     expect(result.feeBase).toBe(0)
     expect(result.creditIdentifier).toBe("seedance-2:8s:720p")
-    expect(result.reserveBase).toBe(82)
+    expect(result.reserveBase).toBe(820)
   })
 
   it("D=15 -> single, reserveBase 154", async () => {
@@ -96,7 +96,7 @@ describe("computeGenerateVideoProPricing — golden table (seedance-2 @ 720p unl
     expect(result.segmentDurations).toEqual([15])
     expect(result.feeBase).toBe(0)
     expect(result.creditIdentifier).toBe("seedance-2:15s:720p")
-    expect(result.reserveBase).toBe(154)
+    expect(result.reserveBase).toBe(1540)
   })
 
   it("D=16 -> multi, n=2, s=17, durations [9,8], reserveBase 189", async () => {
@@ -113,7 +113,7 @@ describe("computeGenerateVideoProPricing — golden table (seedance-2 @ 720p unl
     expect(result.creditIdentifier).toBeUndefined()
     // feeBase(10) + ceil(noRefPerSec(10.25) × maxSeg(15)) + ceil(refPerSec(6.25) × ((n-1)×tailSec(2) + (s-maxSeg)))
     // = 10 + ceil(153.75) + ceil(6.25 × (1×2 + 2)) = 10 + 154 + ceil(25) = 10 + 154 + 25 = 189
-    expect(result.reserveBase).toBe(189)
+    expect(result.reserveBase).toBe(1888)
   })
 
   it("tailSec=4 raises the per-join overlap: D=16 reserveBase 189 -> 202; window is now [2,15] (9 passes, 16→15, 1→2)", async () => {
@@ -123,7 +123,7 @@ describe("computeGenerateVideoProPricing — golden table (seedance-2 @ 720p unl
       provider: "seedance-2", resolution: "720p", durationSec: 16, tailSec: 4,
     })
     expect(r4.tailSec).toBe(4)
-    expect(r4.reserveBase).toBe(202)
+    expect(r4.reserveBase).toBe(2013)
     // Window raised to [2,15] (Tal 2026-07-22): 9 now passes through unclamped.
     const r9 = await computeGenerateVideoProPricing({
       provider: "seedance-2", resolution: "720p", durationSec: 16, tailSec: 9,
@@ -138,7 +138,7 @@ describe("computeGenerateVideoProPricing — golden table (seedance-2 @ 720p unl
       provider: "seedance-2", resolution: "720p", durationSec: 16, tailSec: 1,
     })
     expect(r1.tailSec).toBe(2)
-    expect(r1.reserveBase).toBe(189)
+    expect(r1.reserveBase).toBe(1888)
   })
 
   it("D=43 -> multi, n=3, s=44, durations [15,15,14], reserveBase 371", async () => {
@@ -153,7 +153,7 @@ describe("computeGenerateVideoProPricing — golden table (seedance-2 @ 720p unl
     expect(result.totalRawSec).toBe(44)
     expect(result.segmentDurations).toEqual([15, 15, 14])
     // 10 + ceil(10.25×15) + ceil(6.25×((3-1)×2+(44-15))) = 10 + 154 + ceil(6.25×33) = 10+154+207 = 371
-    expect(result.reserveBase).toBe(371)
+    expect(result.reserveBase).toBe(3701)
   })
 
   it("preferredSegmentSec=6 @ D=45 -> even 6s segments; the reserve follows the levered split (never the default's)", async () => {
@@ -170,7 +170,7 @@ describe("computeGenerateVideoProPricing — golden table (seedance-2 @ 720p unl
     // 10 + ceil(10.25×6) + ceil(6.25×((8-1)×2+(48-6))) = 10 + 62 + ceil(6.25×56) = 10+62+350 = 422
     // (default split for D=45 reserves 388 — shorter segments cost MORE; the
     // twin split keeps reserve and plan in lock-step)
-    expect(result.reserveBase).toBe(422)
+    expect(result.reserveBase).toBe(4215)
   })
 
   it("preferredSegmentSec=4 turns a ≤15s request into a multi split (D=10 -> [6,5])", async () => {
@@ -183,7 +183,7 @@ describe("computeGenerateVideoProPricing — golden table (seedance-2 @ 720p unl
     expect(result.mode).toBe("multi")
     expect(result.segmentDurations).toEqual([6, 5])
     // 10 + ceil(10.25×6) + ceil(6.25×((2-1)×2+(11-6))) = 10 + 62 + ceil(6.25×7) = 10+62+44 = 116
-    expect(result.reserveBase).toBe(116)
+    expect(result.reserveBase).toBe(1153)
   })
 
   it("preferredSegmentSec clamps into [4,15] (3 behaves as 4, 20 as 15)", async () => {
@@ -207,7 +207,7 @@ describe("computeGenerateVideoProPricing — golden table (seedance-2 @ 720p unl
     expect(result.totalRawSec).toBe(62)
     expect(result.segmentDurations).toEqual([14, 12, 12, 12, 12])
     // 10 + ceil(10.25×15) + ceil(6.25×((5-1)×2+(62-15))) = 10 + 154 + ceil(6.25×55) = 10+154+344 = 508
-    expect(result.reserveBase).toBe(508)
+    expect(result.reserveBase).toBe(5076)
   })
 
   it("D=120 -> multi, n=9, s=123, durations [15,15,15,13,13,13,13,13,13], reserveBase 939", async () => {
@@ -222,7 +222,7 @@ describe("computeGenerateVideoProPricing — golden table (seedance-2 @ 720p unl
     expect(result.totalRawSec).toBe(123)
     expect(result.segmentDurations).toEqual([15, 15, 15, 13, 13, 13, 13, 13, 13])
     // 10 + ceil(10.25×15) + ceil(6.25×((9-1)×2+(123-15))) = 10 + 154 + ceil(6.25×124) = 10+154+775 = 939
-    expect(result.reserveBase).toBe(939)
+    expect(result.reserveBase).toBe(9388)
   })
 })
 
@@ -238,12 +238,14 @@ describe("resolution clamp", () => {
     expect(result.segmentCount).toBe(5)
     expect(result.totalRawSec).toBe(62)
     expect(result.segmentDurations).toEqual([14, 12, 12, 12, 12])
-    // Clamped to mini's top tier 720p: noRefPerSec = 41/8, refPerSec = 25/8 (NOT an unpriced 1080p lookup).
-    expect(result.noRefPerSec).toBeCloseTo(41 / 8)
-    expect(result.refPerSec).toBeCloseTo(25 / 8)
-    // 10 + ceil((41/8)×15) + ceil((25/8)×((5-1)×2+(62-15))) = 10 + ceil(76.875) + ceil(3.125×55)
-    // = 10 + 77 + ceil(171.875) = 10 + 77 + 172 = 259
-    expect(result.reserveBase).toBe(259)
+    // Clamped to mini's top tier 720p: noRefPerSec = 410/8, refPerSec = 250/8
+    // (NOT an unpriced 1080p lookup).
+    expect(result.noRefPerSec).toBeCloseTo(410 / 8)
+    expect(result.refPerSec).toBeCloseTo(250 / 8)
+    // 100 + ceil((410/8)×15) + ceil((250/8)×((5-1)×2+(62-15)))
+    // = 100 + ceil(768.75) + ceil(31.25×55) = 100 + 769 + ceil(1718.75)
+    // = 100 + 769 + 1719 = 2588
+    expect(result.reserveBase).toBe(2588)
   })
 
   it("seedance-2 @ 4k uses 4k rates", async () => {
@@ -262,7 +264,7 @@ describe("resolution clamp", () => {
     //             = 10 + ceil(52×15) + ceil(32×4)
     //             = 10 + 780 + 128
     //             = 918
-    expect(result.reserveBase).toBe(918)
+    expect(result.reserveBase).toBe(9180)
   })
 })
 
@@ -308,25 +310,25 @@ describe("computeGenerateVideoProContinuationPricing — golden table (seedance-
     expect(r.segmentDurations).toEqual([14, 12, 12, 12, 12])
     expect(r.billFromSegment).toBe(4)
     expect(r.tailSec).toBe(2)
-    expect(r.reserveBase).toBe(185)
+    expect(r.reserveBase).toBe(1850)
   })
 
   it("fromSegment=5 (tail re-roll of a completed run): 10 + ceil(6.25×(1×2+12)) = 98", async () => {
     const r = await computeGenerateVideoProContinuationPricing({ ...base, fromSegment: 5 })
     expect(r.billFromSegment).toBe(5)
-    expect(r.reserveBase).toBe(98)
+    expect(r.reserveBase).toBe(975)
   })
 
   it("fromSegment=1 degenerates to the fresh-run formula over the SAME fixed durations: 10 + ceil(10.25×14) + ceil(6.25×(4×2+48)) = 504", async () => {
     const r = await computeGenerateVideoProContinuationPricing({ ...base, fromSegment: 1 })
     expect(r.billFromSegment).toBe(1)
-    expect(r.reserveBase).toBe(504)
+    expect(r.reserveBase).toBe(5035)
   })
 
   it("tailSec lever moves the per-join term: fromSegment=4 @ tail 4 → 10 + ceil(6.25×(2×4+24)) = 210", async () => {
     const r = await computeGenerateVideoProContinuationPricing({ ...base, fromSegment: 4, tailSec: 4 })
     expect(r.tailSec).toBe(4)
-    expect(r.reserveBase).toBe(210)
+    expect(r.reserveBase).toBe(2100)
   })
 
   it("rejects out-of-range fromSegment and corrupt parent durations (never a silent misprice)", async () => {
