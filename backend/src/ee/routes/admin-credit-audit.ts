@@ -41,7 +41,10 @@ interface ModelMapping {
   category: string
 }
 
-function buildModelMap(): Map<string, ModelMapping[]> {
+// Exported for scripts/kie-actual-billing.mts (A2 audit collection) — the
+// KIE-model → our-identifier mapping with all its aliases lives ONLY here;
+// re-implementing it in a script would drift.
+export function buildModelMap(): Map<string, ModelMapping[]> {
   const map = new Map<string, ModelMapping[]>()
 
   function addModels(models: Record<string, KieModelConfig>, category: string) {

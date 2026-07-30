@@ -38,6 +38,37 @@ describe("getAppSettings", () => {
     expect(mockFrom).toHaveBeenCalledWith("app_settings")
   })
 
+  it("parses service_margin_percent, dropping invalid entries", async () => {
+    mockSelect.mockResolvedValueOnce({
+      data: [
+        { key: "cost_markup_percent", value: 25 },
+        {
+          key: "service_margin_percent",
+          value: { svc: 30, "svc:pro": 45, bad: -5, over: 501, "": 10, str: "20", nan: Number.NaN },
+        },
+      ],
+      error: null,
+    })
+
+    const settings = await getAppSettings()
+
+    // Valid rows kept; negative / >500 / empty-prefix / non-number / NaN dropped.
+    expect(settings.service_margin_percent).toEqual({ svc: 30, "svc:pro": 45 })
+    expect(settings.cost_markup_percent).toBe(25)
+  })
+
+  it("defaults service_margin_percent to empty when the row is missing or malformed", async () => {
+    mockSelect.mockResolvedValueOnce({
+      data: [{ key: "service_margin_percent", value: ["not", "an", "object"] }],
+      error: null,
+    })
+    expect((await getAppSettings()).service_margin_percent).toEqual({})
+
+    invalidateSettingsCache()
+    mockSelect.mockResolvedValueOnce({ data: [], error: null })
+    expect((await getAppSettings()).service_margin_percent).toEqual({})
+  })
+
   it("returns defaults on DB error", async () => {
     mockSelect.mockResolvedValueOnce({
       data: null,

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
-import { CHAT_STAGES, CHAT_TURN_CAPS, TIER_MAX_PIPELINE_COST_CREDITS, ShowrunnerPlanSchema, buildVideoCreditModelIdentifier, type PipelineFormat, type PipelineMode, type VideoCriticFrameMode } from "@nodaro/shared"
+import { CHAT_STAGES, CHAT_TURN_CAPS, TIER_MAX_PIPELINE_COST_CREDITS, ShowrunnerPlanSchema, buildVideoCreditModelIdentifier, creditsToUsd, type PipelineFormat, type PipelineMode, type VideoCriticFrameMode } from "@nodaro/shared"
 // ee-to-ee static import — allowed (only core/backend/src/lib/** is barred from
 // statically importing ee/**). Direct precedent: scene-helper-credits.ts
 // (same directory) statically imports this same module for the same reason —
@@ -112,7 +112,7 @@ export interface EstimateUpfrontArgs {
  * usage. Unused turns refund automatically via the pipeline's normal credit
  * reconciliation at completion.
  *
- * 1 credit = $0.02.
+ * 1 credit = CREDIT_BASE_USD.
  */
 export function estimateUpfrontCredits(args: EstimateUpfrontArgs): number {
   let credits = 30 // Stage 1 baseline (Phase 1A)
@@ -183,7 +183,7 @@ export async function reservePipelineCredits(
     p_job_id: null,
     p_model_identifier: "pipeline-orchestration",
     p_provider_cost_usd: 0, // pipelines aggregate many provider calls; tracked separately
-    p_display_cost_usd: args.credits * 0.02,
+    p_display_cost_usd: creditsToUsd(args.credits),
     p_is_app_run: false,
   })
   if (error) {

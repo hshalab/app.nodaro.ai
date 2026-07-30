@@ -16,6 +16,7 @@
  *
  * Ref approximation: each reference image's MP is treated as equal to outputMP.
  */
+import { usdToCredits } from "@nodaro/shared"
 import type { Flux2Model } from "@nodaro/shared"
 
 const RATES: Record<Flux2Model, { base: number; perOutMP: number; perRefMP: number }> = {
@@ -30,13 +31,12 @@ export function flux2CostUsd(model: Flux2Model, outputMP: number, refCount = 0):
   return r.base + r.perOutMP * outputMP + r.perRefMP * outputMP * Math.max(0, refCount)
 }
 
-/** 0%-base credits for the reservation table (markup applied once at lookup). 1 credit = $0.02.
+/** 0%-base credits for the reservation table (markup applied once at lookup).
  *
- * Uses milli-credit intermediate rounding to avoid IEEE-754 division noise
- * (e.g., 0.14 / 0.02 = 7.000000000000001 in float64 → would ceil to 8 without this guard).
- * 1000 milli-credits per credit gives sub-0.1% resolution, well below any pricing granularity.
+ * The milli-credit float guard this function used to inline now lives in
+ * `usdToCredits` (`@nodaro/shared`), so every provider-cost family rounds
+ * identically and a credit re-denomination is a one-constant change.
  */
 export function flux2BaseCredits(model: Flux2Model, outputMP: number, refCount = 0): number {
-  const milliCredits = Math.round(flux2CostUsd(model, outputMP, refCount) / 0.02 * 1000)
-  return Math.ceil(milliCredits / 1000)
+  return usdToCredits(flux2CostUsd(model, outputMP, refCount))
 }

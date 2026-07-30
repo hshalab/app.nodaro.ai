@@ -121,6 +121,27 @@ export async function adminSettingsRoutes(app: FastifyInstance) {
       }
     }
 
+    if (key === "service_margin_percent") {
+      const bad =
+        typeof value !== "object" || value === null || Array.isArray(value)
+          ? "service_margin_percent must be an object of identifier-prefix -> percent"
+          : Object.entries(value).find(
+              ([prefix, pct]) =>
+                prefix.trim().length === 0 ||
+                typeof pct !== "number" ||
+                !Number.isFinite(pct) ||
+                pct < 0 ||
+                pct > 500,
+            )
+            ? "each service margin needs a non-empty prefix and a percent between 0 and 500"
+            : null
+      if (bad) {
+        return reply.status(400).send({
+          error: { code: "validation_error", message: bad },
+        })
+      }
+    }
+
     if (key === "carousel_video_autoplay" || key === "apps_page_video_autoplay") {
       if (typeof value !== "boolean") {
         return reply.status(400).send({

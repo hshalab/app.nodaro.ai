@@ -17,10 +17,9 @@
 
 import { describe, it, expect } from "vitest"
 import { STATIC_CREDIT_COSTS, CREDIT_COSTS } from "../credits.js"
-import { AI_AVATAR_RESERVE_IDS, AI_AVATAR_DURATION_BUCKETS, type AiAvatarEngine, type AiAvatarResolution } from "@nodaro/shared"
+import { AI_AVATAR_RESERVE_IDS, AI_AVATAR_DURATION_BUCKETS, type AiAvatarEngine, type AiAvatarResolution, CREDIT_BASE_USD} from "@nodaro/shared"
 import { AI_AVATAR_RATE_USD_PER_SEC, aiAvatarHoldCredits, aiAvatarUsdCost } from "../../../lib/pricing/ai-avatar-cost.js"
 
-const CREDIT_BASE_USD = 0.02
 
 // Runtime reserve: getModelCreditCostFromDB applies the admin markup to the
 // STORED hold value (which is the at-cost 0%-base aiAvatarHoldCredits).

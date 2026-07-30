@@ -7,6 +7,7 @@ import { PIPELINE_PINNABLE_SCRIPT_LLMS, getLlmTier, buildCreditModelIdentifier, 
 // published Apache package). See the 2026-07-06 public-flip IP audit, S5.
 import { flux2BaseCredits } from "../../lib/pricing/flux2-cost.js"
 import { AI_AVATAR_RATE_USD_PER_SEC, aiAvatarHoldCredits } from "../../lib/pricing/ai-avatar-cost.js"
+import { effectiveMarkupPercent } from "./service-margin.js"
 import { CINEMATIC_RATE_USD_PER_SEC, cinematicHoldCredits } from "../../lib/pricing/cinematic-avatar-cost.js"
 
 // ── Flux 2 per-MP×ref static costs (generated from flux2BaseCredits formula) ──
@@ -908,9 +909,12 @@ export const STATIC_CREDIT_COSTS: Record<string, number> = {
   "modify-image": 2,
   "upscale-image": 1,
   "remove-background": 1,
-  "image-to-video": 25,
+  // Bare-id fallback reserves (fire only when no duration-composite matches).
+  // Re-sized 2026-07-30 to cover observed composite actuals (29-47 cr) — the
+  // old 25 sat below the real worst case. Commit meters down to actual.
+  "image-to-video": 50,
   "video-to-video": 25,
-  "text-to-video": 25,
+  "text-to-video": 50,
   "text-to-speech": 3,
   "generate-music": 18,
   "text-to-audio": 3,
@@ -1305,18 +1309,22 @@ export async function getModelCreditBaseCost(modelIdentifier: string): Promise<M
 
 /**
  * Get credit cost for a model from database, falling back to static costs.
- * Base costs are cached for 60s. The cost_markup_percent from admin settings
- * is applied on top: finalCost = ceil(baseCost * (1 + markup/100)).
+ * Base costs are cached for 60s. The markup from admin settings is applied on
+ * top: finalCost = ceil(baseCost * (1 + markup/100)), where markup is the
+ * identifier's per-service margin when one is configured
+ * (`service_margin_percent`, longest prefix wins) and the global
+ * `cost_markup_percent` otherwise — see ee/billing/service-margin.ts.
  * Both DB values and STATIC_CREDIT_COSTS represent base costs at 0% markup.
  */
 export async function getModelCreditCostFromDB(modelIdentifier: string): Promise<ModelPricing> {
   const base = await getModelCreditBaseCost(modelIdentifier)
   // Apply markup from admin settings (cached 60s separately)
   const settings = await getAppSettings()
-  if (settings.cost_markup_percent > 0 && base.creditCost > 0) {
+  const markupPercent = effectiveMarkupPercent(settings, modelIdentifier)
+  if (markupPercent > 0 && base.creditCost > 0) {
     return {
       ...base,
-      creditCost: Math.ceil(base.creditCost * (1 + settings.cost_markup_percent / 100)),
+      creditCost: Math.ceil(base.creditCost * (1 + markupPercent / 100)),
     }
   }
   return base

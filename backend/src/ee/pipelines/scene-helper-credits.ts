@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
+import { creditsToUsd } from "@nodaro/shared"
 import type { SceneHelperName } from "@nodaro/shared"
 import {
   CreditsService,
@@ -71,7 +72,7 @@ export async function reserveHelperCredits(
     p_job_id: null,
     p_model_identifier: modelIdentifier,
     p_provider_cost_usd: 0, // helpers aggregate to provider cost on the parent pipeline
-    p_display_cost_usd: credits * 0.02,
+    p_display_cost_usd: creditsToUsd(credits),
     p_is_app_run: false,
   })
   if (error) {

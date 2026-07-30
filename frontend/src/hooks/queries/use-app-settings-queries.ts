@@ -6,6 +6,8 @@ import { getAuthHeaders } from "@/lib/api"
 export interface AppSettings {
   readonly ai_provider: "replicate" | "kie"
   readonly cost_markup_percent: number
+  /** Per-service margin overrides (identifier-prefix -> percent); replaces the global markup for matching identifiers. */
+  readonly service_margin_percent?: Readonly<Record<string, number>>
   readonly carousel_video_autoplay: boolean
   readonly apps_page_video_autoplay: boolean
   readonly featured_app_ids: readonly string[]

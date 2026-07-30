@@ -171,6 +171,25 @@ describe("PUT /v1/admin/settings/:key", () => {
     expect(res.statusCode).toBe(400)
   })
 
+  it("returns 400 when service_margin_percent is not an object", async () => {
+    const res = await app.inject({
+      method: "PUT", url: "/v1/admin/settings/service_margin_percent",
+      payload: { value: ["svc"], userId: "admin-1" },
+    })
+    expect(res.statusCode).toBe(400)
+    expect(res.json().error.message).toContain("service_margin_percent")
+  })
+
+  it("returns 400 when a service margin percent is out of range or its prefix empty", async () => {
+    for (const value of [{ svc: -1 }, { svc: 501 }, { svc: Number.NaN }, { "  ": 20 }, { svc: "20" }]) {
+      const res = await app.inject({
+        method: "PUT", url: "/v1/admin/settings/service_margin_percent",
+        payload: { value, userId: "admin-1" },
+      })
+      expect(res.statusCode).toBe(400)
+    }
+  })
+
   it("returns 200 and invalidates cache on successful upsert", async () => {
     const mockSingle = vi.fn().mockResolvedValue({
       data: { key: "ai_provider", value: "kie", updated_at: "2024-01-01" },

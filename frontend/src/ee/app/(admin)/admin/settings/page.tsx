@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { Loader2, Settings, Server, Percent, Check, AlertCircle, Film } from "lucide-react"
+import { Loader2, Settings, Server, Percent, Check, AlertCircle, Film, Plus, Trash2 } from "lucide-react"
 import { useAdminSettings } from "@/ee/hooks/queries/use-admin-queries"
 import { useUpdateSettingMutation, type AppSettings } from "@/hooks/queries/use-app-settings-queries"
 import { isFeatureEnabled, isCloud } from "@/lib/edition"
@@ -22,6 +22,9 @@ export default function AdminSettingsPage() {
   // Neutral placeholder matching the app_settings seed; the real value is
   // DB-synced on load (and Save is disabled until settings have loaded).
   const [markup, setMarkup] = useState<number>(0)
+  // Per-service margin overrides, edited as rows. Which services carry their
+  // own margin is runtime data (DB-only) — nothing here names a service.
+  const [serviceMargins, setServiceMargins] = useState<Array<{ prefix: string; percent: number }>>([])
   const [carouselAutoplay, setCarouselAutoplay] = useState(true)
   const [appsPageAutoplay, setAppsPageAutoplay] = useState(true)
   const [appsLimit, setAppsLimit] = useState(20)
@@ -34,12 +37,21 @@ export default function AdminSettingsPage() {
     if (settings) {
       setProvider(settings.ai_provider)
       setMarkup(settings.cost_markup_percent)
+      setServiceMargins(
+        Object.entries(settings.service_margin_percent ?? {}).map(([prefix, percent]) => ({ prefix, percent })),
+      )
       setCarouselAutoplay(settings.carousel_video_autoplay)
       setAppsPageAutoplay(settings.apps_page_video_autoplay)
       setAppsLimit(settings.featured_apps_limit)
       setAutoScrollSeconds(settings.apps_auto_scroll_seconds)
     }
   }, [settings])
+
+  // Canonical object form for diffing and saving (drops blank prefixes).
+  const marginsAsObject = (rows: Array<{ prefix: string; percent: number }>) =>
+    Object.fromEntries(rows.filter(r => r.prefix.trim().length > 0).map(r => [r.prefix.trim(), r.percent]))
+  const marginsDirty =
+    JSON.stringify(marginsAsObject(serviceMargins)) !== JSON.stringify(settings?.service_margin_percent ?? {})
 
   const handleSave = async () => {
     setSaving(true)
@@ -54,6 +66,10 @@ export default function AdminSettingsPage() {
 
     if (isFeatureEnabled("costMarkup") && markup !== settings?.cost_markup_percent) {
       updates.push({ key: "cost_markup_percent", value: markup })
+    }
+
+    if (isFeatureEnabled("costMarkup") && marginsDirty) {
+      updates.push({ key: "service_margin_percent", value: marginsAsObject(serviceMargins) })
     }
 
     if (carouselAutoplay !== settings?.carousel_video_autoplay) {
@@ -96,6 +112,7 @@ export default function AdminSettingsPage() {
   const hasChanges = settings != null && (
     (isFeatureEnabled("providerSelection") && provider !== settings.ai_provider) ||
     (isFeatureEnabled("costMarkup") && markup !== settings.cost_markup_percent) ||
+    (isFeatureEnabled("costMarkup") && marginsDirty) ||
     carouselAutoplay !== settings.carousel_video_autoplay ||
     appsPageAutoplay !== settings.apps_page_video_autoplay ||
     appsLimit !== settings.featured_apps_limit ||
@@ -210,6 +227,63 @@ export default function AdminSettingsPage() {
                 />
                 <span className="text-muted-foreground">%</span>
               </div>
+              <p className="text-xs text-muted-foreground">
+                Applied to every priced model unless a service override below matches it.
+              </p>
+            </div>
+
+            <div className="mt-5 space-y-2">
+              <Label>Per-service margin overrides</Label>
+              <p className="text-xs text-muted-foreground">
+                A matching service uses its own margin <em>instead of</em> the global markup
+                (longest prefix wins; a prefix matches the identifier itself or any
+                <code className="bg-muted px-1 rounded mx-1">:</code>composite of it).
+              </p>
+              {serviceMargins.map((row, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <Input
+                    aria-label={`Service prefix ${i + 1}`}
+                    placeholder="model identifier prefix"
+                    value={row.prefix}
+                    onChange={(e) =>
+                      setServiceMargins(rows => rows.map((r, j) => (j === i ? { ...r, prefix: e.target.value } : r)))
+                    }
+                    className="flex-1 max-w-xs font-mono text-xs"
+                  />
+                  <Input
+                    aria-label={`Service margin percent ${i + 1}`}
+                    type="number"
+                    min={0}
+                    max={500}
+                    value={row.percent}
+                    onChange={(e) =>
+                      setServiceMargins(rows =>
+                        rows.map((r, j) =>
+                          j === i ? { ...r, percent: Math.max(0, Math.min(500, Number(e.target.value) || 0)) } : r,
+                        ),
+                      )
+                    }
+                    className="w-24"
+                  />
+                  <span className="text-muted-foreground">%</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Remove service margin ${i + 1}`}
+                    onClick={() => setServiceMargins(rows => rows.filter((_, j) => j !== i))}
+                  >
+                    <Trash2 className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                </div>
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setServiceMargins(rows => [...rows, { prefix: "", percent: 0 }])}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Add service margin
+              </Button>
             </div>
           </div>
         )}

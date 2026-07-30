@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { CINEMATIC_MIN_DURATION_SEC, CINEMATIC_MAX_DURATION_SEC } from "@nodaro/shared"
+import { CINEMATIC_MIN_DURATION_SEC, CINEMATIC_MAX_DURATION_SEC, usdToCredits } from "@nodaro/shared"
 import { CINEMATIC_RATE_USD_PER_SEC, cinematicUsdCost, cinematicHoldCredits } from "../cinematic-avatar-cost.js"
 
 describe("cinematicUsdCost", () => {
@@ -53,5 +53,27 @@ describe("cinematicHoldCredits — minimal-safe at-cost formula (NO *1.5)", () =
         }
       }
     }
+  })
+})
+
+// ── Guard adoption: usdToCredits vs the bare ceil this module used to do ──
+// Sweeps the SHIPPED id range (credits.ts prices exactly
+// CINEMATIC_MIN_DURATION_SEC..CINEMATIC_MAX_DURATION_SEC), not 1..300s.
+describe("cinematicHoldCredits — guard adoption is a no-op on shipped ids", () => {
+  it("agrees with the bare ceil on every shipped resolution × duration", () => {
+    let compared = 0
+    for (const resolution of Object.keys(CINEMATIC_RATE_USD_PER_SEC) as never[]) {
+      for (let d = CINEMATIC_MIN_DURATION_SEC; d <= CINEMATIC_MAX_DURATION_SEC; d++) {
+        const usd = cinematicUsdCost(resolution, d)
+        expect(usdToCredits(usd)).toBe(Math.ceil(usd / 0.02))
+        compared++
+      }
+    }
+    // 2 resolutions × 12 durations (4..15s) — fails loudly if the sweep goes inert.
+    expect(compared).toBe(24)
+  })
+
+  it("holds credits equal to usdToCredits of the same cost", () => {
+    expect(cinematicHoldCredits("720p", 10)).toBe(usdToCredits(cinematicUsdCost("720p", 10)))
   })
 })
