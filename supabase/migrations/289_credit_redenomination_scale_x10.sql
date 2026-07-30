@@ -15,7 +15,7 @@
 -- §5.3 list was incomplete; it omitted total_credits and daily_spent_credits):
 --   profiles.subscription_credits    live, 90 code refs  -> x10
 --   profiles.topup_credits           live, 82 code refs  -> x10
---   profiles.total_credits           live, 71 code refs  -> x10  (MISSING from §5.3)
+--   profiles.total_credits           GENERATED from the two above -> re-derives
 --   profiles.daily_spent_credits     live, 49 code refs  -> x10  (MISSING from §5.3)
 --   profiles.app_credits_allowance   live, 16 code refs  -> x10
 --   profiles.credits_balance         dead (1 ref, every row = 50) -> untouched
@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS credit_redenomination_snapshot (
   profile_id             UUID PRIMARY KEY,
   subscription_credits   INTEGER NOT NULL,
   topup_credits          INTEGER NOT NULL,
-  total_credits          INTEGER,
+  total_credits          INTEGER,   -- recorded for verification only; generated, never restored
   daily_spent_credits    INTEGER,
   app_credits_allowance  INTEGER,
   captured_at            TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -79,10 +79,14 @@ ON CONFLICT (profile_id) DO NOTHING;
 -- NULL). SQL's NULL * 10 = NULL preserves it, so the round trip is exact.
 -- Verified: an earlier COALESCE version failed the round-trip digest on all 5
 -- history tables.
+-- total_credits is NOT listed: migration 099 defines it as
+--   GENERATED ALWAYS AS (COALESCE(subscription_credits,0) + COALESCE(topup_credits,0)) STORED
+-- so Postgres rejects any direct assignment ("column can only be updated to
+-- DEFAULT", SQLSTATE 428C9) and it re-derives itself from the two columns
+-- below. Scaling those scales it automatically.
 UPDATE profiles SET
   subscription_credits  = subscription_credits  * 10,
   topup_credits         = topup_credits         * 10,
-  total_credits         = total_credits         * 10,
   daily_spent_credits   = daily_spent_credits   * 10,
   app_credits_allowance = app_credits_allowance * 10;
 
