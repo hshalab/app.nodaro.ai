@@ -14,12 +14,21 @@ export interface SubscriptionTier {
   readonly notes?: string
 }
 
+// Grants and the top-up ladder below are the POST-re-denomination values, taken
+// from `TIER_CREDITS` / `TOP_UPS` in `ee/billing/stripe-config.ts` — the numbers
+// Stripe actually provisions. This table is display-only (the admin pricing
+// reference), which is exactly why it went stale through the 2026-07-30 ×10
+// without anything failing: nothing reads it, so nothing broke — it just told
+// admins the wrong prices.
+//
+// Note the top-ups are NOT the old ladder ×10. They were re-rated onto the
+// flattened curve (design §4.3), so copy them, never scale them.
 export const SUBSCRIPTION_TIERS: readonly SubscriptionTier[] = [
-  { name: "Free", priceMonthly: 0, priceAnnual: 0, credits: 150, perCredit: null, llmRequests: "20/mo", notes: "One-time credits, 30 cr/day, VEO 3.1 blocked, watermark" },
-  { name: "Basic", priceMonthly: 12, priceAnnual: 10, credits: 250, perCredit: 0.048, llmRequests: "100/mo" },
-  { name: "Standard", priceMonthly: 29, priceAnnual: 24, credits: 850, perCredit: 0.034, llmRequests: "300/mo" },
-  { name: "Pro", priceMonthly: 59, priceAnnual: 49, credits: 2000, perCredit: 0.030, llmRequests: "1,000/mo" },
-  { name: "Business", priceMonthly: 129, priceAnnual: 109, credits: 4800, perCredit: 0.027, llmRequests: "Unlimited" },
+  { name: "Free", priceMonthly: 0, priceAnnual: 0, credits: 1500, perCredit: null, llmRequests: "20/mo", notes: "One-time credits, 500 cr/day, VEO 3.1 blocked, watermark" },
+  { name: "Basic", priceMonthly: 12, priceAnnual: 10, credits: 4500, perCredit: 0.0027, llmRequests: "100/mo" },
+  { name: "Standard", priceMonthly: 29, priceAnnual: 24, credits: 11000, perCredit: 0.0026, llmRequests: "300/mo" },
+  { name: "Pro", priceMonthly: 59, priceAnnual: 49, credits: 23000, perCredit: 0.0026, llmRequests: "1,000/mo" },
+  { name: "Business", priceMonthly: 129, priceAnnual: 109, credits: 52000, perCredit: 0.0025, llmRequests: "Unlimited" },
 ] as const
 
 export interface TopUpPackage {
@@ -30,10 +39,10 @@ export interface TopUpPackage {
 }
 
 export const TOPUP_PACKAGES: readonly TopUpPackage[] = [
-  { name: "Small", price: 10, credits: 150, perCredit: 0.067 },
-  { name: "Medium", price: 25, credits: 450, perCredit: 0.056 },
-  { name: "Large", price: 50, credits: 1000, perCredit: 0.050 },
-  { name: "XL", price: 100, credits: 2200, perCredit: 0.045 },
+  { name: "Small", price: 10, credits: 3300, perCredit: 0.0030 },
+  { name: "Medium", price: 25, credits: 8500, perCredit: 0.0029 },
+  { name: "Large", price: 50, credits: 17500, perCredit: 0.0029 },
+  { name: "XL", price: 100, credits: 36000, perCredit: 0.0028 },
 ] as const
 
 export interface FFmpegNode {

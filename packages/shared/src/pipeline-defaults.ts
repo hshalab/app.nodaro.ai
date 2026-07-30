@@ -72,12 +72,18 @@ export const TIER_PIPELINE_PARALLELISM: Record<string, number> = {
 }
 
 // Tier → default hard cost cap when max_cost_credits omitted (Architecture §6.6.3)
+//
+// These are a FRACTION OF THE TIER'S GRANT, so they move with `TIER_CREDITS`:
+// the 2026-07-30 ×10 re-denomination multiplied every grant, and leaving these
+// behind would have silently tightened each cap tenfold — a basic-tier pipeline
+// would abort at 300 credits out of a 4,500-credit grant, i.e. 6% of the plan
+// the user paid for, instead of the intended two-thirds.
 export const TIER_MAX_PIPELINE_COST_CREDITS: Record<string, number> = {
   free: 0,
-  basic: 300,
-  standard: 800,
-  pro: 2000,
-  business: 5000,
+  basic: 3000,
+  standard: 8000,
+  pro: 20000,
+  business: 50000,
 }
 
 // Per-stage soft timeout (matches workflow-orchestration)

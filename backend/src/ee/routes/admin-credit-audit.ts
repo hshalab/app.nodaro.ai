@@ -19,6 +19,8 @@ import {
   KIE_SPEECH_TO_VIDEO_MODELS, KIE_SPECIAL_MODELS,
 } from "../../providers/kie/models.js"
 import type { KieModelConfig } from "../../providers/kie/models.js"
+import { KIE_CREDIT_USD } from "../../providers/kie/models.js"
+import { CREDIT_BASE_USD } from "@nodaro/shared"
 import { STATIC_CREDIT_COSTS } from "../billing/credits.js"
 import { getAppSettings } from "../../lib/app-settings.js"
 
@@ -30,8 +32,17 @@ const T2V_CREDIT_OVERRIDES: Record<string, string> = {
   "wan-turbo": "wan-turbo-t2v",
 }
 
-// 1 Nodaro credit = ( vs )
-const KIE_CREDITS_PER_NODARO = 4
+/**
+ * How many KIE credits one Nodaro credit is worth — DERIVED from the two rates,
+ * never written down.
+ *
+ * It was hardcoded to 4, which was right only while a Nodaro credit was worth
+ * $0.02 (0.02 / 0.005). The ×10 re-denomination made it 0.4, and a stale 4 made
+ * this audit read every one of our prices as 10× KIE's bill — i.e. it would
+ * report healthy margin on rows that are actually under-recovering, which is
+ * the exact failure an audit exists to prevent.
+ */
+const KIE_CREDITS_PER_NODARO = CREDIT_BASE_USD / KIE_CREDIT_USD
 
 // Build reverse map: KIE model ID → { ourKey, kieCredits, category }
 interface ModelMapping {

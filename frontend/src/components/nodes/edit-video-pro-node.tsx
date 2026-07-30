@@ -37,13 +37,16 @@ const ACCEPTS_IMAGE_REFS = (t: string) => isValidEditVideoProConnection("imageRe
 // default-case answer — edit-video-pro's real cost is a multi-term formula
 // (fee + per-second ref-rate × (span + head/tail-loss + ref adjustments))
 // with no single cache key to resolve it live client-side; the ONLY key that
-// exists today ("edit-video-pro", the flat fee-base) resolves to just 10,
+// exists today ("edit-video-pro", the flat fee-base) resolves to just 100,
 // which would understate the true charge by roughly an order of magnitude —
 // worse than a clearly-labeled coarse constant. Task 14's
 // estimateEditVideoProCredits(data) replaces this with the real per-render
 // dynamic estimate; the true charge is always computed server-side at
 // probe-at-reserve time regardless.
-const EDIT_VIDEO_PRO_CREDIT_FALLBACK = 67
+//
+// Re-denominated 2026-07-30 (was 67 at the old base, alongside a fee-base of
+// 10). A coarse constant still has to be coarse in the RIGHT units.
+const EDIT_VIDEO_PRO_CREDIT_FALLBACK = 670
 
 // Bottom-anchored 3-pip stack, 28px apart (mirrors generate-video-pro-node's
 // spacing convention). `video` sits closest to the bottom — it's the

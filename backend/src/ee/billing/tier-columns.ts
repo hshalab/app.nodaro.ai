@@ -5,7 +5,7 @@
 // `tier`, while the admin panel and GET /v1/me read only `subscription_tier`.
 // On 2026-07-28 that surfaced as a paying Basic customer being displayed as
 // "free" in admin — and looking, at a glance, like a free user who had blown
-// straight through the 50/day cap.
+// straight through the free daily cap.
 //
 // Until the duplicate column is dropped, these two helpers are the only
 // sanctioned way to touch tier:

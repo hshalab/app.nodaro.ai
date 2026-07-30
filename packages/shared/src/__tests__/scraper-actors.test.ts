@@ -56,12 +56,15 @@ describe("scraper-actors", () => {
     }
   })
 
+  // Values match `STATIC_CREDIT_COSTS` / `model_pricing`; the backend-side guard
+  // `shared-credit-table-sync.test.ts` is what keeps the two equal. This one only
+  // pins that every SKU is present and priced.
   it("credit costs include bare fallback + every composite SKU", () => {
-    expect(SCRAPER_CREDIT_COSTS["web-scrape"]).toBe(2)
-    expect(SCRAPER_CREDIT_COSTS["web-scrape:google-search"]).toBe(3)
-    expect(SCRAPER_CREDIT_COSTS["web-scrape:content-crawler"]).toBe(1)
-    expect(SCRAPER_CREDIT_COSTS["web-scrape:content-crawler:site"]).toBe(5)
-    expect(SCRAPER_CREDIT_COSTS["web-scrape:instagram"]).toBe(1)
-    expect(SCRAPER_CREDIT_COSTS["web-scrape:tiktok"]).toBe(1)
+    expect(SCRAPER_CREDIT_COSTS["web-scrape"]).toBe(20)
+    expect(SCRAPER_CREDIT_COSTS["web-scrape:google-search"]).toBe(30)
+    expect(SCRAPER_CREDIT_COSTS["web-scrape:content-crawler"]).toBe(10)
+    expect(SCRAPER_CREDIT_COSTS["web-scrape:content-crawler:site"]).toBe(50)
+    expect(SCRAPER_CREDIT_COSTS["web-scrape:instagram"]).toBe(10)
+    expect(SCRAPER_CREDIT_COSTS["web-scrape:tiktok"]).toBe(10)
   })
 })

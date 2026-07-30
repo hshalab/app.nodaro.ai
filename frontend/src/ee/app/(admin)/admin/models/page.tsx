@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react"
 import { Link } from "react-router-dom"
+import { CREDIT_BASE_USD } from "@nodaro/shared"
 import { Cpu, Loader2, Save, Check, ArrowLeft } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -153,7 +154,12 @@ function InlineEditableCell({
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(String(value))
 
-  const MAX_CREDIT_COST = 10000
+  // Sanity ceiling on a typo, not a pricing policy — so it has to sit ABOVE the
+  // most expensive real row. The ×10 re-denomination pushed 29 rows past the old
+  // 10,000 (the priciest avatar tiers reach 90,000), which made those rows
+  // uneditable in this very form: every save bounced with a validation toast.
+  // Sized in dollars so it scales with the base instead of stranding rows again.
+  const MAX_CREDIT_COST = Math.round(1000 / CREDIT_BASE_USD)
 
   const commit = () => {
     const num = Number(draft)

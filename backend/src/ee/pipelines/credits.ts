@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
-import { CHAT_STAGES, CHAT_TURN_CAPS, TIER_MAX_PIPELINE_COST_CREDITS, ShowrunnerPlanSchema, buildVideoCreditModelIdentifier, creditsToUsd, type PipelineFormat, type PipelineMode, type VideoCriticFrameMode } from "@nodaro/shared"
+import { CHAT_STAGES, CHAT_TURN_CAPS, TIER_MAX_PIPELINE_COST_CREDITS, ShowrunnerPlanSchema, buildVideoCreditModelIdentifier, creditsToUsd, usdToCredits, type PipelineFormat, type PipelineMode, type VideoCriticFrameMode } from "@nodaro/shared"
 // ee-to-ee static import — allowed (only core/backend/src/lib/** is barred from
 // statically importing ee/**). Direct precedent: scene-helper-credits.ts
 // (same directory) statically imports this same module for the same reason —
@@ -10,24 +10,54 @@ import { getModelCreditCostFromDB } from "../billing/credits.js"
 // file's `estimateUpfrontCredits`/`reservePipelineCredits`.
 import type { SeededPipelineInput } from "./seed-pipeline.js"
 
-const PER_TURN_ESTIMATE_CREDITS = 2 // cached Sonnet 4.6 turn /
-const STORYBOARD_COHESION_CREDITS = 5 // Sonnet vision call with N images × markup /
+// Every upfront reservation below is stated in DOLLARS and converted, not
+// written as a credit count. They were bare credit literals (2 / 5 / 2-3-4)
+// through the 2026-07-30 ×10 re-denomination and were missed by it, which left
+// every pipeline reserving a tenth of its intended budget — an under-reservation
+// silently shifts cost onto the commit step instead of failing the balance gate.
+// A reservation is a dollar amount; the credit count is just how it's denominated.
+const PER_TURN_ESTIMATE_USD = 0.04 // cached Sonnet 4.6 turn
+const STORYBOARD_COHESION_USD = 0.1 // Sonnet vision call with N images × markup
+
+const PER_TURN_ESTIMATE_CREDITS = usdToCredits(PER_TURN_ESTIMATE_USD)
+const STORYBOARD_COHESION_CREDITS = usdToCredits(STORYBOARD_COHESION_USD)
+
+// The fixed per-pipeline stage reservations. These were bare literals inline in
+// `estimateUpfrontCredits` (30 / 4 / 3 / 3), which is why the re-denomination
+// swept the named constants around them and left these behind — a grep for
+// `*_CREDITS =` cannot see a number written directly into an expression.
+const STAGE_1_BASELINE_USD = 0.6 // Phase 1A stage-1 work
+const MUSIC_TIMELINE_USD = 0.08 // 7f
+const EDITOR_LLM_USD = 0.06 // 7h
+const FINAL_MERGE_USD = 0.06 // 7j (FreeCut export is free; reserve worst case)
+
+const STAGE_1_BASELINE_CREDITS = usdToCredits(STAGE_1_BASELINE_USD)
+const MUSIC_TIMELINE_CREDITS = usdToCredits(MUSIC_TIMELINE_USD)
+const EDITOR_LLM_CREDITS = usdToCredits(EDITOR_LLM_USD)
+const FINAL_MERGE_CREDITS = usdToCredits(FINAL_MERGE_USD)
 
 /**
  * Phase 1D.2c-b-ii (G1): per-shot Video Critic budget by frame extraction mode.
  *
- * Cost scales with how many frames the critic ingests:
- *   - first_last         (2 frames): ~$0.02 → 2 credits/shot
- *   - first_middle_last  (3 frames): ~$0.03 → 3 credits/shot
- *   - five_evenly        (5 frames): ~$0.05 → 4 credits/shot
+ * Cost scales with how many frames the critic ingests (reserved at ~2× the
+ * observed call cost, worst-case):
+ *   - first_last         (2 frames): ~$0.02 call → $0.04 reserved
+ *   - first_middle_last  (3 frames): ~$0.03 call → $0.06 reserved
+ *   - five_evenly        (5 frames): ~$0.05 call → $0.08 reserved
  *
  * Reservations are upfront and worst-case. Unused credits refund on pipeline
  * completion via the normal credit reconciliation path.
  */
+const VIDEO_CRITIC_PER_SHOT_USD: Record<VideoCriticFrameMode, number> = {
+  first_last: 0.04,
+  first_middle_last: 0.06,
+  five_evenly: 0.08,
+}
+
 const VIDEO_CRITIC_PER_SHOT_CREDITS: Record<VideoCriticFrameMode, number> = {
-  first_last: 2,
-  first_middle_last: 3,
-  five_evenly: 4,
+  first_last: usdToCredits(VIDEO_CRITIC_PER_SHOT_USD.first_last),
+  first_middle_last: usdToCredits(VIDEO_CRITIC_PER_SHOT_USD.first_middle_last),
+  five_evenly: usdToCredits(VIDEO_CRITIC_PER_SHOT_USD.five_evenly),
 }
 
 /**
@@ -115,10 +145,10 @@ export interface EstimateUpfrontArgs {
  * 1 credit = CREDIT_BASE_USD.
  */
 export function estimateUpfrontCredits(args: EstimateUpfrontArgs): number {
-  let credits = 30 // Stage 1 baseline (Phase 1A)
-  if (args.musicEnabled) credits += 4 // 7f music timeline
-  credits += 3 // 7h Editor LLM
-  credits += 3 // 7j final merge (or FreeCut export — 0 cr, but reserve for worst case)
+  let credits = STAGE_1_BASELINE_CREDITS
+  if (args.musicEnabled) credits += MUSIC_TIMELINE_CREDITS // 7f music timeline
+  credits += EDITOR_LLM_CREDITS // 7h Editor LLM
+  credits += FINAL_MERGE_CREDITS // 7j final merge (or FreeCut export — 0 cr, but reserve for worst case)
   credits += STORYBOARD_COHESION_CREDITS // Phase 1D.2c-b-i: Storyboard Cohesion critic (all modes)
   // Phase 1D.2c-b-ii (G1): per-shot Video Critic budget. Default frame mode
   // is "first_last" so older call-sites that don't thread the field through
@@ -129,8 +159,9 @@ export function estimateUpfrontCredits(args: EstimateUpfrontArgs): number {
   if (args.mode === "guided") {
     // Reserve chat-refine budget for ALL stages whose chat code paths are
     // actually wired (CHAT_STAGES[stage].wired === true). 1D.2b wired Script
-    // (20 turns); 1D.2c wired Post-merge (8 turns). Worst-case at 2cr/turn:
-    //   script (20) × 2 + post_merge (8) × 2 = 40 + 16 = 56 credits.
+    // (20 turns); 1D.2c wired Post-merge (8 turns). Worst-case, at
+    // PER_TURN_ESTIMATE_CREDITS per turn:
+    //   script (20) + post_merge (8) = 28 turns × the per-turn reservation.
     // Unwired stages (shot_list pre-declared for 1D.2d) reserve 0.
     let chatBudget = 0
     for (const stage of Object.keys(CHAT_STAGES) as Array<keyof typeof CHAT_STAGES>) {
@@ -149,7 +180,10 @@ export interface ResolveMaxCostArgs {
 }
 
 export function resolveMaxCostCredits({ requested, tier }: ResolveMaxCostArgs): number {
-  const tierCap = TIER_MAX_PIPELINE_COST_CREDITS[tier] ?? 300
+  // An unrecognised tier gets the most conservative REAL cap rather than its own
+  // literal — a second copy of "basic" would have to be re-denominated
+  // separately, and this one wasn't (it sat at 300 while the table moved to 3000).
+  const tierCap = TIER_MAX_PIPELINE_COST_CREDITS[tier] ?? TIER_MAX_PIPELINE_COST_CREDITS.basic
   if (requested === undefined || requested === null) return tierCap
   return Math.min(requested, tierCap)
 }

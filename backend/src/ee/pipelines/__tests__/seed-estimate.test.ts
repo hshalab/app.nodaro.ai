@@ -119,13 +119,15 @@ describe("estimateSeededPipelineCredits", () => {
     // pipeline-level Suno track
     expect(result.breakdown.music).toBe(3)
     // estimateUpfrontCredits(auto, 30s, music on, first_last default):
-    // 30 (baseline) + 4 (music) + 3 (editor) + 3 (final merge) + 5 (cohesion)
-    //   + 2cr × max(5, ceil(30/4)=8) shots (video critic) = 61
-    expect(result.breakdown.pipelineUpfront).toBe(61)
+    // 300 (baseline) + 40 (music) + 30 (editor) + 30 (final merge) + 50 (cohesion)
+    //   + 20cr × max(5, ceil(30/4)=8) shots (video critic) = 610
+    expect(result.breakdown.pipelineUpfront).toBe(610)
 
     const expectedTotal = Object.values(result.breakdown).reduce((sum, credits) => sum + credits, 0)
     expect(result.totalCredits).toBe(expectedTotal)
-    expect(result.totalCredits).toBe(61 + 6 + 66 + 8 + 3)
+    // The other lines come from MOCK_CREDIT_COSTS, which is deliberately frozen
+    // at its own fixed values — only the pipelineUpfront line tracks real code.
+    expect(result.totalCredits).toBe(610 + 6 + 66 + 8 + 3)
   })
 
   it("zeroes the music line (and skips the Suno lookup) when config.music_enabled is false", async () => {
@@ -136,9 +138,9 @@ describe("estimateSeededPipelineCredits", () => {
 
     expect(result.breakdown.music).toBe(0)
     expect(getModelCreditCostFromDB).not.toHaveBeenCalledWith("suno-v5_5")
-    // Same as above minus the 4cr music allocation: 61 - 4 = 57
-    expect(result.breakdown.pipelineUpfront).toBe(57)
-    expect(result.totalCredits).toBe(57 + 6 + 66 + 8 + 0)
+    // Same as above minus the 40cr music allocation: 610 - 40 = 570
+    expect(result.breakdown.pipelineUpfront).toBe(570)
+    expect(result.totalCredits).toBe(570 + 6 + 66 + 8 + 0)
   })
 
   it("sums shot_count_hint (not scene count) for keyframes and animation", async () => {
