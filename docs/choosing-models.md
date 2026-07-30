@@ -141,9 +141,9 @@ Many video models support **both** `t2v` and `i2v` from the same id — the Gene
 | ⭐ Kling 3.0 | Kuaishou | Premium | 500 | i2v, t2v | Premium Kling 3.0 — variable 3-15s duration, native audio, 720P/1080P. |
 | Seedance 2 Extend | Bytedance | Premium | 530 | extend | Extend ANY video: generates the continuation (audio included) and trim-stitches it into one seamless clip. |
 | Kling Avatar Pro | Kuaishou | Premium | 560 | lip-sync | Premium lip-sync — better mouth shape and timing. |
-| Video Analysis (Mixed) | Nodaro | Premium | 630 | video-analysis | Our most advanced analysis tier — multiple analysis engines combined into one result for maximum completeness and accuracy. Billed per duration bucket. |
+| Video Analysis (Mixed) | Nodaro | Premium | 621 | video-analysis | Our most advanced analysis tier — multiple analysis engines combined into one result for maximum completeness and accuracy. Billed per duration bucket. |
 | ⭐ VEO 3.1 Quality | Google | Premium | 1000 | i2v, t2v | Google VEO 3.1 Quality — premium cinematic video. 4/6/8s clips, optional end frame, native audio. Flat per-generation pricing across durations. |
-| Video Analysis (Smart) | Nodaro | Premium | 3500 | video-analysis | Highest-accuracy analysis — a single deep pass that reads the footage frame by frame, finds its own shot boundaries, and identifies the cast by appearance. Best choice when the shot list will drive regeneration. Billed per duration bucket. |
+| Video Analysis (Smart) | Nodaro | Premium | 3496 | video-analysis | Highest-accuracy analysis — a single deep pass that reads the footage frame by frame, finds its own shot boundaries, and identifies the cast by appearance. Best choice when the shot list will drive regeneration. Billed per duration bucket. |
 | OmniHuman 1.5 | ByteDance | Premium | 4050 | lip-sync | Premium prompt-directed talking avatar from a still image + audio. 720p / 1080p, up to 60s. People, pets, anime. |
 | Volcengine Lip Sync | Volcengine | Premium | 6000 | lip-sync | Video-to-video AI dubbing — re-syncs lips to a new vocal track. Multi-speaker (scene detection + speaker ID) in basic mode. Video input, billed per second. |
 | Sync Lipsync v3 | Sync | Premium | 20000 | lip-sync | Dub existing footage — re-syncs lips to a new audio track. Video input, billed per second. |

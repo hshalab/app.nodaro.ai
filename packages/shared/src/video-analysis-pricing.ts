@@ -48,11 +48,18 @@ export const VIDEO_ANALYSIS_WINDOW = { LEN: WINDOW_LEN, STRIDE: WINDOW_STRIDE, O
  * Keep in sync with
  * `docs/nodes/processing-video/video-analysis.md`.
  */
-// RE-DERIVED from the cloud-plugins formula at the new credit base — NOT a
-// mechanical x10 of the old table. The formula ceils USD into credits, so a
-// 10x finer base rounds LESS: the 60s flash bucket is 23, where x10 of the old
-// 3 would have been 30 (a ~30% over-charge). A CI cross-check in the plugin
-// asserts this table equals what its videoAnalysisBucketCredits produces.
+// EVERY row here is RE-DERIVED from the cloud-plugins formula at the current
+// credit base — never a mechanical x10 of an older table. The formula ceils USD
+// into credits, so a 10x finer base rounds LESS: the 60s flash bucket is 23,
+// where x10 of the old 3 would have been 30 (a ~30% over-charge).
+//
+// That applies to the SENTINEL rows (`mixed:*`, `smart:*`) exactly as much as to
+// the per-model rows. They were briefly shipped as a x10 on the reasoning that
+// they sit outside the plugin's cross-check loop — but being outside the loop
+// makes a row UNGUARDED, not exempt: `videoAnalysisBucketCredits` computes them
+// from the same roll plan, so they are formula-derived too (mixed:60s is 104,
+// not 110). The plugin's cost test now covers sentinels as well, so this class
+// of drift fails CI instead of shipping.
 export const VIDEO_ANALYSIS_BUCKET_CREDITS: Record<string, number> = {
   // Legacy fast-tier model (pre-2026-07) — kept for stored raw-id configs.
   "video-analysis:gemini-3-flash:60s": 23,
@@ -72,18 +79,18 @@ export const VIDEO_ANALYSIS_BUCKET_CREDITS: Record<string, number> = {
   // Mixed tiers (`mixed` + `mixed-fast`) share ONE credit family — they are
   // variants of the same engine plan (plan internals live in the private
   // analysis plugin). Admin-tunable via model_pricing like every other row.
-  "video-analysis:mixed:60s": 110,
-  "video-analysis:mixed:180s": 150,
-  "video-analysis:mixed:360s": 380,
-  "video-analysis:mixed:600s": 630,
+  "video-analysis:mixed:60s": 104,
+  "video-analysis:mixed:180s": 142,
+  "video-analysis:mixed:360s": 372,
+  "video-analysis:mixed:600s": 621,
   // SMART — the one native-transport plan: a single pass with reasoning and
   // frame sampling turned all the way up. Priced well above the economy tiers
   // because it genuinely costs more to run, and it is the only tier whose
   // accuracy was measured against a hand-counted edit list.
-  "video-analysis:smart:60s": 460,
-  "video-analysis:smart:180s": 980,
-  "video-analysis:smart:360s": 2110,
-  "video-analysis:smart:600s": 3500,
+  "video-analysis:smart:60s": 454,
+  "video-analysis:smart:180s": 975,
+  "video-analysis:smart:360s": 2105,
+  "video-analysis:smart:600s": 3496,
 }
 
 /**
