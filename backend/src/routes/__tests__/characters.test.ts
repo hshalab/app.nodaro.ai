@@ -122,6 +122,7 @@ function mockJobsPendingChain(result: { data: unknown; error: unknown } = { data
     eq: vi.fn().mockReturnThis(),
     in: vi.fn().mockReturnThis(),
     filter: vi.fn().mockReturnThis(),
+    or: vi.fn().mockReturnThis(),
     gte: vi.fn().mockReturnThis(),
     order: vi.fn().mockReturnThis(),
     limit: vi.fn().mockReturnThis(),
@@ -474,6 +475,31 @@ describe("GET /v1/characters/:id", () => {
       "eq",
       TEST_CHARACTER_ID,
     )
+  })
+
+  it("excludes skipPortraitAttach jobs from BOTH portrait-candidate queries (scene renders are not portraits)", async () => {
+    // A skipPortraitAttach job borrows the character's identity for a scene
+    // render and attaches to no bucket — surfacing it as a pending portrait or
+    // a promotable "Other portrait" is exactly what the flag exists to
+    // prevent. The predicate must be NULL-safe (legacy rows lack the key).
+    const charsByIdChain = getByIdChain({ data: DB_CHARACTER, error: null })
+    const jobs = mockGetByIdJobs()
+    vi.mocked(supabase.from).mockImplementation((table: string) => {
+      if (table === "jobs") return jobs.next() as never
+      return { select: charsByIdChain.mockSelect } as never
+    })
+
+    const res = await app.inject({
+      method: "GET",
+      url: `/v1/characters/${TEST_CHARACTER_ID}`,
+      headers: { "x-user-id": TEST_USER_ID },
+    })
+
+    expect(res.statusCode).toBe(200)
+    const NULL_SAFE_PREDICATE =
+      "input_data->>skipPortraitAttach.is.null,input_data->>skipPortraitAttach.neq.true"
+    expect(jobs.portraitChain.chain.or).toHaveBeenCalledWith(NULL_SAFE_PREDICATE)
+    expect(jobs.previousChain.chain.or).toHaveBeenCalledWith(NULL_SAFE_PREDICATE)
   })
 
   it("returns reference_videos_by_variant on the row (read round-trip)", async () => {

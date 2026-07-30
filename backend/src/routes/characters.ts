@@ -429,6 +429,11 @@ export async function characterRoutes(app: FastifyInstance) {
         .in("status", [...IN_FLIGHT_JOB_STATUSES])
         .filter("input_data->>type", "eq", "generate-character")
         .filter("input_data->>attachToCharacterId", "eq", id)
+        // skipPortraitAttach jobs (scene renders that only BORROW the
+        // character's identity) must never surface as an incoming portrait.
+        // OR-with-is.null keeps legacy rows without the key — a bare `neq`
+        // would drop them (SQL NULL <> 'true' filters the row out).
+        .or("input_data->>skipPortraitAttach.is.null,input_data->>skipPortraitAttach.neq.true")
         .limit(50),
       // previousCandidates: recently-completed `generate-character` jobs for
       // THIS row, with URL ≠ current portrait, within the last 7 days. We
@@ -444,6 +449,13 @@ export async function characterRoutes(app: FastifyInstance) {
         .eq("status", "completed")
         .filter("input_data->>type", "eq", "generate-character")
         .filter("input_data->>attachToCharacterId", "eq", id)
+        // skipPortraitAttach jobs are scene renders, not portrait candidates —
+        // surfacing them here made a busy full-scene image one click away from
+        // becoming the character's identity anchor (the exact promotion the
+        // flag exists to prevent; studio filtered this client-side as a
+        // TODO(nodaro) until this predicate landed). OR-with-is.null keeps
+        // legacy rows without the key.
+        .or("input_data->>skipPortraitAttach.is.null,input_data->>skipPortraitAttach.neq.true")
         .gte("created_at", sevenDaysAgo)
         .order("created_at", { ascending: false })
         .limit(10),

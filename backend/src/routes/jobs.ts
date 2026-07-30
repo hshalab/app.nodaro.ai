@@ -125,6 +125,11 @@ export interface JobRecord {
   credits: number | null
   credits_actual: number | null
   job_type: string | null
+  /** Provenance — which kind of caller created the job (lib/job-source.ts).
+   *  Owner-visible by design: it is the caller's own origin, not a cost or
+   *  provider internal, so `sanitizeJobForPublic` passes it through. */
+  source?: string | null
+  source_detail?: string | null
 }
 
 // Public job type (for regular users). USD-denominated `cost` removed
@@ -144,6 +149,8 @@ export interface PublicJob {
   user_id: string
   credits: number | null
   job_type: string | null
+  source?: string | null
+  source_detail?: string | null
 }
 
 /**
@@ -259,7 +266,7 @@ export async function jobRoutes(app: FastifyInstance) {
 
     let query = supabase
       .from("jobs")
-      .select("id, status, progress, input_data, output_data, error_message, created_at, started_at, completed_at, user_id, provider, provider_cost, display_cost, credits, credits_actual, reconcile_attempts")
+      .select("id, status, progress, input_data, output_data, error_message, created_at, started_at, completed_at, user_id, provider, provider_cost, display_cost, credits, credits_actual, reconcile_attempts, source, source_detail")
       .eq("id", id)
 
     if (!isAdmin) {
@@ -348,7 +355,7 @@ export async function jobRoutes(app: FastifyInstance) {
 
     let query = supabase
       .from("jobs")
-      .select("id, status, progress, input_data, output_data, error_message, created_at, started_at, completed_at, user_id, provider, provider_cost, display_cost, credits, credits_actual, job_type, workflow_executions!left(is_component_execution)")
+      .select("id, status, progress, input_data, output_data, error_message, created_at, started_at, completed_at, user_id, provider, provider_cost, display_cost, credits, credits_actual, job_type, source, source_detail, workflow_executions!left(is_component_execution)")
       .or("workflow_execution_id.is.null,workflow_executions.is_component_execution.neq.true")
       .order("created_at", { ascending: false })
       .limit(limitNum)

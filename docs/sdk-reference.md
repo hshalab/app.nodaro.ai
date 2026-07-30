@@ -3409,7 +3409,7 @@ Every type used in a public method signature is re-exported from
 
 ### Jobs
 
-- `Job` — snake_case wire shape
+- `Job` — snake_case wire shape; includes provenance: `source` (`"internal" | "mcp" | "app" | "cli" | "sdk" | "extension" | "web" | "api"`) + `source_detail` (origin host / `extension/<name>` label / `sdk/<version>` / MCP client / app id) so a library view can label or filter media by origin
 - `JobStatus` — `"pending" | "queued" | "processing" | "completed" | "failed" | "cancelled"`
 - `JobStatusResult` — lean poll shape: `{ id, status, progress?, output_data?, error_message? }`
 - `CancelJobResult` — `{ success: true, cancelled: number }`
