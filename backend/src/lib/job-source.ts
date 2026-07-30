@@ -34,11 +34,21 @@
  *  3. `app`       — a developer-app OAuth token (`req.appAuthorization`).
  *                   Beats the client header: what matters is WHICH integration,
  *                   not that it happened to use our SDK to get there.
- *  4. `web`       — an `Origin` header. Browsers always send it and CORS
- *                   already validates it, so it cannot be spoofed by a page we
- *                   don't serve. Non-browser callers never send it.
- *  5. `cli`/`sdk` — the `X-Nodaro-Client` header the published packages send.
- *  6. `api`       — none of the above: a raw HTTP call, or an SDK/CLI old
+ *  4. `extension` — an `Origin` with a browser-extension scheme
+ *                   (`chrome-extension://…`, `moz-extension://…`,
+ *                   `safari-web-extension://…`). A genuinely different KIND of
+ *                   caller than `web`: the origin host is an opaque store id,
+ *                   not a product domain, so grouping it under `web` buries it.
+ *                   The trusted signal (the scheme) decides the KIND; an
+ *                   `extension/<name>` client header — the one label browsers
+ *                   let extension service workers set freely — only refines the
+ *                   DETAIL to something human-readable.
+ *  5. `web`       — an http(s) `Origin` header. Browsers always send it and
+ *                   CORS already validates it, so it cannot be spoofed by a
+ *                   page we don't serve. Non-browser callers never send it.
+ *  6. `cli`/`sdk`/`extension` — the `X-Nodaro-Client` header the published
+ *                   packages (or an extension without an Origin) send.
+ *  7. `api`       — none of the above: a raw HTTP call, or an SDK/CLI old
  *                   enough to predate the header.
  *
  * ORIGIN ABOVE THE CLIENT HEADER is deliberate and was originally the other way
@@ -78,7 +88,7 @@ const firstHeaderValue = (v: string | string[] | undefined): string | undefined 
 
 /** Coarse caller kind. Closed set — widen only for a genuinely new KIND of
  *  caller, not for a new deployment of an existing one (that's `detail`). */
-export const JOB_SOURCES = ["internal", "mcp", "app", "cli", "sdk", "web", "api"] as const
+export const JOB_SOURCES = ["internal", "mcp", "app", "cli", "sdk", "extension", "web", "api"] as const
 export type JobSource = (typeof JOB_SOURCES)[number]
 
 /** Header the published `@nodaro/sdk` and `@nodaro/cli` send, e.g.
@@ -111,13 +121,31 @@ function originHost(origin: string | undefined): string | null {
   }
 }
 
-/** Parse `X-Nodaro-Client`. Only `cli` and `sdk` are honoured; the version is
- *  kept verbatim as detail. A header claiming anything else is discarded. */
+/** Browser-extension origin schemes. The scheme is set by the browser itself
+ *  (like `Origin` generally), so it is the trusted "this is an extension"
+ *  signal; the host part is the store-assigned extension id. */
+const EXTENSION_ORIGIN_SCHEMES = ["chrome-extension:", "moz-extension:", "safari-web-extension:"]
+
+/** Extension id when the Origin carries an extension scheme, else null. */
+function extensionOriginId(origin: string | undefined): string | null {
+  if (!origin || origin === "null") return null
+  try {
+    const url = new URL(origin)
+    return EXTENSION_ORIGIN_SCHEMES.includes(url.protocol) ? (url.host || null) : null
+  } catch {
+    return null
+  }
+}
+
+/** Parse `X-Nodaro-Client`. Only `cli`, `sdk`, and `extension` are honoured;
+ *  the value is kept verbatim as detail. A header claiming anything else is
+ *  discarded — this is a convenience signal from an unauthenticated header, so
+ *  it may only ever select among values we already recognise. */
 function parseClientHeader(raw: string | undefined): DerivedJobSource | null {
   if (!raw) return null
   const value = raw.trim()
   const name = (value.split("/")[0] ?? "").toLowerCase()
-  if (name !== "cli" && name !== "sdk") return null
+  if (name !== "cli" && name !== "sdk" && name !== "extension") return null
   return { source: name, sourceDetail: detail(value) }
 }
 
@@ -137,12 +165,25 @@ export function deriveJobSource(req: FastifyRequest): DerivedJobSource {
     return { source: "app", sourceDetail: detail(req.appAuthorization.appId) }
   }
 
+  const rawOrigin = firstHeaderValue(req.headers.origin)
+  const fromHeader = parseClientHeader(firstHeaderValue(req.headers[CLIENT_HEADER] as string | string[] | undefined))
+
+  // Extension-scheme Origin: the browser-set scheme decides the KIND; a
+  // matching `extension/<name>` header only upgrades the DETAIL from the
+  // opaque store id to a human-readable label. See the precedence note above.
+  const extensionId = extensionOriginId(rawOrigin)
+  if (extensionId) {
+    return {
+      source: "extension",
+      sourceDetail: fromHeader?.source === "extension" ? fromHeader.sourceDetail : detail(extensionId),
+    }
+  }
+
   // Before the client header: a browser app that uses the SDK sends both, and
   // the origin host is the more specific answer. See the precedence note above.
-  const host = originHost(firstHeaderValue(req.headers.origin))
+  const host = originHost(rawOrigin)
   if (host) return { source: "web", sourceDetail: detail(host) }
 
-  const fromHeader = parseClientHeader(firstHeaderValue(req.headers[CLIENT_HEADER] as string | string[] | undefined))
   if (fromHeader) return fromHeader
 
   return { source: "api", sourceDetail: null }

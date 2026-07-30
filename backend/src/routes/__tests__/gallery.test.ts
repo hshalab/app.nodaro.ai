@@ -63,11 +63,14 @@ beforeEach(async () => {
 
   app = Fastify({ logger: false })
 
-  // Bypass auth — set userId from request body or query for protected routes
+  // Bypass auth — set userId from request body or query for protected routes.
+  // An `x-user-id` header (when present) wins, so tests can simulate an
+  // AUTHENTICATED caller different from the `?userId=` filter (cross-user).
   app.addHook("preHandler", async (req) => {
     const body = req.body as Record<string, unknown> | undefined
     const query = req.query as Record<string, unknown> | undefined
-    const userId = body?.userId ?? query?.userId
+    const headerId = req.headers["x-user-id"]
+    const userId = (typeof headerId === "string" && headerId) || body?.userId || query?.userId
     if (userId && typeof userId === "string") {
       req.userId = userId
       req.userRole = undefined
@@ -107,6 +110,28 @@ function createChainMock(result: { data: unknown; error: unknown }) {
   }
   const proxy = new Proxy(chain, handler)
   return proxy
+}
+
+/**
+ * Like `createChainMock`, but records every method call + args so a test can
+ * assert WHICH filters were applied (e.g. whether `.eq("is_public", true)`
+ * was part of the chain). One recorder serves every `.from()` in the request.
+ */
+function createRecordingChainMock(result: { data: unknown; error: unknown }) {
+  const calls: Array<{ method: string; args: unknown[] }> = []
+  const handler: ProxyHandler<Record<string, unknown>> = {
+    get(_target, prop) {
+      if (prop === "then") {
+        return (resolve: (v: unknown) => void) => resolve(result)
+      }
+      return (...args: unknown[]) => {
+        calls.push({ method: String(prop), args })
+        return proxy
+      }
+    },
+  }
+  const proxy = new Proxy({}, handler)
+  return { proxy, calls }
 }
 
 // ---------------------------------------------------------------------------
@@ -210,6 +235,56 @@ describe("GET /v1/gallery", () => {
 // ---------------------------------------------------------------------------
 // Tests — POST /v1/gallery/report
 // ---------------------------------------------------------------------------
+
+describe("GET /v1/gallery — force_private is discovery-only, never owner-invisible", () => {
+  const OTHER_USER_ID = "00000000-0000-4000-8000-000000000002"
+
+  it("drops the is_public gate when the authenticated caller IS the requested user", async () => {
+    // "My items only": the owner must see their own force_private outputs —
+    // every other layer (/v1/jobs, RLS 032, MCP browse_gallery scope=mine)
+    // already treats the flag as discovery-only.
+    const rec = createRecordingChainMock({ data: [], error: null })
+    vi.mocked(supabase.from).mockReturnValue(rec.proxy as never)
+
+    const res = await app.inject({ method: "GET", url: `/v1/gallery?userId=${TEST_USER_ID}` })
+
+    expect(res.statusCode).toBe(200)
+    const isPublicFilters = rec.calls.filter((c) => c.method === "eq" && c.args[0] === "is_public")
+    expect(isPublicFilters).toEqual([])
+    const userScope = rec.calls.filter((c) => c.method === "eq" && c.args[0] === "user_id")
+    expect(userScope.length).toBeGreaterThan(0)
+  })
+
+  it("keeps the public-only gate when a DIFFERENT authenticated user requests someone's items", async () => {
+    const rec = createRecordingChainMock({ data: [], error: null })
+    vi.mocked(supabase.from).mockReturnValue(rec.proxy as never)
+
+    const res = await app.inject({
+      method: "GET",
+      url: `/v1/gallery?userId=${TEST_USER_ID}`,
+      headers: { "x-user-id": OTHER_USER_ID },
+    })
+
+    expect(res.statusCode).toBe(200)
+    const isPublicFilters = rec.calls.filter(
+      (c) => c.method === "eq" && c.args[0] === "is_public" && c.args[1] === true,
+    )
+    expect(isPublicFilters.length).toBeGreaterThan(0)
+  })
+
+  it("keeps the public-only gate for the anonymous global gallery", async () => {
+    const rec = createRecordingChainMock({ data: [], error: null })
+    vi.mocked(supabase.from).mockReturnValue(rec.proxy as never)
+
+    const res = await app.inject({ method: "GET", url: "/v1/gallery" })
+
+    expect(res.statusCode).toBe(200)
+    const isPublicFilters = rec.calls.filter(
+      (c) => c.method === "eq" && c.args[0] === "is_public" && c.args[1] === true,
+    )
+    expect(isPublicFilters.length).toBeGreaterThan(0)
+  })
+})
 
 describe("POST /v1/gallery/report", () => {
   it("returns 400 for invalid UUID", async () => {

@@ -30,6 +30,15 @@ export interface Job {
   created_at: string
   started_at: string | null
   completed_at: string | null
+  /**
+   * Provenance: which kind of caller created the job — one of
+   * `"internal" | "mcp" | "app" | "cli" | "sdk" | "extension" | "web" | "api"`.
+   * `source_detail` narrows it (origin host, `extension/<name>` label,
+   * `sdk/<version>`, MCP client name, developer-app id). Descriptive only;
+   * lets a library view label or filter media by origin.
+   */
+  source?: string | null
+  source_detail?: string | null
 }
 
 export interface CancelJobResult {

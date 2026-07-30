@@ -77,6 +77,36 @@ describe("deriveJobSource", () => {
     }
   })
 
+  it("classifies a browser-extension Origin as `extension`, not `web`", () => {
+    // The scheme is browser-set (trusted, like Origin generally); the host is
+    // the store-assigned extension id. Grouping these under `web` would bury
+    // them behind an opaque hash where a product host is expected.
+    expect(deriveJobSource(req({ headers: { origin: "chrome-extension://abcdefghijklmnop" } })))
+      .toEqual({ source: "extension", sourceDetail: "abcdefghijklmnop" })
+    expect(deriveJobSource(req({ headers: { origin: "moz-extension://0b1c2d3e" } })).source)
+      .toBe("extension")
+  })
+
+  it("an extension/<name> header upgrades the DETAIL; the scheme still decides the KIND", () => {
+    const r = req({
+      headers: {
+        origin: "chrome-extension://abcdefghijklmnop",
+        "x-nodaro-client": "extension/recut-clipper@1.2.0",
+      },
+    })
+    expect(deriveJobSource(r)).toEqual({ source: "extension", sourceDetail: "extension/recut-clipper@1.2.0" })
+  })
+
+  it("a non-extension header does NOT override the extension origin's id detail", () => {
+    const r = req({ headers: { origin: "chrome-extension://abcdef", "x-nodaro-client": "sdk/1.12.0" } })
+    expect(deriveJobSource(r)).toEqual({ source: "extension", sourceDetail: "abcdef" })
+  })
+
+  it("honours a bare extension/<name> header when no Origin is present", () => {
+    expect(deriveJobSource(req({ headers: { "x-nodaro-client": "extension/recut-clipper" } })))
+      .toEqual({ source: "extension", sourceDetail: "extension/recut-clipper" })
+  })
+
   it("stores the ORIGIN HOST for browsers, so a new subdomain needs no code change", () => {
     // The point of the design: person.nodaro.ai has never been mentioned in
     // job-source.ts, and still classifies correctly on the day it launches.
@@ -107,6 +137,7 @@ describe("deriveJobSource", () => {
       req({ isInternalCall: true }),
       req({ body: { mcp_client: "X" } }),
       req({ headers: { origin: "https://a.b" } }),
+      req({ headers: { origin: "chrome-extension://abcdef" } }),
       req({ headers: { "x-nodaro-client": "cli/1" } }),
       req({ appAuthorization: { appId: "a", authorizationId: "b", scopes: [] } }),
     ]

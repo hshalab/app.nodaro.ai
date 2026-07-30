@@ -90,6 +90,18 @@ export async function galleryRoutes(app: FastifyInstance) {
     const userIdFilter = query.userId as string | undefined
     const favoritesOnly = query.favoritesOnly === "true"
 
+    // `force_private` (jobs.is_public = false) is DISCOVERY-only: it keeps an
+    // output out of the public gallery, it never hides it from its own
+    // creator — /v1/jobs, RLS (032), and MCP `browse_gallery scope=mine` all
+    // already treat it that way; this route was the one surface conflating
+    // "not discoverable" with "not visible to its owner" ("My items only"
+    // hid every force_private generation from the person who made it). When
+    // the AUTHENTICATED caller is the requested user, drop the is_public
+    // gate. req.userId comes from the auth hook's optional-auth path on this
+    // public route, so an anonymous or cross-user request can never reach
+    // the private view.
+    const isOwnerView = !!userIdFilter && !!req.userId && req.userId === userIdFilter
+
     // Pre-fetch favorite job IDs if filtering by favorites
     let favoriteJobIds: string[] | null = null
     if (favoritesOnly && userIdFilter) {
@@ -110,10 +122,12 @@ export async function galleryRoutes(app: FastifyInstance) {
       let countQuery = supabase
         .from("jobs")
         .select("id", { count: "exact", head: true })
-        .eq("is_public", true)
         .eq("status", "completed")
         .not("output_data", "is", null)
 
+      if (!isOwnerView) {
+        countQuery = countQuery.eq("is_public", true)
+      }
       if (userIdFilter) {
         countQuery = countQuery.eq("user_id", userIdFilter)
       }
@@ -156,12 +170,14 @@ export async function galleryRoutes(app: FastifyInstance) {
       let dbQuery = supabase
         .from("jobs")
         .select("id, job_type, input_data, output_data, completed_at, user_id, provider")
-        .eq("is_public", true)
         .eq("status", "completed")
         .not("output_data", "is", null)
         .order("completed_at", { ascending: false })
         .limit(fetchCount)
 
+      if (!isOwnerView) {
+        dbQuery = dbQuery.eq("is_public", true)
+      }
       if (userIdFilter) {
         dbQuery = dbQuery.eq("user_id", userIdFilter)
       }
