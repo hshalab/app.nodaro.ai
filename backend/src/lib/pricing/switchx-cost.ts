@@ -14,13 +14,26 @@
 // non-monetary tier list, tier-picker, and credit-id builder stay in
 // `@nodaro/shared` (`switchx-pricing.ts`) — this file holds only the
 // $-per-block → credits conversion.
-import { SWITCHX_BLOCK_FRAMES, pickSwitchXFrameTier } from "@nodaro/shared"
+import { SWITCHX_BLOCK_FRAMES, pickSwitchXFrameTier, usdToCredits } from "@nodaro/shared"
 
-// At-cost credits per 30-frame block: 720p, 1080p.
-const SWITCHX_BLOCK_CREDITS: Record<720 | 1080, number> = { 720: 5, 1080: 15 }
+/**
+ * Beeble's per-30-frame-block rate in USD, at cost.
+ *
+ * PROVENANCE: derived from the credit values this module shipped with
+ * (720p = 5 cr, 1080p = 15 cr at CREDIT_BASE_USD = $0.02), which the header
+ * above documents as a straight at-cost pass-through of Beeble's published
+ * rate. It is NOT quoted from an invoice or from developer.beeble.ai/pricing.
+ * Confirm against the published rate before re-deriving anything from it.
+ *
+ * Recorded in USD rather than credits so the value survives a change to
+ * CREDIT_BASE_USD — the credit figures are now derived, not stored. As stored
+ * credits, a re-denomination would have silently mispriced this provider by
+ * the full re-denomination factor.
+ */
+export const SWITCHX_BLOCK_USD: Record<720 | 1080, number> = { 720: 0.10, 1080: 0.30 }
 
 export function switchXHoldCredits(frames: number | undefined, res: 720 | 1080): number {
   // tier is always a 30-frame multiple, so (tier / 30) is the integer block count.
   const blocks = pickSwitchXFrameTier(frames) / SWITCHX_BLOCK_FRAMES
-  return blocks * SWITCHX_BLOCK_CREDITS[res]
+  return usdToCredits(blocks * SWITCHX_BLOCK_USD[res])
 }

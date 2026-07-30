@@ -3,6 +3,8 @@ import {
   AI_AVATAR_DURATION_BUCKETS,
   AI_AVATAR_MAX_AUDIO_SEC,
   resolveAiAvatarCreditId,
+  usdToCredits,
+  CREDIT_BASE_USD,
 } from "@nodaro/shared"
 import {
   AI_AVATAR_RATE_USD_PER_SEC,
@@ -16,7 +18,6 @@ import {
 // hold value: reserved = ceil(hold * (1 + markup/100)).
 // At COMMIT: computeActualCredits(providerCostUsd) = ceil(ceil(usd/0.02) * (1+markup/100)).
 // The hold value stored in STATIC_CREDIT_COSTS / model_pricing is aiAvatarHoldCredits().
-const CREDIT_BASE_USD = 0.02
 function reservedFromHold(hold: number, markupPct: number): number {
   return markupPct > 0 ? Math.ceil(hold * (1 + markupPct / 100)) : hold
 }
@@ -184,5 +185,31 @@ describe("AI_AVATAR_RATE_USD_PER_SEC", () => {
       const resolutions = Object.keys(AI_AVATAR_RATE_USD_PER_SEC[engine as keyof typeof AI_AVATAR_RATE_USD_PER_SEC])
       expect(resolutions).toHaveLength(3)
     }
+  })
+})
+
+// ── Guard adoption: usdToCredits vs the bare ceil this module used to do ──
+// Sweeps the SHIPPED id construction (credits.ts builds one id per
+// engine × resolution × AI_AVATAR_DURATION_BUCKETS), NOT the rate function's
+// whole 1..300s domain. A domain sweep reports divergences at durations that
+// are never priced, which would wrongly read as a price change.
+describe("aiAvatarHoldCredits — guard adoption is a no-op on shipped ids", () => {
+  it("agrees with the bare ceil on every shipped engine × resolution × bucket", () => {
+    let compared = 0
+    for (const engine of Object.keys(AI_AVATAR_RATE_USD_PER_SEC) as (keyof typeof AI_AVATAR_RATE_USD_PER_SEC)[]) {
+      for (const resolution of Object.keys(AI_AVATAR_RATE_USD_PER_SEC[engine]) as never[]) {
+        for (const bucketSec of AI_AVATAR_DURATION_BUCKETS) {
+          const usd = aiAvatarUsdCost(engine, resolution, bucketSec)
+          expect(usdToCredits(usd)).toBe(Math.ceil(usd / 0.02))
+          compared++
+        }
+      }
+    }
+    // 2 engines × 3 resolutions × 10 buckets — fails loudly if the sweep goes inert.
+    expect(compared).toBe(60)
+  })
+
+  it("holds credits equal to usdToCredits of the same cost", () => {
+    expect(aiAvatarHoldCredits("avatar-iv", "720p", 10)).toBe(usdToCredits(aiAvatarUsdCost("avatar-iv", "720p", 10)))
   })
 })

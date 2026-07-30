@@ -1,3 +1,4 @@
+import { CREDIT_BASE_USD } from "@nodaro/shared"
 import { describe, it, expect } from "vitest"
 import { STATIC_CREDIT_COSTS } from "../credits.js"
 
@@ -9,7 +10,6 @@ import { STATIC_CREDIT_COSTS } from "../credits.js"
  */
 
 const RATE_PER_SEC = 0.13333
-const CREDIT_BASE_USD = 0.02
 const atCost = (bucketSec: number): number =>
   Math.ceil((RATE_PER_SEC * bucketSec) / CREDIT_BASE_USD)
 

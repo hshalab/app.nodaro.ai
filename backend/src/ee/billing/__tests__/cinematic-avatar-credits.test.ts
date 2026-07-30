@@ -17,10 +17,9 @@
 
 import { describe, it, expect } from "vitest"
 import { STATIC_CREDIT_COSTS, CREDIT_COSTS } from "../credits.js"
-import { CINEMATIC_RESERVE_IDS, CINEMATIC_MIN_DURATION_SEC, CINEMATIC_MAX_DURATION_SEC, resolveCinematicCreditId, type CinematicResolution } from "@nodaro/shared"
+import { CINEMATIC_RESERVE_IDS, CINEMATIC_MIN_DURATION_SEC, CINEMATIC_MAX_DURATION_SEC, resolveCinematicCreditId, type CinematicResolution, CREDIT_BASE_USD} from "@nodaro/shared"
 import { CINEMATIC_RATE_USD_PER_SEC, cinematicHoldCredits, cinematicUsdCost } from "../../../lib/pricing/cinematic-avatar-cost.js"
 
-const CREDIT_BASE_USD = 0.02
 // Runtime reserve: getModelCreditCostFromDB applies the admin markup to the stored hold.
 function reservedFromHold(hold: number, markupPct: number): number {
   return markupPct > 0 ? Math.ceil(hold * (1 + markupPct / 100)) : hold

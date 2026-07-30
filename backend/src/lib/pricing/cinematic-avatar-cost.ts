@@ -27,6 +27,7 @@
  * Provider Enum Sync checklist steps 7–9).
  * ────────────────────────────────────────────────────────────────────────────
  */
+import { usdToCredits } from "@nodaro/shared"
 import type { CinematicResolution } from "@nodaro/shared"
 
 /**
@@ -62,7 +63,7 @@ export function cinematicUsdCost(
 /**
  * Credit hold (the STORED 0%-base reserve) for a given (resolution, durationSec).
  *
- * Formula: ceil(cinematicUsdCost(resolution, durationSec) / 0.02)
+ * Formula: usdToCredits(cinematicUsdCost(resolution, durationSec))
  *
  * This is the at-cost base-credit value (1 credit = $0.02, CREDIT_BASE_USD).
  * It is deliberately MINIMAL — there is NO *1.5 safety factor — because the
@@ -72,7 +73,7 @@ export function cinematicUsdCost(
  *
  * Refund-only invariant (verified by the pricing test): because duration is a
  * user parameter known at submit time, the reserve id encodes the EXACT
- * duration, so reserved = ceil(hold * markup) = ceil(ceil(usd/0.02) * markup)
+ * duration, so reserved = ceil(hold * markup) = ceil(usdToCredits(usd) * markup)
  * equals the metered actual computed at commit from the same USD cost. They
  * coincide exactly (the provider returns the requested duration), so
  * commit_credits refunds nothing in the common case and can only ever refund,
@@ -82,5 +83,5 @@ export function cinematicHoldCredits(
   resolution: CinematicResolution,
   durationSec: number,
 ): number {
-  return Math.ceil(cinematicUsdCost(resolution, durationSec) / 0.02)
+  return usdToCredits(cinematicUsdCost(resolution, durationSec))
 }

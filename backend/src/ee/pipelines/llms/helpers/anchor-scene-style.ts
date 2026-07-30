@@ -1,6 +1,6 @@
 import { z } from "zod"
 import type { SupabaseClient } from "@supabase/supabase-js"
-import { type AnchorSceneStyleResult, type SceneNodeData, type ShowrunnerPlan } from "@nodaro/shared"
+import { usdToCredits, type AnchorSceneStyleResult, type SceneNodeData, type ShowrunnerPlan } from "@nodaro/shared"
 import { callLLM } from "../call-llm.js"
 import { pipelineGenerateImage } from "../../services/pipeline-generate-image.js"
 import { getPipelinePrompt, PIPELINE_PROMPT_KEYS } from "../prompt-registry.js"
@@ -87,6 +87,6 @@ Write the anchor_prompt and respond as JSON.`
     asset_url: imageResult.assetUrl,
     credits_spent:
       imageResult.creditsSpent +
-      (planResult.costUsd > 0 ? Math.ceil(planResult.costUsd / 0.02) : 0),
+      (planResult.costUsd > 0 ? usdToCredits(planResult.costUsd) : 0),
   }
 }

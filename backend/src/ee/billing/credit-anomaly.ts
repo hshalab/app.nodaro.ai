@@ -1,17 +1,37 @@
 import { supabase } from "../../lib/supabase.js"
 import { getAppSettings } from "../../lib/app-settings.js"
-import { CREDIT_BASE_USD } from "@nodaro/shared"
+import { usdToCredits } from "@nodaro/shared"
+
+/**
+ * Reserve-vs-actual mismatches below this DOLLAR value are noise, not anomalies.
+ *
+ * Stored in USD rather than credits so it means the same thing after a credit
+ * re-denomination. As a hardcoded `1` it would silently become a 10x-tighter
+ * filter the moment CREDIT_BASE_USD moved, flooding `credit_anomalies`.
+ */
+export const ANOMALY_TOLERANCE_USD = 0.02
+
+/** {@link ANOMALY_TOLERANCE_USD} expressed in whole credits at the current base. */
+export function anomalyToleranceCredits(): number {
+  return usdToCredits(ANOMALY_TOLERANCE_USD)
+}
 
 /**
  * Compute actual credits from provider cost in USD.
- * Mirrors the credit pricing formula: 1 credit = $0.02 at 0% markup.
+ * Mirrors the credit pricing formula: 1 credit = CREDIT_BASE_USD at 0% markup.
  *
- * Double-ceil rationale: ceil(cost / base) rounds up fractional provider cost
+ * Double-ceil rationale: the base conversion rounds up fractional provider cost
  * to whole credits first, then ceil(× markup) rounds up the markup separately.
  * This ensures we never undercharge even by a fraction of a credit.
+ *
+ * The base conversion goes through `usdToCredits`, which carries the
+ * milli-credit float guard. The previous bare `Math.ceil(cost / base)`
+ * over-charged a full credit whenever IEEE-754 division landed just above an
+ * integer — measured at 61 production jobs (55 lip-sync, 4 image-to-video,
+ * 2 generate-character), always in the customer's disfavour.
  */
 export async function computeActualCredits(providerCostUsd: number): Promise<number> {
-  const baseCredits = Math.ceil(providerCostUsd / CREDIT_BASE_USD)
+  const baseCredits = usdToCredits(providerCostUsd)
   const settings = await getAppSettings()
   if (settings.cost_markup_percent > 0) {
     return Math.ceil(baseCredits * (1 + settings.cost_markup_percent / 100))
@@ -42,8 +62,8 @@ export async function checkAndLogAnomaly(params: AnomalyCheckParams): Promise<vo
     // Zero-cost reservation with actual charges is always an anomaly
     if (reservedCredits === 0 && actualCredits > 0) {
       // fall through to log as "zero_cost" anomaly
-    } else if (Math.abs(diff) <= 1 || reservedCredits === 0 || Math.abs(diff) / reservedCredits <= 0.10) {
-      // Skip insignificant mismatches: 1 credit or less, or under 10% deviation
+    } else if (Math.abs(diff) <= anomalyToleranceCredits() || reservedCredits === 0 || Math.abs(diff) / reservedCredits <= 0.10) {
+      // Skip insignificant mismatches: under the dollar tolerance, or under 10% deviation
       return
     }
 

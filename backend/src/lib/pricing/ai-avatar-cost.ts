@@ -29,7 +29,7 @@
  * confirmed (follow the Provider Enum Sync checklist steps 7–9).
  * ────────────────────────────────────────────────────────────────────────────
  */
-import { AI_AVATAR_MAX_DURATION_SEC } from "@nodaro/shared"
+import { AI_AVATAR_MAX_DURATION_SEC, usdToCredits } from "@nodaro/shared"
 import type { AiAvatarEngine, AiAvatarResolution } from "@nodaro/shared"
 
 /**
@@ -65,7 +65,7 @@ export function aiAvatarUsdCost(
 /**
  * Credit hold (the STORED 0%-base reserve) for a given (engine, resolution, bucket).
  *
- * Formula: ceil(aiAvatarUsdCost(engine, resolution, bucketSec) / 0.02)
+ * Formula: usdToCredits(aiAvatarUsdCost(engine, resolution, bucketSec))
  *
  * This is the at-cost base-credit value (1 credit = $0.02, CREDIT_BASE_USD).
  * It is deliberately MINIMAL — there is NO *1.5 safety factor — because:
@@ -79,7 +79,7 @@ export function aiAvatarUsdCost(
  *
  * Refund-only invariant (verified by the pricing test): for every bucket at its
  * CEILING duration, reserved = ceil(hold * markup) EQUALS the metered actual
- * = ceil(ceil(usd/0.02) * markup) — they share the exact same base. For any
+ * = ceil(usdToCredits(usd) * markup) — they share the exact same base. For any
  * shorter clip the metered actual is strictly less. So commit_credits
  * (computeActualCredits at job completion) can only ever REFUND surplus, never
  * undercharge. No epsilon is needed — the bases are identical at the boundary.
@@ -89,7 +89,7 @@ export function aiAvatarHoldCredits(
   resolution: AiAvatarResolution,
   bucketSec: number,
 ): number {
-  return Math.ceil(aiAvatarUsdCost(engine, resolution, bucketSec) / 0.02)
+  return usdToCredits(aiAvatarUsdCost(engine, resolution, bucketSec))
 }
 
 /**
