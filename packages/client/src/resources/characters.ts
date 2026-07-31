@@ -245,6 +245,14 @@ export interface ListCharactersParams {
    * server default — passing it just narrows further.
    */
   limit?: number
+  /** Opaque cursor from a prior page's `nextCursor` (fetches the next page). */
+  cursor?: string
+}
+
+export interface ListCharactersResult {
+  characters: Character[]
+  /** Pass back as `cursor` for the next page; `null` when there are no more. */
+  nextCursor: string | null
 }
 
 export interface DuplicateCharacterInput {
@@ -424,12 +432,29 @@ export class CharactersResource {
    * pass `archived: true` to fetch soft-deleted rows for an "archive" view.
    * When `projectId` is set, only characters belonging to that project are
    * returned.
+   *
+   * Cursor-paginated: a response carrying a non-null `nextCursor` means more
+   * rows exist. Pass it back as `cursor` to fetch the next page, and keep going
+   * until `nextCursor` is `null` — a single call returns at most `limit` rows
+   * (default 100), so treating one call as "all characters" silently truncates
+   * the list for anyone past that count.
+   *
+   * ```ts
+   * const all: Character[] = []
+   * let cursor: string | undefined
+   * do {
+   *   const page = await client.characters.list({ cursor })
+   *   all.push(...page.characters)
+   *   cursor = page.nextCursor ?? undefined
+   * } while (cursor)
+   * ```
    */
-  list(params: ListCharactersParams = {}): Promise<{ characters: Character[] }> {
+  list(params: ListCharactersParams = {}): Promise<ListCharactersResult> {
     const query: Record<string, string | undefined> = {}
     if (params.projectId) query.projectId = params.projectId
     if (params.archived) query.archived = "true"
     if (params.limit !== undefined) query.limit = String(params.limit)
+    if (params.cursor) query.cursor = params.cursor
     return this.client.request("GET", "/v1/characters", { query })
   }
 

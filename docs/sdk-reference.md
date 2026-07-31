@@ -940,9 +940,30 @@ Lists the caller's characters. By default returns active characters only;
 pass `archived: true` for an "archive" view. `projectId` further restricts
 to a single project. `limit` caps the result (server default 100, max 500).
 
+Cursor-paginated — one call returns **at most `limit` rows**, so a single
+call is not "all characters" for anyone above that count. Page until
+`nextCursor` is `null`:
+
 ```ts
-const { characters } = await client.characters.list({ projectId, limit: 50 })
+const all: Character[] = []
+let cursor: string | undefined
+do {
+  const page = await client.characters.list({ projectId, cursor })
+  all.push(...page.characters)
+  cursor = page.nextCursor ?? undefined
+} while (cursor)
 ```
+
+A single page, when that is all you need:
+
+```ts
+const { characters, nextCursor } = await client.characters.list({ projectId, limit: 50 })
+```
+
+`nextCursor` is opaque — echo it back as `cursor`, never parse or persist it.
+The underlying keyset is `(created_at, id)` ordered `DESC`, so rows sharing a
+`created_at` are not skipped at page boundaries. A malformed cursor throws a
+`validation_error` rather than silently restarting from page 1.
 
 #### `get(id)`
 

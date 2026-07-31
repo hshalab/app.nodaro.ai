@@ -14,6 +14,7 @@ import { cancelCharacterTraining, deleteCharacterLora } from "../providers/repli
 import { refundReservedCreditsForJob } from "../lib/character-lora.js"
 import { sendInternalError } from "../lib/http-errors.js"
 import { IN_FLIGHT_JOB_STATUSES } from "../lib/job-status.js"
+import { decodeKeysetCursor, encodeKeysetCursor, keysetFilter } from "../lib/keyset-cursor.js"
 
 /**
  * Characters API. Soft-delete + case-insensitive unique name per user
@@ -176,9 +177,14 @@ const listCharactersQuery = z.object({
   archived: z.enum(["true", "false"]).optional(),
   // Default 100 = enough for the library list at typical scale; cap at 500 so
   // a misbehaving SDK consumer can't drag the whole table over the wire.
-  // The route APPLIES `.limit(parsed.limit)` so this both validates AND drives
-  // the actual DB cap.
+  // The route APPLIES `.limit(parsed.limit + 1)` so this both validates AND
+  // drives the actual DB cap (the +1 is the has-more probe, see below).
   limit: z.coerce.number().int().positive().max(500).optional().default(100),
+  // Opaque keyset cursor over `(created_at, id)` — echo back a prior page's
+  // `nextCursor`. Bounded so a junk value can't cost us a large base64 decode.
+  // Format is validated by `decodeKeysetCursor`, not here: Zod only sees an
+  // opaque string, and an undecodable one is a 400 in the handler.
+  cursor: z.string().max(512).optional(),
 })
 
 const SELECT_COLUMNS =
@@ -336,21 +342,39 @@ export async function characterRoutes(app: FastifyInstance) {
       })
     }
 
-    const { projectId, archived, limit } = parsed.data
+    const { projectId, archived, limit, cursor: rawCursor } = parsed.data
     const userId = req.userId
     const wantArchived = archived === "true"
+
+    // An undecodable cursor is a 400, NOT a silent fall-through to page 1:
+    // a rolling-load client that got page 1 back for a "next page" request
+    // would append the same rows forever instead of surfacing the bug.
+    const cursor = rawCursor ? decodeKeysetCursor(rawCursor) : null
+    if (rawCursor && !cursor) {
+      return reply.status(400).send({
+        error: { code: "validation_error", message: "Invalid cursor" },
+      })
+    }
 
     let query = supabase
       .from("characters")
       .select(SELECT_COLUMNS)
+      // `id` is the tie-break that makes the ordering TOTAL — without it, rows
+      // sharing a `created_at` (same-transaction inserts) have no defined order
+      // and the keyset boundary below can't land between two specific rows.
       .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
 
     if (projectId) query = query.eq("project_id", projectId)
     if (userId) query = query.eq("user_id", userId)
     // Default view excludes archived. Archived view flips the filter.
     if (wantArchived) query = query.not("deleted_at", "is", null)
     else query = query.is("deleted_at", null)
-    query = query.limit(limit)
+    if (cursor) query = query.or(keysetFilter(cursor))
+    // Over-fetch by one to learn whether another page exists without a second
+    // round-trip. The probe row is sliced off before the response is built, so
+    // a page never exceeds the caller's `limit`.
+    query = query.limit(limit + 1)
 
     const { data, error } = await query
 
@@ -358,7 +382,14 @@ export async function characterRoutes(app: FastifyInstance) {
       return sendInternalError(reply, req, error, "Failed to list characters")
     }
 
-    return { characters: (data ?? []).map(toCamel) }
+    const rows = data ?? []
+    const hasMore = rows.length > limit
+    const page = hasMore ? rows.slice(0, limit) : rows
+    const last = page[page.length - 1]
+    const nextCursor =
+      hasMore && last ? encodeKeysetCursor({ createdAt: last.created_at, id: last.id }) : null
+
+    return { characters: page.map(toCamel), nextCursor }
   })
 
   // -----------------------------------------------------------------------
