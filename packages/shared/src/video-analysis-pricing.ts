@@ -60,37 +60,45 @@ export const VIDEO_ANALYSIS_WINDOW = { LEN: WINDOW_LEN, STRIDE: WINDOW_STRIDE, O
 // from the same roll plan, so they are formula-derived too (mixed:60s is 104,
 // not 110). The plugin's cost test now covers sentinels as well, so this class
 // of drift fails CI instead of shipping.
+// REGENERATED 2026-07-31 with the smart-tier re-base (formula inputs moved in
+// the plugin: sampling 24→6 fps after a 43-run measurement found 6 equal on
+// content and strictly better on cast stability; the system-prompt and
+// per-window output-token constants trued-up to directly measured values).
+// Net effect: smart drops 27–47% per bucket — the 24 fps token spend was also
+// partly paying for media tokens the provider clamped and never counted — and
+// the economy rows tick up 3–6% from the prompt-token true-up.
 export const VIDEO_ANALYSIS_BUCKET_CREDITS: Record<string, number> = {
   // Legacy fast-tier model (pre-2026-07) — kept for stored raw-id configs.
-  "video-analysis:gemini-3-flash:60s": 23,
-  "video-analysis:gemini-3-flash:180s": 32,
-  "video-analysis:gemini-3-flash:360s": 81,
-  "video-analysis:gemini-3-flash:600s": 136,
+  "video-analysis:gemini-3-flash:60s": 24,
+  "video-analysis:gemini-3-flash:180s": 33,
+  "video-analysis:gemini-3-flash:360s": 86,
+  "video-analysis:gemini-3-flash:600s": 143,
   // Current fast tier — regenerated from the private formula for its backing
   // model; higher than the legacy fast schedule but still ≤ pro per bucket.
-  "video-analysis:gemini-3.6-flash:60s": 61,
-  "video-analysis:gemini-3.6-flash:180s": 88,
-  "video-analysis:gemini-3.6-flash:360s": 224,
-  "video-analysis:gemini-3.6-flash:600s": 374,
-  "video-analysis:gemini-3.1-pro:60s": 82,
-  "video-analysis:gemini-3.1-pro:180s": 111,
-  "video-analysis:gemini-3.1-pro:360s": 291,
-  "video-analysis:gemini-3.1-pro:600s": 486,
+  "video-analysis:gemini-3.6-flash:60s": 65,
+  "video-analysis:gemini-3.6-flash:180s": 92,
+  "video-analysis:gemini-3.6-flash:360s": 237,
+  "video-analysis:gemini-3.6-flash:600s": 395,
+  "video-analysis:gemini-3.1-pro:60s": 87,
+  "video-analysis:gemini-3.1-pro:180s": 116,
+  "video-analysis:gemini-3.1-pro:360s": 305,
+  "video-analysis:gemini-3.1-pro:600s": 509,
   // Mixed tiers (`mixed` + `mixed-fast`) share ONE credit family — they are
   // variants of the same engine plan (plan internals live in the private
   // analysis plugin). Admin-tunable via model_pricing like every other row.
-  "video-analysis:mixed:60s": 104,
-  "video-analysis:mixed:180s": 142,
-  "video-analysis:mixed:360s": 372,
-  "video-analysis:mixed:600s": 621,
-  // SMART — the one native-transport plan: a single pass with reasoning and
-  // frame sampling turned all the way up. Priced well above the economy tiers
-  // because it genuinely costs more to run, and it is the only tier whose
-  // accuracy was measured against a hand-counted edit list.
-  "video-analysis:smart:60s": 454,
-  "video-analysis:smart:180s": 975,
-  "video-analysis:smart:360s": 2105,
-  "video-analysis:smart:600s": 3496,
+  "video-analysis:mixed:60s": 110,
+  "video-analysis:mixed:180s": 149,
+  "video-analysis:mixed:360s": 390,
+  "video-analysis:mixed:600s": 651,
+  // SMART — the one native-transport plan: a single pass with reasoning turned
+  // all the way up at a measured-optimal sampling rate. Priced above the
+  // economy tiers because it genuinely costs more to run; the only tier whose
+  // accuracy is validated against a hand-counted edit list, re-validated at
+  // the current sampling rate before this schedule shipped.
+  "video-analysis:smart:60s": 333,
+  "video-analysis:smart:180s": 470,
+  "video-analysis:smart:360s": 1135,
+  "video-analysis:smart:600s": 1868,
 }
 
 /**
