@@ -707,6 +707,9 @@ export function buildToolkit(): PluginToolkit {
             // differently-grounded analysis instead of an error. A caller that
             // genuinely wants the aggregator passes `requireLane: "kie"`.
             requireLane: req.requireLane ?? "direct",
+            // Media fail-open guard — only the caller knows how much media it
+            // sent, so the floor rides the request. See the contract docstring.
+            minPromptTokens: req.minPromptTokens,
           },
           schema as ZodType<T>,
           opts,

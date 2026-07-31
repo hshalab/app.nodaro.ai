@@ -116,6 +116,30 @@ export interface LlmRequest {
    * throws rather than degrading — see {@link assertLanePinnable}.
    */
   requireLane?: LlmServingLane
+  /**
+   * Reject the response unless the provider reports at least this many PROMPT
+   * tokens. Set it when the request carries media the answer depends on.
+   *
+   * This exists because the proxied lane FAILS OPEN on media. Measured
+   * 2026-07-31: of 7 KIE calls carrying a freshly-uploaded R2 video, 3 came
+   * back reporting prompt tokens equal to the system prompt ALONE — the video
+   * was never ingested — and answered with a fluent, schema-valid analysis of
+   * a video that does not exist (a different invented one each time: a
+   * programmer with a tabby cat, a starship pilot, a luxury-watch commercial).
+   * Nothing downstream can catch that: the text is well-formed, the schema
+   * validates, and a text-only grader cannot tell a confident fabrication from
+   * the truth. The token count is the only honest signal, and only the caller
+   * knows how much media it sent, so the floor is passed in rather than
+   * guessed here.
+   *
+   * Enforced on all three KIE formats — that is the lane with the hazard, and
+   * where `buildResponse` sees both the request and the reported usage. It is
+   * deliberately NOT wired into the direct lanes: `lib/gemini/media.ts` already
+   * THROWS when media cannot be fetched, so an ungrounded answer is not
+   * reachable there, and the direct-Anthropic paths carry no video at all.
+   * Setting the field on a direct-pinned call is harmless and simply inert.
+   */
+  minPromptTokens?: number
 }
 
 export interface LlmResponse {
@@ -656,13 +680,36 @@ function extractActualUsd(data: unknown): number | undefined {
  * the two logs an ops signal — KIE's real price moved and the rate table in
  * `pricing/llm-cost.ts` needs a manual reprice.
  */
+/**
+ * The media fail-open guard. Throws when the provider reports fewer prompt
+ * tokens than the caller's floor — i.e. it answered without ingesting the media
+ * it was sent. See {@link LlmRequest.minPromptTokens} for the measurement that
+ * motivated it; the failure mode is a confident analysis of a video that was
+ * never delivered, which is strictly worse than an error.
+ *
+ * Silent when the caller sets no floor, or when the provider reports no usage
+ * at all (streams) — this must never turn a working call into a failure.
+ */
+function assertMediaIngested(model: LlmModelDef, req: LlmRequest, usage?: { inputTokens: number }): void {
+  const floor = req.minPromptTokens
+  if (floor === undefined || !usage || usage.inputTokens <= 0) return
+  if (usage.inputTokens < floor) {
+    throw new Error(
+      `media_not_ingested:${model.id} — provider reported ${usage.inputTokens} prompt tokens, below the ${floor} floor for this request's media. ` +
+        `The response describes content the model was not shown; discarding it.`,
+    )
+  }
+}
+
 function buildResponse(
   model: LlmModelDef,
   text: string,
   usage?: { inputTokens: number; outputTokens: number },
   actualUsd?: number,
   lane: LlmServingLane = "kie",
+  req?: LlmRequest,
 ): LlmResponse {
+  if (req) assertMediaIngested(model, req, usage)
   const tableEstimate = usage ? calculateLlmCost(model, usage, lane) : undefined
   if (actualUsd !== undefined && tableEstimate !== undefined && tableEstimate > 0) {
     const drift = Math.abs(actualUsd - tableEstimate) / tableEstimate
@@ -770,6 +817,8 @@ async function callKieChatCompletions(model: LlmModelDef, req: LlmRequest): Prom
     text,
     usage ? { inputTokens: usage.prompt_tokens ?? 0, outputTokens: usage.completion_tokens ?? 0 } : undefined,
     extractActualUsd(data),
+    "kie",
+    req,
   )
 }
 
@@ -856,6 +905,8 @@ async function callKieMessages(model: LlmModelDef, req: LlmRequest): Promise<Llm
     text,
     usage ? { inputTokens: usage.input_tokens ?? 0, outputTokens: usage.output_tokens ?? 0 } : undefined,
     extractActualUsd(data),
+    "kie",
+    req,
   )
 }
 
@@ -922,6 +973,8 @@ async function callKieResponses(model: LlmModelDef, req: LlmRequest): Promise<Ll
     text,
     usage ? { inputTokens: usage.input_tokens ?? 0, outputTokens: usage.output_tokens ?? 0 } : undefined,
     extractActualUsd(data),
+    "kie",
+    req,
   )
 }
 

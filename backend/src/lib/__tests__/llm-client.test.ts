@@ -404,3 +404,68 @@ describe("actual-cost capture from KIE credits_consumed", () => {
     warnSpy.mockRestore()
   })
 })
+
+describe("media fail-open guard (minPromptTokens)", () => {
+  let fetchMock: ReturnType<typeof vi.fn>
+  beforeEach(() => { fetchMock = vi.fn(); vi.stubGlobal("fetch", fetchMock) })
+  afterEach(() => { vi.unstubAllGlobals() })
+
+  // The hazard, measured 2026-07-31: 3 of 7 KIE calls carrying a freshly
+  // uploaded video reported prompt tokens equal to the SYSTEM PROMPT ALONE and
+  // returned a fluent, schema-valid analysis of a video that does not exist.
+  // Well-formed text + valid schema means nothing downstream can catch it; the
+  // token count is the only honest signal.
+  it("throws when the provider reports fewer prompt tokens than the floor", async () => {
+    const { llmComplete } = await import("../llm-client.js")
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        choices: [{ message: { role: "assistant", content: "a confident description of nothing" } }],
+        usage: { prompt_tokens: 7950, completion_tokens: 1800 },
+      }),
+    )
+    await expect(
+      llmComplete({
+        modelId: "gemini-3-flash",
+        system: "",
+        messages: [{ role: "user", content: "analyse this video" }],
+        minPromptTokens: 9000,
+      }),
+    ).rejects.toThrow(/media_not_ingested/)
+  })
+
+  it("passes when the media was actually ingested", async () => {
+    const { llmComplete } = await import("../llm-client.js")
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        choices: [{ message: { role: "assistant", content: "ok" } }],
+        usage: { prompt_tokens: 13145, completion_tokens: 1800 },
+      }),
+    )
+    const res = await llmComplete({
+      modelId: "gemini-3-flash",
+      system: "",
+      messages: [{ role: "user", content: "analyse this video" }],
+      minPromptTokens: 9000,
+    })
+    expect(res.text).toBe("ok")
+  })
+
+  // Must never turn a working call into a failure: no floor set, or a provider
+  // that reports no usage at all, both pass through untouched.
+  it("is inert without a floor, and when usage is absent", async () => {
+    const { llmComplete } = await import("../llm-client.js")
+    fetchMock.mockResolvedValue(
+      jsonResponse({ choices: [{ message: { role: "assistant", content: "ok" } }], usage: { prompt_tokens: 12, completion_tokens: 3 } }),
+    )
+    const noFloor = await llmComplete({
+      modelId: "gemini-3-flash", system: "", messages: [{ role: "user", content: "hi" }],
+    })
+    expect(noFloor.text).toBe("ok")
+
+    fetchMock.mockResolvedValue(jsonResponse({ choices: [{ message: { role: "assistant", content: "ok" } }] }))
+    const noUsage = await llmComplete({
+      modelId: "gemini-3-flash", system: "", messages: [{ role: "user", content: "hi" }], minPromptTokens: 9000,
+    })
+    expect(noUsage.text).toBe("ok")
+  })
+})
