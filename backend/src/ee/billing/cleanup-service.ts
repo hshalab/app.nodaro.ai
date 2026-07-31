@@ -609,7 +609,7 @@ export async function expireSubscriptions(): Promise<ExpiryResult> {
     // status and never downgrade a user who currently has an active/trialing/
     // past_due subscription. Mirrors the live-sub re-check in
     // cleanupCanceledUserMedia. Without this, a paying re-subscriber is silently
-    // reset to free tier / 150 credits / 1GB on the next hourly run.
+    // reset to free tier / 1,500 credits / 1GB on the next hourly run.
     const { data: activeSubs } = await supabase
       .from("subscriptions")
       .select("user_id")
