@@ -150,6 +150,26 @@ export const TIER_PARALLELISM: Record<string, number> = {
   business: 12,
 }
 
+/**
+ * The free-tier signup grant, DERIVED from PRICING_TIERS rather than restated.
+ *
+ * Signup copy and balance fallbacks used to hardcode this. The 2026-07-30 x10
+ * re-denomination moved the tier table but left those literals reading 150,
+ * so the login page advertised a tenth of the real grant. Derive, don't repeat.
+ */
+export const FREE_TIER_CREDITS: number =
+  PRICING_TIERS.find((t) => t.id === "free")?.credits ?? 1500
+
+/**
+ * One-shot Character LoRA training (Replicate flux-dev-lora-trainer, 1000 steps).
+ *
+ * Authority is STATIC_CREDIT_COSTS["character-lora-training"] in
+ * backend/src/ee/billing/credits.ts. Pinned to it by a guard test in
+ * __tests__/pricing-data.test.ts — the same x10 re-denomination left the two
+ * training labels quoting 150 against a real cost of 1500.
+ */
+export const CHARACTER_LORA_TRAINING_CREDITS = 1500
+
 /** Get the display price for a tier based on billing cycle. */
 export function getTierPrice(tier: PricingTier, cycle: BillingCycle): number {
   return cycle === "monthly" ? tier.priceMonthly : tier.priceAnnual

@@ -42,9 +42,9 @@ on the roadmap (Phase 2).
 
 | Action | Credits | Notes |
 |--------|---------|-------|
-| Training | **150 cr** (~$3) | Refunded if Replicate reports failure or cancel. |
-| Inference per image | **2 cr** | Applied when the trained model is used. The dropdown's provider price (typically nano-banana, 1cr) is replaced. |
-| Re-training | 150 cr | Full re-training price every time. |
+| Training | **1,500 cr** (~$3) | Refunded if Replicate reports failure or cancel. |
+| Inference per image | **20 cr** | Applied when the trained model is used. The dropdown's provider price (typically nano-banana, 10 cr) is replaced. |
+| Re-training | 1,500 cr | Full re-training price every time. |
 
 ## Limits
 

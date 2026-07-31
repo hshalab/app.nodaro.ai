@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { NodaroLogo } from "@/components/nodaro-logo"
 import { useAuth } from "@/hooks/use-auth"
 import { AUTH_REDIRECT_KEY } from "@/lib/storage-keys"
+import { FREE_TIER_CREDITS } from "@/lib/pricing-data"
 
 const PENDING_PLAN_KEY = "nodaro_pending_plan"
 
@@ -78,7 +79,7 @@ export default function LoginPage() {
           )}
 
           <p className="text-xs text-muted-foreground/60 pt-1">
-            Start free with up to 150 credits. No credit card required.
+            Start free with up to {FREE_TIER_CREDITS.toLocaleString()} credits. No credit card required.
           </p>
         </div>
       </div>

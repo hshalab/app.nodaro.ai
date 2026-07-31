@@ -399,8 +399,8 @@ const IMAGE_MODELS: Record<string, ModelCatalogEntry> = {
     aspectRatios: FLUX_RATIOS,
     resolutions: ["0.5 MP", "1 MP", "2 MP", "4 MP"],
     pricing: [
-      { identifier: "flux-2-klein",       credits: 10 },  // 1MP 0ref (default)
-      { identifier: "flux-2-klein:1MP:0ref", credits: 3 },  // min
+      { identifier: "flux-2-klein",       credits: 3 },  // 1MP 0ref (default)
+      { identifier: "flux-2-klein:1MP:0ref", credits: 3 },  // min — same point on the grid as the bare default
       { identifier: "flux-2-klein:4MP:8ref", credits: 108 }, // max
     ],
   },
@@ -430,7 +430,7 @@ const IMAGE_MODELS: Record<string, ModelCatalogEntry> = {
     aspectRatios: FLUX_RATIOS,
     resolutions: ["0.5 MP", "1 MP", "2 MP", "4 MP"],
     pricing: [
-      { identifier: "flux-2-pro",        credits: 30 },  // 2MP 0ref (default)
+      { identifier: "flux-2-pro",        credits: 23 },  // 2MP 0ref (default)
       { identifier: "flux-2-pro:0.5MP:0ref", credits: 12 },  // min
       { identifier: "flux-2-pro:4MP:8ref",   credits: 278 }, // max
     ],

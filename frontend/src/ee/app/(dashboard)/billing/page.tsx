@@ -21,7 +21,7 @@ import { hasCredits } from "@/lib/edition"
 import { useUserCredits } from "@/ee/hooks/queries/use-credits-queries"
 import { useSubscription, useTransactions, useStorageProfile, useManageSubscriptionMutation } from "@/ee/hooks/queries/use-billing-queries"
 import { CreditTopup } from "@/ee/components/credits/CreditTopup"
-import { PRICING_TIERS, getBillingCycleFromPriceId } from "@/lib/pricing-data"
+import { PRICING_TIERS, FREE_TIER_CREDITS, getBillingCycleFromPriceId } from "@/lib/pricing-data"
 import { toast } from "sonner"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { queryKeys } from "@/lib/query-keys"
@@ -300,10 +300,10 @@ export default function BillingPage() {
             <div>
               <p className="text-sm text-muted-foreground">Total Used</p>
               <p className="text-2xl font-bold font-mono">
-                {(currentTier?.credits ?? 150) - balance.subscription}
+                {(currentTier?.credits ?? FREE_TIER_CREDITS) - balance.subscription}
               </p>
               <p className="text-xs text-muted-foreground">
-                of {currentTier?.credits ?? 150} {balance.tier === "free" ? "one-time" : "/ month"}
+                of {currentTier?.credits ?? FREE_TIER_CREDITS} {balance.tier === "free" ? "one-time" : "/ month"}
               </p>
             </div>
             <div>

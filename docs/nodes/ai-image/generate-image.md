@@ -68,7 +68,7 @@ The migration runs on the frontend (`loadWorkflow`) plus three defensive backend
 | nano-banana | Nano Banana | Fast drafts, iteration, storyboards | 1:1, 16:9, 9:16, 4:3, 3:4, 3:2, 2:3, 5:4, 4:5, 21:9 |
 | nano-banana-pro | Nano Banana Pro | Higher detail, production-ready images | Same as Nano Banana |
 | nano-banana-2 | Nano Banana 2 | Updated Nano Banana with web grounding | Same as Nano Banana |
-| nano-banana-2-lite | Nano Banana 2 Lite | Fast, low-cost 1K drafts and iteration (Gemini 3.1 Flash-Lite). Flat **2 credits** per image — no resolution tiers. | auto, 1:1, 16:9, 9:16, 4:3, 3:4, 3:2, 2:3, 4:5, 5:4, 21:9, 4:1, 1:4, 8:1, 1:8 |
+| nano-banana-2-lite | Nano Banana 2 Lite | Fast, low-cost 1K drafts and iteration (Gemini 3.1 Flash-Lite). Flat **20 credits** per image — no resolution tiers. | auto, 1:1, 16:9, 9:16, 4:3, 3:4, 3:2, 2:3, 4:5, 5:4, 21:9, 4:1, 1:4, 8:1, 1:8 |
 | grok | Grok | Creative and stylized imagery | 1:1, 16:9, 9:16, 3:2, 2:3 |
 | flux | Flux | Photorealistic, highest quality output | 1:1, 16:9, 9:16, 4:3, 3:4, 3:2, 2:3 |
 | flux-flex | Flux Flex | Flexible Flux, fast generation | Same as Flux |
@@ -87,9 +87,9 @@ The migration runs on the frontend (`loadWorkflow`) plus three defensive backend
 | z-image | Z-Image | Fast, lightweight generation | 1:1, 16:9, 9:16, 4:3, 3:4 |
 | wan-2.7 | Wan 2.7 | Text-to-image, 1K/2K/4K resolution, up to 9 optional reference images | 1:1, 16:9, 9:16, 4:3, 3:4, 21:9, 8:1, 1:8 |
 | wan-2.7-pro | Wan 2.7 Pro | Higher quality text-to-image, 1K/2K/4K resolution | 1:1, 16:9, 9:16, 4:3, 3:4, 21:9, 8:1, 1:8 |
-| flux-2-klein | Flux 2 Klein (Open) | BFL Flux 2 9B Klein via Replicate — fast, no safety filter. Resolution 0.5 / 1 / 2 / 4 MP (default 1 MP). **1 credit at 1 MP**, scaling with resolution. | Same as Flux |
-| flux-2-pro | Flux 2 Pro (Safety Tolerance) | BFL Flux 2 Pro flagship via Replicate — `safety_tolerance` pinned to 5 (max for Pro). Resolution 0.5 / 1 / 2 / 4 MP (**default 2 MP**). Per-megapixel pricing: **3 credits at 2 MP**. | Same as Flux |
-| flux-2-max | Flux 2 Max (Safety Tolerance) | BFL Flux 2 Max via Replicate — `safety_tolerance=5`, up to 8 reference images. Resolution 0.5 / 1 / 2 / 4 MP (**default 2 MP**). **Per-megapixel pricing**: **7 credits at 2 MP** (0 refs), **14 credits at 4 MP** (0 refs), scaling with resolution and refs. | Same as Flux |
+| flux-2-klein | Flux 2 Klein (Open) | BFL Flux 2 9B Klein via Replicate — fast, no safety filter. Resolution 0.5 / 1 / 2 / 4 MP (default 1 MP). **3 credits at 1 MP** (0 refs), scaling with resolution and reference count. | Same as Flux |
+| flux-2-pro | Flux 2 Pro (Safety Tolerance) | BFL Flux 2 Pro flagship via Replicate — `safety_tolerance` pinned to 5 (max for Pro). Resolution 0.5 / 1 / 2 / 4 MP (**default 2 MP**). Per-megapixel pricing: **23 credits at 2 MP** (0 refs). | Same as Flux |
+| flux-2-max | Flux 2 Max (Safety Tolerance) | BFL Flux 2 Max via Replicate — `safety_tolerance=5`, up to 8 reference images. Resolution 0.5 / 1 / 2 / 4 MP (**default 2 MP**). **Per-megapixel pricing**: **70 credits at 2 MP** (0 refs), **140 credits at 4 MP** (0 refs), scaling with resolution and refs. | Same as Flux |
 
 ## Inpainting & Refine
 
@@ -145,6 +145,6 @@ An inpaint or refine edit is **one generation at the provider's normal cost** �
 
 ## Trained character routing (Cloud edition)
 
-When you `@mention` a [trained character](../../features/character-training.md) — a character with a successful LoRA — in the prompt, this node automatically routes through the trained Flux LoRA on Replicate instead of the selected provider. The dropdown provider's price is **replaced** by 2 credits/image.
+When you `@mention` a [trained character](../../features/character-training.md) — a character with a successful LoRA — in the prompt, this node automatically routes through the trained Flux LoRA on Replicate instead of the selected provider. The dropdown provider's price is **replaced** by 20 credits/image.
 
 Two or more trained `@-mentions` in one prompt fall back to the selected provider + reference-image injection (multi-character LoRA composition is Phase 2).

@@ -289,7 +289,7 @@ FFmpeg-based audio manipulation.
 
 | Node | Description | When to Use |
 |------|-------------|-------------|
-| [Split into Chunks](./processing-audio/split-media.md) | Divide a video or audio file into equal-duration segments (2 CR) | Batch transcription, per-scene processing, or chunked dubbing of long recordings |
+| [Split into Chunks](./processing-audio/split-media.md) | Divide a video or audio file into equal-duration segments (20 CR) | Batch transcription, per-scene processing, or chunked dubbing of long recordings |
 | [Merge Video & Audio](./processing-audio/merge-video-audio.md) | Combine video with audio tracks | Add voiceover, music, or sound effects to video |
 | [Extract Audio](./processing-audio/extract-audio.md) | Demux a video's audio track to MP3 | Pull audio from a video for transcription, dubbing, or reuse |
 | [Trim Audio](./processing-audio/trim-audio.md) | Extract section of audio file | Cut specific time range from audio |
@@ -380,7 +380,7 @@ Multi-stage AI pipelines that generate an editable Nodaro graph from a single pr
 
 | Node | Description | When to Use |
 |------|-------------|-------------|
-| [Story → Video](./generative/generative-pipeline.md) | Cloud-only. Variable cost (~30 cr in Phase 1A). Orchestrates Detection (Haiku) → Showrunner (Opus) → Script + Cast Coverage Critics (Sonnet) under approval gates. | Generate a complete cinematic workflow from a single story prompt; review and approve at each stage |
+| [Story → Video](./generative/generative-pipeline.md) | Cloud-only. Variable cost (~300 cr in Phase 1A). Orchestrates Detection (Haiku) → Showrunner (Opus) → Script + Cast Coverage Critics (Sonnet) under approval gates. | Generate a complete cinematic workflow from a single story prompt; review and approve at each stage |
 
 ---
 

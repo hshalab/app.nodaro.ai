@@ -120,7 +120,7 @@ HeyGen Lipsync Precision, Sync Lipsync 2 Pro, and Sync Lipsync v3 also bill per 
 
 The credit chip updates once the audio is wired (the node probes its duration). When the duration is unknown, the 5-minute tier is reserved.
 
-> **Supply `audioDurationSec` for accurate pricing.** When calling `sync-lipsync-v3` or `volcengine-lipsync` via API/SDK, pass the output duration in seconds so the reservation buckets to the correct tier. If it is absent, the request is billed at the **5-minute ceiling** (sync-lipsync-v3: 2,000 CR; volcengine-lipsync: 600 CR) with **no refund** — these per-second models commit the reserved bucket verbatim. The editor probes the duration automatically once the audio is wired.
+> **Supply `audioDurationSec` for accurate pricing.** When calling `sync-lipsync-v3` or `volcengine-lipsync` via API/SDK, pass the output duration in seconds so the reservation buckets to the correct tier. If it is absent, the request is billed at the **5-minute ceiling** (sync-lipsync-v3: 20,000 CR; volcengine-lipsync: 6,000 CR) with **no refund** — these per-second models commit the reserved bucket verbatim. The editor probes the duration automatically once the audio is wired.
 
 InfiniTalk and Hailuo Avatar use flat per-call pricing (see admin → Models).
 
