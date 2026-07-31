@@ -16,6 +16,7 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { useWorkflowStore } from "@/hooks/use-workflow-store"
 import { hasCredits } from "@/lib/edition"
+import { CHARACTER_LORA_TRAINING_CREDITS } from "@/lib/pricing-data"
 import {
   deleteCharacterLora,
   getCharacterTraining,
@@ -164,7 +165,9 @@ export function TrainingSection({ characterNodeId, data }: TrainingSectionProps)
     <section className="mb-6 border-t border-[#2D2D2D] pt-4">
       <header className="flex items-center justify-between mb-2">
         <h3 className="text-sm font-semibold">High-fidelity model</h3>
-        <span className="text-[11px] text-muted-foreground">150 credits · ~15 min</span>
+        <span className="text-[11px] text-muted-foreground">
+          {CHARACTER_LORA_TRAINING_CREDITS.toLocaleString()} credits · ~15 min
+        </span>
       </header>
 
       {status === "succeeded" && (

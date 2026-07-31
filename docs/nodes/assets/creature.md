@@ -63,7 +63,7 @@ In two more cases the picker helps you avoid clutter:
 
 The creature node itself is a setup/reference node and does not bill credits to exist on the canvas. Generation inside the Creature Studio bills per the chosen provider, the same as the standalone generation nodes:
 
-- **Image assets** (angles / poses / variations / main image) bill per the selected image provider (default `nano-banana`, 1 credit). See [Generate Image](../ai-image/generate-image.md) for the per-provider credit table.
+- **Image assets** (angles / poses / variations / main image) bill per the selected image provider (default `nano-banana`, 10 credits). See [Generate Image](../ai-image/generate-image.md) for the per-provider credit table.
 - **Motion clips** bill per the selected image-to-video provider (default `kling-turbo`, 11 credits). See [Image to Video](../ai-video/image-to-video.md) for the per-provider credit table.
 
 ## Best Practices

@@ -74,7 +74,7 @@ blueprint's exact param contract before writing a `blueprint` reveal in a brief.
 Blueprints are declarative shot-shapes — most are text/shape only, and two
 (`device-surface-showcase`, `cursor-ui-demo`) take your own uploaded screenshot
 images as params. Either way they carry no pricing or credit information: the
-standard render-video credit (5 credits) applies to the overall
+standard render-video credit (50 credits) applies to the overall
 `render_shot_sequence` call, not to individual blueprints.
 
 | Id | Roles | Default duration (frames) | What it does |

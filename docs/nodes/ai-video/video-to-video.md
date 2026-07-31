@@ -40,10 +40,10 @@ The Video to Video node applies AI-powered transformations to an existing video 
 |----------|---------|-------|
 | **Wan 2.6** (`wan`) | 18 cr | General-purpose V2V, reliable results |
 | **Wan 2.6 Flash** (`wan-flash`) | 13 cr | Fast V2V with optional audio & multi-shot |
-| **Wan 2.7 VideoEdit** (`wan-videoedit`) | 32 cr | Guided editing with reference image, audio control, prompt extend |
-| **Luma Modify** (`luma-modify`) | 32 cr | Strong at style transfer and artistic modifications |
-| **Runway Aleph** (`runway-aleph`) | 35 cr | High-quality transformations, flexible aspect ratio |
-| **HappyHorse Edit** (`happyhorse-edit`) | 35 cr | Up to 60s input, 720p (default) or 1080p output |
+| **Wan 2.7 VideoEdit** (`wan-videoedit`) | 320 cr | Guided editing with reference image, audio control, prompt extend |
+| **Luma Modify** (`luma-modify`) | 320 cr | Strong at style transfer and artistic modifications |
+| **Runway Aleph** (`runway-aleph`) | 350 cr | High-quality transformations, flexible aspect ratio |
+| **HappyHorse Edit** (`happyhorse-edit`) | 350 cr | Up to 60s input, 720p (default) or 1080p output |
 
 ## Best Practices
 

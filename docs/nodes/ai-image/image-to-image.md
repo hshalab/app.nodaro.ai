@@ -38,7 +38,7 @@ Image to Image takes a source image and a text prompt to generate a transformed 
 |----------|-------|-------------|----------------|
 | nano-banana | Nano Banana | Fast iteration, quick transforms | General I2I |
 | nano-banana-2 | Nano Banana 2 | Updated Nano Banana; 1K/2K/4K resolution | General I2I, resolution options |
-| nano-banana-2-lite | Nano Banana 2 Lite | Fast, low-cost 1K edits (Gemini 3.1 Flash-Lite); flat 2 credits | Up to 10 input images |
+| nano-banana-2-lite | Nano Banana 2 Lite | Fast, low-cost 1K edits (Gemini 3.1 Flash-Lite); flat 10 credits | Up to 10 input images |
 | nano-banana-pro | Nano Banana Pro | Higher detail, production images | General I2I, resolution options |
 | grok-i2i | Grok | Creative and stylized imagery | Stylized transforms |
 | flux-i2i | Flux-2 | Style-faithful transformations | Resolution options (1K/2K) |
@@ -55,7 +55,7 @@ Image to Image takes a source image and a text prompt to generate a transformed 
 | seedream-5-pro-i2i | Seedream 5 Pro | Flagship Seedream image-to-image, multi-reference instruction edits. **3 credits** at basic (1K) / **6 credits** at high (2K). | Quality options (basic/high) |
 | flux-kontext | Flux Kontext | Context-aware editing via Kontext | Context-aware transforms |
 | flux-kontext-max | Flux Kontext Max | Highest quality Kontext editing | Premium context-aware transforms |
-| kontext-multi | Kontext Multi (Open) | Multi-image Flux Kontext Pro via Replicate — no safety filter | Up to 2 reference images. 3 credits |
+| kontext-multi | Kontext Multi (Open) | Multi-image Flux Kontext Pro via Replicate — no safety filter | Up to 2 reference images. 30 credits |
 | flux-2-pro | Flux 2 Pro (Safety Tolerance) | BFL Flux 2 Pro flagship via Replicate — `safety_tolerance` pinned to 5 | Up to 4 reference images. Resolution 0.5 / 1 / 2 / 4 MP (default 2 MP); per-MP pricing — ~4 credits at 2 MP with the primary image. |
 | flux-2-max | Flux 2 Max (Safety Tolerance) | BFL Flux 2 Max via Replicate — `safety_tolerance=5`, up to 8 reference images | Resolution 0.5 / 1 / 2 / 4 MP (default 2 MP). **Per-megapixel pricing**: ~10 credits at 2 MP with the primary image (1 ref), scaling with resolution and extra references. |
 

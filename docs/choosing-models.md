@@ -48,8 +48,8 @@ Text-to-image, image-to-image, editing, upscaling, and background removal. For e
 | --- | --- | --- | --- | --- | --- |
 | Recraft Crisp Upscale | Recraft | Everyday | 2 | upscale | Light-weight image upscale (Recraft Crisp). |
 | ⭐ Z-Image | Tongyi-MAI | Everyday | 2 | t2i | Cheapest model in catalog. Fast, stylized output. Limited aspect ratios. |
+| Flux 2 Klein (Open) | Black Forest Labs | Standard | 3 | t2i | Open Flux 2 9B from BFL — fast, no safety filter. Runs direct on Replicate. |
 | Recraft Remove BG | Recraft | Standard | 3 | remove-bg | Remove image background. Cheap utility. |
-| Flux 2 Klein (Open) | Black Forest Labs | Premium | 10 | t2i | Open Flux 2 9B from BFL — fast, no safety filter. Runs direct on Replicate. |
 | Grok Imagine | xAI | Premium | 10 | t2i, t2v | Expressive, high-contrast output. Supports both image and video. |
 | Grok Imagine (I2I) | xAI | Premium | 10 | i2i | Image-to-image with Grok. |
 | Imagen 4 Fast | Google | Premium | 10 | t2i | Cheaper / quicker Imagen 4 tier. |
@@ -72,10 +72,10 @@ Text-to-image, image-to-image, editing, upscaling, and background removal. For e
 | Imagen 4 | Google | Premium | 20 | t2i | Google's Imagen 4 — strong photographic quality and prompt fidelity. |
 | Nano Banana 2 | Google | Premium | 20 | t2i, i2i | Newer Nano Banana with native resolution control (1K/2K/4K) and Google Search context. |
 | Wan 2.7 | Alibaba | Premium | 20 | t2i | Wan 2.7 text-to-image — 1K/2K/4K, up to 9 optional style/character reference images. |
+| Flux 2 Pro (Safety Tolerance) | Black Forest Labs | Premium | 23 | t2i, i2i | BFL Flux 2 Pro flagship via Replicate — exposes the `safety_tolerance` lever pinned to 5 (max for Pro). Accepts up to 4 reference images. |
 | Flux Kontext Max | Black Forest Labs | Premium | 25 | t2i, edit | Premium Kontext — highest fidelity context-aware edits. |
 | Grok Upscale | xAI | Premium | 25 | upscale | Upscale a previously-generated Grok image. Requires the prior task id. |
 | Topaz Image Upscale | Topaz | Premium | 25 | upscale | High-quality image upscale up to 8K. Best for production-ready output. |
-| Flux 2 Pro (Safety Tolerance) | Black Forest Labs | Premium | 30 | t2i, i2i | BFL Flux 2 Pro flagship via Replicate — exposes the `safety_tolerance` lever pinned to 5 (max for Pro). Accepts up to 4 reference images. |
 | Imagen 4 Ultra | Google | Premium | 30 | t2i | Premium Imagen 4 — highest fidelity, slower / more credits. |
 | Kontext Multi (Open) | Black Forest Labs | Premium | 30 | i2i, edit | Multi-image Flux Kontext Pro via Replicate — up to 4 input images, no safety filter. |
 | Flux 2 Flex | Black Forest Labs | Premium | 35 | t2i | Flux 2 Flex — premium fidelity, more flexible composition. Pricier than Pro. |

@@ -211,7 +211,7 @@ describe("cleanup-service", () => {
       // period end is now in the past coexists with a fresh 'active' row, and the
       // profile is on the paid tier the re-subscribe restored. The candidate query
       // matches the STALE canceled row, so without the live-sub re-check this cron
-      // would silently reset the paying customer to free / 150 credits / 1GB.
+      // would silently reset the paying customer to free / TIER_CREDITS.free / 1GB.
       //
       // First `subscriptions` read  -> the stale canceled candidate row.
       // Second `subscriptions` read -> the live-sub re-check finds the active row.

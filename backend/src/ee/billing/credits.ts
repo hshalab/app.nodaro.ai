@@ -245,10 +245,16 @@ export const STATIC_CREDIT_COSTS: Record<string, number> = {
   // Base rows (representative default-resolution 0-ref) — for admin display and
   // single-node runs where no :MP:ref composite is available yet.
   // Per-MP×ref composites are spread below via FLUX2_STATIC.
-  "flux-2-klein": 10,             // default 1MP 0ref — BFL Flux 2 9B Klein via Replicate
+  // DERIVED from the same formula as the composites below, at each model's
+  // default resolution — never hand-written. These were literals (1/3/7) that
+  // the x10 re-denomination hand-multiplied to 10/30/70, which amplified the
+  // rounding error they already carried at the old coarse credit scale: the
+  // formula and migration 288's DB rows both say 3/23/70 for these exact
+  // defaults. Deriving keeps the fallback honest through any future reprice.
+  "flux-2-klein": flux2BaseCredits("flux-2-klein", 1, 0),  // default 1MP 0ref — BFL Flux 2 9B Klein via Replicate
   "kontext-multi": 30,            // multi-image-kontext-pro via Replicate
-  "flux-2-pro": 30,               // default 2MP 0ref — BFL Flux 2 Pro via Replicate, safety_tolerance=5
-  "flux-2-max": 70,               // default 2MP 0ref — BFL Flux 2 Max via Replicate, safety_tolerance=5
+  "flux-2-pro": flux2BaseCredits("flux-2-pro", 2, 0),      // default 2MP 0ref — BFL Flux 2 Pro via Replicate, safety_tolerance=5
+  "flux-2-max": flux2BaseCredits("flux-2-max", 2, 0),      // default 2MP 0ref — BFL Flux 2 Max via Replicate, safety_tolerance=5
   // Full per-MP×ref grid for Flux 2 family (108 entries, see flux2BaseCredits formula).
   // Identifier format: `<model>:<mp>MP:<n>ref` (mp ∈ {0.5,1,2,4}, n ∈ 0..8).
   ...FLUX2_STATIC,

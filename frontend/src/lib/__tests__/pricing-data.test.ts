@@ -1,8 +1,12 @@
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
 import { describe, it, expect } from "vitest"
 import {
   PRICING_TIERS,
   TIER_STORAGE_BYTES,
   TOPUP_PACKAGES,
+  FREE_TIER_CREDITS,
+  CHARACTER_LORA_TRAINING_CREDITS,
   getTierPrice,
   getTierPriceId,
   getAnnualSavingsPercent,
@@ -10,6 +14,31 @@ import {
   getBillingCycleFromPriceId,
 } from "../pricing-data"
 import type { PricingTier } from "../pricing-data"
+
+/**
+ * Credit figures restated in the frontend, pinned to their backend authority.
+ *
+ * The 2026-07-30 x10 re-denomination moved the backend constants and left the
+ * frontend's copies reading a tenth: the login page advertised 150 free credits
+ * against a real grant of 1500, and both LoRA training labels quoted 150 against
+ * a real cost of 1500. Deriving fixes the free grant; this suite covers the one
+ * figure that cannot be derived because it lives in backend-only code.
+ */
+describe("frontend credit figures track their backend authority", () => {
+  it("FREE_TIER_CREDITS derives from the free tier rather than restating it", () => {
+    expect(FREE_TIER_CREDITS).toBe(PRICING_TIERS.find((t) => t.id === "free")?.credits)
+  })
+
+  it("CHARACTER_LORA_TRAINING_CREDITS matches STATIC_CREDIT_COSTS in credits.ts", () => {
+    const src = readFileSync(
+      join(__dirname, "../../../../backend/src/ee/billing/credits.ts"),
+      "utf8",
+    )
+    const m = src.match(/"character-lora-training":\s*(\d+)/)
+    expect(m, "STATIC_CREDIT_COSTS['character-lora-training'] not found — was it renamed?").toBeTruthy()
+    expect(CHARACTER_LORA_TRAINING_CREDITS).toBe(Number(m![1]))
+  })
+})
 
 describe("PRICING_TIERS", () => {
   it("has exactly 5 tiers", () => {

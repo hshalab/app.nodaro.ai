@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button"
 import { CachedImage } from "@/components/ui/cached-image"
 import { useWorkflowStore } from "@/hooks/use-workflow-store"
 import { hasCredits } from "@/lib/edition"
+import { CHARACTER_LORA_TRAINING_CREDITS } from "@/lib/pricing-data"
 import {
   deleteCharacterLora,
   getCharacterTraining,
@@ -266,7 +267,9 @@ export function LoraPage({ state }: StudioPageProps<CharacterStudioState, Charac
       <section>
         <header className="flex items-center justify-between mb-2">
           <h3 className="text-sm font-semibold text-slate-200">High-fidelity model</h3>
-          <span className="text-[11px] text-slate-500">150 credits · ~15 min</span>
+          <span className="text-[11px] text-slate-500">
+            {CHARACTER_LORA_TRAINING_CREDITS.toLocaleString()} credits · ~15 min
+          </span>
         </header>
 
         {status === "succeeded" && (

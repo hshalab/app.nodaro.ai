@@ -36,7 +36,7 @@ import { cn } from "@/lib/utils"
 import { useAuth } from "@/hooks/use-auth"
 import { isFeatureEnabled, hasCredits, isMultiUser } from "@/lib/edition"
 import { useUserCredits } from "@/ee/hooks/queries/use-credits-queries"
-import { PRICING_TIERS } from "@/lib/pricing-data"
+import { PRICING_TIERS, FREE_TIER_CREDITS } from "@/lib/pricing-data"
 import { APP_VERSION } from "@/lib/version"
 import { NodaroLogo } from "@/components/nodaro-logo"
 import { otherNodaroApps } from "@/lib/nodaro-apps"
@@ -299,7 +299,7 @@ export function AppSidebar({
                 <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                   {creditBalance.tier === "free" ? "Free Plan" : `${creditBalance.tier.charAt(0).toUpperCase() + creditBalance.tier.slice(1)} Plan`}
                 </span>
-                {(creditBalance.tier === "free" || creditBalance.total <= (PRICING_TIERS.find((t) => t.id === creditBalance.tier)?.credits ?? 150) * 0.1) && (
+                {(creditBalance.tier === "free" || creditBalance.total <= (PRICING_TIERS.find((t) => t.id === creditBalance.tier)?.credits ?? FREE_TIER_CREDITS) * 0.1) && (
                   <Link
                     to="/pricing"
                     onClick={(e) => e.stopPropagation()}
@@ -318,7 +318,7 @@ export function AppSidebar({
               </div>
 
               {(() => {
-                const tierAllocation = PRICING_TIERS.find((t) => t.id === creditBalance.tier)?.credits ?? 150
+                const tierAllocation = PRICING_TIERS.find((t) => t.id === creditBalance.tier)?.credits ?? FREE_TIER_CREDITS
                 const remainPercent = Math.min(100, Math.max(0, Math.round((creditBalance.total / tierAllocation) * 100)))
                 return (
                   <div className="mb-3">

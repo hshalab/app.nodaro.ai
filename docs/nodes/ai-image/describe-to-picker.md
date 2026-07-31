@@ -38,7 +38,7 @@ If no LLM API key (KIE or Anthropic) is configured, the node returns `503 provid
 
 ## Credit Cost
 
-**Flat 1 credit per run**, regardless of how many pickers you wire or which vision model you pick — it is always one vision call. The tiered identifiers `describe-to-picker`, `describe-to-picker:economy`, and `describe-to-picker:premium` all resolve to 1 credit. Credits are reserved when the job starts, committed on success, and fully refunded if the analysis fails.
+**Flat 10 credits per run**, regardless of how many pickers you wire or which vision model you pick — it is always one vision call. The tiered identifiers `describe-to-picker`, `describe-to-picker:economy`, and `describe-to-picker:premium` all resolve to the same flat price. Credits are reserved when the job starts, committed on success, and fully refunded if the analysis fails.
 
 ## Consumer flow
 
