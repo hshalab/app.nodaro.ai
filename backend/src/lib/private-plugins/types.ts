@@ -947,6 +947,19 @@ export interface PluginLlmMultimodalRequest {
    * Pass `"kie"` explicitly to opt a non-analysis multimodal caller out.
    */
   requireLane?: "direct" | "kie"
+  /**
+   * Reject the response unless the provider reports at least this many PROMPT
+   * tokens — the media fail-open guard. Additive-optional.
+   *
+   * Set it whenever this request carries media the answer depends on and the
+   * call may reach the proxied lane. Measured 2026-07-31: 3 of 7 KIE calls
+   * carrying a freshly-uploaded video reported prompt tokens equal to the
+   * system prompt alone and answered about a video that does not exist. Only
+   * the caller knows how much media it sent, so it supplies the floor —
+   * typically `systemPromptTokens + durationSec * (a conservative
+   * tokens-per-second)`. See `LlmRequest.minPromptTokens` in llm-client.ts.
+   */
+  minPromptTokens?: number
 }
 
 export interface PluginLlmToolkit {
