@@ -324,16 +324,22 @@ charged) — generated and drift-guarded internally, never hand-written.
 
 | Tier | ≤60s | ≤180s | ≤360s | ≤600s |
 |------|------|-------|-------|-------|
-| `fast` (economy) | 23 | 32 | 81 | 136 |
-| `pro` (default) | 82 | 111 | 291 | 486 |
-| `mixed` / `mixed-fast` | 104 | 142 | 372 | 621 |
-| `smart` (highest accuracy) | 454 | 975 | 2105 | 3496 |
+| `fast` (economy) | 24 | 33 | 86 | 143 |
+| `pro` (default) | 87 | 116 | 305 | 509 |
+| `mixed` / `mixed-fast` | 110 | 149 | 390 | 651 |
+| `smart` (highest accuracy) | 333 | 470 | 1135 | 1868 |
 
 The two mixed tiers are variants of the same advanced analysis and share one
 price: `mixed` is tuned for maximum result quality; `mixed-fast` for the most
 consistent output character run-to-run.
 
 > These values are the internal pricing formula's current outputs.
+
+> **Smart re-based, 2026-07-31.** The `smart` tier's video sampling was re-tuned
+> after a measurement campaign found the same analysis quality — and more
+> consistent casting — at a much lower sampling cost, so its prices drop 27–47%
+> per bucket. The other tiers tick up 3–6% from a re-measurement of fixed
+> analysis overhead. Analyses also now always report a camera `angle` per scene.
 
 > **Credit re-denomination, 2026-07-30.** A credit is now worth a tenth of what
 > it was, so every number in this table is ~10× its old value — the price in
