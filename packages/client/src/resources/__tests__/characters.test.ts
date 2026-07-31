@@ -58,6 +58,52 @@ describe("characters resource", () => {
     expect(url).toContain("limit=5")
   })
 
+  it("list serializes the cursor param into the query string", async () => {
+    const fetchMock = vi.fn().mockReturnValueOnce(mockOk({ characters: [], nextCursor: null }))
+    const c = createClient({
+      baseUrl: "https://api.example.com",
+      auth: new StaticTokenAuth("t"),
+      fetch: fetchMock,
+    })
+    await c.characters.list({ cursor: "eyJhIjoxfQ==" })
+    const url = fetchMock.mock.calls[0][0] as string
+    expect(url).toContain("cursor=eyJhIjoxfQ%3D%3D")
+  })
+
+  it("list omits cursor from the query string when not supplied", async () => {
+    const fetchMock = vi.fn().mockReturnValueOnce(mockOk({ characters: [], nextCursor: null }))
+    const c = createClient({
+      baseUrl: "https://api.example.com",
+      auth: new StaticTokenAuth("t"),
+      fetch: fetchMock,
+    })
+    await c.characters.list()
+    expect(fetchMock.mock.calls[0][0] as string).not.toContain("cursor")
+  })
+
+  it("list surfaces nextCursor so a caller can page to exhaustion", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockReturnValueOnce(mockOk({ characters: [{ id: "a" }], nextCursor: "cur-1" }))
+      .mockReturnValueOnce(mockOk({ characters: [{ id: "b" }], nextCursor: null }))
+    const c = createClient({
+      baseUrl: "https://api.example.com",
+      auth: new StaticTokenAuth("t"),
+      fetch: fetchMock,
+    })
+
+    const all: unknown[] = []
+    let cursor: string | undefined
+    do {
+      const page = await c.characters.list({ cursor })
+      all.push(...page.characters)
+      cursor = page.nextCursor ?? undefined
+    } while (cursor)
+
+    expect(all).toHaveLength(2)
+    expect(fetchMock.mock.calls[1][0] as string).toContain("cursor=cur-1")
+  })
+
   it("list omits limit from the query string when not supplied", async () => {
     const fetchMock = vi.fn().mockReturnValueOnce(mockOk({ characters: [] }))
     const c = createClient({

@@ -146,6 +146,7 @@ export type {
   UpsertCharacterInput,
   UpsertCharacterResult,
   ListCharactersParams,
+  ListCharactersResult,
   DuplicateCharacterInput,
   GenerateCharacterInput,
   GenerateCharacterResult,

@@ -168,6 +168,10 @@ function mockListChain(result: { data: unknown; error: unknown }) {
     is: vi.fn().mockReturnThis(),
     not: vi.fn().mockReturnThis(),
     limit: vi.fn().mockReturnThis(),
+    // Keyset pagination adds a second `.order("id")` (total ordering) and an
+    // `.or()` leg (the cursor predicate) to this chain.
+    order: vi.fn().mockReturnThis(),
+    or: vi.fn().mockReturnThis(),
   }
   // Make chainable thenable so `await query` resolves
   chainable.then = (resolve: (value: { data: unknown; error: unknown }) => unknown) => Promise.resolve(result).then(resolve)
@@ -370,24 +374,41 @@ describe("GET /v1/characters", () => {
   // The list route accepts `?limit=N` (Zod coerces from the query string).
   // Default is 100; cap is 500. Without the limit on the query builder a
   // misbehaving SDK consumer could drag the whole table across the wire.
-  it("applies the default limit of 100 when ?limit is not supplied", async () => {
+  // The builder gets `limit + 1` — the extra row is the has-more probe and is
+  // sliced off before the response, so a PAGE never exceeds the caller's limit.
+  it("applies the default limit of 100 (+1 has-more probe) when ?limit is not supplied", async () => {
     const { mockSelect, chainable } = mockListChain({ data: [], error: null })
     vi.mocked(supabase.from).mockReturnValue({ select: mockSelect } as never)
 
     const res = await app.inject({ method: "GET", url: "/v1/characters" })
 
     expect(res.statusCode).toBe(200)
-    expect(chainable.limit).toHaveBeenCalledWith(100)
+    expect(chainable.limit).toHaveBeenCalledWith(101)
   })
 
-  it("forwards ?limit=N (coerced to number) to the query builder", async () => {
+  it("forwards ?limit=N (coerced to number, +1 probe) to the query builder", async () => {
     const { mockSelect, chainable } = mockListChain({ data: [], error: null })
     vi.mocked(supabase.from).mockReturnValue({ select: mockSelect } as never)
 
     const res = await app.inject({ method: "GET", url: "/v1/characters?limit=5" })
 
     expect(res.statusCode).toBe(200)
-    expect(chainable.limit).toHaveBeenCalledWith(5)
+    expect(chainable.limit).toHaveBeenCalledWith(6)
+  })
+
+  it("never returns more than `limit` rows even though it fetches limit+1", async () => {
+    // 3 rows come back for limit=2: the 3rd is the probe, not a result.
+    const rows = [0, 1, 2].map((i) => ({
+      ...DB_CHARACTER,
+      id: `00000000-0000-4000-8000-00000000002${i}`,
+    }))
+    const { mockSelect } = mockListChain({ data: rows, error: null })
+    vi.mocked(supabase.from).mockReturnValue({ select: mockSelect } as never)
+
+    const res = await app.inject({ method: "GET", url: "/v1/characters?limit=2" })
+
+    expect(res.statusCode).toBe(200)
+    expect(res.json().characters).toHaveLength(2)
   })
 
   it("rejects ?limit > 500 with 400 validation_error", async () => {
@@ -419,6 +440,170 @@ describe("GET /v1/characters", () => {
 
     expect(res.statusCode).toBe(500)
     expect(res.json().error.code).toBe("internal_error")
+  })
+})
+
+// ---------------------------------------------------------------------------
+// GET /v1/characters — keyset pagination
+//
+// Before this existed the route returned at most `limit` rows with no way to
+// ask for the next page, so a user with more characters than the limit simply
+// could not see the rest (favourites included) — indistinguishable, from the
+// UI, from the rows having been deleted.
+// ---------------------------------------------------------------------------
+
+describe("GET /v1/characters — cursor pagination", () => {
+  it("orders by (created_at, id) so the keyset boundary is total", async () => {
+    const { mockSelect, mockOrder, chainable } = mockListChain({ data: [], error: null })
+    vi.mocked(supabase.from).mockReturnValue({ select: mockSelect } as never)
+
+    const res = await app.inject({ method: "GET", url: "/v1/characters" })
+
+    expect(res.statusCode).toBe(200)
+    expect(mockOrder).toHaveBeenCalledWith("created_at", { ascending: false })
+    expect(chainable.order).toHaveBeenCalledWith("id", { ascending: false })
+  })
+
+  it("returns nextCursor: null when the page is not full", async () => {
+    const { mockSelect } = mockListChain({ data: [DB_CHARACTER], error: null })
+    vi.mocked(supabase.from).mockReturnValue({ select: mockSelect } as never)
+
+    const res = await app.inject({ method: "GET", url: "/v1/characters?limit=10" })
+
+    expect(res.statusCode).toBe(200)
+    expect(res.json().nextCursor).toBeNull()
+  })
+
+  // Exactly `limit` rows means the table is exhausted — the probe row is what
+  // proves more exist. Returning a cursor here (the `length === limit` bug in
+  // the older /v1/jobs pagination) costs the client a wasted empty request.
+  it("returns nextCursor: null when the last page is exactly `limit` rows", async () => {
+    const rows = [0, 1].map((i) => ({
+      ...DB_CHARACTER,
+      id: `00000000-0000-4000-8000-00000000002${i}`,
+    }))
+    const { mockSelect } = mockListChain({ data: rows, error: null })
+    vi.mocked(supabase.from).mockReturnValue({ select: mockSelect } as never)
+
+    const res = await app.inject({ method: "GET", url: "/v1/characters?limit=2" })
+
+    expect(res.statusCode).toBe(200)
+    expect(res.json().characters).toHaveLength(2)
+    expect(res.json().nextCursor).toBeNull()
+  })
+
+  it("returns a nextCursor built from the LAST returned row, not the probe", async () => {
+    const rows = [
+      { ...DB_CHARACTER, id: "00000000-0000-4000-8000-000000000021", created_at: "2026-07-31T10:00:02Z" },
+      { ...DB_CHARACTER, id: "00000000-0000-4000-8000-000000000022", created_at: "2026-07-31T10:00:01Z" },
+      // probe row — must NOT be returned, and must NOT be the cursor
+      { ...DB_CHARACTER, id: "00000000-0000-4000-8000-000000000023", created_at: "2026-07-31T10:00:00Z" },
+    ]
+    const { mockSelect } = mockListChain({ data: rows, error: null })
+    vi.mocked(supabase.from).mockReturnValue({ select: mockSelect } as never)
+
+    const res = await app.inject({ method: "GET", url: "/v1/characters?limit=2" })
+
+    expect(res.statusCode).toBe(200)
+    const { characters, nextCursor } = res.json()
+    expect(characters).toHaveLength(2)
+    expect(nextCursor).not.toBeNull()
+    expect(JSON.parse(Buffer.from(nextCursor, "base64").toString("utf8"))).toEqual({
+      createdAt: "2026-07-31T10:00:01Z",
+      id: "00000000-0000-4000-8000-000000000022",
+    })
+  })
+
+  it("applies the composite keyset filter when a cursor is supplied", async () => {
+    const { mockSelect, chainable } = mockListChain({ data: [], error: null })
+    vi.mocked(supabase.from).mockReturnValue({ select: mockSelect } as never)
+
+    const cursor = Buffer.from(
+      JSON.stringify({ createdAt: "2026-07-31T10:00:01Z", id: "00000000-0000-4000-8000-000000000022" }),
+    ).toString("base64")
+    const res = await app.inject({
+      method: "GET",
+      url: `/v1/characters?cursor=${encodeURIComponent(cursor)}`,
+    })
+
+    expect(res.statusCode).toBe(200)
+    // The `and(created_at.eq...)` leg is what keeps rows sharing a timestamp
+    // (same-transaction inserts) from being skipped at the page boundary.
+    expect(chainable.or).toHaveBeenCalledWith(
+      "created_at.lt.2026-07-31T10:00:01Z,and(created_at.eq.2026-07-31T10:00:01Z,id.lt.00000000-0000-4000-8000-000000000022)",
+    )
+  })
+
+  it("does not apply an or() filter when no cursor is supplied", async () => {
+    const { mockSelect, chainable } = mockListChain({ data: [], error: null })
+    vi.mocked(supabase.from).mockReturnValue({ select: mockSelect } as never)
+
+    const res = await app.inject({ method: "GET", url: "/v1/characters" })
+
+    expect(res.statusCode).toBe(200)
+    expect(chainable.or).not.toHaveBeenCalled()
+  })
+
+  // A malformed cursor must NOT silently serve page 1 — a rolling-load client
+  // would append the same rows forever instead of surfacing the bug.
+  it("returns 400 on an undecodable cursor instead of falling back to page 1", async () => {
+    const { mockSelect } = mockListChain({ data: [], error: null })
+    vi.mocked(supabase.from).mockReturnValue({ select: mockSelect } as never)
+
+    const res = await app.inject({ method: "GET", url: "/v1/characters?cursor=garbage" })
+
+    expect(res.statusCode).toBe(400)
+    expect(res.json().error.code).toBe("validation_error")
+  })
+
+  it("returns 400 on a cursor carrying PostgREST filter metacharacters", async () => {
+    const { mockSelect, chainable } = mockListChain({ data: [], error: null })
+    vi.mocked(supabase.from).mockReturnValue({ select: mockSelect } as never)
+
+    const injected = Buffer.from(
+      JSON.stringify({
+        createdAt: "2026-07-31T10:00:01Z,deleted_at.not.is.null",
+        id: "00000000-0000-4000-8000-000000000022",
+      }),
+    ).toString("base64")
+    const res = await app.inject({
+      method: "GET",
+      url: `/v1/characters?cursor=${encodeURIComponent(injected)}`,
+    })
+
+    expect(res.statusCode).toBe(400)
+    expect(chainable.or).not.toHaveBeenCalled()
+  })
+
+  it("round-trips its own nextCursor back into a valid next-page request", async () => {
+    const rows = [
+      { ...DB_CHARACTER, id: "00000000-0000-4000-8000-000000000021", created_at: "2026-07-31T10:00:02Z" },
+      { ...DB_CHARACTER, id: "00000000-0000-4000-8000-000000000022", created_at: "2026-07-31T10:00:01Z" },
+    ]
+    const first = mockListChain({ data: rows, error: null })
+    vi.mocked(supabase.from).mockReturnValue({ select: first.mockSelect } as never)
+    const page1 = await app.inject({ method: "GET", url: "/v1/characters?limit=1" })
+    const { nextCursor } = page1.json()
+    expect(nextCursor).not.toBeNull()
+
+    const second = mockListChain({ data: [], error: null })
+    vi.mocked(supabase.from).mockReturnValue({ select: second.mockSelect } as never)
+    const page2 = await app.inject({
+      method: "GET",
+      url: `/v1/characters?limit=1&cursor=${encodeURIComponent(nextCursor)}`,
+    })
+
+    expect(page2.statusCode).toBe(200)
+    expect(second.chainable.or).toHaveBeenCalled()
+  })
+
+  it("rejects an over-long cursor with 400 before decoding", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: `/v1/characters?cursor=${"a".repeat(600)}`,
+    })
+    expect(res.statusCode).toBe(400)
+    expect(res.json().error.code).toBe("validation_error")
   })
 })
 

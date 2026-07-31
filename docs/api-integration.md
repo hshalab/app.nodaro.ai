@@ -287,7 +287,7 @@ Studio. All routes require an authenticated bearer token (`ndr_…` /
 
 | Method | Path | Purpose |
 |---|---|---|
-| `GET` | `/v1/characters` | List characters. Query: `projectId`, `archived=true`, `limit` (default 100, max 500). |
+| `GET` | `/v1/characters` | List characters (cursor-paginated). Query: `projectId`, `archived=true`, `limit` (default 100, max 500), `cursor`. Returns `{ characters, nextCursor }` — see [pagination](#get-v1characters--pagination) below. |
 | `GET` | `/v1/characters/:id` | Get full character + in-flight portrait/asset jobs. |
 | `POST` | `/v1/characters` | Upsert (create if no `id`, update otherwise). |
 | `POST` | `/v1/characters/:id/duplicate` | Fork to a new row with `(copy)` suffix. |
@@ -299,6 +299,51 @@ The upsert body is documented in `backend/src/routes/characters.ts`. On
 UPDATE, only the fields you supply are written; omitted keys are left alone
 so partial saves don't clobber asset arrays a worker is concurrently
 appending to.
+
+### `GET /v1/characters` — pagination
+
+The list is cursor-paginated. One call returns **at most `limit` rows**
+(default 100, max 500), so treating a single response as "all characters"
+silently truncates the list for anyone above that count.
+
+```jsonc
+{
+  "characters": [ /* … */ ],
+  "nextCursor": "eyJjcmVhdGVkQXQiOiIyMDI2LTA3LTMxVDEwOjAwOjAxWiIsImlkIjoi…"
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `nextCursor` | Opaque token. Pass it back as `?cursor=` to fetch the next page. |
+| `nextCursor: null` | You have reached the end — there are no more rows. |
+
+Keep requesting until `nextCursor` is `null`:
+
+```bash
+CURSOR=""
+while :; do
+  RESP=$(curl -s -H "Authorization: Bearer $TOKEN" \
+    "$BASE/v1/characters?limit=100${CURSOR:+&cursor=$CURSOR}")
+  echo "$RESP" | jq -r '.characters[].id'
+  CURSOR=$(echo "$RESP" | jq -r '.nextCursor // empty')
+  [ -z "$CURSOR" ] && break
+done
+```
+
+Notes:
+
+- The cursor is a **keyset** over `(created_at, id)` — the ordering is
+  `created_at DESC, id DESC`. Pairing the id with the timestamp is what keeps
+  rows created in the same transaction (identical `created_at`) from being
+  skipped at a page boundary.
+- The cursor is **opaque**: do not parse, construct, or persist it across
+  releases. Only ever echo back a `nextCursor` the server gave you.
+- A malformed cursor is a `400 validation_error`, not a silent reset to the
+  first page.
+- `archived=true` pages the same way, over the archived set.
+- Rows created *while* you are paging (newer than page 1's boundary) are not
+  picked up by the walk — restart from no cursor to see them.
 
 ### Generation
 
