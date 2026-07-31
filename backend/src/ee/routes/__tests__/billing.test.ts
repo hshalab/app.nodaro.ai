@@ -51,11 +51,14 @@ vi.mock("@/ee/billing/stripe-config.js", () => ({
     }
     return map[priceId] || "free"
   },
+  // Mirrors the real TIER_CREDITS post-re-denomination. Kept in step on
+  // purpose: a mock frozen at the old x0.1 values still passes every
+  // assertion here, which is how a real drift stays invisible.
   TIER_CREDITS: {
-    free: 150,
-    basic: 475,
-    standard: 1175,
-    pro: 2650,
+    free: 1500,
+    basic: 4500,
+    standard: 11000,
+    pro: 23000,
   } as Record<string, number>,
   TIER_STORAGE_LIMITS: {
     free: 1 * 1024 * 1024 * 1024,
