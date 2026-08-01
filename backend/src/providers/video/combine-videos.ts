@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs"
 import { join } from "node:path"
-import { downloadFile, runFfmpeg, runFfprobe, getVideoStreamDuration, createWorkDir, cleanupWorkDir, normalizeVideoForCombine, trimEdgeFrames } from "./ffmpeg-utils.js"
+import { downloadFile, runFfmpeg, runFfprobe, getVideoStreamDuration, createWorkDir, cleanupWorkDir, normalizeVideoForCombine, trimEdgeFrames, COMBINE_DELIVERY_CRF } from "./ffmpeg-utils.js"
 import { getSmartCutMatcher, type SmartCutMode } from "./smart-cut.js"
 import { resolveXfadeName, resolveAudioCrossfadeCurve } from "@nodaro/shared"
 
@@ -613,6 +613,7 @@ export async function combineVideos(options: CombineOptions): Promise<CombineVid
         "-map", videoFilter.outputLabel,
         "-c:v", "libx264",
         "-preset", "fast",
+        "-crf", COMBINE_DELIVERY_CRF,
         "-an",
         outputPath,
       ])
@@ -628,6 +629,7 @@ export async function combineVideos(options: CombineOptions): Promise<CombineVid
           "-map", videoFilter.outputLabel,
           "-c:v", "libx264",
           "-preset", "fast",
+          "-crf", COMBINE_DELIVERY_CRF,
           "-an",
           outputPath,
         ])
@@ -649,6 +651,7 @@ export async function combineVideos(options: CombineOptions): Promise<CombineVid
             "-map", audioFilter.outputLabel,
             "-c:v", "libx264",
             "-preset", "fast",
+            "-crf", COMBINE_DELIVERY_CRF,
             "-c:a", "aac",
             outputPath,
           ])
@@ -664,6 +667,7 @@ export async function combineVideos(options: CombineOptions): Promise<CombineVid
             "-map", videoFilter.outputLabel,
             "-c:v", "libx264",
             "-preset", "fast",
+            "-crf", COMBINE_DELIVERY_CRF,
             "-an",
             outputPath,
           ])
@@ -704,6 +708,7 @@ export async function combineVideos(options: CombineOptions): Promise<CombineVid
           "-map", videoFilter.outputLabel,
           "-c:v", "libx264",
           "-preset", "fast",
+          "-crf", COMBINE_DELIVERY_CRF,
           "-an",
           outputPath,
         ])
@@ -718,6 +723,7 @@ export async function combineVideos(options: CombineOptions): Promise<CombineVid
           "-map", "[aout]",
           "-c:v", "libx264",
           "-preset", "fast",
+          "-crf", COMBINE_DELIVERY_CRF,
           "-c:a", "aac",
           outputPath,
         ])

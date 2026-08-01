@@ -396,6 +396,19 @@ export const BROWSER_SAFE_VIDEO_ARGS = [
 ] as const
 
 /**
+ * CRF for every re-encode on the COMBINE/DELIVERY path — clip normalization,
+ * smart-cut edge trims, and the xfade renders in combine-videos.ts. The
+ * inputs are already-compressed AI segments, and this is the encode the user
+ * actually receives: x264's default 23 (and the explicit 23 normalize used
+ * to carry) halved the delivered bitrate at the very last step (job
+ * 08f99f85: 2.2–2.5 Mbps segments → 1.19 Mbps final; the cut path even
+ * stacks normalize + trim, two such generations before its stream-copy
+ * concat). 18 is the visually-lossless norm; the size cost lands on one
+ * deliverable file, not a library.
+ */
+export const COMBINE_DELIVERY_CRF = "18"
+
+/**
  * Browser-safe args optimized for Remotion's OffthreadVideo compositor.
  * Forces a keyframe every frame (`-g 1`) so the compositor can seek to any
  * timestamp without decoding from a distant keyframe.  File size is ~20-40%
@@ -530,7 +543,7 @@ export async function trimEdgeFrames(
       `[0:v]trim=start=${startSec}:end=${duration - endSec},setpts=PTS-STARTPTS[v];` +
         `[0:a]atrim=start=${startSec},asetpts=PTS-STARTPTS[a]`,
       "-map", "[v]", "-map", "[a]",
-      "-c:v", "libx264", "-preset", "fast", "-c:a", "aac", outputPath,
+      "-c:v", "libx264", "-preset", "fast", "-crf", COMBINE_DELIVERY_CRF, "-c:a", "aac", outputPath,
     ])
     return outputPath
   }
@@ -540,7 +553,7 @@ export async function trimEdgeFrames(
   // Also bounds the AUDIO to the video's cut point, killing the overhang on
   // trimmed clips — concat boundaries then match the video exactly.
   if (trimEndFrames > 0) args.push("-to", String(duration - endSec))
-  args.push("-c:v", "libx264", "-preset", "fast", "-c:a", "aac", outputPath)
+  args.push("-c:v", "libx264", "-preset", "fast", "-crf", COMBINE_DELIVERY_CRF, "-c:a", "aac", outputPath)
 
   await runFfmpeg(args)
   return outputPath
@@ -615,7 +628,7 @@ export async function normalizeVideoForCombine(
   await runFfmpeg([
     "-y", "-i", inputPath,
     "-vf", `fps=24,scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1`,
-    "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "fast", "-crf", "23",
+    "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "fast", "-crf", COMBINE_DELIVERY_CRF,
     "-c:a", "aac", "-b:a", "128k", "-ar", "44100", "-ac", "2",
     "-movflags", "+faststart",
     outputPath,
