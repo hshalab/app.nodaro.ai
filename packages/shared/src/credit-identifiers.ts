@@ -15,6 +15,7 @@ import {
   RESOLUTION_DURATION_PRICING,
   VEO_RESOLUTION_TIERED_PROVIDERS,
   VIDEO_DURATION_TIERS,
+  PRICING_DEFAULT_DURATION_SEC,
   MOTION_DURATION_TIERS,
   T2I_TO_I2I_VARIANT,
   isVeoProvider,
@@ -219,8 +220,12 @@ export function buildVideoCreditModelIdentifier(
     return effectiveProvider
   }
 
-  const parsed = typeof duration === "string" ? parseInt(duration, 10) : (duration ?? 5)
-  const durationSec = Number.isNaN(parsed) ? 5 : parsed
+  // A named-provider request with NO duration renders the model's own default
+  // (kie/models.ts extraParams), so price that default — not the global 5s —
+  // for providers whose per-second tiers wouldn't snap 5 up to it (minimax-h3).
+  const durationFallback = PRICING_DEFAULT_DURATION_SEC[effectiveProvider] ?? 5
+  const parsed = typeof duration === "string" ? parseInt(duration, 10) : (duration ?? durationFallback)
+  const durationSec = Number.isNaN(parsed) ? durationFallback : parsed
   const tiers = VIDEO_DURATION_TIERS[effectiveProvider]
   if (!tiers) return effectiveProvider
 

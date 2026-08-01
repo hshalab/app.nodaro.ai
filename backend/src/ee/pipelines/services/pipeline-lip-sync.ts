@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
-import { buildLipSyncCreditId, SEEDANCE_LIP_SYNC_PROVIDERS } from "@nodaro/shared"
+import { buildLipSyncCreditId, SEEDANCE_LIP_SYNC_PROVIDERS, isMinimaxH3Provider } from "@nodaro/shared"
 import { runPipelineWorkerJob } from "./_run-worker-job.js"
 
 export interface PipelineLipSyncArgs {
@@ -63,15 +63,18 @@ export async function pipelineLipSync(
     throw new Error("pipelineLipSync requires either videoUrl or imageUrl")
   }
 
-  // Mirror routes/lip-sync.ts credit-identifier construction.
+  // Mirror routes/lip-sync.ts credit-identifier construction. (minimax-h3 has
+  // no resolution dimension — its duration composite prices every tier.)
   const modelIdentifier =
     provider === "infinitalk"
       ? `infinitalk:${resolution ?? "720p"}`
-      : SEEDANCE_LIP_SYNC_PROVIDERS.has(provider)
-        ? `${provider}:8s:${resolution ?? "720p"}-ref`
-        : provider === "kling-avatar" || provider === "kling-avatar-pro"
-          ? buildLipSyncCreditId(provider, audioDurationSec)
-          : provider
+      : isMinimaxH3Provider(provider)
+        ? "minimax-h3:8s"
+        : SEEDANCE_LIP_SYNC_PROVIDERS.has(provider)
+          ? `${provider}:8s:${resolution ?? "720p"}-ref`
+          : provider === "kling-avatar" || provider === "kling-avatar-pro"
+            ? buildLipSyncCreditId(provider, audioDurationSec)
+            : provider
 
   return runPipelineWorkerJob({
     supabase,

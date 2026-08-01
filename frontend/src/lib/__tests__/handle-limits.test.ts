@@ -79,6 +79,30 @@ describe("getHandleConnectionLimit (generate-video)", () => {
     })
   }
 
+  it("minimax-h3 returns the full multimodal caps for ALL handles (mirrors the Seedance 2 surface)", () => {
+    const node = {
+      id: "n",
+      type: "generate-video",
+      data: { provider: "minimax-h3" },
+    } as unknown as WorkflowNode
+    expect(getHandleConnectionLimit(node, "startFrame")?.limit).toBe(1)
+    expect(getHandleConnectionLimit(node, "endFrame")?.limit).toBe(1)
+    expect(getHandleConnectionLimit(node, "imageReferences")?.limit).toBe(9)
+    expect(getHandleConnectionLimit(node, "videoReferences")?.limit).toBe(3)
+    expect(getHandleConnectionLimit(node, "audioReferences")?.limit).toBe(3)
+  })
+
+  it("minimax-h3 shares the image-ref POOL with frames (folded by the shared resolver)", () => {
+    // Same pool arithmetic as Seedance 2: consumed frame/asset slots subtract
+    // from the 9-image user-ref budget.
+    const node = {
+      id: "n",
+      type: "generate-video",
+      data: { provider: "minimax-h3" },
+    } as unknown as WorkflowNode
+    expect(getHandleConnectionLimit(node, "imageReferences", { seedance2ImagePoolConsumed: 2 })?.limit).toBe(7)
+  })
+
   it("returns null for unknown handle on generate-video", () => {
     const node = {
       id: "n",

@@ -6,7 +6,7 @@
 import type { SimpleNode, SimpleEdge, ResolvedInputs, NodeExecutionState } from "./types.js"
 
 // Shared logic from packages/shared — single source of truth
-import { collectAncestorRefs as sharedCollectAncestorRefs, applyDefaultVideoSelection, LOCATION_REFERENCE_PHOTO_KINDS, locationReferencePhotoKindLabel, type LocationReferencePhotoKind, characterMentionableAssetArrays, buildCreditModelIdentifier, resolveImageGenCreditIdentifier, buildVideoCreditModelIdentifier, buildMotionCreditModelIdentifier, applyVideoNegativePrompt, resolveVideoProviderForMode, videoProviderRequiresImage, isVeoProvider, buildLipSyncCreditId, isPerSecondLipSyncProvider, resolveAiAvatarCreditId, resolveSwitchXCreditId, resolveCinematicCreditId, referenceSheetCreditId, buildVideoAnalysisCreditId, resolveVideoAnalysisModel, extractReferencedLabels, combineSameLabelRefs, refHandleCategory, canonicalVarName, validateAiAvatarPayload, validateCinematicAvatarPayload, resolveNodeRefs, resolveEffectiveSourceType, PARAMETER_NODE_TYPES, characterMentionSlug, expandExtraRefsToConnectedReferences, PLATFORM_SPECS, isSeedance2Provider, MODEL_CATALOG, hasFeature, referenceModalityForHandle, countRefModalityEdges as countRefModalityEdgesCore, type ReferenceModality, COMPOSER_PLAN_MAP, ASPECT_RATIO_DIMENSIONS, buildLlmCreditIdentifier, motionGraphicsFeature, FLUX_LORA_CHARACTER_MODEL_ID, extractCharacterLoraFields, clampSmartCutWindow } from "@nodaro/shared"
+import { collectAncestorRefs as sharedCollectAncestorRefs, applyDefaultVideoSelection, LOCATION_REFERENCE_PHOTO_KINDS, locationReferencePhotoKindLabel, type LocationReferencePhotoKind, characterMentionableAssetArrays, buildCreditModelIdentifier, resolveImageGenCreditIdentifier, buildVideoCreditModelIdentifier, buildMotionCreditModelIdentifier, applyVideoNegativePrompt, resolveVideoProviderForMode, videoProviderRequiresImage, isVeoProvider, buildLipSyncCreditId, isPerSecondLipSyncProvider, resolveAiAvatarCreditId, resolveSwitchXCreditId, resolveCinematicCreditId, referenceSheetCreditId, buildVideoAnalysisCreditId, resolveVideoAnalysisModel, extractReferencedLabels, combineSameLabelRefs, refHandleCategory, canonicalVarName, validateAiAvatarPayload, validateCinematicAvatarPayload, resolveNodeRefs, resolveEffectiveSourceType, PARAMETER_NODE_TYPES, characterMentionSlug, expandExtraRefsToConnectedReferences, PLATFORM_SPECS, isSeedance2Provider, isMinimaxH3Provider, MODEL_CATALOG, hasFeature, referenceModalityForHandle, countRefModalityEdges as countRefModalityEdgesCore, type ReferenceModality, COMPOSER_PLAN_MAP, ASPECT_RATIO_DIMENSIONS, buildLlmCreditIdentifier, motionGraphicsFeature, FLUX_LORA_CHARACTER_MODEL_ID, extractCharacterLoraFields, clampSmartCutWindow } from "@nodaro/shared"
 import { composeNegative, resolveTemplate, applyTemplate, computeNodePrompt, assembleImageInput, buildImagePrompt, buildScenePrompt, collectIdentityLockClause as sharedCollectIdentityLockClause, getParameterPromptHint, characterLockToRefLock, buildCharacterPrompt, buildObjectPrompt, buildCreaturePrompt, buildLocationPrompt, buildFaceTemplateInputs, appendMusicMeta, composeSoundHintFromConnections, truncateForField, appendField, assembleSunoInput, type SoundConsumerType, type SoundComposition, resolveVideoReferenceCore } from "@nodaro/prompts"
 import type { CharacterDef, ConnectedReference, SceneData, ExtraRefInput, ExtraRefCharacterContext } from "@nodaro/shared"
 import type { CharacterMeta } from "@nodaro/prompts"
@@ -60,11 +60,13 @@ export interface PayloadBuildContext {
 // every other bullet), so a @-mentioned character that auto-fills the empty
 // start frame WHILE other references are present ends up double-numbered.
 //
-// Suppress the promotion ONLY for Seedance 2 AND when other references will
-// remain (→ reference mode is guaranteed): the mention then stays front-of-list
-// at its bullet's number and no frame suffix is emitted. A lone mention with no
-// other refs still fills the frame slot — genuine strict first-frame mode, a
-// single image, nothing to collide with.
+// Suppress the promotion ONLY for Seedance 2 / MiniMax H3 AND when other
+// references will remain (→ reference mode is guaranteed): the mention then
+// stays front-of-list at its bullet's number and no frame suffix is emitted. A
+// lone mention with no other refs still fills the frame slot — genuine strict
+// first-frame mode, a single image, nothing to collide with. (MiniMax H3 runs
+// the SAME shared resolver with the same tail-fold semantics, so the guard
+// applies identically.)
 function keepSeedance2MentionsAsRefs(
   provider: string,
   opts: {
@@ -79,7 +81,7 @@ function keepSeedance2MentionsAsRefs(
     opts.baseRefCount > 0 ||
     opts.refVideoCount > 0 ||
     opts.refAudioCount > 0
-  return isSeedance2Provider(provider) && otherRefsPresent
+  return (isSeedance2Provider(provider) || isMinimaxH3Provider(provider)) && otherRefsPresent
 }
 
 // ---------------------------------------------------------------------------
@@ -2510,11 +2512,13 @@ export function buildPayload(
           generateAudio: data.generateAudio,
           negativePrompt: data.negativePrompt,
           cfgScale: data.cfgScale,
-          // Seedance 2 config pickers render defaults in the UI without
-          // persisting them to data until the user explicitly picks, so
-          // untouched nodes submitted aspectRatio / resolution undefined.
-          // Fill the defaults here so the request matches the UI.
-          aspectRatio: (data.aspectRatio as string | undefined) ?? (isSeedance2Provider(provider) ? "adaptive" : undefined),
+          // Seedance 2 / MiniMax H3 config pickers render defaults in the UI
+          // without persisting them to data until the user explicitly picks,
+          // so untouched nodes submitted aspectRatio / resolution undefined.
+          // Fill the defaults here so the request matches the UI. (H3 has no
+          // resolution lever — its catalog declares no resolutions, so the
+          // resolution fallback stays undefined by construction.)
+          aspectRatio: (data.aspectRatio as string | undefined) ?? (isSeedance2Provider(provider) || isMinimaxH3Provider(provider) ? "adaptive" : undefined),
           resolution: (data.resolution as string | undefined) ?? (isSeedance2Provider(provider) ? MODEL_CATALOG[provider]?.resolutions?.[0] : undefined),
           seed: data.seed,
           cameraFixed: data.cameraFixed,
@@ -2617,8 +2621,8 @@ export function buildPayload(
           duration: data.duration,
           mode: data.mode ?? data.kling3Mode,
           sound: data.sound ?? data.kling3Sound,
-          // See i2v note above — Seedance 2 UI default fallbacks.
-          aspectRatio: (data.aspectRatio as string | undefined) ?? (isSeedance2Provider(provider) ? "adaptive" : undefined),
+          // See i2v note above — Seedance 2 / MiniMax H3 UI default fallbacks.
+          aspectRatio: (data.aspectRatio as string | undefined) ?? (isSeedance2Provider(provider) || isMinimaxH3Provider(provider) ? "adaptive" : undefined),
           negativePrompt: data.negativePrompt,
           cfgScale: data.cfgScale,
           multiShot: data.multiShot,
@@ -2649,6 +2653,7 @@ export function buildPayload(
       const gvSel = applyDefaultVideoSelection({ provider: data.provider as string | undefined, duration: data.duration as number | string | undefined })
       const provider = gvSel.provider
       const isS2 = isSeedance2Provider(provider)
+      const isH3 = isMinimaxH3Provider(provider)
 
       // ─── LTX 2.3 task dispatch ───────────────────────────────────────────
       // LTX has a single Replicate endpoint per variant that switches behavior
@@ -2872,7 +2877,7 @@ export function buildPayload(
           // Seedance 2 config pickers render defaults in the UI without
           // persisting them to data until the user explicitly picks; fill
           // them in here so the worker request matches the visible UI state.
-          aspectRatio: (data.aspectRatio as string | undefined) ?? (isS2 ? "adaptive" : undefined),
+          aspectRatio: (data.aspectRatio as string | undefined) ?? (isS2 || isH3 ? "adaptive" : undefined),
           resolution: (data.resolution as string | undefined) ?? (isS2 ? MODEL_CATALOG[provider]?.resolutions?.[0] : undefined),
           seed: data.seed,
           cameraFixed: data.cameraFixed,

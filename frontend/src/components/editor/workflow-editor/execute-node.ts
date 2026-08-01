@@ -87,7 +87,7 @@ import {
   executeReduce,
 } from "@/lib/api";
 import { resolveTemplate, applyTemplate } from "@/lib/prompt-templates";
-import { ASPECT_RATIO_DIMENSIONS, COMPOSER_PLAN_MAP, VIDEO_INPUT_LIP_SYNC_PROVIDERS, FLEXIBLE_INPUT_LIP_SYNC_PROVIDERS, isSeedance2Provider, isVeoProvider, MODEL_CATALOG, splitGeneratedItems, LLM_FEATURE_DEFAULTS, resolveVideoProviderForMode, resolveEffectiveSourceType, sourceRefKey, hasFeature, countRefModalityEdges, type ReferenceModality, LOCATION_REFERENCE_PHOTO_KINDS, locationReferencePhotoKindLabel, type LocationReferencePhotoKind, characterMentionSlug, characterMentionableAssetArrays, selectLoraRoutingForMentions, expandExtraRefsToConnectedReferences, resolveSeparator, evaluateJsonPath, stringifyPathResults, spreadJsonArrayIfSingleton, zipMergeLists, evaluateJsonExpression, buildExpressionFromVisual, jsonResultToList, tryParseJson, evaluateCondition, evaluateConditionGroup, resolveConditionValue, sortListItems, runSelector, resolveSelectorRefs, buildConditionVariables, VARIABLES_HANDLE_ID, clampSmartCutWindow } from "@nodaro/shared"
+import { ASPECT_RATIO_DIMENSIONS, COMPOSER_PLAN_MAP, VIDEO_INPUT_LIP_SYNC_PROVIDERS, FLEXIBLE_INPUT_LIP_SYNC_PROVIDERS, isSeedance2Provider, isMinimaxH3Provider, isVeoProvider, MODEL_CATALOG, splitGeneratedItems, LLM_FEATURE_DEFAULTS, resolveVideoProviderForMode, resolveEffectiveSourceType, sourceRefKey, hasFeature, countRefModalityEdges, type ReferenceModality, LOCATION_REFERENCE_PHOTO_KINDS, locationReferencePhotoKindLabel, type LocationReferencePhotoKind, characterMentionSlug, characterMentionableAssetArrays, selectLoraRoutingForMentions, expandExtraRefsToConnectedReferences, resolveSeparator, evaluateJsonPath, stringifyPathResults, spreadJsonArrayIfSingleton, zipMergeLists, evaluateJsonExpression, buildExpressionFromVisual, jsonResultToList, tryParseJson, evaluateCondition, evaluateConditionGroup, resolveConditionValue, sortListItems, runSelector, resolveSelectorRefs, buildConditionVariables, VARIABLES_HANDLE_ID, clampSmartCutWindow } from "@nodaro/shared"
 import { composeNegative, computeNodePrompt, computeLlmChatFields, pickerFanoutTargets, buildImagePrompt, assembleImageInput, collectIdentityLockClause, characterLockToRefLock, assembleSunoInput, type AssembleSunoResult } from "@nodaro/prompts"
 import type { CharacterDef, ConnectedReference, ReferenceSource, ExtraRefCharacterContext } from "@nodaro/shared"
 import { ANALYZABLE_PICKER_HINT } from "@/lib/picker-labels";
@@ -2349,7 +2349,7 @@ export function executeNode(
     // Seedance 2 (unified inputs): the backend resolver picks the mode from
     // whatever is connected; a prompt-only run is a valid t2v fallback, so never
     // hard-fail on a missing start frame.
-    const isSeedance2RefOnly = isSeedance2Provider(nodeProvider ?? "")
+    const isSeedance2RefOnly = isSeedance2Provider(nodeProvider ?? "") || isMinimaxH3Provider(nodeProvider ?? "")
     if (!startFrameUrl && !isVeoRefMode && !isSeedance2RefOnly) {
       const debugSources = edges.filter((e) => e.target === node.id).map((e) => `${e.sourceHandle ?? "?"}→${e.targetHandle ?? "?"}`).join(", ")
       toast.error(`Node "${i2vData.label}": no start frame image found (inputs: startFrame=${inputs.startFrameUrl ?? "none"}, imageUrl=${inputs.imageUrl ?? "none"}, edges: ${debugSources || "none"})`);
@@ -2387,7 +2387,8 @@ export function executeNode(
     // both fields silently. Send explicit defaults so the value the user
     // SEES in the picker always matches what KIE receives.
     const isSeedance2I2V = isSeedance2Provider(nodeProvider ?? "")
-    const effectiveAspectRatio = i2vData.aspectRatio ?? (isSeedance2I2V ? "adaptive" : undefined)
+    const isMinimaxH3I2V = isMinimaxH3Provider(nodeProvider ?? "")
+    const effectiveAspectRatio = i2vData.aspectRatio ?? (isSeedance2I2V || isMinimaxH3I2V ? "adaptive" : undefined)
     const effectiveResolution = i2vData.resolution ?? (isSeedance2I2V ? MODEL_CATALOG[nodeProvider ?? ""]?.resolutions?.[0] : undefined)
     setUserPromptTemplate(i2vData.prompt?.trim() || undefined);
     return runVideoGeneration(
@@ -2674,7 +2675,7 @@ export function executeNode(
     // data until the user actively picks — so an untouched Seedance 2 node
     // silently submits without aspectRatio/resolution. Fill the defaults
     // explicitly so the request matches what the user sees.
-    const effectiveT2vAspect = (t2vData.aspectRatio as string | undefined) ?? (isSeedance2T2V ? "adaptive" : undefined)
+    const effectiveT2vAspect = (t2vData.aspectRatio as string | undefined) ?? (isSeedance2T2V || isMinimaxH3Provider(t2vProvider) ? "adaptive" : undefined)
     // generate-video (re-typed, carries `__appendWired`): typed + wired negative
     // both emitted. Standalone text-to-video keeps legacy wired-wins.
     const t2vTypedNeg = (t2vData.negativePrompt as string | undefined) || undefined;

@@ -17,7 +17,7 @@ import {
   uiMeta,
 } from "./_verb-helpers.js"
 import { WIDGET_URI } from "../widgets/registrar.js"
-import { modelIdsByKindMode, SEEDANCE_2_REF_LIMITS, isSeedance2Provider, ALL_CAPTION_STYLES, COMBINE_TRANSITION_IDS, AUDIO_CROSSFADE_CURVE_IDS, MOTION_TRANSFER_PROVIDERS, VIDEO_ANALYSIS_TIER_ORDER, resolveVideoAnalysisModel, DEFAULT_VIDEO_ANALYSIS_TIER, VIDEO_ANALYSIS_DURATION_BUCKETS, VIDEO_ANALYSIS_MAX_DURATION_SEC, VIDEO_ANALYSIS_MAX_SCENE_SEC, VIDEO_ANALYSIS_BUCKET_CREDITS, buildVideoAnalysisCreditId } from "@nodaro/shared"
+import { modelIdsByKindMode, SEEDANCE_2_REF_LIMITS, isSeedance2Provider, isMinimaxH3Provider, ALL_CAPTION_STYLES, COMBINE_TRANSITION_IDS, AUDIO_CROSSFADE_CURVE_IDS, MOTION_TRANSFER_PROVIDERS, VIDEO_ANALYSIS_TIER_ORDER, resolveVideoAnalysisModel, DEFAULT_VIDEO_ANALYSIS_TIER, VIDEO_ANALYSIS_DURATION_BUCKETS, VIDEO_ANALYSIS_MAX_DURATION_SEC, VIDEO_ANALYSIS_MAX_SCENE_SEC, VIDEO_ANALYSIS_BUCKET_CREDITS, buildVideoAnalysisCreditId } from "@nodaro/shared"
 
 // Map list_models catalog/display ids → /v1/motion-transfer route providers.
 // The catalog advertises `motion-transfer` / `kling-3.0-motion` (the credit/
@@ -490,12 +490,13 @@ export function registerVideoVerbs({ server, session, fastify }: RegisterOpts): 
               expectedKind: "image",
             })
           : undefined)
-      // Seedance 2 multimodal refs — resolve per-item URL/asset_id, then
-      // gate by provider. Other providers silently drop these args.
-      const isSd2 = isSeedance2Provider(model)
-      const refImageUrls = isSd2 ? await resolveRefArray(args.reference_image_urls, session.userId, "image", SEEDANCE_2_REF_LIMITS.images) : []
-      const refVideoUrls = isSd2 ? await resolveRefArray(args.reference_video_urls, session.userId, "video", SEEDANCE_2_REF_LIMITS.videos) : []
-      const refAudioUrls = isSd2 ? await resolveRefArray(args.reference_audio_urls, session.userId, "audio", SEEDANCE_2_REF_LIMITS.audio) : []
+      // Multimodal refs (Seedance 2 family + MiniMax Hailuo 3 — identical
+      // 9/3/3 caps) — resolve per-item URL/asset_id, then gate by provider.
+      // Other providers silently drop these args.
+      const isMultimodalRef = isSeedance2Provider(model) || isMinimaxH3Provider(model)
+      const refImageUrls = isMultimodalRef ? await resolveRefArray(args.reference_image_urls, session.userId, "image", SEEDANCE_2_REF_LIMITS.images) : []
+      const refVideoUrls = isMultimodalRef ? await resolveRefArray(args.reference_video_urls, session.userId, "video", SEEDANCE_2_REF_LIMITS.videos) : []
+      const refAudioUrls = isMultimodalRef ? await resolveRefArray(args.reference_audio_urls, session.userId, "audio", SEEDANCE_2_REF_LIMITS.audio) : []
 
       // KIE forbids combining multimodal-ref mode with start+end frame mode.
       // Fail fast with a clear MCP error rather than letting the route 400.
@@ -503,7 +504,7 @@ export function registerVideoVerbs({ server, session, fastify }: RegisterOpts): 
         return {
           content: [{
             type: "text" as const,
-            text: "Seedance 2: reference videos/audio cannot be combined with end_frame_url / end_frame_asset_id. Pass one or the other.",
+            text: `${model}: reference videos/audio cannot be combined with end_frame_url / end_frame_asset_id. Pass one or the other.`,
           }],
           isError: true,
         }

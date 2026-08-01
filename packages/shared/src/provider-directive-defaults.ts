@@ -24,6 +24,10 @@ export const PROVIDER_DIRECTIVE_DEFAULTS = {
   "hailuo-2.3-pro": {} as Record<string, never>,
   "hailuo-standard": {} as Record<string, never>,
   minimax: {} as Record<string, never>,
+  // MiniMax Hailuo 3 — multimodal like seedance-2 but no verified directive
+  // semantics yet; empty until probed (NOTE: never match `minimax-h3` with a
+  // startsWith("seedance") / startsWith("minimax") prefix check — exact keys only).
+  "minimax-h3": {} as Record<string, never>,
   "bytedance-lite": {} as Record<string, never>,
 } as const
 

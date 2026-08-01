@@ -10,7 +10,6 @@ import {
   getVideoResolutionOptions,
   IMAGE_QUALITY_OPTIONS,
   IMAGE_RESOLUTION_OPTIONS,
-  VIDEO_RATIOS,
 } from "@/components/editor/config-panels/model-options"
 // Single source of truth for the duration-slider cap — defined once in the
 // config panel (frontend/src/components/editor/config-panels/video-configs.tsx)
@@ -447,10 +446,14 @@ function renderTextToVideo(
         />
       )
     case "aspectRatio":
+      // Provider-aware (was a hardcoded 3-ratio VIDEO_RATIOS list): wide/tall
+      // sets like Seedance 2 / MiniMax H3 (adaptive, 21:9, 4:3, 3:4) surface in
+      // curated app cards exactly as in the editor. Falls back to VIDEO_RATIOS
+      // for providers without a catalog aspect list.
       return (
         <AspectRatioField
           label={customLabel ?? "Aspect Ratio"}
-          options={VIDEO_RATIOS}
+          options={getAspectRatiosForVideoModel(String(props.nodeData.provider ?? "seedance-2-fast"))}
           value={value}
           onChange={onChange}
           allowedValues={allowedValues}
@@ -503,10 +506,14 @@ function renderGenerateVideo(
         />
       )
     case "aspectRatio":
+      // Provider-aware (was a hardcoded 3-ratio VIDEO_RATIOS list): wide/tall
+      // sets like Seedance 2 / MiniMax H3 (adaptive, 21:9, 4:3, 3:4) surface in
+      // curated app cards exactly as in the editor. Falls back to VIDEO_RATIOS
+      // for providers without a catalog aspect list.
       return (
         <AspectRatioField
           label={customLabel ?? "Aspect Ratio"}
-          options={VIDEO_RATIOS}
+          options={getAspectRatiosForVideoModel(String(props.nodeData.provider ?? "seedance-2-fast"))}
           value={value}
           onChange={onChange}
           allowedValues={allowedValues}

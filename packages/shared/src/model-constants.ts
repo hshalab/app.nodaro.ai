@@ -133,6 +133,9 @@ export const MAX_VIDEO_PROMPT_CHARS_BY_PROVIDER: Record<string, number> = {
   "bytedance-lite": 10000,
   "bytedance-pro": 10000,
   "bytedance-pro-fast": 10000,
+  // MiniMax Hailuo 3 — 1-7000 chars, uniform across t2v/i2v/r2v
+  // (docs.kie.ai/market/minimax-h3).
+  "minimax-h3": 7000,
   // lower than the 8000 default
   "minimax": 1500,
   "hailuo-standard": 1500,
@@ -641,6 +644,7 @@ export const IMAGE_TO_VIDEO_PROVIDERS = [
   "seedance-2",
   "seedance-2-fast",
   "seedance-2-mini",
+  "minimax-h3",
   "hailuo-2.3-pro",
   "hailuo-2.3",
   "hailuo-standard",
@@ -683,6 +687,7 @@ export const TEXT_TO_VIDEO_PROVIDERS = [
   "seedance-2",
   "seedance-2-fast",
   "seedance-2-mini",
+  "minimax-h3",
   "wan",
   "hailuo-standard",
   "bytedance-lite",
@@ -861,15 +866,22 @@ export const LIP_SYNC_PROVIDERS = [
   "seedance-2",
   "seedance-2-fast",
   "seedance-2-mini",
+  // MiniMax Hailuo 3 — same multimodal audio-driven mechanism (r2v
+  // reference_audio_urls paired with an image ref); rides the same
+  // reference-audio lip-sync surface as the Seedance 2 family.
+  "minimax-h3",
 ] as const
 export type LipSyncProvider = typeof LIP_SYNC_PROVIDERS[number]
 
-/** Seedance variants exposed via the lip-sync surface. They go through
- *  the i2v provider with the audio plumbed as `reference_audio_urls`. */
+/** Multimodal video models exposed via the lip-sync surface (Seedance 2 family
+ *  + MiniMax Hailuo 3). They go through the i2v provider with the audio
+ *  plumbed as `reference_audio_urls` rather than a dedicated lip-sync flow.
+ *  (Name kept for the Seedance-era public export.) */
 export const SEEDANCE_LIP_SYNC_PROVIDERS = new Set<string>([
   "seedance-2",
   "seedance-2-fast",
   "seedance-2-mini",
+  "minimax-h3",
 ])
 
 /** Replicate-based lip-sync providers (video or image+audio via Replicate SDK) */
@@ -1104,6 +1116,7 @@ export const DURATION_PRICED_PROVIDERS = new Set([
   "seedance-2",
   "seedance-2-fast",
   "seedance-2-mini",
+  "minimax-h3",
   "grok-imagine-video-1.5",
   "happyhorse",
   "happyhorse-i2v",
@@ -1122,6 +1135,23 @@ export const SEEDANCE_2_PROVIDERS = new Set<string>([
 
 export function isSeedance2Provider(provider: string | undefined): boolean {
   return !!provider && SEEDANCE_2_PROVIDERS.has(provider)
+}
+
+/**
+ * MiniMax Hailuo 3 family — the KIE "minimax-h3" market model. One Nodaro id
+ * covers three KIE endpoints (text-to-video / image-to-video /
+ * reference-to-video); the provider layer swaps the endpoint by which inputs
+ * are present. Mirrors the Seedance 2 multimodal surface (frames + image/video/
+ * audio references) but with a FIXED 2K output (no resolution lever) and
+ * uniform per-second pricing. Exact-membership set — NEVER match on a
+ * "minimax" prefix (the unrelated Hailuo 02 id "minimax" would collide).
+ */
+export const MINIMAX_H3_PROVIDERS = new Set<string>([
+  "minimax-h3",
+])
+
+export function isMinimaxH3Provider(provider: string | undefined): boolean {
+  return !!provider && MINIMAX_H3_PROVIDERS.has(provider)
 }
 
 /**
@@ -1147,9 +1177,15 @@ export function isGvpSupportedProvider(provider: string | undefined): boolean {
  * historical `"16:9"`. Single source of truth so every run-default / display-
  * fallback site stays in lock-step (preview = run). Applies to ALL Seedance
  * modes incl. text-to-video — KIE accepts `adaptive` there too.
+ *
+ * MiniMax Hailuo 3 also defaults to `adaptive`: its r2v endpoint takes
+ * `adaptive` natively (the KIE default) and its i2v endpoint has no aspect
+ * param at all (inferred from the frame). Only the pure-t2v endpoint requires
+ * a concrete ratio — the KIE provider layer coerces `adaptive` → `16:9` there
+ * (see applyMinimaxH3Params in backend kie/video.ts).
  */
 export function defaultVideoAspectRatio(provider: string | undefined): string {
-  return isSeedance2Provider(provider) ? "adaptive" : "16:9"
+  return isSeedance2Provider(provider) || isMinimaxH3Provider(provider) ? "adaptive" : "16:9"
 }
 
 /**
@@ -1233,6 +1269,9 @@ export const SEEDANCE_2_EXTEND_STITCH = {
  */
 export const SEEDANCE_2_R2V_MAX_AUDIO_SEC_BY_PROVIDER: Record<string, number> = {
   "seedance-2-fast": 15.2,
+  // MiniMax Hailuo 3 — documented hard limit: each reference audio segment
+  // 2-15s, ≤15s total (docs.kie.ai/market/minimax-h3/reference-to-video).
+  "minimax-h3": 15,
 }
 
 /** The verified r2v reference-audio cap (seconds) for a provider, or null when
@@ -1281,6 +1320,11 @@ export const VIDEO_REF_LIMITS_BY_PROVIDER: Record<
   "seedance-2": { ...SEEDANCE_2_REF_LIMITS },
   "seedance-2-fast": { ...SEEDANCE_2_REF_LIMITS },
   "seedance-2-mini": { ...SEEDANCE_2_REF_LIMITS },
+  // MiniMax Hailuo 3 — identical multimodal caps (9 images / 3 videos / 3
+  // audio per docs.kie.ai/market/minimax-h3/reference-to-video). Note: KIE
+  // bills input images beyond the first 5 (11 KIE cr each) — see the
+  // minimax-h3 credit helper in backend ee/billing.
+  "minimax-h3": { ...SEEDANCE_2_REF_LIMITS },
   // Multi-image reference providers.
   "gemini-omni-video": { images: 7, videos: 1 },
   "kling-3-omni": { images: 7 },     // catalog/docs: "end frame + up to 7 reference images"
@@ -1477,6 +1521,10 @@ export const VIDEO_AUDIO_CAPABILITY: Record<string, VideoAudioCapability> = {
   "seedance-2": { mode: "audio_driven", field: "generateAudio" },
   "seedance-2-fast": { mode: "audio_driven", field: "generateAudio" },
   "seedance-2-mini": { mode: "audio_driven", field: "generateAudio" },
+  // MiniMax Hailuo 3 — multimodal; lip-syncs to reference audio (r2v). The
+  // KIE API exposes NO audio on/off parameter (audio is always produced), so
+  // there is no toggle field — alwaysOn, like VEO.
+  "minimax-h3": { mode: "audio_driven", alwaysOn: true },
 }
 
 const VIDEO_AUDIO_NONE: VideoAudioCapability = { mode: "none" }
@@ -1595,8 +1643,26 @@ export const VIDEO_VARIABLE_PRICING: Record<string, "duration" | "duration+audio
   "seedance-2": "duration+resolution+ref",
   "seedance-2-fast": "duration+resolution+ref",
   "seedance-2-mini": "duration+resolution+ref",
+  // MiniMax Hailuo 3 — fixed 2K output, uniform per-second rate: duration is
+  // the only composite dimension (ref-video input seconds + extra input
+  // images are billed via the dedicated compute hook, not the identifier).
+  "minimax-h3": "duration",
   // Grok Imagine Video 1.5 — per-second billing split 480p/720p (no video-ref dimension).
   "grok-imagine-video-1.5": "duration+resolution",
+}
+
+/**
+ * Duration assumed for PRICING when a request names a provider but omits
+ * `duration` — MUST match the provider's KIE-side default (`extraParams.duration`
+ * in backend kie/models.ts) so an intent-less request reserves what it will
+ * actually render. Providers absent here use the historical global 5s fallback,
+ * which is only safe when their duration TIERS snap 5 up to (or past) the model
+ * default (e.g. seedance-2's 4/8/12/15 ladder snaps 5 → the 8s tier = its 8s
+ * default). minimax-h3 prices per-second (every 4-15s tier seeded), so a 5s
+ * fallback would under-reserve its 6s default render.
+ */
+export const PRICING_DEFAULT_DURATION_SEC: Record<string, number> = {
+  "minimax-h3": 6,
 }
 
 /** HappyHorse 1.1 per-second tiers — one per allowed duration (3–15s), shared
@@ -1683,6 +1749,23 @@ export const VIDEO_DURATION_TIERS: Record<string, Array<{ maxSeconds: number; su
     { maxSeconds: 4, suffix: "4s" },
     { maxSeconds: 8, suffix: "8s" },
     { maxSeconds: 12, suffix: "12s" },
+    { maxSeconds: 15, suffix: "15s" },
+  ],
+  // MiniMax Hailuo 3 — true per-second billing (KIE 36.5 cr/s, fixed 2K). One
+  // tier per allowed second (4-15s) so the composite identifier maps 1:1 to
+  // the seeded price — no rounding/overcharge for any on-menu duration.
+  "minimax-h3": [
+    { maxSeconds: 4, suffix: "4s" },
+    { maxSeconds: 5, suffix: "5s" },
+    { maxSeconds: 6, suffix: "6s" },
+    { maxSeconds: 7, suffix: "7s" },
+    { maxSeconds: 8, suffix: "8s" },
+    { maxSeconds: 9, suffix: "9s" },
+    { maxSeconds: 10, suffix: "10s" },
+    { maxSeconds: 11, suffix: "11s" },
+    { maxSeconds: 12, suffix: "12s" },
+    { maxSeconds: 13, suffix: "13s" },
+    { maxSeconds: 14, suffix: "14s" },
     { maxSeconds: 15, suffix: "15s" },
   ],
   // Grok Imagine Video 1.5 — true per-second billing (KIE 14.5 cr/s @480p, 25 cr/s

@@ -62,6 +62,7 @@ Generate Video covers the union of the legacy image-to-video and text-to-video c
 | Gemini Omni | `gemini-omni-video` | T2V, I2V, video-edit (V2V) | 4 / 6 / 8 / 10s; 720p / 1080p / 4K (4K not on free tier); no prompt-baked audio (external `audio_ids` only — see section); up to 7 reference images; V2V uses trim window ≤ 10 s |
 | Kling | `kling`, `kling-turbo`, `kling-3.0`, `kling-master` | T2V, I2V (`kling-master` is I2V-only) | 5 / 10s (Kling 3.0: continuous 3–15s) |
 | Seedance / Seedance 2 | `seedance`, `seedance-2`, `seedance-2-fast`, `seedance-2-mini` | T2V, I2V, reference (S2) | S2: 4–15s; aspect 16:9 / 9:16 / 1:1 / 4:3 / 3:4 / **21:9** / **adaptive** — **`adaptive` is the default** (output matches the wired input; was `16:9`). Resolution by variant (separate KIE models): `seedance-2` (full) **480p / 720p / 1080p / 4K**; `seedance-2-fast` **480p / 720p only** (no 1080p, no 4K); `seedance-2-mini` **480p / 720p only**. Up to 9 image + 3 video + 3 audio refs |
+| MiniMax Hailuo 3 | `minimax-h3` | T2V, I2V (first/last frame), reference | 4–15s (any second, default 6); **fixed 2K output — no resolution lever**; aspect 21:9 / 16:9 / 4:3 / 1:1 / 3:4 / 9:16 + **adaptive** (default; pure T2V requires a concrete ratio and renders 16:9 when left on adaptive). Up to 9 image + 3 video + 3 audio refs; audio always on |
 | Hailuo | `hailuo-2.3-pro`, `hailuo-2.3`, `hailuo-standard` | T2V (`hailuo-standard`), I2V | 6 / 10s |
 | Bytedance | `bytedance-lite`, `bytedance-pro`, `bytedance-pro-fast` | T2V (lite, pro), I2V | 5 / 10s |
 | MiniMax | `minimax` | T2V, I2V | Fixed 5s, end-frame supported |
@@ -83,7 +84,7 @@ Providers that accept a paired last frame: `veo3`, `veo3.1`, `veo3_lite` (`image
 
 ### Multimodal references
 
-Seedance 2 (`seedance-2` / `seedance-2-fast` / `seedance-2-mini`) accepts up to 9 image refs, 3 video refs, and 3 audio refs in a single call. **`seedance-2-fast` requires each reference audio clip to be ≤ 15.2 seconds** (audio-driven r2v mode) — longer clips are rejected before the job is created with an `audio_too_long` error. HappyHorse Ref2V accepts 1–9 image refs. VEO 3.1 (`veo3.1`) supports `REFERENCE_2_VIDEO` mode when image references are wired without a start frame. Gemini Omni (`gemini-omni-video`) accepts up to 7 image refs in both modes — with a start frame (i2v) or without one (reference-conditioned t2v).
+Seedance 2 (`seedance-2` / `seedance-2-fast` / `seedance-2-mini`) accepts up to 9 image refs, 3 video refs, and 3 audio refs in a single call. **`seedance-2-fast` requires each reference audio clip to be ≤ 15.2 seconds** (audio-driven r2v mode) — longer clips are rejected before the job is created with an `audio_too_long` error. MiniMax Hailuo 3 (`minimax-h3`) mirrors the same 9 / 3 / 3 caps through the same input resolver (frames fold into the reference pool when any reference is wired): reference videos are 2–15s each and ≤ 15s combined, reference audio is ≤ 15s per clip (enforced pre-submit with the same `audio_too_long` error) and **cannot be used alone** — it must ride with an image or video reference. HappyHorse Ref2V accepts 1–9 image refs. VEO 3.1 (`veo3.1`) supports `REFERENCE_2_VIDEO` mode when image references are wired without a start frame. Gemini Omni (`gemini-omni-video`) accepts up to 7 image refs in both modes — with a start frame (i2v) or without one (reference-conditioned t2v).
 
 **Seedance 2 unified inputs (frames + references together).** Seedance 2 no longer has a Frames-vs-References toggle (`data.seedance2InputMode` was removed) — first/last frames and references can all be connected at once, and the dispatch mode is derived from the wiring:
 
@@ -190,32 +191,37 @@ If neither has the identifier, the route returns HTTP 503 `price_not_configured`
 
 | Provider | Duration | Resolution | Mode | Refs | Credits |
 |---|---|---|---|---|---|
-| `veo3` (Quality) | 8s | 1080p | i2v | — | 63 |
-| `veo3.1` (Fast) | 8s | 1080p | i2v | — | 17 |
-| `veo3_lite` | 8s | 720p | t2v | — | 8 |
-| `kling-turbo` | 5s | — | i2v | — | 11 |
-| `kling-3.0` | 10s | — | i2v | sound on | doubles base cost |
-| `minimax` | 5s | — | i2v | — | 15 |
-| `seedance-2` | 8s | 720p | i2v | no ref | 82 |
-| `seedance-2` | 8s | 1080p | i2v | no ref | 204 |
-| `seedance-2` | 8s | 1080p | i2v | with ref | 124 |
-| `seedance-2` | 8s | 4K | i2v | no ref | 416 |
-| `seedance-2` | 8s | 4K | i2v | with ref | 256 |
-| `seedance-2-fast` | 8s | 720p | i2v | with ref | 40 |
-| `seedance-2-mini` | 8s | 720p | i2v | no ref | 41 |
-| `seedance-2-mini` | 8s | 480p | i2v | with ref | 12 |
-| `grok-imagine-video-1.5` | 8s | 480p | i2v | image required | 30 |
-| `grok-imagine-video-1.5` | 8s | 720p | i2v | image required | 51 |
-| `grok-imagine-video-1.5` | 15s | 720p | i2v | image required | 95 |
-| `happyhorse-i2v` | 5s | 720p | i2v | — | 29 |
-| `happyhorse-i2v` | 5s | 1080p | i2v | — | 37 |
-| `happyhorse-ref2v` | 15s | 1080p | i2v | 1–9 ref images | 109 |
+| `veo3` (Quality) | 8s | 1080p | i2v | — | 1000 |
+| `veo3.1` (Fast) | 8s | 1080p | i2v | — | 170 |
+| `veo3_lite` | 8s | 720p | t2v | — | 75 |
+| `kling-turbo` | 5s | — | i2v | — | 110 |
+| `kling-3.0` | 10s | — | i2v | sound on | ~1.5× the silent rate |
+| `minimax` | 5s | — | i2v | — | 143 |
+| `minimax-h3` | 6s | 2K (fixed) | any | ≤ 5 input images | 550 |
+| `minimax-h3` | 8s | 2K (fixed) | any | ≤ 5 input images | 730 |
+| `minimax-h3` | 15s | 2K (fixed) | any | ≤ 5 input images | 1370 |
+| `minimax-h3` | 8s out | 2K (fixed) | reference | + 5s reference video | 1187 |
+| `minimax-h3` | 6s | 2K (fixed) | reference | 8 input images (3 over the free 5) | 630 |
+| `seedance-2` | 8s | 720p | i2v | no ref | 820 |
+| `seedance-2` | 8s | 1080p | i2v | no ref | 2040 |
+| `seedance-2` | 8s | 1080p | i2v | with ref | 1240 |
+| `seedance-2` | 8s | 4K | i2v | no ref | 4160 |
+| `seedance-2` | 8s | 4K | i2v | with ref | 2560 |
+| `seedance-2-fast` | 8s | 720p | i2v | with ref | 400 |
+| `seedance-2-mini` | 8s | 720p | i2v | no ref | 410 |
+| `seedance-2-mini` | 8s | 480p | i2v | with ref | 120 |
+| `grok-imagine-video-1.5` | 8s | 480p | i2v | image required | 300 |
+| `grok-imagine-video-1.5` | 8s | 720p | i2v | image required | 510 |
+| `grok-imagine-video-1.5` | 15s | 720p | i2v | image required | 950 |
+| `happyhorse-i2v` | 5s | 720p | i2v | — | 290 |
+| `happyhorse-i2v` | 5s | 1080p | i2v | — | 370 |
+| `happyhorse-ref2v` | 15s | 1080p | i2v | 1–9 ref images | 1090 |
 
-**Grok Imagine 1.5** uses true per-second pricing via the composite identifier `grok-imagine-video-1.5:<N>s:<resolution>` (N = 1–15, resolution = `480p` / `720p`). Credits = `ceil((rate × seconds + 2) / 4)`, where the per-second rate is 14.5 @ 480p and 25 @ 720p and the `+2` covers the required input image. Examples: 4s/480p = 15, 8s/480p = 30, 8s/720p = 51, 15s/720p = 95.
+**Grok Imagine 1.5** uses true per-second pricing via the composite identifier `grok-imagine-video-1.5:<N>s:<resolution>` (N = 1–15, resolution = `480p` / `720p`). Credits = `ceil((rate × seconds + 2) / 4) × 10`, where the per-second KIE rate is 14.5 @ 480p and 25 @ 720p and the `+2` covers the required input image. Examples: 4s/480p = 150, 8s/480p = 300, 8s/720p = 510, 15s/720p = 950.
 
-**HappyHorse 1.1** (`happyhorse` T2V / `happyhorse-i2v` / `happyhorse-ref2v`) is per-second priced via the composite identifier `<id>:<N>s:<resolution>` (N = 3–15, resolution = `720p` / `1080p`), with identical rates across all three modes. Credits = `ceil(rate × seconds / 4)`, where the per-second rate is 22.5 @ 720p and 29 @ 1080p. Examples: 5s/720p = 29, 5s/1080p = 37, 10s/720p = 57, 15s/1080p = 109. When resolution is unspecified the run renders and bills at 720p.
+**HappyHorse 1.1** (`happyhorse` T2V / `happyhorse-i2v` / `happyhorse-ref2v`) is per-second priced via the composite identifier `<id>:<N>s:<resolution>` (N = 3–15, resolution = `720p` / `1080p`), with identical rates across all three modes. Credits = `ceil(rate × seconds / 4) × 10`, where the per-second KIE rate is 22.5 @ 720p and 29 @ 1080p. Examples: 5s/720p = 290, 5s/1080p = 370, 10s/720p = 570, 15s/1080p = 1090. When resolution is unspecified the run renders and bills at 720p.
 
-**Seedance 2** (full `seedance-2`) is per-second priced via the composite identifier `seedance-2:<N>s:<resolution>` (no-ref) or `seedance-2:<N>s:<resolution>-ref` (any reference wired). Credits = `ceil(KIE_per_sec × duration / 4)`, where the per-second KIE rate depends on resolution and whether a reference is present:
+**Seedance 2** (full `seedance-2`) is per-second priced via the composite identifier `seedance-2:<N>s:<resolution>` (no-ref) or `seedance-2:<N>s:<resolution>-ref` (any reference wired). Credits = `ceil(KIE_per_sec × duration / 4) × 10`, where the per-second KIE rate depends on resolution and whether a reference is present:
 
 | Resolution | Per-sec (no ref) | Per-sec (with ref) |
 |---|---:|---:|
@@ -224,9 +230,14 @@ If neither has the identifier, the route returns HTTP 503 `price_not_configured`
 | 720p | 41 | 25 |
 | 480p | 19 | 11.5 |
 
-So at 8s: 1080p = `ceil(102×8/4)` = **204** no-ref / `ceil(62×8/4)` = **124** with-ref; 4K = `ceil(208×8/4)` = **416** no-ref / `ceil(128×8/4)` = **256** with-ref. Wiring any reference (image / video / audio) selects the cheaper `-ref` ladder. 4K is the full `seedance-2` only — `seedance-2-fast` (480p / 720p) and `seedance-2-mini` (480p / 720p) are separate, cheaper KIE models with their own ladders (neither has a 1080p SKU).
+So at 8s: 1080p = `ceil(102×8/4) × 10` = **2040** no-ref / `ceil(62×8/4) × 10` = **1240** with-ref; 4K = `ceil(208×8/4) × 10` = **4160** no-ref / `ceil(128×8/4) × 10` = **2560** with-ref. Wiring any reference (image / video / audio) selects the cheaper `-ref` ladder. 4K is the full `seedance-2` only — `seedance-2-fast` (480p / 720p) and `seedance-2-mini` (480p / 720p) are separate, cheaper KIE models with their own ladders (neither has a 1080p SKU).
 
-**Reference videos bill input + output duration.** KIE bills "with video input" runs as `per_sec × (input_video_duration + output_duration)`, not output alone. When one or more reference videos are wired, the runtime ffprobes their durations at reservation time and reserves `ceil(per_sec_with_ref × (Σ reference_video_seconds + output_seconds) / 4)` up front — credits can only be refunded (never up-charged) at commit, so the full duration is reserved. A probe failure assumes the 15s cap (KIE limits total reference video to ≤ 15s) so a blip never under-charges. Reference **images** and **audio** do not add input duration — only reference **videos** do.
+**MiniMax Hailuo 3** (`minimax-h3`) is per-second priced via the duration-only composite `minimax-h3:<N>s` (N = 4–15) — output is fixed 2K, so there is no resolution or `-ref` dimension. Credits = `ceil(36.5 × seconds / 4) × 10` (36.5 = the KIE per-second rate). Examples: 4s = 370, 6s = 550 (the default duration), 8s = 730, 15s = 1370. Two extra billing dimensions are reserved dynamically on top of the composite:
+
+- **Reference-video input seconds** bill at the same per-second rate: total = `ceil(91.25 × (Σ reference_video_seconds + output_seconds))` base credits, where 91.25 = the 8s composite ÷ 8. Example: 8s output + a 5s reference video = `ceil(91.25 × 13)` = **1187**.
+- **Input images beyond the first 5** (counting frames folded into the reference pool) add 27.5 base credits each (11 KIE cr/image). Example: 6s output with 8 pool images = `ceil(91.25 × 6 + 3 × 27.5)` = **630**. Reference audio is free.
+
+**Reference videos bill input + output duration.** KIE bills "with video input" runs as `per_sec × (input_video_duration + output_duration)`, not output alone. When one or more reference videos are wired, the runtime ffprobes their durations at reservation time and reserves the full scaled base up front (per-second base rate = the provider's 8s composite ÷ 8, on the `-ref` ladder for Seedance 2 and the flat ladder for MiniMax H3) — credits can only be refunded (never up-charged) at commit, so the full duration is reserved. A probe failure assumes the 15s cap (KIE limits total reference video to ≤ 15s) so a blip never under-charges. Reference **images** and **audio** do not add input duration — only reference **videos** do (and for `minimax-h3`, images beyond the first 5 add the per-image surcharge above).
 
 Cross-check the runtime table in `/admin/models` for the live numbers — the worked examples above match the `STATIC_CREDIT_COSTS` snapshot at the time of this writing.
 
@@ -262,7 +273,7 @@ A request is **voiced** only when a spec is present **and** the model can carry 
 
 | Audio mode | Models | Chain |
 |---|---|---|
-| `audio_driven` | `seedance-2`, `seedance-2-fast`, `seedance-2-mini` | Synthesize the dialogue (each line in its own voice) via ElevenLabs Dialogue v3 → feed as reference audio → the model lip-syncs to it. |
+| `audio_driven` | `seedance-2`, `seedance-2-fast`, `seedance-2-mini`, `minimax-h3` (audio always on — no toggle) | Synthesize the dialogue (each line in its own voice) via ElevenLabs Dialogue v3 → feed as reference audio → the model lip-syncs to it. |
 | `native_speech` | `veo3`, `veo3.1`, `veo3_lite` (always on); `kling`, `kling-3.0` (behind the `sound` toggle — enabling it on Kling raises the credit cost, see the `:audio` composites below); `kling-3-omni` (audio included in the flat rate) | Bake the line during generation, then revoice the baked audio to the primary character voice (ElevenLabs voice-changer, keeping the music/SFX bed). |
 
 Kling models speak scripted dialogue natively: quote the line in the prompt (optionally with a voice description, e.g. `[Anna: warm calm voice]: "good morning"`) and enable sound. Kling 2.6 voices are English/Chinese; other languages are auto-translated to English by the model.
@@ -275,8 +286,8 @@ The audio step is reserved as an add-on **on top of** the base video cost — sa
 
 | Mode | Add-on identifier | Add-on credits |
 |---|---|---|
-| `audio_driven` (Seedance 2) | `elevenlabs-dialogue` | +4 |
-| `native_speech` (VEO 3.x) | `elevenlabs-voice-changer` | +4 |
+| `audio_driven` (Seedance 2 / MiniMax H3) | `elevenlabs-dialogue` | +25 (per 1K chars) |
+| `native_speech` (VEO 3.x) | `elevenlabs-voice-changer` | +40 |
 
 Example: `veo3.1` 8s / 1080p i2v voiced = 17 (base) + 4 (revoice) = **21 credits**.
 

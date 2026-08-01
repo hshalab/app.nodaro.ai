@@ -39,7 +39,7 @@ import type {
   VideoAnalysisNodeData,
 } from "@/types/nodes"
 import { GENERATE_VIDEO_PRO_MAX_DURATION_FALLBACK, VIDEO_I2V_MODELS, VIDEO_T2V_MODELS, VIDEO_V2V_MODELS, VIDEO_GEN_MODELS, GVP_PROVIDERS, MOTION_TRANSFER_MODELS, KIE_VIDEO_DURATIONS, KIE_T2V_DURATIONS, VIDEO_DURATION_OPTIONS, VIDEO_FPS_OPTIONS, PROVIDERS_WITH_END_FRAME, KLING3_DURATIONS, VIDEO_RATIOS, SEEDANCE_2_VIDEO_RATIOS, PROVIDERS_WITH_REFERENCES, V2V_DURATION_OPTIONS, V2V_RESOLUTION_OPTIONS, V2V_ALEPH_ASPECT_RATIOS, EXTEND_VIDEO_MODELS, getVideoResolutionOptions, getAspectRatiosForVideoModel, getVideoModelCapabilitiesTooltip } from "./model-options"
-import { isSeedance2Provider, defaultVideoAspectRatio, MODEL_CATALOG, SEEDANCE_2_REF_LIMITS, VIDEO_PROMPT_MAX, getMaxVideoPromptChars, getMaxNegativePromptChars, buildVideoCreditModelIdentifier, characterMentionSlug, characterMentionableAssetArrays, DEFAULT_LABEL_BY_SOURCE, locationMentionSlug, resolveEffectiveSourceType, FRAME_TARGET_HANDLES, VIDEO_ANALYSIS_TIER_ORDER, VIDEO_ANALYSIS_TIER_LABELS, VIDEO_ANALYSIS_TIERS, VIDEO_ANALYSIS_LEGACY_MODELS, DEFAULT_VIDEO_ANALYSIS_TIER, isVideoAnalysisTier, LLM_MODELS, clampSmartCutWindow, SMART_CUT_WINDOW_MIN, SMART_CUT_WINDOW_MAX, SMART_CUT_WINDOW_DEFAULT } from "@nodaro/shared"
+import { isSeedance2Provider, isMinimaxH3Provider, defaultVideoAspectRatio, MODEL_CATALOG, SEEDANCE_2_REF_LIMITS, VIDEO_PROMPT_MAX, getMaxVideoPromptChars, getMaxNegativePromptChars, buildVideoCreditModelIdentifier, characterMentionSlug, characterMentionableAssetArrays, DEFAULT_LABEL_BY_SOURCE, locationMentionSlug, resolveEffectiveSourceType, FRAME_TARGET_HANDLES, VIDEO_ANALYSIS_TIER_ORDER, VIDEO_ANALYSIS_TIER_LABELS, VIDEO_ANALYSIS_TIERS, VIDEO_ANALYSIS_LEGACY_MODELS, DEFAULT_VIDEO_ANALYSIS_TIER, isVideoAnalysisTier, LLM_MODELS, clampSmartCutWindow, SMART_CUT_WINDOW_MIN, SMART_CUT_WINDOW_MAX, SMART_CUT_WINDOW_DEFAULT } from "@nodaro/shared"
 import type { ReferenceSource, ConnectedReference } from "@nodaro/shared"
 import { resolveSeedance2Inputs } from "@nodaro/prompts"
 import { probeVideoAnalysis } from "@/lib/api"
@@ -508,7 +508,7 @@ function ImageToVideoConfigImpl({ data, onUpdate, sources, fieldMappings, onMapF
       </MappableField>
       <ModelDescriptionHint modelId={data.provider} />
 
-      {isSeedance2Provider(currentI2VProvider) && (() => {
+      {(isSeedance2Provider(currentI2VProvider) || isMinimaxH3Provider(currentI2VProvider)) && (() => {
         const s2 = resolveSeedance2Inputs({
           firstFrameUrl: connectedImages.some((img) => img.targetHandle !== "endFrame") ? "first" : undefined,
           lastFrameUrl: hasEndFrame ? "last" : undefined,
@@ -529,7 +529,7 @@ function ImageToVideoConfigImpl({ data, onUpdate, sources, fieldMappings, onMapF
             )}
             {s2.droppedRefImages > 0 && (
               <span className="text-[10px] leading-snug text-amber-500">
-                {s2.droppedRefImages} reference image{s2.droppedRefImages > 1 ? "s" : ""} over the 9-image limit will be dropped (frames kept).
+                {s2.droppedRefImages} reference image{s2.droppedRefImages > 1 ? "s" : ""} over the {SEEDANCE_2_REF_LIMITS.images}-image limit will be dropped (frames kept).
               </span>
             )}
           </div>
@@ -1073,6 +1073,23 @@ function ImageToVideoConfigImpl({ data, onUpdate, sources, fieldMappings, onMapF
             />
             <label htmlFor="seedance2Nsfw" className="text-xs">NSFW Content Filter</label>
           </div>
+        </>
+      )}
+
+      {isMinimaxH3Provider(data.provider) && (
+        <>
+          {/* Fixed 2K output — no resolution lever (deliberately NO Resolution
+              select; the fail-safe effect clears any stale data.resolution). */}
+          <MappableField field="aspectRatio" label="Aspect Ratio" sources={sources} fieldMappings={fieldMappings} onMapField={onMapField}>
+            <AspectRatioSelector
+              options={getAspectRatiosForVideoModel(currentI2VProvider)}
+              value={data.aspectRatio || defaultVideoAspectRatio(currentI2VProvider)}
+              onValueChange={(v) => onUpdate({ aspectRatio: v as ImageToVideoData["aspectRatio"] })}
+            />
+          </MappableField>
+          <p className="text-[10px] text-muted-foreground px-1">
+            Fixed 2K output. “adaptive” matches the wired input; pure text-to-video renders 16:9 unless a concrete ratio is picked. Audio is always generated — lip-synced to reference audio when connected.
+          </p>
         </>
       )}
 
@@ -1971,6 +1988,7 @@ function TextToVideoConfigImpl({ data, onUpdate, sources, fieldMappings, onMapFi
   const currentProvider = data.provider || "seedance-2-fast"
   const allowedDurations = KIE_T2V_DURATIONS[currentProvider] || null
   const isSeedance2 = isSeedance2Provider(currentProvider)
+  const isMinimaxH3 = isMinimaxH3Provider(currentProvider)
 
   // Fail-safe: keep `data.resolution` and `data.duration` consistent with
   // the current provider's valid sets, or clear/snap when invalid.
@@ -2231,7 +2249,9 @@ function TextToVideoConfigImpl({ data, onUpdate, sources, fieldMappings, onMapFi
         </div>
       )}
 
-      {isSeedance2 && (
+      {/* Multimodal reference sections — Seedance 2 family + MiniMax Hailuo 3
+          (identical 9/3/3 caps, same shared resolver). */}
+      {(isSeedance2 || isMinimaxH3) && (
         <>
           {connectedRefImages.length > 0 && (
             <div className="flex flex-col gap-1.5">
@@ -2268,6 +2288,17 @@ function TextToVideoConfigImpl({ data, onUpdate, sources, fieldMappings, onMapFi
               </div>
             </div>
           )}
+        </>
+      )}
+
+      {isMinimaxH3 && (
+        <p className="text-[10px] text-muted-foreground px-1">
+          Fixed 2K output. Audio is always generated — lip-synced to reference audio when connected.
+        </p>
+      )}
+
+      {isSeedance2 && (
+        <>
           <div>
             <Label className="text-xs">Resolution</Label>
             <Select
@@ -2316,14 +2347,15 @@ function TextToVideoConfigImpl({ data, onUpdate, sources, fieldMappings, onMapFi
         </>
       )}
 
-      {/* Seedance defaults to adaptive (preview = run, matching execute-node's
-          effectiveT2vAspect); non-Seedance keeps no default → undefined, so the run
-          still sends undefined (provider's own default) rather than a 16:9 the run
-          wouldn't send. */}
+      {/* Seedance / MiniMax H3 default to adaptive (preview = run, matching
+          execute-node's effectiveT2vAspect); other providers keep no default →
+          undefined, so the run still sends undefined (provider's own default)
+          rather than a 16:9 the run wouldn't send. (H3's pure-t2v endpoint has
+          no adaptive member — the KIE layer coerces adaptive → 16:9 there.) */}
       <MappableField field="aspectRatio" label="Aspect Ratio" sources={sources} fieldMappings={fieldMappings} onMapField={onMapField}>
         <AspectRatioSelector
-          options={isSeedance2 ? SEEDANCE_2_VIDEO_RATIOS : VIDEO_RATIOS}
-          value={data.aspectRatio || (isSeedance2 ? defaultVideoAspectRatio(currentProvider) : undefined)}
+          options={isSeedance2 ? SEEDANCE_2_VIDEO_RATIOS : isMinimaxH3 ? getAspectRatiosForVideoModel(currentProvider) : VIDEO_RATIOS}
+          value={data.aspectRatio || (isSeedance2 || isMinimaxH3 ? defaultVideoAspectRatio(currentProvider) : undefined)}
           onValueChange={(v) => onUpdate({ aspectRatio: v as TextToVideoData["aspectRatio"] })}
         />
       </MappableField>
@@ -2524,6 +2556,7 @@ function GenerateVideoConfigImpl({ data: rawData, onUpdate: rawOnUpdate, sources
   const isVeo = currentProvider === "veo3" || currentProvider === "veo3.1" || currentProvider === "veo3_lite"
   const isVeoRefMode = isVeo && data.veoMode === "reference"
   const isSeedance2 = isSeedance2Provider(currentProvider)
+  const isMinimaxH3 = isMinimaxH3Provider(currentProvider)
 
   const connectedImages = useMemo(() => {
     const imageTypes = ["generate-image", "upload-image", "character", "object", "location", "edit-image", "image-to-image", "scene"]
@@ -2610,12 +2643,12 @@ function GenerateVideoConfigImpl({ data: rawData, onUpdate: rawOnUpdate, sources
       </MappableField>
       <ModelDescriptionHint modelId={currentProvider} />
 
-      {/* Seedance 2 resolved-mode indicator — the backend resolver
-          (resolveSeedance2Inputs) decides frames-vs-references from the
-          connected inputs at run time, so the panel only DISPLAYS the
-          resolved mode + the prompt directive it appends. Mirror of the
-          indicator in ImageToVideoConfigImpl. */}
-      {isSeedance2 && (() => {
+      {/* Seedance 2 / MiniMax H3 resolved-mode indicator — the backend
+          resolver (resolveSeedance2Inputs, shared by both families) decides
+          frames-vs-references from the connected inputs at run time, so the
+          panel only DISPLAYS the resolved mode + the prompt directive it
+          appends. Mirror of the indicator in ImageToVideoConfigImpl. */}
+      {(isSeedance2 || isMinimaxH3) && (() => {
         const s2 = resolveSeedance2Inputs({
           firstFrameUrl: connectedImages.some((img) => img.targetHandle !== "endFrame") ? "first" : undefined,
           lastFrameUrl: hasEndFrame ? "last" : undefined,
@@ -2636,7 +2669,7 @@ function GenerateVideoConfigImpl({ data: rawData, onUpdate: rawOnUpdate, sources
             )}
             {s2.droppedRefImages > 0 && (
               <span className="text-[10px] leading-snug text-amber-500">
-                {s2.droppedRefImages} reference image{s2.droppedRefImages > 1 ? "s" : ""} over the 9-image limit will be dropped (frames kept).
+                {s2.droppedRefImages} reference image{s2.droppedRefImages > 1 ? "s" : ""} over the {SEEDANCE_2_REF_LIMITS.images}-image limit will be dropped (frames kept).
               </span>
             )}
           </div>
@@ -2665,7 +2698,7 @@ function GenerateVideoConfigImpl({ data: rawData, onUpdate: rawOnUpdate, sources
       {/* Reference images section (Grok / VEO reference mode / Seedance 2). */}
       {(supportsReferences && (!isVeo || isVeoRefMode)) && connectedRefImages.length > 0 && (
         <div className="flex flex-col gap-1.5">
-          <Label className="text-xs">Reference Images ({connectedRefImages.length}/{isSeedance2 ? SEEDANCE_2_REF_LIMITS.images : maxRefImages})</Label>
+          <Label className="text-xs">Reference Images ({connectedRefImages.length}/{isSeedance2 || isMinimaxH3 ? SEEDANCE_2_REF_LIMITS.images : maxRefImages})</Label>
           <ConnectedMediaList
             sources={refSources}
             mediaOrder={data.referenceImageOrder ?? []}
@@ -2673,13 +2706,13 @@ function GenerateVideoConfigImpl({ data: rawData, onUpdate: rawOnUpdate, sources
             mediaType="image"
           />
           <p className="text-[10px] text-muted-foreground px-1">
-            Connect image nodes to the References handle. Up to {isSeedance2 ? SEEDANCE_2_REF_LIMITS.images : maxRefImages} additional reference images.
+            Connect image nodes to the References handle. Up to {isSeedance2 || isMinimaxH3 ? SEEDANCE_2_REF_LIMITS.images : maxRefImages} additional reference images.
           </p>
         </div>
       )}
 
-      {/* Seedance 2 reference videos */}
-      {isSeedance2 && connectedRefVideos.length > 0 && (
+      {/* Seedance 2 / MiniMax H3 reference videos */}
+      {(isSeedance2 || isMinimaxH3) && connectedRefVideos.length > 0 && (
         <div className="flex flex-col gap-1.5">
           <Label className="text-xs">Reference Videos ({connectedRefVideos.length}/{SEEDANCE_2_REF_LIMITS.videos})</Label>
           <div className="flex flex-col gap-1">
@@ -2692,8 +2725,8 @@ function GenerateVideoConfigImpl({ data: rawData, onUpdate: rawOnUpdate, sources
         </div>
       )}
 
-      {/* Seedance 2 reference audio */}
-      {isSeedance2 && connectedRefAudio.length > 0 && (
+      {/* Seedance 2 / MiniMax H3 reference audio */}
+      {(isSeedance2 || isMinimaxH3) && connectedRefAudio.length > 0 && (
         <div className="flex flex-col gap-1.5">
           <Label className="text-xs">Reference Audio ({connectedRefAudio.length}/{SEEDANCE_2_REF_LIMITS.audio})</Label>
           <div className="flex flex-col gap-1">
@@ -3202,6 +3235,23 @@ function GenerateVideoConfigImpl({ data: rawData, onUpdate: rawOnUpdate, sources
             />
             <label htmlFor="gv-seedance2Nsfw" className="text-xs">NSFW Content Filter</label>
           </div>
+        </>
+      )}
+
+      {isMinimaxH3 && (
+        <>
+          {/* Fixed 2K output — no resolution lever (deliberately NO Resolution
+              select; the fail-safe effect clears any stale data.resolution). */}
+          <MappableField field="aspectRatio" label="Aspect Ratio" sources={sources} fieldMappings={fieldMappings} onMapField={onMapField}>
+            <AspectRatioSelector
+              options={getAspectRatiosForVideoModel(currentProvider)}
+              value={data.aspectRatio || defaultVideoAspectRatio(currentProvider)}
+              onValueChange={(v) => onUpdate({ aspectRatio: v as ImageToVideoData["aspectRatio"] })}
+            />
+          </MappableField>
+          <p className="text-[10px] text-muted-foreground px-1">
+            Fixed 2K output. “adaptive” matches the wired input; pure text-to-video renders 16:9 unless a concrete ratio is picked. Audio is always generated — lip-synced to reference audio when connected.
+          </p>
         </>
       )}
 

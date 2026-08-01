@@ -9,7 +9,7 @@ import { extractMcpClient } from "../lib/extract-mcp-client.js"
 import { buildJobInputData } from "../lib/job-input-data.js"
 import { insertWithIdempotencyKey } from "../lib/idempotent-insert.js"
 import { sendInternalError } from "../lib/http-errors.js"
-import { TEXT_TO_VIDEO_PROVIDERS, SEEDANCE_2_REF_LIMITS, PROMPT_HARD_CEILING, videoProviderRequiresImage, isSeedance2Provider, applyDefaultVideoSelection, buildVideoCreditModelIdentifier } from "@nodaro/shared"
+import { TEXT_TO_VIDEO_PROVIDERS, SEEDANCE_2_REF_LIMITS, PROMPT_HARD_CEILING, videoProviderRequiresImage, isSeedance2Provider, isMinimaxH3Provider, applyDefaultVideoSelection, buildVideoCreditModelIdentifier, type ConnectedReference } from "@nodaro/shared"
 import { connectedReferenceSchema } from "../lib/connected-reference-schema.js"
 import { assembleVideoConnectedReferences } from "./generate-video.js"
 import { formatZodError } from "../lib/zod-error.js"
@@ -81,6 +81,37 @@ export async function textToVideoRoutes(app: FastifyInstance) {
               outputDurationSec: Number(b.duration ?? 5),
               referenceVideoUrls: b.referenceVideoUrls as unknown[],
             })
+          }
+          // MiniMax Hailuo 3: unit×(input+output) for ref-video runs + a
+          // surcharge for input images beyond the first 5. Predict the
+          // ASSEMBLED reference-image count the same way the handler will
+          // (connectedReferences → referenceImageUrls; t2v has no frames).
+          if (isMinimaxH3Provider(b?.provider as string | undefined)) {
+            const { minimaxH3BaseCreditsFromUrls, minimaxH3BillableRefImageCount, MINIMAX_H3_FREE_INPUT_IMAGES } =
+              await import("../ee/billing/minimax-h3-credits.js")
+            const refVideos = Array.isArray(b.referenceVideoUrls) ? (b.referenceVideoUrls as unknown[]) : []
+            const assembled = assembleVideoConnectedReferences({
+              prompt: b.prompt as string | undefined,
+              provider: b.provider as string,
+              connectedReferences: (Array.isArray(b.connectedReferences) ? b.connectedReferences : []) as ConnectedReference[],
+              baseReferenceImageUrls: (Array.isArray(b.referenceImageUrls) ? b.referenceImageUrls : undefined) as string[] | undefined,
+              referenceOrder: (Array.isArray(b.referenceOrder) ? b.referenceOrder : undefined) as string[] | undefined,
+              referenceVideoCount: refVideos.length,
+              referenceAudioCount: Array.isArray(b.referenceAudioUrls) ? (b.referenceAudioUrls as unknown[]).length : 0,
+            })
+            const refImageCount = minimaxH3BillableRefImageCount({
+              referenceImageUrls: assembled.referenceImageUrls,
+              referenceVideoUrls: refVideos,
+              referenceAudioUrls: Array.isArray(b.referenceAudioUrls) ? (b.referenceAudioUrls as unknown[]) : undefined,
+            })
+            if (hasVideoRef || refImageCount > MINIMAX_H3_FREE_INPUT_IMAGES) {
+              return minimaxH3BaseCreditsFromUrls({
+                outputDurationSec: Number(b.duration ?? 6),
+                referenceVideoUrls: refVideos,
+                referenceImageCount: refImageCount,
+              })
+            }
+            // No ref videos and ≤5 images → the seeded duration composite prices it.
           }
           // Non-ref / other providers: the normal base for the resolved identifier
           // (matches how generate-video computes its non-addon base).

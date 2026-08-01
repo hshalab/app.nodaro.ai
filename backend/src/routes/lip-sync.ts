@@ -8,7 +8,7 @@ import { creditGuard, reserveCreditsForJob } from "../middleware/credit-guard.js
 import { extractWorkflowId, extractNodeId, extractForcePrivate } from "../lib/request-helpers.js"
 import { extractMcpClient } from "../lib/extract-mcp-client.js"
 import { buildJobInputData } from "../lib/job-input-data.js"
-import { LIP_SYNC_PROVIDERS, SEEDANCE_LIP_SYNC_PROVIDERS, MODEL_CATALOG, buildLipSyncCreditId, isPerSecondLipSyncProvider } from "@nodaro/shared"
+import { LIP_SYNC_PROVIDERS, SEEDANCE_LIP_SYNC_PROVIDERS, MODEL_CATALOG, buildLipSyncCreditId, isPerSecondLipSyncProvider, isMinimaxH3Provider } from "@nodaro/shared"
 import { formatZodError } from "../lib/zod-error.js"
 import { sendInternalError } from "../lib/http-errors.js"
 
@@ -78,6 +78,13 @@ export function resolveLipSyncIdentifier(body: Record<string, unknown> | undefin
   // credit-identifiers.ts. Without this, seedance-2-fast/-mini + 4k (and -mini +
   // 1080p) emit an unseeded composite that 503s under the hard-fail credit guard.
   // seedance-2 4k→:8s:4k-ref; -fast 4k→:8s:1080p-ref; -mini 4k|1080p→:8s:720p-ref.
+  // MiniMax Hailuo 3 — same audio-as-reference mechanism but a fixed 2K
+  // output: no resolution dimension and the r2v rate equals the base rate, so
+  // ANY requested resolution collapses onto the seeded 8s duration composite
+  // (the reservation tier; the worker decides actual duration).
+  if (isMinimaxH3Provider(provider)) {
+    return "minimax-h3:8s"
+  }
   if (SEEDANCE_LIP_SYNC_PROVIDERS.has(provider)) {
     const supported = MODEL_CATALOG[provider]?.resolutions ?? ["480p", "720p", "1080p"]
     const want = (body?.resolution as string) ?? "720p"

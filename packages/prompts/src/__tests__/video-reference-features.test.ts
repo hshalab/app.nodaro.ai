@@ -34,6 +34,7 @@ describe("video reference-image capability (catalog)", () => {
       "seedance-2",
       "seedance-2-fast",
       "seedance-2-mini",
+      "minimax-h3",
     ]) {
       expect(refModels).toContain(id)
     }

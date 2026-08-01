@@ -151,6 +151,19 @@ describe("generate-video (i2v) — frontend payload × backend Zod", () => {
     expect(result.success).toBe(true)
   })
 
+  it("minimax-h3 with reference images + videos + audio", () => {
+    const result = generateVideoBody.safeParse({
+      imageUrl: "https://r2.test/start.png",
+      provider: "minimax-h3",
+      duration: 12,
+      aspectRatio: "adaptive",
+      referenceImageUrls: ["https://r2.test/ref1.png", "https://r2.test/ref2.png"],
+      referenceVideoUrls: ["https://r2.test/refvid.mp4"],
+      referenceAudioUrls: ["https://r2.test/voice.mp3"],
+    })
+    expect(result.success).toBe(true)
+  })
+
   it("rejects: unknown provider", () => {
     expect(
       generateVideoBody.safeParse({

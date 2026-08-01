@@ -19,6 +19,12 @@
  *   - KIE API docs https://docs.kie.ai/market/kling/kling-3-0
  *   - Live KIE-path dialogue probe 2026-07-16 (scripted lines spoken verbatim,
  *     lip-synced, on both kling-2.6 and kling-3.0 with sound=true)
+ *   MiniMax Hailuo 3:
+ *   - KIE API docs https://docs.kie.ai/market/minimax-h3 (text-to-video /
+ *     image-to-video / reference-to-video — the API contract is the doctrine
+ *     source: limits, modes, aspect rules, pricing dimensions). No live probe
+ *     yet — structure guidance mirrors the platform's ordinal-reference
+ *     conventions rather than vendor style claims.
  */
 export interface ProviderPromptDoctrine {
   /** MODEL_CATALOG ids this doctrine covers. */
@@ -111,9 +117,46 @@ const KLING_AUDIO_DOCTRINE: ProviderPromptDoctrine = {
 - Durations: 2.6 = 5/10s; 3.0/omni = 3-15s. A spoken line needs roughly 1s per 2-3 words — don't script more dialogue than the clip can hold.`,
 }
 
+const MINIMAX_H3_DOCTRINE: ProviderPromptDoctrine = {
+  providers: ["minimax-h3"],
+  heading: "MiniMax Hailuo 3 (minimax-h3)",
+  tips: [
+    "Natural-language prompts up to 7000 chars. Front-load what matters: subject → action → scene/environment → lighting → camera move → style. One camera movement per shot.",
+    "Fixed 2K output — no resolution lever. Aspect: pure text-to-video needs a concrete ratio (21:9/16:9/4:3/1:1/3:4/9:16); reference runs default to adaptive (match the input).",
+    "References go by ordinal in attachment order (@Image 1, Video 1) — earlier = higher priority. Caps: 9 images, 3 videos (2-15s each, ≤15s total), 3 audio clips (≤15s total).",
+    "Reference audio drives speech/lip-sync but never rides alone — pair it with an image or video reference. Audio input is free; the first 5 input images are free, extras bill per image.",
+    "No negative-prompt parameter — put constraints in the prompt text: 'keep it subtitle-free, do not generate a watermark, do not generate a logo'.",
+  ],
+  doctrine: `Prompt structure (front-load what matters most):
+precise subject → action details → scene/environment → lighting & color tone → camera movement → visual style → image quality → constraints. Prompts are natural language, 1-7000 characters, across all three modes.
+
+**Modes (picked automatically from the wired inputs)**
+- First frame and/or last frame connected, nothing else → exact frame mode (image-to-video): the output opens on the first frame and/or closes on the last. The clip's aspect is inferred from the frame — there is no aspect parameter in this mode.
+- ANY reference connected (image, video, or audio) → reference mode (reference-to-video): frames ride along as reference images with a prompt directive binding them to the opening/closing position. Aspect defaults to adaptive (matches the input); a concrete ratio can be forced.
+- Nothing visual connected → text-to-video. A concrete aspect ratio is required (21:9 / 16:9 / 4:3 / 1:1 / 3:4 / 9:16 — no adaptive); Nodaro renders 16:9 unless one is picked.
+
+**References (when reference media is attached)**
+- Refer to assets by ordinal in attachment order: "@Image 1", "Video 1", "Audio 1". Put the identity-critical asset first. (In the editor, the \`{image:N:label}\` / \`{video:N}\` / \`{audio:N}\` prompt tokens auto-emit this binding, so a wired reference and its mention stay in sync.)
+- Caps: 9 reference images; 3 reference videos, each 2-15s and ≤15s combined; 3 reference audio clips, ≤15s combined. Reference audio cannot be used alone — it must accompany an image or video reference.
+- Define each subject once, then reuse the label consistently ("the woman from @Image 1 … the woman opens the door"). A focused set of 4-5 assets beats maxing every cap.
+- Billing note: generated seconds AND reference-video input seconds bill at the same per-second rate; the first 5 input images are free and each extra image adds a small surcharge; audio input is free.
+
+**Audio**
+- Audio is always generated — there is no on/off toggle. With reference audio attached, the model syncs speech to the supplied track (the platform's lip-sync surface routes image + voice line through this mode automatically).
+- Quoted dialogue in the prompt gives the model the line to perform; describe the voice in words when no reference audio is supplied.
+
+**Duration & pacing**
+- 4-15 seconds, integer, default 6. Per-second pricing — a 15s clip costs ~3.7× a 4s clip, so pick the shortest duration that serves the shot.
+- One camera movement type per shot; chain actions with physical, quantified detail ("slowly raises a hand", "pushes hard off the ground") rather than abstract emotion words.
+
+**Constraints**
+- There is NO negative-prompt parameter — all constraints belong in the prompt text itself: "keep it subtitle-free, do not generate a watermark, do not generate a logo, stable picture".`,
+}
+
 export const PROVIDER_PROMPT_DOCTRINES: readonly ProviderPromptDoctrine[] = [
   SEEDANCE_2_DOCTRINE,
   KLING_AUDIO_DOCTRINE,
+  MINIMAX_H3_DOCTRINE,
 ]
 
 const DOCTRINE_BY_PROVIDER: ReadonlyMap<string, ProviderPromptDoctrine> = new Map(
