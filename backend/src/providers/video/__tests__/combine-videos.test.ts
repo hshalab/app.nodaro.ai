@@ -72,6 +72,8 @@ vi.mock("../ffmpeg-utils.js", () => ({
   cleanupWorkDir: mocks.cleanupWorkDir,
   normalizeVideoForCombine: mocks.normalizeVideoForCombine,
   trimEdgeFrames: mocks.trimEdgeFrames,
+  // Real constant, not a stub — the xfade-args assertion checks its value.
+  COMBINE_DELIVERY_CRF: "18",
 }))
 
 vi.mock("node:fs", () => ({
@@ -703,6 +705,12 @@ describe("combineVideos — smart cut voice-preserving tail (cut + crossfade)", 
     expect(mocks.trimEdgeFrames).toHaveBeenNthCalledWith(
       1, "/tmp/work/normalized_0.mp4", "/tmp/work/trimmed_0.mp4", 0, 3, { preserveAudioTail: false },
     )
+
+    // The xfade render is the DELIVERED encode — it must carry the explicit
+    // delivery CRF (18); bare libx264 defaulted to 23 and halved the final
+    // bitrate (job 08f99f85).
+    const xfadeCall = mocks.runFfmpeg.mock.calls.map((c) => c[0] as string[]).find((a) => a.includes("-filter_complex") && a.includes("libx264"))!
+    expect(xfadeCall[xfadeCall.indexOf("-crf") + 1]).toBe("18")
   })
 
   it("prev clip without audio: no tail to preserve (silent-injection path keeps symmetric trims)", async () => {

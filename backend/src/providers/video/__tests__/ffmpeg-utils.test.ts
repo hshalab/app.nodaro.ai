@@ -838,6 +838,9 @@ describe("trimEdgeFrames", () => {
     expect(args[args.indexOf("-to") + 1]).toBe("9")
     expect(args).toContain("libx264")
     expect(args[args.indexOf("-preset") + 1]).toBe("fast")
+    // Delivery CRF: this re-encode stacks on top of normalize's on the cut
+    // path — an implicit x264 default (23) was a second bitrate halving.
+    expect(args[args.indexOf("-crf") + 1]).toBe("18")
     expect(args[args.indexOf("-c:a") + 1]).toBe("aac")
     expect(args[args.length - 1]).toBe("/tmp/out.mp4")
   })
@@ -896,6 +899,7 @@ describe("trimEdgeFrames", () => {
     expect(args[args.indexOf("-map") + 1]).toBe("[v]")
     expect(args).toContain("libx264")
     expect(args[args.indexOf("-preset") + 1]).toBe("fast")
+    expect(args[args.indexOf("-crf") + 1]).toBe("18") // delivery CRF, same as the -ss/-to path
     expect(args[args.indexOf("-c:a") + 1]).toBe("aac")
     expect(result).toBe("/tmp/out.mp4")
   })
@@ -988,6 +992,15 @@ describe("normalizeVideoForCombine", () => {
     expect(args).toContain("libx264")
     expect(args).toContain("yuv420p")
     expect(args).toContain("aac")
+  })
+
+  it("encodes at the delivery CRF (18) — this is the encode the user receives on the cut path (job 08f99f85: the old CRF 23 halved the delivered bitrate)", async () => {
+    execFileOnce("")
+
+    await normalizeVideoForCombine("/tmp/in.mp4", "/tmp/out.mp4", 1280, 720)
+
+    const args = execArgs()
+    expect(args[args.indexOf("-crf") + 1]).toBe("18")
   })
 
   it("pins audio to 44.1kHz stereo so -c copy concat never splices mismatched rates", async () => {
