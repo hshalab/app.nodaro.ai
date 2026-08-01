@@ -703,7 +703,7 @@ const handleLipSync: HandlerFn = async function handleLipSync(job, ctx) {
     // and pass the audio as a reference; the model produces a cinematic
     // talking-head video synced to the voice line.
     if (!imageUrl) {
-      throw new Error("Seedance lip-sync requires an image (face/portrait)")
+      throw new Error(`${resolvedProvider} lip-sync requires an image (face/portrait)`)
     }
     const result = await imageToVideo(
       imageUrl,

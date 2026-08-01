@@ -192,7 +192,9 @@ const VIDEO_RATIOS_HVS = ["16:9", "9:16", "1:1"] as const
 const WAN_27_IMAGE_RATIOS = ["1:1", "16:9", "9:16", "4:3", "3:4", "21:9", "8:1", "1:8"] as const
 const VIDEO_RATIOS_HVS345 = ["16:9", "9:16", "1:1", "4:3", "3:4"] as const
 // Seedance 2.x only — KIE accepts the full fixed-ratio set incl. 21:9
-// (docs.kie.ai/market/bytedance/seedance-2). Kept separate from HVS so the
+// (docs.kie.ai/market/bytedance/seedance-2); MiniMax Hailuo 3 shares the same
+// seven-ratio set (t2v enum + r2v adaptive default per docs.kie.ai/market/minimax-h3).
+// Kept separate from HVS so the
 // wider set can't leak to models that don't support it.
 const VIDEO_RATIOS_SEEDANCE_2 = ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "adaptive"] as const
 // HappyHorse 1.1 (t2v + ref2v) — the model's full 9-ratio set incl. 4:5/5:4
@@ -909,6 +911,32 @@ const VIDEO_MODELS: Record<string, ModelCatalogEntry> = {
     features: ["end-frame"],
     durations: [5],
     pricing: [{ identifier: "minimax", credits: 143, note: "5s, 1080p" }],
+  },
+  // MiniMax Hailuo 3 (KIE "minimax-h3") — t2v / i2v (first and/or last frame) /
+  // reference-to-video (9 images / 3 videos ≤15s total / 3 audios ≤15s total;
+  // audio refs require an image or video ref alongside). Fixed 2K output — NO
+  // resolution lever, so pricing is per-second only: 36.5 KIE cr/s billed on
+  // output + input-video seconds, input images beyond the first 5 add 11 KIE cr
+  // each, reference audio free. Mirrors the Seedance 2 multimodal surface.
+  // docs.kie.ai/market/minimax-h3/{text,image,reference}-to-video.
+  "minimax-h3": {
+    id: "minimax-h3",
+    kind: "video",
+    modes: ["i2v", "t2v"] as const,
+    family: "MiniMax",
+    label: "Hailuo 3 (H3)",
+    series: "Hailuo",
+    description: "MiniMax Hailuo 3 — premium multimodal tier: first/last frame + image/video/audio references, native audio, fixed 2K output, 4-15s per-second pricing.",
+    useCases: ["premium", "narrative"],
+    features: ["end-frame", "audio", "reference-image"],
+    aspectRatios: VIDEO_RATIOS_SEEDANCE_2,
+    durations: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    pricing: [
+      { identifier: "minimax-h3", credits: 550, note: "default 6s — see :Ns variants" },
+      { identifier: "minimax-h3:4s", credits: 370, note: "4s (min)" },
+      { identifier: "minimax-h3:8s", credits: 730, note: "8s" },
+      { identifier: "minimax-h3:15s", credits: 1370, note: "15s (max)" },
+    ],
   },
   "hailuo-2.3-pro": {
     id: "hailuo-2.3-pro",

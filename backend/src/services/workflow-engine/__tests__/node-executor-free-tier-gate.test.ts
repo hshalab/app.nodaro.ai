@@ -149,9 +149,10 @@ vi.mock("@nodaro/shared", () => ({
   mergeExposedSettings: vi.fn().mockReturnValue({ settings: {}, exposedSettingValues: {} }),
   applyHandleInputOverride: vi.fn().mockImplementation((_e, node) => node),
   isHandleInputWired: vi.fn().mockReturnValue(false),
-  // node-executor consults this for the Seedance 2 ref-video credit override
-  // (A3); non-seedance providers short-circuit to no override.
+  // node-executor consults these for the Seedance 2 / MiniMax H3 credit
+  // overrides (A3); other providers short-circuit to no override.
   isSeedance2Provider: (p: unknown) => typeof p === "string" && p.startsWith("seedance-2"),
+  isMinimaxH3Provider: (p: unknown) => p === "minimax-h3",
 }))
 
 // ---------------------------------------------------------------------------

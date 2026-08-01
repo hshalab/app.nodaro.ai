@@ -23,7 +23,7 @@ import { resolveFieldMappings, NODE_MAPPABLE_FIELDS } from "./resolve-field-mapp
 
 import { executeCombineText, executeSplitText, executeComposite, executeWebhookOutput, executePreview, executeTeleporterPassthrough, executeRouter, executeExtractField, executeJsonProcess, executeFilterList, executeDeduplicateList, executeMergeLists, executeSortList, executeSelector } from "./inline-executor.js"
 import { executeSubWorkflow } from "./sub-workflow-handler.js"
-import { mergeExposedSettings, applyHandleInputOverride, isHandleInputWired, resolveNodeRefs, SOCIAL_POST_NODE_TYPES, isSeedance2Provider } from "@nodaro/shared"
+import { mergeExposedSettings, applyHandleInputOverride, isHandleInputWired, resolveNodeRefs, SOCIAL_POST_NODE_TYPES, isSeedance2Provider, isMinimaxH3Provider } from "@nodaro/shared"
 import { computeLlmChatFields, computeNodePrompt, pickerFanoutTargets } from "@nodaro/prompts"
 import type { ComponentMetadata } from "@nodaro/shared"
 import { getAppSettings } from "../../lib/app-settings.js"
@@ -1013,6 +1013,48 @@ async function computeSeedance2RefVideoCreditOverride(
 }
 
 /**
+ * Compute the BASE-then-markup credit override for a MiniMax Hailuo 3 run, or
+ * `undefined` when the override doesn't apply (non-h3 provider, or no
+ * reference videos AND ≤5 input images — the seeded duration composite
+ * already prices those). Sibling of computeSeedance2RefVideoCreditOverride
+ * above with the same markup mechanics, but two billable dimensions instead
+ * of one: KIE bills `unit × (input_video + output)` seconds AND 11 KIE cr per
+ * input image beyond the first 5. The billable image count is derived through
+ * the SAME shared input resolver the KIE provider layer uses (frames fold
+ * into the reference pool in reference mode), so reserve == what ships.
+ */
+async function computeMinimaxH3CreditOverride(
+  payload: Record<string, unknown>,
+): Promise<number | undefined> {
+  const provider = payload.provider as string | undefined
+  if (!isMinimaxH3Provider(provider)) return undefined
+
+  const { minimaxH3BaseCreditsFromUrls, minimaxH3BillableRefImageCount, MINIMAX_H3_FREE_INPUT_IMAGES } =
+    await import("../../ee/billing/minimax-h3-credits.js")
+  const refVideos = Array.isArray(payload.referenceVideoUrls) ? (payload.referenceVideoUrls as unknown[]) : []
+  const refImageCount = minimaxH3BillableRefImageCount({
+    referenceImageUrls: Array.isArray(payload.referenceImageUrls) ? (payload.referenceImageUrls as unknown[]) : undefined,
+    firstFrameUrl: payload.imageUrl,
+    lastFrameUrl: payload.endFrameUrl,
+    referenceVideoUrls: refVideos,
+    referenceAudioUrls: Array.isArray(payload.referenceAudioUrls) ? (payload.referenceAudioUrls as unknown[]) : undefined,
+  })
+  if (refVideos.length === 0 && refImageCount <= MINIMAX_H3_FREE_INPUT_IMAGES) return undefined
+
+  const baseCredits = await minimaxH3BaseCreditsFromUrls({
+    outputDurationSec: Number(payload.duration ?? 6),
+    referenceVideoUrls: refVideos,
+    referenceImageCount: refImageCount,
+  })
+
+  // Apply the admin markup ONCE — identical formula + guard to credit-guard-impl.ts.
+  const settings = await getAppSettings()
+  return settings.cost_markup_percent > 0 && baseCredits > 0
+    ? Math.ceil(baseCredits * (1 + settings.cost_markup_percent / 100))
+    : baseCredits
+}
+
+/**
  * Compute the CLAMPED-then-markup credit override for a generate-video-pro
  * dispatch, or `undefined` when the payload isn't one (every other node
  * type). Mirrors `computeSeedance2RefVideoCreditOverride` above — same
@@ -1298,7 +1340,10 @@ async function executeWorkerNode(
       const creditOverride =
         (await computeGenerateVideoProCreditOverride(payload))?.override ??
         (await computeEditVideoProCreditOverride(payload))?.override ??
-        (await computeSeedance2RefVideoCreditOverride(payload))
+        (await computeSeedance2RefVideoCreditOverride(payload)) ??
+        // MiniMax Hailuo 3 twin — unit×(input+output) ref-video billing plus
+        // the >5-input-images surcharge (same heuristic-gated fallback slot).
+        (await computeMinimaxH3CreditOverride(payload))
 
       // Free-tier / blocked-models gate. reserveCredits does NOT check
       // blockedModels, so without this a free-tier workflow/app run could

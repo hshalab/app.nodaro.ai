@@ -82,6 +82,7 @@ Base URL: `https://api.kie.ai`, Auth: `Bearer KIE_API_KEY`
 | `grok-i2v` | `grok-imagine/image-to-video` | [grok i2v](https://docs.kie.ai/market/grok-imagine/image-to-video.md) |
 | `sora2-pro` | `sora-2-pro-image-to-video` | [sora2 pro i2v](https://docs.kie.ai/market/sora2/sora-2-pro-image-to-video.md) |
 | `seedance` | `bytedance/seedance-1.5-pro` | [seedance 1.5 pro](https://docs.kie.ai/market/bytedance/seedance-1.5-pro.md) |
+| `minimax-h3` | `minimax-h3/image-to-video` (swaps to `minimax-h3/reference-to-video` when refs are wired — see `minimaxH3TaskModel`) | [minimax-h3 i2v](https://docs.kie.ai/market/minimax-h3/image-to-video.md) / [r2v](https://docs.kie.ai/market/minimax-h3/reference-to-video.md) |
 | `wan-i2v` | `wan/2-6-image-to-video` | [wan 2.6 i2v](https://docs.kie.ai/market/wan/2-6-image-to-video.md) |
 | `wan-turbo` | `wan/2-2-a14b-image-to-video-turbo` | [wan turbo i2v](https://docs.kie.ai/market/wan/2-2-a14b-image-to-video-turbo.md) |
 | `hailuo-2.3-pro` | `hailuo/2-3-image-to-video-pro` | [hailuo 2.3 pro](https://docs.kie.ai/market/hailuo/2-3-image-to-video-pro.md) |
@@ -105,6 +106,7 @@ Base URL: `https://api.kie.ai`, Auth: `Bearer KIE_API_KEY`
 | `sora2-pro` | `sora-2-pro-text-to-video` | [sora2 pro t2v](https://docs.kie.ai/market/sora2/sora-2-pro-text-to-video.md) |
 | `kling-3.0` | `kling-3.0/video` | [kling 3.0](https://docs.kie.ai/market/kling/kling-3.0.md) |
 | `seedance` | `bytedance/seedance-1.5-pro` | [seedance t2v](https://docs.kie.ai/market/bytedance/seedance-1.5-pro.md) |
+| `minimax-h3` | `minimax-h3/text-to-video` (swaps to `minimax-h3/reference-to-video` when refs are wired) | [minimax-h3 t2v](https://docs.kie.ai/market/minimax-h3/text-to-video.md) |
 | `wan` | `wan/2-6-text-to-video` | [wan 2.6 t2v](https://docs.kie.ai/market/wan/2-6-text-to-video.md) |
 | `sora2` | `sora-2-text-to-video` | [sora2 t2v](https://docs.kie.ai/market/sora2/sora-2-text-to-video.md) |
 | `hailuo-standard` | `hailuo/02-text-to-video-standard` | [hailuo std t2v](https://docs.kie.ai/market/hailuo/02-text-to-video-standard.md) |

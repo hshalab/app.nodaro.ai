@@ -86,12 +86,15 @@ const DIRECT_API_EXEMPTIONS = new Set<string>([
   // (falLipSync) and dispatched from the lip-sync worker's fal branch, not via
   // providerRegistry/KIE.
   "sync-lipsync-v3",
-  // Seedance 2 family (incl. -mini) — go through the i2v worker with audio
-  // plumbed as reference_audio_urls. They appear in LIP_SYNC_PROVIDERS for UX
-  // purposes but the lip-sync route delegates to the i2v code path.
+  // Seedance 2 family (incl. -mini) + MiniMax Hailuo 3 — go through the i2v
+  // worker with audio plumbed as reference_audio_urls. They appear in
+  // LIP_SYNC_PROVIDERS for UX purposes but the lip-sync route delegates to
+  // the i2v code path. (minimax-h3 IS a KIE_VIDEO_MODELS key — the exemption
+  // here only covers the KIE_LIP_SYNC_MODELS map.)
   "seedance-2",
   "seedance-2-fast",
   "seedance-2-mini",
+  "minimax-h3",
   // ── TTS ────────────────────────────────────────────────────────────────
   // ElevenLabs v3 routes through ElevenLabs direct API
   // (backend/src/providers/elevenlabs/direct-tts.ts), not via KIE.

@@ -490,6 +490,26 @@ export const STATIC_CREDIT_COSTS: Record<string, number> = {
   "seedance-2-mini:8s:720p-ref": 250,
   "seedance-2-mini:12s:720p-ref": 380,
   "seedance-2-mini:15s:720p-ref": 470,
+  // ── MiniMax Hailuo 3 — per-second billing, fixed 2K (no resolution lever) ──
+  // KIE 36.5 cr/s; Nodaro = ceil(36.5 × duration / 4) × 10 (at cost, like
+  // Seedance-2). One seeded tier per allowed second (4-15s). Reference-video
+  // runs bill unit × (input + output) seconds and input images beyond the
+  // first 5 add 11 KIE cr (27.5 credits) each — both reserved via the
+  // minimax-h3-credits computeCredits hook, NOT via extra composites.
+  // Reference audio is free. Base fallback = 6s (the KIE default duration).
+  "minimax-h3": 550,
+  "minimax-h3:4s": 370,
+  "minimax-h3:5s": 460,
+  "minimax-h3:6s": 550,
+  "minimax-h3:7s": 640,
+  "minimax-h3:8s": 730,
+  "minimax-h3:9s": 830,
+  "minimax-h3:10s": 920,
+  "minimax-h3:11s": 1010,
+  "minimax-h3:12s": 1100,
+  "minimax-h3:13s": 1190,
+  "minimax-h3:14s": 1280,
+  "minimax-h3:15s": 1370,
   // ── Gemini Omni Video (KIE) —; Nodaro. Lowercase 4k. ──
   "gemini-omni-video": 315,         // base = 720p/1080p 4s
   "gemini-omni-video:4": 230,

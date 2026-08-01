@@ -19,7 +19,7 @@ import type {
   ProviderOptions,
   ReconcileOpts,
 } from "../provider.interface.js"
-import { SEEDANCE_2_REF_LIMITS, isSeedance2Provider, isVeoProvider, getLipSyncMaxAudioSeconds, applyVideoNegativePrompt, applyVideoAudioToggle, getModel, DEFAULT_VIDEO_PROVIDER } from "@nodaro/shared"
+import { isSeedance2Provider, isMinimaxH3Provider, isVeoProvider, getLipSyncMaxAudioSeconds, applyVideoNegativePrompt, applyVideoAudioToggle, getModel, DEFAULT_VIDEO_PROVIDER } from "@nodaro/shared"
 import { resolveSeedance2Inputs } from "@nodaro/prompts"
 import {
   createSanitizedError,
@@ -137,6 +137,104 @@ export function applySeedance2Params(
     const base = typeof input.prompt === "string" ? input.prompt : ""
     input.prompt = base ? `${base}\n\n${resolved.promptSuffix}` : resolved.promptSuffix
   }
+}
+
+/**
+ * MiniMax Hailuo 3 fixed aspect enum. t2v REQUIRES one of these (no adaptive);
+ * r2v additionally accepts "adaptive" (its default); i2v has NO aspect param
+ * at all (inferred from the frame). docs.kie.ai/market/minimax-h3.
+ */
+const MINIMAX_H3_FIXED_ASPECTS = new Set(["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"])
+
+/**
+ * Merge MiniMax Hailuo 3 options into the KIE payload (I2V + T2V entry paths).
+ *
+ * Reuses the shared Seedance-2 input resolver — H3's three KIE endpoints map
+ * 1:1 onto the resolver's modes (identical 9/3/3 reference caps and the same
+ * frames-fold-into-references semantics), but unlike Seedance each mode is a
+ * DIFFERENT KIE task model; the swap happens in {@link minimaxH3TaskModel}
+ * right before runKieTask:
+ *   first-frame / first-last-frame → minimax-h3/image-to-video
+ *   reference (any ref present)    → minimax-h3/reference-to-video
+ *   neither (t2v entry path)       → minimax-h3/text-to-video
+ *
+ * Param hygiene per H3's per-endpoint schemas:
+ *   - `resolution` / `web_search` / `nsfw_checker` / `generate_audio` are NOT
+ *     H3 params on any endpoint — always dropped (output is fixed 2K; audio
+ *     is always on, there is no toggle).
+ *   - `aspect_ratio`: i2v has none (inferred from frame) → dropped; r2v is
+ *     optional with an "adaptive" default → forwarded only when documented;
+ *     t2v REQUIRES a member of the fixed enum → adaptive/unknown coerce to
+ *     "16:9".
+ *   - `duration` must be an integer 4-15 (the generic path stringifies).
+ */
+export function applyMinimaxH3Params(
+  input: Record<string, unknown>,
+  options: ProviderOptions | undefined,
+): void {
+  delete input.resolution
+  delete input.web_search
+  delete input.nsfw_checker
+  delete input.generate_audio
+  if (input.duration !== undefined) input.duration = Number(input.duration)
+
+  const resolved = resolveSeedance2Inputs({
+    prompt: typeof input.prompt === "string" ? input.prompt : undefined,
+    firstFrameUrl: typeof input.first_frame_url === "string" ? input.first_frame_url : undefined,
+    lastFrameUrl: typeof input.last_frame_url === "string" ? input.last_frame_url : undefined,
+    refImageUrls: options?.referenceImageUrls,
+    refVideoUrls: options?.referenceVideoUrls,
+    refAudioUrls: options?.referenceAudioUrls,
+  })
+
+  if (resolved.firstFrameUrl) input.first_frame_url = resolved.firstFrameUrl
+  else delete input.first_frame_url
+  if (resolved.lastFrameUrl) input.last_frame_url = resolved.lastFrameUrl
+  else delete input.last_frame_url
+
+  if (resolved.referenceImageUrls.length > 0) input.reference_image_urls = resolved.referenceImageUrls
+  else delete input.reference_image_urls
+  if (resolved.referenceVideoUrls.length > 0) input.reference_video_urls = resolved.referenceVideoUrls
+  else delete input.reference_video_urls
+  if (resolved.referenceAudioUrls.length > 0) input.reference_audio_urls = resolved.referenceAudioUrls
+  else delete input.reference_audio_urls
+
+  if (resolved.promptSuffix) {
+    const base = typeof input.prompt === "string" ? input.prompt : ""
+    input.prompt = base ? `${base}\n\n${resolved.promptSuffix}` : resolved.promptSuffix
+  }
+
+  // Aspect is normalized AFTER the mode is known (see docstring). The request
+  // value can arrive on the input (t2v generic path) or in options (i2v path).
+  const raw = (typeof input.aspect_ratio === "string" ? input.aspect_ratio : undefined) ?? options?.aspectRatio
+  const rawAspect = raw?.trim()
+  const hasFrames = Boolean(input.first_frame_url || input.last_frame_url)
+  if (resolved.mode === "reference") {
+    const ar = rawAspect === "Auto" || rawAspect === "auto" ? "adaptive" : rawAspect
+    if (ar && (ar === "adaptive" || MINIMAX_H3_FIXED_ASPECTS.has(ar))) input.aspect_ratio = ar
+    else delete input.aspect_ratio // KIE defaults r2v to adaptive
+  } else if (hasFrames) {
+    delete input.aspect_ratio // i2v: no aspect param — inferred from the frame
+  } else {
+    // Pure t2v: aspect_ratio is REQUIRED and the enum has no adaptive member.
+    input.aspect_ratio = rawAspect && MINIMAX_H3_FIXED_ASPECTS.has(rawAspect) ? rawAspect : "16:9"
+  }
+}
+
+/**
+ * The KIE task model for a prepared minimax-h3 `input`: any reference array
+ * swaps the call onto the reference-to-video endpoint; frames stay on
+ * image-to-video; neither (t2v entry path) keeps the map default. Audio refs
+ * never appear alone (the resolver pairs them with an image/video ref), but
+ * they're checked anyway so a future resolver change can't mis-route.
+ */
+export function minimaxH3TaskModel(defaultModel: string, input: Record<string, unknown>): string {
+  const has = (k: string) => Array.isArray(input[k]) && (input[k] as unknown[]).length > 0
+  if (has("reference_image_urls") || has("reference_video_urls") || has("reference_audio_urls")) {
+    return "minimax-h3/reference-to-video"
+  }
+  if (input.first_frame_url || input.last_frame_url) return "minimax-h3/image-to-video"
+  return defaultModel
 }
 
 // Audio-duration cap per lip-sync provider (seconds).
@@ -768,6 +866,14 @@ export class KieVideoProvider
       i2vConstraints.maxAspectRatio = 2.5
     }
     if (provider === "happyhorse-ref2v") i2vConstraints.minDimension = 400
+    // MiniMax H3 documented input floors — reject early with a clear message
+    // instead of an opaque KIE 422: sides 256-5760px, aspect within 0.4-2.5
+    // (the 2048px cap already satisfies the upper side bound).
+    if (isMinimaxH3Provider(provider)) {
+      i2vConstraints.minDimension = 256
+      i2vConstraints.minAspectRatio = 0.4
+      i2vConstraints.maxAspectRatio = 2.5
+    }
     if (modelConfig.model.startsWith("hailuo/")) i2vConstraints.forceJpeg = true
     if (!usesRawImageUrls) {
       const [normImage, normEnd] = await Promise.all([
@@ -940,7 +1046,7 @@ export class KieVideoProvider
     if (effectiveEndFrameUrl) {
       if (provider === "seedance") {
         input.input_urls = [effectiveImageUrl, effectiveEndFrameUrl]
-      } else if (isSeedance2Provider(provider) || provider === "wan-2.7-i2v") {
+      } else if (isSeedance2Provider(provider) || isMinimaxH3Provider(provider) || provider === "wan-2.7-i2v") {
         input.last_frame_url = effectiveEndFrameUrl
       } else if (provider === "kling-turbo") {
         input.tail_image_url = effectiveEndFrameUrl
@@ -1033,6 +1139,13 @@ export class KieVideoProvider
       applySeedance2Params(input, seedance2Options)
     }
 
+    if (isMinimaxH3Provider(provider)) {
+      // Same 2048px-cap normalization pipeline as Seedance 2 (the frames were
+      // already processed into effectiveImageUrl/effectiveEndFrameUrl above).
+      const h3Options = await normalizeSeedance2ReferenceImages(provider, options)
+      applyMinimaxH3Params(input, h3Options)
+    }
+
     // Wan Turbo specific params
     if (provider === "wan-turbo") {
       if (options?.acceleration !== undefined) {
@@ -1053,8 +1166,13 @@ export class KieVideoProvider
       JSON.stringify(input, null, 2)
     )
 
+    // MiniMax H3 exposes one KIE model per input mode — swap the task model
+    // to the reference-to-video endpoint when the resolver produced refs.
+    const taskModel = isMinimaxH3Provider(provider)
+      ? minimaxH3TaskModel(modelConfig.model, input)
+      : modelConfig.model
     const { resultJson, rawRecordInfo, taskId: kieTaskId, providerMs } = await runKieTask(
-      modelConfig.model,
+      taskModel,
       input,
       MAX_POLL_ATTEMPTS_VIDEO,
       options?.onProgress,
@@ -1264,13 +1382,25 @@ export class KieVideoProvider
       applySeedance2Params(input, seedance2Options)
     }
 
+    if (isMinimaxH3Provider(provider)) {
+      // Same rationale as the i2v path (applyMinimaxH3Params is synchronous;
+      // reference images ride the shared 2048px-cap normalization first).
+      // With references wired, the task model swaps to reference-to-video.
+      const h3Options = await normalizeSeedance2ReferenceImages(provider, options)
+      applyMinimaxH3Params(input, h3Options)
+    }
+
     console.log(
       `[KIE.ai] Final input:`,
       JSON.stringify(input, null, 2)
     )
 
+    // MiniMax H3: refs wired into a t2v run swap onto reference-to-video.
+    const t2vTaskModel = isMinimaxH3Provider(provider)
+      ? minimaxH3TaskModel(modelConfig.model, input)
+      : modelConfig.model
     const { resultJson, taskId: kieTaskId, providerMs } = await runKieTask(
-      modelConfig.model,
+      t2vTaskModel,
       input,
       MAX_POLL_ATTEMPTS_VIDEO,
       options?.onProgress,

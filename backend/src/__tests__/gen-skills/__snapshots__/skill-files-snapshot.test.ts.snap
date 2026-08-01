@@ -367,6 +367,33 @@ Prompt structure: Scene (setting, light) → Character/Element (who, appearance)
 - Kling 2.6 prompts cap at 1000 characters — front-load scene + dialogue and trim style tails first. kling-3.0 accepts long prompts.
 - Durations: 2.6 = 5/10s; 3.0/omni = 3-15s. A spoken line needs roughly 1s per 2-3 words — don't script more dialogue than the clip can hold.
 
+### MiniMax Hailuo 3 (minimax-h3)
+
+Prompt structure (front-load what matters most):
+precise subject → action details → scene/environment → lighting & color tone → camera movement → visual style → image quality → constraints. Prompts are natural language, 1-7000 characters, across all three modes.
+
+**Modes (picked automatically from the wired inputs)**
+- First frame and/or last frame connected, nothing else → exact frame mode (image-to-video): the output opens on the first frame and/or closes on the last. The clip's aspect is inferred from the frame — there is no aspect parameter in this mode.
+- ANY reference connected (image, video, or audio) → reference mode (reference-to-video): frames ride along as reference images with a prompt directive binding them to the opening/closing position. Aspect defaults to adaptive (matches the input); a concrete ratio can be forced.
+- Nothing visual connected → text-to-video. A concrete aspect ratio is required (21:9 / 16:9 / 4:3 / 1:1 / 3:4 / 9:16 — no adaptive); Nodaro renders 16:9 unless one is picked.
+
+**References (when reference media is attached)**
+- Refer to assets by ordinal in attachment order: "@Image 1", "Video 1", "Audio 1". Put the identity-critical asset first. (In the editor, the \`{image:N:label}\` / \`{video:N}\` / \`{audio:N}\` prompt tokens auto-emit this binding, so a wired reference and its mention stay in sync.)
+- Caps: 9 reference images; 3 reference videos, each 2-15s and ≤15s combined; 3 reference audio clips, ≤15s combined. Reference audio cannot be used alone — it must accompany an image or video reference.
+- Define each subject once, then reuse the label consistently ("the woman from @Image 1 … the woman opens the door"). A focused set of 4-5 assets beats maxing every cap.
+- Billing note: generated seconds AND reference-video input seconds bill at the same per-second rate; the first 5 input images are free and each extra image adds a small surcharge; audio input is free.
+
+**Audio**
+- Audio is always generated — there is no on/off toggle. With reference audio attached, the model syncs speech to the supplied track (the platform's lip-sync surface routes image + voice line through this mode automatically).
+- Quoted dialogue in the prompt gives the model the line to perform; describe the voice in words when no reference audio is supplied.
+
+**Duration & pacing**
+- 4-15 seconds, integer, default 6. Per-second pricing — a 15s clip costs ~3.7× a 4s clip, so pick the shortest duration that serves the shot.
+- One camera movement type per shot; chain actions with physical, quantified detail ("slowly raises a hand", "pushes hard off the ground") rather than abstract emotion words.
+
+**Constraints**
+- There is NO negative-prompt parameter — all constraints belong in the prompt text itself: "keep it subtitle-free, do not generate a watermark, do not generate a logo, stable picture".
+
 _Generated from \`PROVIDER_PROMPT_DOCTRINES\` in \`@nodaro/shared\` — edit there, then \`npm run gen:skills\`._",
 }
 `;
@@ -549,6 +576,33 @@ Prompt structure: Scene (setting, light) → Character/Element (who, appearance)
 **Limits**
 - Kling 2.6 prompts cap at 1000 characters — front-load scene + dialogue and trim style tails first. kling-3.0 accepts long prompts.
 - Durations: 2.6 = 5/10s; 3.0/omni = 3-15s. A spoken line needs roughly 1s per 2-3 words — don't script more dialogue than the clip can hold.
+
+### MiniMax Hailuo 3 (minimax-h3)
+
+Prompt structure (front-load what matters most):
+precise subject → action details → scene/environment → lighting & color tone → camera movement → visual style → image quality → constraints. Prompts are natural language, 1-7000 characters, across all three modes.
+
+**Modes (picked automatically from the wired inputs)**
+- First frame and/or last frame connected, nothing else → exact frame mode (image-to-video): the output opens on the first frame and/or closes on the last. The clip's aspect is inferred from the frame — there is no aspect parameter in this mode.
+- ANY reference connected (image, video, or audio) → reference mode (reference-to-video): frames ride along as reference images with a prompt directive binding them to the opening/closing position. Aspect defaults to adaptive (matches the input); a concrete ratio can be forced.
+- Nothing visual connected → text-to-video. A concrete aspect ratio is required (21:9 / 16:9 / 4:3 / 1:1 / 3:4 / 9:16 — no adaptive); Nodaro renders 16:9 unless one is picked.
+
+**References (when reference media is attached)**
+- Refer to assets by ordinal in attachment order: "@Image 1", "Video 1", "Audio 1". Put the identity-critical asset first. (In the editor, the \`{image:N:label}\` / \`{video:N}\` / \`{audio:N}\` prompt tokens auto-emit this binding, so a wired reference and its mention stay in sync.)
+- Caps: 9 reference images; 3 reference videos, each 2-15s and ≤15s combined; 3 reference audio clips, ≤15s combined. Reference audio cannot be used alone — it must accompany an image or video reference.
+- Define each subject once, then reuse the label consistently ("the woman from @Image 1 … the woman opens the door"). A focused set of 4-5 assets beats maxing every cap.
+- Billing note: generated seconds AND reference-video input seconds bill at the same per-second rate; the first 5 input images are free and each extra image adds a small surcharge; audio input is free.
+
+**Audio**
+- Audio is always generated — there is no on/off toggle. With reference audio attached, the model syncs speech to the supplied track (the platform's lip-sync surface routes image + voice line through this mode automatically).
+- Quoted dialogue in the prompt gives the model the line to perform; describe the voice in words when no reference audio is supplied.
+
+**Duration & pacing**
+- 4-15 seconds, integer, default 6. Per-second pricing — a 15s clip costs ~3.7× a 4s clip, so pick the shortest duration that serves the shot.
+- One camera movement type per shot; chain actions with physical, quantified detail ("slowly raises a hand", "pushes hard off the ground") rather than abstract emotion words.
+
+**Constraints**
+- There is NO negative-prompt parameter — all constraints belong in the prompt text itself: "keep it subtitle-free, do not generate a watermark, do not generate a logo, stable picture".
 
 _Generated from \`PROVIDER_PROMPT_DOCTRINES\` in \`@nodaro/shared\` — edit there, then \`npm run gen:skills\`._",
 }

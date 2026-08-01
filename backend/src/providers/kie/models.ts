@@ -612,6 +612,23 @@ export const KIE_VIDEO_MODELS: Record<string, KieModelConfig> = {
     endFrameParam: "last_frame_url",
   },
 
+  // MiniMax Hailuo 3 — docs.kie.ai/market/minimax-h3/image-to-video (+
+  // reference-to-video / text-to-video siblings; video.ts swaps the task model
+  // per input mode via minimaxH3TaskModel). Fixed 2K output, no resolution
+  // param. Per-second pricing: 36.5 KIE cr/s × (output + input-video seconds);
+  // input images beyond the first 5 add 11 KIE cr each; reference audio free.
+  // Per-second composites in credits.ts are authoritative.
+  "minimax-h3": {
+    model: "minimax-h3/image-to-video",
+    credits: 219,
+    cost: 1.095,  // 6s default (36.5 KIE cr/s); composites override
+    imageParam: "first_frame_url",
+    extraParams: { duration: 6 },
+    allowedDurations: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    supportsEndFrame: true,
+    endFrameParam: "last_frame_url",
+  },
+
   // Wan 2.6 I2V - docs.kie.ai/market/wan/2-6-image-to-video
   "wan-i2v": {
     model: "wan/2-6-image-to-video",
@@ -915,6 +932,18 @@ export const KIE_TEXT_TO_VIDEO_MODELS: Record<string, KieModelConfig> = {
       web_search: false,
       nsfw_checker: false,
     },
+    allowedDurations: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+  },
+
+  // MiniMax Hailuo 3 T2V — docs.kie.ai/market/minimax-h3/text-to-video.
+  // aspect_ratio is REQUIRED here (enum only — NO adaptive; adaptive is
+  // r2v-only). applyMinimaxH3Params coerces adaptive/missing → 16:9 for the
+  // pure-t2v endpoint and swaps to reference-to-video when refs are wired.
+  "minimax-h3": {
+    model: "minimax-h3/text-to-video",
+    credits: 219,
+    cost: 1.095,  // 6s default (36.5 KIE cr/s); composites override
+    extraParams: { duration: 6 },
     allowedDurations: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
   },
 

@@ -108,6 +108,8 @@ export {
   VIDEO_GEN_COLLAPSED_T2V_IDS,
   resolveVideoProviderForMode,
   isSeedance2Provider,
+  MINIMAX_H3_PROVIDERS,
+  isMinimaxH3Provider,
   GVP_SUPPORTED_PROVIDERS,
   isGvpSupportedProvider,
   defaultVideoAspectRatio,
@@ -126,6 +128,7 @@ export {
   DEFAULT_VIDEO_PROVIDER,
   DEFAULT_VIDEO_DURATION_SEC,
   applyDefaultVideoSelection,
+  PRICING_DEFAULT_DURATION_SEC,
 } from "./model-constants.js"
 
 export {

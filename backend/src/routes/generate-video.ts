@@ -13,7 +13,7 @@ import { extractMcpClient } from "../lib/extract-mcp-client.js"
 import { buildJobInputData } from "../lib/job-input-data.js"
 import { insertWithIdempotencyKey } from "../lib/idempotent-insert.js"
 import { sendInternalError } from "../lib/http-errors.js"
-import { VIDEO_GEN_PROVIDERS, SEEDANCE_2_REF_LIMITS, PROMPT_HARD_CEILING, isSeedance2Provider, isVeoProvider, estimateLoopTrimAddonCredits, seedance2AudioLimitSec, findSeedance2AudioOverLimit, videoModelCanSpeakDialogue, getVideoAudioCapability, TTS_PROVIDERS, buildVideoCreditModelIdentifier, applyDefaultVideoSelection, VIDEO_REF_LIMITS_BY_PROVIDER, type ConnectedReference } from "@nodaro/shared"
+import { VIDEO_GEN_PROVIDERS, SEEDANCE_2_REF_LIMITS, PROMPT_HARD_CEILING, isSeedance2Provider, isMinimaxH3Provider, isVeoProvider, estimateLoopTrimAddonCredits, seedance2AudioLimitSec, findSeedance2AudioOverLimit, videoModelCanSpeakDialogue, getVideoAudioCapability, TTS_PROVIDERS, buildVideoCreditModelIdentifier, applyDefaultVideoSelection, VIDEO_REF_LIMITS_BY_PROVIDER, type ConnectedReference } from "@nodaro/shared"
 import { resolveVideoReferenceCore, resolveReferenceTokens, type VideoExtraRef, type CharacterMeta } from "@nodaro/prompts"
 import { connectedReferenceSchema } from "../lib/connected-reference-schema.js"
 import { formatZodError } from "../lib/zod-error.js"
@@ -439,6 +439,41 @@ export async function generateVideoRoutes(app: FastifyInstance) {
               outputDurationSec: Number(b.duration ?? 5),
               referenceVideoUrls: b.referenceVideoUrls as unknown[],
             })
+          }
+          // MiniMax Hailuo 3 bills unit×(input+output) for reference-video runs
+          // AND surcharges input images beyond the first 5 (11 KIE cr each).
+          // Predict the ASSEMBLED reference-image count exactly the way the
+          // handler will build it (connectedReferences → referenceImageUrls →
+          // frames folded by the shared resolver), then reserve the full
+          // scaled base up front (commit_credits only refunds).
+          if (isMinimaxH3Provider(b?.provider as string | undefined)) {
+            const { minimaxH3BaseCreditsFromUrls, minimaxH3BillableRefImageCount, MINIMAX_H3_FREE_INPUT_IMAGES } =
+              await import("../ee/billing/minimax-h3-credits.js")
+            const refVideos = Array.isArray(b.referenceVideoUrls) ? (b.referenceVideoUrls as unknown[]) : []
+            const assembled = assembleVideoConnectedReferences({
+              prompt: b.prompt as string | undefined,
+              provider: b.provider as string,
+              connectedReferences: (Array.isArray(b.connectedReferences) ? b.connectedReferences : []) as ConnectedReference[],
+              baseReferenceImageUrls: (Array.isArray(b.referenceImageUrls) ? b.referenceImageUrls : undefined) as string[] | undefined,
+              referenceOrder: (Array.isArray(b.referenceOrder) ? b.referenceOrder : undefined) as string[] | undefined,
+              referenceVideoCount: refVideos.length,
+              referenceAudioCount: Array.isArray(b.referenceAudioUrls) ? (b.referenceAudioUrls as unknown[]).length : 0,
+            })
+            const refImageCount = minimaxH3BillableRefImageCount({
+              referenceImageUrls: assembled.referenceImageUrls,
+              firstFrameUrl: b.imageUrl,
+              lastFrameUrl: b.endFrameUrl,
+              referenceVideoUrls: refVideos,
+              referenceAudioUrls: Array.isArray(b.referenceAudioUrls) ? (b.referenceAudioUrls as unknown[]) : undefined,
+            })
+            if (hasVideoRef || refImageCount > MINIMAX_H3_FREE_INPUT_IMAGES) {
+              return minimaxH3BaseCreditsFromUrls({
+                outputDurationSec: Number(b.duration ?? 6),
+                referenceVideoUrls: refVideos,
+                referenceImageCount: refImageCount,
+              })
+            }
+            // No ref videos and ≤5 images → the seeded duration composite prices it.
           }
           const bSel = applyDefaultVideoSelection({ provider: b?.provider as string | undefined, duration: b?.duration as number | string | undefined })
           const modelId = buildVideoCreditModelIdentifier(

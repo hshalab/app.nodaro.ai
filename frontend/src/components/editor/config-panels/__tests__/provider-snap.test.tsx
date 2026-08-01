@@ -594,6 +594,16 @@ describe("ImageToVideoConfig — provider-snap useEffect", () => {
     expect(onUpdate).toHaveBeenCalledWith(expect.objectContaining({ resolution: undefined }))
   })
 
+  it("clears stale seedance resolution when switching to minimax-h3 (fixed 2K, no lever)", () => {
+    // A node configured for seedance-2 carries resolution "720p"; minimax-h3
+    // has no VIDEO_RESOLUTION_OPTIONS entry, so the fail-safe must clear it —
+    // otherwise the stale value ships to a provider with no resolution param.
+    const onUpdate = vi.fn()
+    const data = baseImageToVideoData({ provider: "minimax-h3", resolution: "720p" })
+    render(<ImageToVideoConfig {...commonProps(onUpdate, data)} />)
+    expect(onUpdate).toHaveBeenCalledWith(expect.objectContaining({ resolution: undefined }))
+  })
+
   it("preserves resolution when valid for the current provider", () => {
     // veo3 supports 720p, 1080p. data.resolution = "1080p" is valid.
     const onUpdate = vi.fn()

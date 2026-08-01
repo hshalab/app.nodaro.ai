@@ -449,7 +449,7 @@ prompt with no questions round-trip.
 | `merge_video_audio` | Merge a video track and an audio track into a single output file. |
 | `add_captions` | Burn subtitles/captions onto a video. Accepts `video_url` and caption style options. |
 | `extract_frame` | Extract a single frame from a video at a given timestamp. Returns an image URL. |
-| `lip_sync` | Drive lip-sync on a video or portrait image from an audio track. Accepts `video_url` / `image_url` + `audio_url`, plus `model` (kling-avatar, kling-avatar-pro, infinitalk, omnihuman-1-5, seedance-2(-fast), latentsync, wav2lip, video-retalking, sadtalker), `prompt`, `resolution`, and (omnihuman-1-5) `seed` / `fast_mode`. |
+| `lip_sync` | Drive lip-sync on a video or portrait image from an audio track. Accepts `video_url` / `image_url` + `audio_url`, plus `model` (kling-avatar, kling-avatar-pro, infinitalk, omnihuman-1-5, seedance-2(-fast), minimax-h3, latentsync, wav2lip, video-retalking, sadtalker), `prompt`, `resolution`, and (omnihuman-1-5) `seed` / `fast_mode`. |
 | `speech_to_video` | Generate a talking-head video from a portrait + speech audio. |
 | `motion_transfer` | Transfer the motion pattern from one video onto a target image or video. |
 | `face_swap` | Swap a face in a source image/video with a reference face. |
@@ -459,6 +459,8 @@ prompt with no questions round-trip.
 | `video_analysis` | Scene-by-scene analysis of a video for AI re-creation — ≤8s scenes with prompt-ready `visualResolved` descriptions, layered audio, and castable entity slots. Exactly one source: `video_asset_id` / `video_url` / `youtube_url` (max 10 minutes, no live streams). See [`video_analysis`](#video_analysis) below. |
 
 **Seedance 2 (`model: "seedance-2"`)** accepts `resolution: "4k"` and `aspect_ratio: "adaptive"` (plus `"21:9"`) on `generate_video` / `animate_image` — both fields are free strings, forwarded to the route unaltered. The cheaper variants are resolution-capped: `seedance-2-fast` and `seedance-2-mini` are **480p / 720p only** (no 1080p, no 4K). Frame inputs and references coexist — when any reference (image / video / audio) is wired alongside `image_url` / `end_frame_url`, the frames become **prompt-directed `Image N` references** rather than pinned endpoints; the resolver decides the mode, so there is no toggle. Reference **videos** are billed `unit × (input + output)` duration — the per-second `-ref` rate (see the [Generate Video node pricing](../nodes/ai-video/generate-video.md)) is scaled by the probed input-video duration plus the output duration, so longer source clips reserve more.
+
+**MiniMax Hailuo 3 (`model: "minimax-h3"`)** takes the same `reference_image_urls` / `reference_video_urls` / `reference_audio_urls` fields on `generate_video` / `animate_image` with the same 9 / 3 / 3 caps, through the same frames-fold-into-references resolver. Output is a **fixed 2K** — any `resolution` value is dropped (no lever) — and audio is always on. `aspect_ratio: "adaptive"` is the default (reference / i2v runs); a pure text-to-video call needs a concrete ratio (adaptive renders 16:9). Reference videos are 2–15s each (≤ 15s combined) and bill `unit × (input + output)` duration at the flat per-second rate; input images beyond the first 5 (counting folded frames) add a per-image surcharge; reference audio is free but must accompany an image or video reference.
 
 ### `video_analysis`
 
