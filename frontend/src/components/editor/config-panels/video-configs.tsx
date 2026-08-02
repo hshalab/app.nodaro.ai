@@ -4941,6 +4941,28 @@ export function VideoAnalysisConfig({ data, onUpdate }: ConfigProps<VideoAnalysi
         </p>
       </div>
 
+      {/* Cast variations opt-in. Off (the default) omits the field entirely so
+          the request body is byte-identical to the pre-feature build. The
+          warning copy is honest about the measured smart-tier recall trade
+          (2026-08-02 probes) — this toggle exists so it can be A/B'd. */}
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="video-analysis-variations"
+            checked={data.variations === true}
+            onCheckedChange={(v) => onUpdate({ variations: v === true ? true : undefined })}
+          />
+          <Label htmlFor="video-analysis-variations" className="text-xs cursor-pointer font-normal">
+            Cast variations — detect alternate looks per entity
+          </Label>
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          Also detect per-entity appearance variations (dream, flashback, disguise, costume…) and bind them to the
+          scenes where each look is active. Note: on single-pass tiers this can reduce how many entities get
+          extracted — leave off unless you need the looks.
+        </p>
+      </div>
+
       {/* Output language — two INDEPENDENT levers. Both off (the default) means
           the analysis keeps the footage's own language and the request body is
           byte-for-byte what it was before the feature existed. They are separate
