@@ -38,7 +38,7 @@ import type {
   SwitchXData,
   VideoAnalysisNodeData,
 } from "@/types/nodes"
-import { GENERATE_VIDEO_PRO_MAX_DURATION_FALLBACK, VIDEO_I2V_MODELS, VIDEO_T2V_MODELS, VIDEO_V2V_MODELS, VIDEO_GEN_MODELS, GVP_PROVIDERS, MOTION_TRANSFER_MODELS, KIE_VIDEO_DURATIONS, KIE_T2V_DURATIONS, VIDEO_DURATION_OPTIONS, VIDEO_FPS_OPTIONS, PROVIDERS_WITH_END_FRAME, KLING3_DURATIONS, VIDEO_RATIOS, SEEDANCE_2_VIDEO_RATIOS, PROVIDERS_WITH_REFERENCES, V2V_DURATION_OPTIONS, V2V_RESOLUTION_OPTIONS, V2V_ALEPH_ASPECT_RATIOS, EXTEND_VIDEO_MODELS, getVideoResolutionOptions, getAspectRatiosForVideoModel, getVideoModelCapabilitiesTooltip } from "./model-options"
+import { GENERATE_VIDEO_PRO_MAX_DURATION_FALLBACK, VIDEO_I2V_MODELS, VIDEO_T2V_MODELS, VIDEO_V2V_MODELS, VIDEO_GEN_MODELS, GVP_PROVIDERS, EVP_PROVIDERS, MOTION_TRANSFER_MODELS, KIE_VIDEO_DURATIONS, KIE_T2V_DURATIONS, VIDEO_DURATION_OPTIONS, VIDEO_FPS_OPTIONS, PROVIDERS_WITH_END_FRAME, KLING3_DURATIONS, VIDEO_RATIOS, SEEDANCE_2_VIDEO_RATIOS, PROVIDERS_WITH_REFERENCES, V2V_DURATION_OPTIONS, V2V_RESOLUTION_OPTIONS, V2V_ALEPH_ASPECT_RATIOS, EXTEND_VIDEO_MODELS, getVideoResolutionOptions, getAspectRatiosForVideoModel, getVideoModelCapabilitiesTooltip } from "./model-options"
 import { isSeedance2Provider, isMinimaxH3Provider, defaultVideoAspectRatio, MODEL_CATALOG, SEEDANCE_2_REF_LIMITS, VIDEO_PROMPT_MAX, getMaxVideoPromptChars, getMaxNegativePromptChars, buildVideoCreditModelIdentifier, characterMentionSlug, characterMentionableAssetArrays, DEFAULT_LABEL_BY_SOURCE, locationMentionSlug, resolveEffectiveSourceType, FRAME_TARGET_HANDLES, VIDEO_ANALYSIS_TIER_ORDER, VIDEO_ANALYSIS_TIER_LABELS, VIDEO_ANALYSIS_TIERS, VIDEO_ANALYSIS_LEGACY_MODELS, DEFAULT_VIDEO_ANALYSIS_TIER, isVideoAnalysisTier, LLM_MODELS, clampSmartCutWindow, SMART_CUT_WINDOW_MIN, SMART_CUT_WINDOW_MAX, SMART_CUT_WINDOW_DEFAULT } from "@nodaro/shared"
 import type { ReferenceSource, ConnectedReference } from "@nodaro/shared"
 import { resolveSeedance2Inputs } from "@nodaro/prompts"
@@ -4007,8 +4007,8 @@ export const EDIT_VIDEO_PRO_MAX_SPAN_FALLBACK = 120
  * Edit Video Pro — span-replace sibling of Generate Video Pro (see
  * EditVideoProNodeData). Deliberately has NO resolution/aspect controls —
  * both are source-derived by design (the replaced span inherits the source
- * clip's own dimensions). Provider select (GVP_PROVIDERS — the supported pro
- * SKUs only), one prompt
+ * clip's own dimensions). Provider select (EVP_PROVIDERS — the Seedance-only
+ * pro subset), one prompt
  * field (no negative), the SpanRangeSlider synced with two numeric From/To
  * fields (the slider itself only renders once sourceDurationSec has been
  * probed — see edit-video-pro-node.tsx's onLoadedMetadata stamping), and the
@@ -4022,9 +4022,11 @@ function EditVideoProConfigImpl({ data, onUpdate, sources, fieldMappings, onMapF
   const sourceDuration = data.sourceDurationSec
 
   // Fail-safe (Provider Enum Sync step 12b): same withdrawn-provider snap as
-  // the gvp panel above — GVP_PROVIDERS is shared between the two siblings.
+  // the gvp panel above — but against EVP's OWN Seedance-only list (gvp gained
+  // minimax-h3 2026-08-02; EVP deliberately did not — no v2v mode, no -ref
+  // pricing axis), so a gvp-only SKU pasted into an EVP node snaps back too.
   useEffect(() => {
-    if (data.provider && !GVP_PROVIDERS.some((m) => m.value === data.provider)) {
+    if (data.provider && !EVP_PROVIDERS.some((m) => m.value === data.provider)) {
       onUpdate({ provider: "seedance-2" })
     }
   }, [data.provider]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -4038,7 +4040,7 @@ function EditVideoProConfigImpl({ data, onUpdate, sources, fieldMappings, onMapF
         >
           <SelectTrigger aria-label="Provider"><SelectValue /></SelectTrigger>
           <SelectContent>
-            {GVP_PROVIDERS.map((m) => (
+            {EVP_PROVIDERS.map((m) => (
               <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
             ))}
           </SelectContent>
@@ -4938,6 +4940,28 @@ export function VideoAnalysisConfig({ data, onUpdate }: ConfigProps<VideoAnalysi
         <p className="text-[11px] text-muted-foreground">
           The video is analyzed several times. "Choose" keeps the strongest pass as-is; "Combine" also folds in
           details from the other passes after verifying them against the footage (slightly slower, most complete).
+        </p>
+      </div>
+
+      {/* Cast variations opt-in. Off (the default) omits the field entirely so
+          the request body is byte-identical to the pre-feature build. The
+          warning copy is honest about the measured smart-tier recall trade
+          (2026-08-02 probes) — this toggle exists so it can be A/B'd. */}
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="video-analysis-variations"
+            checked={data.variations === true}
+            onCheckedChange={(v) => onUpdate({ variations: v === true ? true : undefined })}
+          />
+          <Label htmlFor="video-analysis-variations" className="text-xs cursor-pointer font-normal">
+            Cast variations — detect alternate looks per entity
+          </Label>
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          Also detect per-entity appearance variations (dream, flashback, disguise, costume…) and bind them to the
+          scenes where each look is active. Note: on single-pass tiers this can reduce how many entities get
+          extracted — leave off unless you need the looks.
         </p>
       </div>
 

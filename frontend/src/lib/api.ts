@@ -3714,6 +3714,7 @@ export async function startVideoAnalysis(params: {
   youtubeUrl?: string
   llmModel?: string
   selectionMode?: "choose" | "combine"
+  variations?: boolean
   translateSpeechToEnglish?: boolean
   translateOnScreenTextToEnglish?: boolean
   analysisFocus?: string
@@ -3728,6 +3729,9 @@ export async function startVideoAnalysis(params: {
   // saved to node data but never reached a single-node Run (the combine
   // no-op bug: output always == the judge's raw winner).
   if (params.selectionMode) body.selectionMode = params.selectionMode
+  // Cast-variations opt-in — only sent when ON (omitted = the plugin's
+  // pre-variations shape), matching the translate levers' idiom below.
+  if (params.variations) body.variations = true
   // Only sent when ON, per lever. Omitted means the plugin's default (keep the
   // footage's language), so a node with both off produces the exact request body
   // it did before the feature existed.
@@ -5395,6 +5399,12 @@ export interface SubscriptionInfo {
   stripe_price_id: string
   current_period_start: string | null
   current_period_end: string | null
+  // Scheduled-cancellation state (synced from Stripe by the webhook). Status
+  // stays "active" until the period ends; newer Stripe API versions express a
+  // portal cancel as `cancel_at` with `cancel_at_period_end` still false —
+  // derive "scheduled" via getScheduledCancelDate() in @/ee/lib/subscription.
+  cancel_at_period_end: boolean | null
+  cancel_at: string | null
   canceled_at: string | null
 }
 

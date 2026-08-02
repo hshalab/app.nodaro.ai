@@ -1,4 +1,4 @@
-import { aspectRatioOptionsByKind, resolutionOptionsByKind, qualityOptionsByKind, durationsByMode, creditRangesAll, modelsWithFeature, isFlux2Model, isGvpSupportedProvider, VIDEO_GEN_COLLAPSED_T2V_IDS, type LabeledOption } from "@nodaro/shared"
+import { aspectRatioOptionsByKind, resolutionOptionsByKind, qualityOptionsByKind, durationsByMode, creditRangesAll, modelsWithFeature, isFlux2Model, isGvpSupportedProvider, isSeedance2Provider, GVP_SUPPORTED_PROVIDERS, VIDEO_GEN_COLLAPSED_T2V_IDS, type LabeledOption } from "@nodaro/shared"
 import { STYLES } from "@nodaro/prompts"
 import type { ImageGenProvider, ImageI2IProvider, ImageToVideoProvider, LipSyncProvider, MotionTransferProviderType, TextToVideoProvider, VideoGenProvider, VideoToVideoProvider } from "@nodaro/shared"
 export { MODELS_WITH_REFERENCE_IMAGE_SUPPORT, REF_IMAGE_MAX_LIMITS, DEFAULT_REF_IMAGE_MAX, NATIVE_NEGATIVE_PROMPT_MODELS, I2I_STRENGTH_SUPPORT, I2I_MASK_SUPPORT, IMAGE_MASK_MODE, SEED_SUPPORT, RENDERING_SPEED_SUPPORT, GUIDANCE_SCALE_SUPPORT } from "@nodaro/shared"
@@ -166,14 +166,29 @@ export const VIDEO_GEN_MODELS: readonly { value: VideoGenProvider; label: string
   })()
 
 /** Generate Video Pro's provider set — ONLY the SKUs the pro multi-segment
- *  engine supports: Seedance 2 + Seedance 2 Fast (mini withdrawn from
- *  selection, 2026-07-21). Filtered from VIDEO_GEN_MODELS by the shared
- *  `isGvpSupportedProvider` predicate (the support list lives in
+ *  engine supports (Seedance 2 + Seedance 2 Fast; mini withdrawn 2026-07-21;
+ *  minimax-h3 blessed 2026-08-02). Filtered from VIDEO_GEN_MODELS by the
+ *  shared `isGvpSupportedProvider` predicate (the support list lives in
  *  @nodaro/shared next to the capability family), so id/label/desc can never
- *  drift from the canonical catalog — no hand-written label strings. Also
- *  consumed by Edit Video Pro (same engine, same support set). */
+ *  drift from the canonical catalog — no hand-written label strings — and
+ *  ORDERED by GVP_SUPPORTED_PROVIDERS so the default (seedance-2) lists
+ *  first regardless of catalog order. Edit Video Pro consumes the Seedance-only
+ *  EVP_PROVIDERS subset below. */
 export const GVP_PROVIDERS: readonly { value: VideoGenProvider; label: string; desc: string }[] =
-  VIDEO_GEN_MODELS.filter((m) => isGvpSupportedProvider(m.value))
+  [...VIDEO_GEN_MODELS.filter((m) => isGvpSupportedProvider(m.value))].sort(
+    (x, y) =>
+      (GVP_SUPPORTED_PROVIDERS as readonly string[]).indexOf(x.value) -
+      (GVP_SUPPORTED_PROVIDERS as readonly string[]).indexOf(y.value),
+  )
+
+/** Edit Video Pro's provider set — the Seedance-only SUBSET of GVP_PROVIDERS.
+ *  EVP edits an EXISTING video on the pro engine; minimax-h3 (blessed for
+ *  GENERATION 2026-08-02) has no v2v mode in the catalog and its pricing has
+ *  no `-ref` axis, so it stays out of EVP until separately validated. The
+ *  filter derives from the shared family predicate — a future blessed
+ *  Seedance SKU flows in automatically, a non-Seedance one stays out. */
+export const EVP_PROVIDERS: readonly { value: VideoGenProvider; label: string; desc: string }[] =
+  GVP_PROVIDERS.filter((m) => isSeedance2Provider(m.value))
 
 export const VIDEO_V2V_MODELS: readonly { value: VideoToVideoProvider; label: string; desc: string }[] = [
   { value: "luma-modify", label: "Luma Modify", desc: "Luma video modification" },

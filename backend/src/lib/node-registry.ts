@@ -143,6 +143,8 @@ export const NODE_REGISTRY: NodeDescriptor[] = [
         // Derived from the shared tier vocabulary — never hand-listed.
         { key: "llmModel", type: "select", options: [...VIDEO_ANALYSIS_TIER_ORDER] },
         { key: "selectionMode", type: "select", options: ["choose", "combine"] },
+        // Cast-variations opt-in: per-slot appearance looks + per-scene bindings.
+        { key: "variations", type: "boolean" },
         { key: "translateSpeechToEnglish", type: "boolean" },
         { key: "translateOnScreenTextToEnglish", type: "boolean" },
         { key: "analysisFocus", type: "string" },
@@ -232,7 +234,7 @@ export const NODE_REGISTRY: NodeDescriptor[] = [
     label: "Generate Video Pro",
     category: "ai-video",
     description:
-      "Long-form video generation — Seedance-2-family only (seedance-2 / seedance-2-fast / seedance-2-mini). Requests above a single segment's cap (15s) are auto-split into multiple segments and seamlessly stitched into one clip. Cloud edition only.",
+      "Long-form video generation — seedance-2 / seedance-2-fast / minimax-h3 (Hailuo 3, fixed 2K output). Requests above a single segment's cap (15s) are auto-split into multiple segments and seamlessly stitched into one clip. Cloud edition only.",
     outputType: "video",
     // Multi-mode fee-base (STATIC_CREDIT_COSTS["generate-video-pro"] = 10), reserved
     // on top of the per-second segment cost once the request splits into multiple

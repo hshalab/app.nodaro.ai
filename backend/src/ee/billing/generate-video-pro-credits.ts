@@ -1,4 +1,4 @@
-import { MODEL_CATALOG, buildVideoCreditModelIdentifier, SEEDANCE_2_CONTINUATION_REF_SEC } from "@nodaro/shared"
+import { MODEL_CATALOG, buildVideoCreditModelIdentifier, SEEDANCE_2_CONTINUATION_REF_SEC, isMinimaxH3Provider } from "@nodaro/shared"
 import { STATIC_CREDIT_COSTS, PriceNotConfiguredError, getModelCreditBaseCost } from "./credits.js"
 
 /**
@@ -129,11 +129,24 @@ function clampResolution(provider: string, resolution: string): string {
  * the 8s tier is used as the canonical anchor regardless of the actual
  * segment duration — mirrors `seedance2RefVideoBaseCredits`).
  *
+ * `minimax-h3` (2026-08-02) has a DIFFERENT identifier shape: fixed 2K output
+ * (no resolution axis) and no `-ref` composites — its r2v rate equals the base
+ * rate, and KIE bills reference-VIDEO input as `unit × (input + output)`
+ * seconds (see minimax-h3-credits.ts). Both rates therefore derive from the
+ * one `minimax-h3:8s` composite, and the multi-segment reserve formula's
+ * `refPerSec × (n−1) × tailSec` term prices each continuation's context-tail
+ * input seconds exactly. The per-image surcharge (inputs beyond 5, 27.5 base
+ * each) deliberately rides the provider margin, NOT user credits — the same
+ * treatment as tailUpscale/identityPlate (a pro segment sends anchor + plate +
+ * a few cast refs, typically within the free tier).
+ *
  * Hard-fail policy: throws `PriceNotConfiguredError` when the composite is
  * missing — never silently falls back to a wrong (under-)reservation.
  */
 function perSecRate(provider: string, resolution: string, ref: boolean): number {
-  const identifier = `${provider}:8s:${resolution}${ref ? "-ref" : ""}`
+  const identifier = isMinimaxH3Provider(provider)
+    ? `${provider}:8s`
+    : `${provider}:8s:${resolution}${ref ? "-ref" : ""}`
   const composite = STATIC_CREDIT_COSTS[identifier]
   if (composite === undefined) {
     throw new PriceNotConfiguredError(identifier)

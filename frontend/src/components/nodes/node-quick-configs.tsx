@@ -35,6 +35,7 @@ import {
   IMAGE_RESOLUTION_OPTIONS,
   VIDEO_GEN_MODELS,
   GVP_PROVIDERS,
+  EVP_PROVIDERS,
   GENERATE_VIDEO_PRO_MAX_DURATION_FALLBACK,
   getAspectRatiosForVideoModel,
   getDurationsForVideoModel,
@@ -505,13 +506,15 @@ export const NODE_QUICK_CONFIGS: Readonly<Record<string, ReadonlyArray<QuickConf
     },
   ],
   // ── Edit Video Pro (model only — no resolution lever, both are
-  // source-derived by design; the config panel owns prompt/span/audio) ──
+  // source-derived by design; the config panel owns prompt/span/audio).
+  // EVP_PROVIDERS, not GVP_PROVIDERS: EVP stays Seedance-only (minimax-h3 is
+  // a generation-side blessing) ──
   "edit-video-pro": [
     {
       field: "provider",
       ariaLabel: "Model",
       icon: Sparkles,
-      options: toOptions(GVP_PROVIDERS),
+      options: toOptions(EVP_PROVIDERS),
     },
   ],
   // ── Image Collage (layout · aspect · resolution) ──

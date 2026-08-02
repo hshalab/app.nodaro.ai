@@ -1,7 +1,7 @@
 ---
 node_type: video-analysis
-generated_at: 2026-07-28T21:00:18.754Z
-generated_from: 3f0225549
+generated_at: 2026-08-02T16:51:14.260Z
+generated_from: 77e082459
 ---
 
 # Video Analysis
@@ -27,6 +27,7 @@ generated_from: 3f0225549
 - `temperature?: number`
 - `maxTokens?: number`
 - `selectionMode?: "choose" | "combine"`
+- `variations?: boolean`
 - `translateSpeechToEnglish?: boolean`
 - `translateOnScreenTextToEnglish?: boolean`
 - `analysisFocus?: string`

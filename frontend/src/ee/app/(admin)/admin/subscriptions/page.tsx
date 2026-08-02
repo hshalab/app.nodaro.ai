@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Loader2, HeartPulse, RefreshCw, AlertTriangle, CheckCircle2, ArrowRight } from "lucide-react"
+import { Loader2, HeartPulse, RefreshCw, AlertTriangle, CheckCircle2, ArrowRight, CalendarClock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { getAuthHeaders } from "@/lib/api"
@@ -16,9 +16,17 @@ interface SubscriptionIssue {
   stripeSubscriptionId: string | null
 }
 
+interface ScheduledCancellation {
+  userId: string
+  email: string | null
+  tier: string
+  cancelsAt: string | null
+}
+
 interface HealthData {
   issues: SubscriptionIssue[]
   scannedUsers: number
+  scheduledCancellations?: ScheduledCancellation[]
 }
 
 const ISSUE_LABELS: Record<string, { label: string; color: string }> = {
@@ -70,6 +78,7 @@ export default function AdminSubscriptionsPage() {
 
   const health = data?.data
   const issues = health?.issues ?? []
+  const scheduled = health?.scheduledCancellations ?? []
 
   return (
     <div className="space-y-6">
@@ -121,6 +130,30 @@ export default function AdminSubscriptionsPage() {
               </p>
             </div>
           </div>
+
+          {/* Scheduled cancellations — informational: the user asked to end
+              the plan at period close; status stays active until then. */}
+          {scheduled.length > 0 && (
+            <div className="rounded-lg border border-amber-500/20 overflow-hidden">
+              <div className="px-4 py-2.5 bg-amber-500/5 border-b border-amber-500/20 flex items-center gap-2">
+                <CalendarClock className="w-4 h-4 text-amber-500" />
+                <p className="text-sm font-medium">Scheduled Cancellations ({scheduled.length})</p>
+              </div>
+              <table className="w-full text-sm">
+                <tbody>
+                  {scheduled.map((s) => (
+                    <tr key={s.userId} className="border-b last:border-0">
+                      <td className="p-3 font-mono text-xs truncate max-w-[220px]">{s.email ?? s.userId}</td>
+                      <td className="p-3 capitalize">{s.tier}</td>
+                      <td className="p-3 text-right text-amber-600 dark:text-amber-400">
+                        cancels {s.cancelsAt ? new Date(s.cancelsAt).toLocaleDateString() : "at period end"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           {/* Issues list */}
           {issues.length === 0 ? (

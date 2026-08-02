@@ -164,6 +164,17 @@ function mockWriteError(table: string, error: { code?: string; message?: string 
   writeErrors.set(table, queue)
 }
 
+/** All payloads passed to from(table).update(...) across every mock chain. */
+function updatePayloadsFor(table: string): Array<Record<string, unknown>> {
+  return mockFrom.mock.calls.flatMap((call: unknown[], i: number) => {
+    if (call[0] !== table) return []
+    const chain = mockFrom.mock.results[i]?.value as {
+      update?: { mock: { calls: Array<[Record<string, unknown>]> } }
+    }
+    return chain?.update?.mock.calls.map((c) => c[0]) ?? []
+  })
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -271,6 +282,43 @@ describe("provision-credits", () => {
       )
     })
 
+    it("rolls the pre-subscribe balance into topup credits (free grant survives)", async () => {
+      mockSelect("stripe_customers", { user_id: "user-001" })
+      mockSelectNotFound("subscriptions")
+      // User still holds 139 of the free signup grant when they subscribe.
+      // The tier grant SET below would wipe it — it must carry over to topup.
+      mockSelect("profiles", { subscription_credits: 139, topup_credits: 0 })
+
+      await handleSubscriptionCreated(baseData)
+
+      expect(mockRpc).toHaveBeenCalledWith("add_topup_credits", {
+        p_user_id: "user-001",
+        p_credits: 139,
+      })
+      expect(mockLogTransaction).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: "user-001",
+          amount: 139,
+          creditType: "topup",
+          source: "subscription_created",
+          balanceAfter: 139,
+        }),
+      )
+    })
+
+    it("does not roll over when the pre-subscribe balance is zero", async () => {
+      mockSelect("stripe_customers", { user_id: "user-001" })
+      mockSelectNotFound("subscriptions")
+      mockSelect("profiles", { subscription_credits: 0, topup_credits: 500 })
+
+      await handleSubscriptionCreated(baseData)
+
+      expect(mockRpc).not.toHaveBeenCalledWith("add_topup_credits", expect.anything())
+      expect(mockLogTransaction).not.toHaveBeenCalledWith(
+        expect.objectContaining({ creditType: "topup" }),
+      )
+    })
+
     it("logs transaction when transactionId provided", async () => {
       mockSelect("stripe_customers", { user_id: "user-001" })
       mockSelectNotFound("subscriptions")
@@ -301,6 +349,9 @@ describe("provision-credits", () => {
       status: "active",
       currentPeriodStart: "2026-02-01T00:00:00Z",
       currentPeriodEnd: "2026-03-01T00:00:00Z",
+      cancelAtPeriodEnd: false,
+      cancelAt: null as string | null,
+      canceledAt: null as string | null,
       metadata: null,
     }
 
@@ -368,6 +419,105 @@ describe("provision-credits", () => {
           source: "subscription_renewal",
           description: expect.stringContaining("renewal"),
         })
+      )
+    })
+
+    it("persists scheduled-cancellation fields on the subscription row", async () => {
+      mockSelect("stripe_customers", { user_id: "user-001" })
+      // Same tier + same period: the ONLY thing this event carries is the
+      // user's portal cancel-at-period-end request. Newer Stripe API shape:
+      // cancel_at set, cancel_at_period_end still false.
+      mockSelect("subscriptions", {
+        id: "sub-id",
+        stripe_price_id: STRIPE_PRODUCTS.pro.monthly,
+        tier: "pro",
+        current_period_start: "2026-02-01T00:00:00+00:00",
+      })
+
+      await handleSubscriptionUpdated({
+        ...baseUpdatedData,
+        cancelAt: "2026-03-01T00:00:00.000Z",
+        canceledAt: "2026-02-05T12:00:00.000Z",
+      })
+
+      expect(updatePayloadsFor("subscriptions")).toContainEqual(
+        expect.objectContaining({
+          cancel_at_period_end: false,
+          cancel_at: "2026-03-01T00:00:00.000Z",
+          canceled_at: "2026-02-05T12:00:00.000Z",
+        }),
+      )
+    })
+
+    it("clears cancellation fields when the subscription is reactivated", async () => {
+      mockSelect("stripe_customers", { user_id: "user-001" })
+      mockSelect("subscriptions", {
+        id: "sub-id",
+        stripe_price_id: STRIPE_PRODUCTS.pro.monthly,
+        tier: "pro",
+        current_period_start: "2026-02-01T00:00:00+00:00",
+      })
+
+      await handleSubscriptionUpdated(baseUpdatedData)
+
+      expect(updatePayloadsFor("subscriptions")).toContainEqual(
+        expect.objectContaining({
+          cancel_at_period_end: false,
+          cancel_at: null,
+          canceled_at: null,
+        }),
+      )
+    })
+
+    it("does not misread the Postgres timestamp format as a renewal (no credit refill)", async () => {
+      mockSelect("stripe_customers", { user_id: "user-001" })
+      // Same instant the created-handler stored, but read back in Postgres wire
+      // format (+00:00) while the webhook computes toISOString() (.000Z). A
+      // string compare flags EVERY subscription.updated as a renewal and
+      // refills subscription_credits mid-cycle for free.
+      mockSelect("subscriptions", {
+        id: "sub-id",
+        stripe_price_id: STRIPE_PRODUCTS.pro.monthly,
+        tier: "pro",
+        current_period_start: "2026-02-01T00:00:00+00:00",
+      })
+
+      await handleSubscriptionUpdated(baseUpdatedData)
+
+      expect(mockLogTransaction).not.toHaveBeenCalledWith(
+        expect.objectContaining({ source: "subscription_renewal" }),
+      )
+    })
+
+    it("still detects a real renewal when the period start moves across formats", async () => {
+      mockSelect("stripe_customers", { user_id: "user-001" })
+      mockSelect("subscriptions", {
+        id: "sub-id",
+        stripe_price_id: STRIPE_PRODUCTS.pro.monthly,
+        tier: "pro",
+        current_period_start: "2026-01-01T00:00:00+00:00",
+      })
+
+      await handleSubscriptionUpdated(baseUpdatedData)
+
+      expect(mockLogTransaction).toHaveBeenCalledWith(
+        expect.objectContaining({ source: "subscription_renewal" }),
+      )
+    })
+
+    it("does not invent a renewal when the stored period start is null", async () => {
+      mockSelect("stripe_customers", { user_id: "user-001" })
+      mockSelect("subscriptions", {
+        id: "sub-id",
+        stripe_price_id: STRIPE_PRODUCTS.pro.monthly,
+        tier: "pro",
+        current_period_start: null,
+      })
+
+      await handleSubscriptionUpdated(baseUpdatedData)
+
+      expect(mockLogTransaction).not.toHaveBeenCalledWith(
+        expect.objectContaining({ source: "subscription_renewal" }),
       )
     })
 

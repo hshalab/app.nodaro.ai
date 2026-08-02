@@ -4546,6 +4546,15 @@ export type VideoAnalysisNodeData = {
   // "combine" (judge picks, then a grounded refine pass folds video-verified
   // details from the losing rolls into the winner).
   selectionMode?: "choose" | "combine"
+  /** CAST VARIATIONS opt-in: the analysis may emit per-slot appearance
+   *  variations (dream/flashback/disguise looks) + per-scene bindings.
+   *  Undefined (not false) when off, so pre-feature workflows stay
+   *  byte-identical. KNOWN TRADE (2026-08-02, probe-confirmed): on the
+   *  single-pass `smart` tier this flag measurably suppresses entity-slot
+   *  recall (locations/objects) — jobs e89babdb (on) vs 91b5a118 (off), same
+   *  source. Exposed deliberately for A/B testing until the analyzer moves
+   *  variations to a second pass. */
+  variations?: boolean
   // Output language — two INDEPENDENT levers, both omitted/false by default
   // (the analysis then keeps the footage's language verbatim, exactly as before
   // the feature existed). They are separate because they change different things

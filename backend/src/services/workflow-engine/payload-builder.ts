@@ -2964,6 +2964,10 @@ export function buildPayload(
         // best-of-N strategy — fail-safe narrowed: anything but the literal
         // "combine" is omitted (worker defaults to "choose").
         selectionMode: data.selectionMode === "combine" ? "combine" : undefined,
+        // Cast-variations opt-in — same literal-true narrowing; omitted keeps
+        // the plugin's pre-variations shape (route parity: the plugin route
+        // narrows identically before enqueueing).
+        variations: data.variations === true ? true : undefined,
         // Output language — same fail-safe narrowing, per lever: only a literal
         // true translates, so a stale truthy value in saved node data can never
         // silently flip an orchestrated run into English.

@@ -1,7 +1,7 @@
 import type { WorkflowNode, WorkflowEdge, GenerateVideoProNodeData, EditVideoProNodeData } from "@/types/nodes";
 import { StorageExceededError } from "@/lib/api";
 import { useWorkflowStore } from "@/hooks/use-workflow-store";
-import { buildMotionCreditModelIdentifier, isDefaultSelectorConfig, selectListItems, type SelectorFields, getEffectiveRepeatCount, buildScraperCreditId, isScraperActor, SCRAPER_CREDIT_COSTS, buildVideoAnalysisCreditId, resolveVideoAnalysisModel, bucketSecondsFromCreditId, VIDEO_ANALYSIS_BUCKET_CREDITS, FAN_OUT_EACH_TYPES, buildVideoCreditModelIdentifier, SEEDANCE_2_CONTINUATION_REF_SEC } from "@nodaro/shared"
+import { buildMotionCreditModelIdentifier, isDefaultSelectorConfig, selectListItems, type SelectorFields, getEffectiveRepeatCount, buildScraperCreditId, isScraperActor, SCRAPER_CREDIT_COSTS, buildVideoAnalysisCreditId, resolveVideoAnalysisModel, bucketSecondsFromCreditId, VIDEO_ANALYSIS_BUCKET_CREDITS, FAN_OUT_EACH_TYPES, buildVideoCreditModelIdentifier, SEEDANCE_2_CONTINUATION_REF_SEC, isMinimaxH3Provider } from "@nodaro/shared"
 // getCachedCredits reads the live React-Query model-cost cache (an `ee/`
 // concern — credits are enterprise-only). Allowlisted in
 // tools/check-ee-imports.mjs (same coupling as ./run-handlers.ts).
@@ -180,10 +180,20 @@ const GVP_NOREF_FALLBACK = 82
 const GVP_REF_FALLBACK = 50
 const GVP_FEE_FALLBACK = 10
 
+/** Static fallback for the minimax-h3 8s composite (STATIC_CREDIT_COSTS
+ *  `minimax-h3:8s` = 730) — fixed 2K output, no resolution axis, r2v rate ==
+ *  base rate, so ONE composite backs both rates. */
+const GVP_MINIMAX_H3_FALLBACK = 730
+
 /** Per-second BASE rate for a (provider, resolution, ref) combination, read from the
  *  live cached composite when available (mirrors the backend's perSecRate identifier
- *  scheme exactly: `${provider}:8s:${resolution}[-ref]`), else a static fallback. */
+ *  scheme exactly: `${provider}:8s:${resolution}[-ref]`, minimax-h3 → the
+ *  resolution-less `minimax-h3:8s`), else a static fallback. */
 function gvpPerSecRate(provider: string, resolution: string, ref: boolean): number {
+  if (isMinimaxH3Provider(provider)) {
+    const composite = getCachedCredits(`${provider}:8s`) ?? GVP_MINIMAX_H3_FALLBACK
+    return composite / 8
+  }
   const identifier = `${provider}:8s:${resolution}${ref ? "-ref" : ""}`
   const composite = getCachedCredits(identifier) ?? (ref ? GVP_REF_FALLBACK : GVP_NOREF_FALLBACK)
   return composite / 8
@@ -293,12 +303,20 @@ export function estimateNodeCredits(node: { type?: string; data?: Record<string,
     // to the flat 1-credit placeholder for every fast/pro node).
     const model = resolveVideoAnalysisModel(node.data.llmModel as string | undefined)
     // A probed YouTube duration is trusted only while it still matches the node's
-    // current youtubeUrl (a URL edit invalidates it). No graph context here, so a
-    // wired video's duration isn't reachable — that falls to the ceiling bucket
-    // (the node's own live estimate uses the upstream duration via the hook).
+    // current youtubeUrl (a URL edit invalidates it). For a WIRED video the
+    // upstream-probe hook caches the metadata-read duration on the node as
+    // `probedVideo` (url-bound; rewritten when the upstream changes) — read it
+    // as the fallback so this estimate agrees with the node's own live badge
+    // instead of quoting the :600s ceiling (reported 2026-08-02: the confirm
+    // dialog said ~1868 for a 72s clip the run then billed at 470). No graph
+    // context here to re-verify the url, and none needed: this is display-only
+    // (the reserve is computed server-side from the real length), and a stale
+    // window only exists for the moment between rewire and the hook's re-probe.
     const probed = node.data.probedYoutube as { url: string; durationSec: number } | undefined
+    const probedWired = node.data.probedVideo as { url: string; durationSec: number } | undefined
     const durationSec =
-      probed && probed.url === node.data.youtubeUrl ? probed.durationSec : undefined
+      (probed && probed.url === node.data.youtubeUrl ? probed.durationSec : undefined) ??
+      probedWired?.durationSec
     const bucketSec = bucketSecondsFromCreditId(buildVideoAnalysisCreditId(model, durationSec))
     // The $-derived formula moved to the private @nodaroai/cloud-plugins formula (output published as VIDEO_ANALYSIS_BUCKET_CREDITS)
     // (S5) — look up the precomputed credit table instead of computing it here.

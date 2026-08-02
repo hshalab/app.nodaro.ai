@@ -4,7 +4,7 @@
 
 ## Overview
 
-Generate Video Pro is a specialized, Seedance-2-family-only sibling of [Generate Video](./generate-video.md), built for one thing: clips longer than a single provider call can produce. Ask for a duration beyond the single-segment limit (15 seconds) and the node transparently generates multiple segments in sequence — each one continuing from where the last left off — and stitches them into a single output video.
+Generate Video Pro is a specialized sibling of [Generate Video](./generate-video.md) scoped to a small set of continuation-capable providers (the Seedance 2 family and Hailuo 3), built for one thing: clips longer than a single provider call can produce. Ask for a duration beyond the single-segment limit (15 seconds) and the node transparently generates multiple segments in sequence — each one continuing from where the last left off — and stitches them into a single output video.
 
 Below that limit, Generate Video Pro behaves exactly like a normal single-shot Seedance 2 run and is priced the same way. Use it when you need one continuous clip longer than 15 seconds; use [Generate Video](./generate-video.md) for everything else (shorter clips, other providers, first+last frame, video-to-video, or the full multimodal reference/prompt-token surface).
 
@@ -33,7 +33,7 @@ Generate Video Pro exposes **exactly Generate Video's input handles** — same n
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| Provider | Select | `seedance-2` | `seedance-2` (full) or `seedance-2-fast` — the only providers the pro engine currently supports |
+| Provider | Select | `seedance-2` | `seedance-2` (full), `seedance-2-fast`, or `minimax-h3` (Hailuo 3, fixed 2K output) — the only providers the pro engine currently supports |
 | Prompt | Text | — | Describes the video; also settable via the `prompt` handle |
 | Duration | Number (4–cap) | 8s | Minimum 4s. Maximum is the configured cap (120s by default) — see [Duration cap](#duration-cap) |
 | Aspect Ratio | Select | `adaptive` | 16:9 / 9:16 / 1:1 / 4:3 / 3:4 / 21:9 / Adaptive (matches the wired input) |
@@ -65,12 +65,15 @@ automatically; scripts without look bindings behave exactly as before.
 
 ## Providers
 
-Generate Video Pro is scoped to the Seedance 2 family:
+Generate Video Pro is scoped to providers whose reference surface supports the pro engine's continuation transport (context-tail video reference + frame anchor + identity image references, at per-second durations across the full 4–15s segment window):
 
 | Provider | Label | Resolutions |
 |---|---|---|
 | `seedance-2` | Seedance 2.0 | 480p / 720p / 1080p / 4K |
 | `seedance-2-fast` | Seedance 2.0 Fast | 480p / 720p only |
+| `minimax-h3` | Hailuo 3 (H3) | Fixed 2K output — the Resolution selector does not apply |
+
+Hailuo 3 shares Seedance 2's multimodal reference surface (the same 9-image / 3-video / 3-audio reference semantics), so the whole continuation transport carries over unchanged. Its per-second price has no resolution or with-reference axis: both segment rates derive from the one `minimax-h3:8s` composite (see [Credit cost](#credit-cost)).
 
 Other models (including Seedance 2.0 Mini) are not currently supported by the pro engine and are not offered in selection. Workflows saved with a since-withdrawn provider keep running, and the editor snaps their selection to `seedance-2` the next time the panel is opened.
 
@@ -115,7 +118,7 @@ Because the pro engine generates one segment at a time and checkpoints after eac
 **Continuation pricing.** The plan's segment lengths are already known, so the reserve is exact (no worst-case padding):
 
 ```
-reserve = 10 (fee) + ceil(refPerSec × (K × T + D))
+reserve = 100 (fee) + ceil(refPerSec × (K × T + D))
 ```
 
 where **K** is the number of regenerated segments, **D** the sum of their planned lengths, and **T** the Continuation context setting. Every regenerated segment — the first included — bills at the reference rate, because each re-seeds off the previous footage (the kept prefix for the first one). `fromSegment = 1` degenerates to the fresh-run formula over the same fixed lengths. At commit, only regenerated segments that actually completed are charged; a continuation that produced nothing new refunds in full.
@@ -154,28 +157,30 @@ Billed via the same per-second Seedance 2 composite identifiers Generate Video u
 ### Multi-segment (> 15s)
 
 ```
-reserve = 10 (fee) + ceil(noRefPerSec × 15) + ceil(refPerSec × ((N − 1) × T + (S − 15)))
+reserve = 100 (fee) + ceil(noRefPerSec × 15) + ceil(refPerSec × ((N − 1) × T + (S − 15)))
 ```
 
-- **10** — flat fee covering the segmentation/stitch overhead, charged once per run regardless of segment count.
-- **noRefPerSec** / **refPerSec** — the same per-second Seedance 2 rates Generate Video's single-segment pricing uses. At 720p these are **10.25** and **6.25** credits/sec; see Generate Video's [Seedance 2 pricing table](./generate-video.md#credit-pricing) for the 480p / 1080p / 4K rates.
+- **100** — flat fee covering the segmentation/stitch overhead, charged once per run regardless of segment count.
+- **noRefPerSec** / **refPerSec** — the same per-second Seedance 2 rates Generate Video's single-segment pricing uses. At 720p these are **102.5** and **62.5** credits/sec; see Generate Video's [Seedance 2 pricing table](./generate-video.md#credit-pricing) for the 480p / 1080p / 4K rates.
 - **15** — the per-segment maximum. The first segment is always reserved at the full 15s cap, even when its actual length ends up shorter (see the worked example below).
 - **N** — the number of segments the request splits into.
 - **S** — the combined length (seconds) of all segments, which runs slightly longer than the requested duration to cover the per-join overlap needed for a seamless stitch.
 - **`(N − 1) × T`** — the continuation-context overlap per join, billed at the reference rate. **T** is the Continuation context setting (2s by default — the minimum reference length the Seedance 2 family accepts; raisable to 5s). Each joining segment continues from the previous one's final T-second tail, so the worked examples below (all at the default T = 2) grow by `refPerSec × (N − 1)` credits per extra second of context.
 
+**Hailuo 3 (`minimax-h3`) rates.** The same formula applies, but Hailuo 3 has no resolution or with-reference rate axis: **noRefPerSec = refPerSec = 91.25** credits/sec, both derived from the one `minimax-h3:8s` composite (730 ÷ 8 — output is fixed 2K, and its reference-to-video rate equals its base rate; each continuation's T-second context tail is billed as input seconds at that same rate, which is exactly the formula's `refPerSec × (N − 1) × T` term). A 60s request (5 segments, S = 62) reserves `100 + ceil(91.25 × 15) + ceil(91.25 × (4 × 2 + 47)) = 100 + 1369 + 5019 = 6488` credits.
+
 #### Worked examples (720p, `seedance-2`)
 
 | Requested duration | Mode | Segments | Total length (S) | Reserved credits |
 |---:|---|---:|---:|---:|
-| 8s | single | 1 | 8s | 82 |
-| 15s | single | 1 | 15s | 154 |
-| 16s | multi | 2 | 17s | 189 |
-| 43s | multi | 3 | 44s | 371 |
-| 60s | multi | 5 | 62s | 508 |
-| 120s | multi | 9 | 123s | 939 |
+| 8s | single | 1 | 8s | 820 |
+| 15s | single | 1 | 15s | 1540 |
+| 16s | multi | 2 | 17s | 1888 |
+| 43s | multi | 3 | 44s | 3701 |
+| 60s | multi | 5 | 62s | 5076 |
+| 120s | multi | 9 | 123s | 9388 |
 
-**60-second example, in full.** A 60-second request splits into 5 segments (14s, 12s, 12s, 12s, 12s — totaling 62s). Reserved at job start: `10 + ceil(10.25 × 15) + ceil(6.25 × (4 × 2 + 47)) = 10 + 154 + 344 = 508` credits. If all 5 segments complete, the commit re-prices the first segment at its actual length (14s, not the reserved 15s cap): `10 + ceil(10.25 × 14) + ceil(6.25 × (4 × 2 + 48)) = 10 + 144 + 350 = 504` credits — **4 credits refunded**. Credits are only ever refunded at commit, never charged above the reservation.
+**60-second example, in full.** A 60-second request splits into 5 segments (14s, 12s, 12s, 12s, 12s — totaling 62s). Reserved at job start: `100 + ceil(102.5 × 15) + ceil(62.5 × (4 × 2 + 47)) = 100 + 1538 + 3438 = 5076` credits. If all 5 segments complete, the commit re-prices the first segment at its actual length (14s, not the reserved 15s cap): `100 + ceil(102.5 × 14) + ceil(62.5 × (4 × 2 + 48)) = 100 + 1435 + 3500 = 5035` credits — **41 credits refunded**. Credits are only ever refunded at commit, never charged above the reservation.
 
 ### Partial delivery
 

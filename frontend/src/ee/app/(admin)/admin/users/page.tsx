@@ -26,6 +26,7 @@ import { SortHeader } from "@/components/ui/sort-header"
 import {
   useAdminUsers,
   useAdminUserTransactions,
+  useAdminUserSubscription,
   useAdminAdjustCreditsMutation,
   useAdminChangeTierMutation,
   useAdminChangeStorageMutation,
@@ -35,6 +36,7 @@ import {
   type SortDir,
   type UserSortBy,
 } from "@/ee/hooks/queries/use-admin-queries"
+import { getScheduledCancelDate } from "@/ee/lib/subscription"
 import { useAuth } from "@/hooks/use-auth"
 
 // ---------------------------------------------------------------------------
@@ -116,6 +118,8 @@ function UserExpandedRow({
   readonly adminUserId: string
 }) {
   const { data: txResult, isLoading: txLoading } = useAdminUserTransactions(user.id)
+  const { data: subInfo } = useAdminUserSubscription(user.id)
+  const scheduledCancelDate = getScheduledCancelDate(subInfo)
   const transactions = Array.isArray(txResult) ? txResult : (txResult?.data ?? []) as ReadonlyArray<CreditTransaction>
   const [adjustAmount, setAdjustAmount] = useState("")
   const [adjustType, setAdjustType] = useState<"subscription" | "topup">("topup")
@@ -242,6 +246,33 @@ function UserExpandedRow({
                 <span>Top-up ({Math.round(100 - subPercent)}%)</span>
               </div>
             </div>
+
+            {/* Subscription status (incl. scheduled cancellation) */}
+            {subInfo && (
+              <div className="border rounded-lg p-3 bg-card space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Subscription</span>
+                  <span className="font-medium capitalize">
+                    {subInfo.tier} · {subInfo.status}
+                  </span>
+                </div>
+                {scheduledCancelDate ? (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Cancels on</span>
+                    <span className="font-medium text-amber-600 dark:text-amber-400">
+                      {new Date(scheduledCancelDate).toLocaleDateString()}
+                    </span>
+                  </div>
+                ) : subInfo.status === "active" && subInfo.current_period_end ? (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Renews</span>
+                    <span className="font-medium">
+                      {new Date(subInfo.current_period_end).toLocaleDateString()}
+                    </span>
+                  </div>
+                ) : null}
+              </div>
+            )}
 
             {/* Change Tier */}
             <div className="border rounded-lg p-3 bg-card space-y-2">
