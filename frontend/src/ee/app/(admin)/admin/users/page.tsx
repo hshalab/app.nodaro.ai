@@ -538,7 +538,7 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold">Users</h1>
         <div className="relative w-64">
@@ -552,7 +552,10 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
-      <div className="border rounded-lg overflow-hidden">
+      {/* overflow-x-auto, NOT overflow-hidden: the 11-column table is wider
+          than the container on smaller viewports — hidden silently clipped
+          the Role/Joined columns with no scrollbar. */}
+      <div className="border rounded-lg overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-muted/50">
             <tr>
@@ -739,7 +742,7 @@ function UserRow({
         <td className="px-4 py-2 text-right font-mono">{user.topup_credits}</td>
         <td className="px-4 py-2 text-right font-mono font-bold">{total}</td>
         <td className="px-4 py-2 text-right font-mono text-muted-foreground">{user.daily_spent_credits}</td>
-        <td className="px-4 py-2 text-right font-mono text-muted-foreground text-xs">
+        <td className="px-4 py-2 text-right font-mono text-muted-foreground text-xs whitespace-nowrap">
           {formatBytes(user.storage_used_bytes)} / {formatBytes(user.storage_limit_bytes)}
         </td>
         <td className="px-4 py-2" onClick={(e) => e.stopPropagation()}>
