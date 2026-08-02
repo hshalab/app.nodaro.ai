@@ -206,8 +206,15 @@ export function AppSidebar({
           className,
         )}
       >
-        {/* Logo - matches editor header height (h-[41px] = py-2 + border-b) */}
-        <div className="flex items-center justify-between h-[41px] px-3 border-b border-zinc-200 dark:border-zinc-800">
+        {/* Logo strip. Collapsed: h-[41px] — MUST match the editor toolbar height
+            (they sit side-by-side on the editor page, borders aligned). Expanded:
+            taller brand strip, 40px lockup with even margins. */}
+        <div
+          className={cn(
+            "flex items-center justify-between px-3 border-b border-zinc-200 dark:border-zinc-800",
+            isCollapsed ? "h-[41px]" : "h-[68px]",
+          )}
+        >
           {/* The logo opens the fleet quick-switch menu (fleet pattern — see
               the client apps' AppShell mark). Home stays one click away via
               the Projects nav item right below, so no navigation is lost. */}
@@ -223,7 +230,7 @@ export function AppSidebar({
               {isCollapsed ? (
                 <NodaroLogo variant="icon" size="md" />
               ) : (
-                <NodaroLogo size="md" />
+                <NodaroLogo size="lg" />
               )}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="min-w-56">

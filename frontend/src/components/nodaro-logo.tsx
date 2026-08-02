@@ -13,14 +13,14 @@ interface NodaroLogoProps {
 const ICON_SIZES = {
   sm: "size-[18px]",
   md: "size-7",
-  lg: "size-9",
+  lg: "size-10",
   xl: "size-8",
 } as const
 
 const TEXT_SIZES = {
   sm: "text-[20px] leading-none",
   md: "text-[28px] leading-none",
-  lg: "text-2xl leading-none",
+  lg: "text-[40px] leading-none",
   xl: "text-[36px] leading-none",
 } as const
 
