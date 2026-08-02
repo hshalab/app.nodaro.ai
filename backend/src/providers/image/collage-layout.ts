@@ -219,28 +219,27 @@ function computeSmart(
 ): CollageLayoutResult {
   const n = images.length
   const aspects = images.map(safeAspect)
-  // The target aspect only steers HOW MANY rows we open — it does not squash the
-  // result. A wide target ⇒ fewer, taller rows; a tall target ⇒ more rows.
+  // The target aspect only steers the PREFERRED row count — it does not squash
+  // the result. A wide target ⇒ fewer, taller rows; a tall target ⇒ more rows.
   const rowCount = chooseRows(n, targetW / targetH)
 
   // Size hints are RELATIVE: only when at least two images resolve to
   // DIFFERENT factors is there anything to express. All-auto / all-equal
-  // hints (and every pre-hints caller) take the original path, so existing
-  // collages render byte-identically.
+  // hints render identically to no hints at all.
   const factors = images.map((_, i) => sizeFactor(sizes?.[i]))
   const hinted = factors.some((f) => f !== factors[0])
-  if (hinted) {
-    return computeSmartHinted(aspects, factors, rowCount, targetW, targetH, gap)
-  }
 
-  // Unhinted budgets are the plain aspects. The balance-point close matters
-  // even here: the old "close once curSum ≥ target" rule sat on a knife-edge
-  // for near-equal aspects — four ~3:4 portraits whose aspect sum landed a
-  // fraction UNDER target at two images ran on to a 3+1 split, rendering the
-  // lone tail image at ~9× its peers' area, and which side of the edge a set
-  // fell on flipped with a sub-percent aspect difference (or with reordering
-  // by the star). Closest-to-target closes 2+2 on the same inputs.
-  const rows = partitionByBudget(aspects, rowCount)
+  const unhinted =
+    selectPartition(aspects, aspects.map(() => 1), rowCount, targetW, targetH, gap) ??
+    partitionByBudget(aspects, rowCount)
+  if (!hinted) return emitJustifiedRows(unhinted, aspects, targetW, targetH, gap)
+
+  // The hinted selection is anchored to the unhinted layout twice over: its
+  // per-image heights are the reference the direction filter checks against,
+  // and it is the fallback when no candidate honours every hint.
+  const baseHeights = effectiveImageHeights(unhinted, aspects, targetW, targetH, gap)
+  const rows =
+    selectPartition(aspects, factors, rowCount, targetW, targetH, gap, baseHeights) ?? unhinted
   return emitJustifiedRows(rows, aspects, targetW, targetH, gap)
 }
 
@@ -250,10 +249,13 @@ function computeSmart(
  * unhinted path passes the aspects verbatim, i.e. all factors 1).
  * Uses an adaptive target (remaining budget / remaining rows) and a
  * balance-point close: a row closes when its sum sits at least as close to
- * the target as it would after absorbing the next image. Big images inflate
- * their budget, so they fill a row's quota with fewer companions — and a row
- * with fewer real aspects justifies TALLER. A "leave one image per remaining
- * row" guard keeps any row from being starved.
+ * the target as it would after absorbing the next image. A "leave one image
+ * per remaining row" guard keeps any row from being starved.
+ *
+ * GREEDY — used only as the candidate generator above `EXHAUSTIVE_MAX_IMAGES`
+ * and as the last-resort fallback: its balance-point close sits on a
+ * knife-edge for near-equal aspects (the tie flips on sub-percent jitter),
+ * which is exactly what `selectPartition`'s scored search exists to avoid.
  */
 function partitionByBudget(budgets: readonly number[], rowCount: number): number[][] {
   const n = budgets.length
@@ -291,38 +293,45 @@ function partitionByBudget(budgets: readonly number[], rowCount: number): number
   return rows
 }
 
-/**
- * How faithfully a candidate partition realizes the requested size ratios.
- * An image's rendered scale is its row's justified height, and its requested
- * scale is its linear factor — so per image we take
- * `ln(rowHeight) − ln(factor)` and score the VARIANCE across images
- * (scale-free: the absolute canvas scale is set by the width; only the
- * ratios between images matter). Lower is better; 0 means every image is
- * exactly its requested multiple of every other.
- */
-function sizeFidelityScore(
-  rows: readonly number[][],
-  aspects: readonly number[],
-  factors: readonly number[],
-  targetW: number,
-  gap: number,
-): number {
-  const devs: number[] = []
-  for (const row of rows) {
-    const availW = targetW - gap * (row.length + 1)
-    const aspectSum = row.reduce((s, idx) => s + aspects[idx]!, 0)
-    const rowH = Math.max(1e-6, availW / Math.max(0.0001, aspectSum))
-    for (const idx of row) devs.push(Math.log(rowH) - Math.log(factors[idx]!))
-  }
-  const mean = devs.reduce((s, d) => s + d, 0) / devs.length
-  return devs.reduce((s, d) => s + (d - mean) * (d - mean), 0) / devs.length
-}
-
 /** Exhaustive-search bound: 2^(n-1) contiguous partitions is trivial through
  *  n=12 (2048 candidates, each scored in O(n)) and explodes past it; larger
  *  inputs (the route caps at 30 images) fall back to the greedy candidate
  *  search. Recast's cast tray sits far below this bound. */
 const EXHAUSTIVE_MAX_IMAGES = 12
+
+/** Adoption bar: a candidate displaces the incumbent only on a MEANINGFUL
+ *  improvement — at least this absolute drop in score (log-variance units;
+ *  0.01 ≈ one row height drifting ~10% relative) AND at least 5% of the
+ *  incumbent's score. The ABSOLUTE floor is what makes selection
+ *  jitter-stable: same-aspect sets produce families of near-tied partitions
+ *  whose scores differ only by gap-accounting noise, and a purely relative
+ *  bar collapses to nothing when the incumbent's score is itself near zero —
+ *  a ±0.5% dimension jitter then flips WHICH image gets a 4× hero cell.
+ *  Under the floor, near-ties always keep the earliest-ranked candidate. */
+const MIN_IMPROVEMENT_ABS = 0.01
+const MIN_IMPROVEMENT_REL = 0.05
+
+/** A hinted candidate must not move a hinted image AGAINST its request.
+ *  Relative-fidelity scoring alone cannot see this: restacking everything
+ *  into full-width rows can perfect the RATIOS while growing an image the
+ *  user asked to shrink (a two-image mixed pair with S on the landscape used
+ *  to grow it 2.3×). Effective heights are compared against the unhinted
+ *  layout's with this much slack for rounding and cap rescales. */
+const HINT_DIRECTION_TOLERANCE = 0.02
+
+/** Candidates whose floated height overshoots the long-edge cap by more than
+ *  this factor are dropped: the cap's uniform rescale would crush the canvas
+ *  width below half the target (a 952px-wide "2K" sheet), which serves the
+ *  hint worse than not realizing it. */
+const MAX_FLOAT_OVERSHOOT = 2
+
+/** Mild shape prior folded into the score: squared log-drift of the floated
+ *  canvas aspect from the requested one. Small enough that any genuine
+ *  fidelity gain overrides it; big enough that among near-tied partitions the
+ *  one shaped like the request wins (a 2560×536 strip stops beating the
+ *  balanced grid it ties with on fidelity alone — and six mixed photos stop
+ *  collapsing into one 448px-tall strip of thumbnail cells). */
+const CANVAS_ASPECT_WEIGHT = 0.05
 
 /** Every way to split [0..n) into non-empty CONTIGUOUS rows — reading order is
  *  part of the layout contract — encoded as break-after-i bitmasks. */
@@ -337,39 +346,88 @@ function* contiguousPartitions(n: number): Generator<number[][]> {
   }
 }
 
+/** Natural justified height of each ROW (availableWidth / Σaspect) — the same
+ *  quantity `emitJustifiedRows` renders, precomputed for scoring. */
+function rowHeightsFor(
+  rows: readonly number[][],
+  aspects: readonly number[],
+  targetW: number,
+  gap: number,
+): number[] {
+  return rows.map((row) => {
+    const availW = targetW - gap * (row.length + 1)
+    const aspectSum = row.reduce((s, idx) => s + aspects[idx]!, 0)
+    return Math.max(1e-6, availW / Math.max(0.0001, aspectSum))
+  })
+}
+
+/** gap + Σ(rowH + gap) — the canvas height `emitJustifiedRows` would float to. */
+function floatedHeightOf(rowHeights: readonly number[], gap: number): number {
+  return rowHeights.reduce((s, h) => s + h + gap, gap)
+}
+
+/** Per-image rendered heights AFTER the long-edge cap's uniform rescale — the
+ *  quantity the direction filter compares. Index-aligned with the images. */
+function effectiveImageHeights(
+  rows: readonly number[][],
+  aspects: readonly number[],
+  targetW: number,
+  targetH: number,
+  gap: number,
+): number[] {
+  const rowHeights = rowHeightsFor(rows, aspects, targetW, gap)
+  const floatH = floatedHeightOf(rowHeights, gap)
+  const maxLong = Math.max(targetW, targetH) * SMART_MAX_LONG_EDGE_FACTOR
+  const scale = floatH > maxLong ? maxLong / floatH : 1
+  const out: number[] = new Array(aspects.length)
+  rows.forEach((row, r) => {
+    for (const idx of row) out[idx] = rowHeights[r]! * scale
+  })
+  return out
+}
+
 /**
- * Smart layout with per-image size hints. Within a justified row every cell
- * shares the row height (that is what makes it crop-free), so relative size
- * is expressed BETWEEN rows: hinted-big images get rows with fewer
- * companions (taller), hinted-small images pack denser rows (shorter).
+ * Choose the row partition — ONE selector for both the unhinted and hinted
+ * paths, because they failed in the same way for different callers: a greedy
+ * partition sat on a knife-edge (±0.5% dimension jitter flipped WHICH of
+ * three same-aspect images ballooned to a 4× hero cell), and a hinted search
+ * over too few candidates either missed the layout that honoured the hints or
+ * adopted one that moved a hinted image the wrong way.
  *
- * Candidate partitions are enumerated EXHAUSTIVELY (bounded — see
- * `EXHAUSTIVE_MAX_IMAGES`) and ranked by `sizeFidelityScore`. The previous
- * greedy (`partitionByBudget` at the unhinted row count ± 1) routinely missed
- * the optimum on same-aspect sets: for four ~3:4 portraits with one image
- * hinted big it kept a uniform 2+2 (score ≈ 0.09) when the hero split
- * [1][2,3,4] (score ≈ 0.03) was available — so S/M/L presses produced no
- * visible change, or worse, moved the layout OPPOSITE to the request when the
- * unhinted baseline was itself degenerate. Candidates whose row count sits
- * nearest the unhinted count are ranked first and only a STRICTLY better
- * score moves away — ties keep today's shape. Geometry emission is shared
- * with the unhinted path — the no-crop invariant is untouched.
+ * Candidates: every contiguous partition (bounded by `EXHAUSTIVE_MAX_IMAGES`;
+ * the greedy triple beyond), ranked so row counts nearest the unhinted
+ * preference come first — the stable sort keeps enumeration order within a
+ * band, which is what makes "the FIRST image gets the hero row" deterministic
+ * on same-aspect sets.
+ *
+ * Filters: the floated height must not overshoot the cap beyond rescue
+ * (`MAX_FLOAT_OVERSHOOT`); and when `baseHeights` is given (the hinted call),
+ * no hinted image may move against its request relative to those heights,
+ * compared post-rescale. Score: variance across images of
+ * `ln(rowHeight) − ln(factor)` — zero when every image renders at exactly its
+ * requested multiple of every other; all-1 factors reduce it to "prefer rows
+ * of similar height" — plus the canvas-shape prior. Adoption only past
+ * `MIN_IMPROVEMENT_*`.
+ *
+ * Returns undefined when nothing survives the filters; callers fall back
+ * (greedy partition for the unhinted call, the unhinted layout — an honest
+ * no-op — for the hinted one).
  */
-function computeSmartHinted(
+function selectPartition(
   aspects: readonly number[],
   factors: readonly number[],
   baseRowCount: number,
   targetW: number,
   targetH: number,
   gap: number,
-): CollageLayoutResult {
+  baseHeights?: readonly number[],
+): number[][] | undefined {
   const n = aspects.length
+  const maxLong = Math.max(targetW, targetH) * SMART_MAX_LONG_EDGE_FACTOR
 
   const candidates: number[][][] =
     n <= EXHAUSTIVE_MAX_IMAGES
       ? [...contiguousPartitions(n)].sort(
-          // Stable sort: within one distance band, bitmask order keeps the
-          // enumeration deterministic.
           (a, b) => Math.abs(a.length - baseRowCount) - Math.abs(b.length - baseRowCount),
         )
       : [...new Set([baseRowCount, baseRowCount - 1, baseRowCount + 1])]
@@ -381,31 +439,50 @@ function computeSmartHinted(
             ),
           )
 
-  // A candidate only displaces the incumbent on a MEANINGFUL improvement.
-  // Same-aspect sets produce whole families of equally-unrealizable no-op
-  // partitions whose scores differ by fractions of a percent (noise from the
-  // per-row gap accounting) — with a strict epsilon, a degenerate single-row
-  // strip can edge out the balanced grid on such noise. Genuine realizations
-  // (a hero row vs a uniform grid) improve the score 2–3×, so a 5% relative
-  // bar cleanly separates them while ties-by-noise keep the shape ranked
-  // closest to the unhinted layout.
   let bestRows: number[][] | undefined
   let bestScore = Infinity
   for (const rows of candidates) {
-    const score = sizeFidelityScore(rows, aspects, factors, targetW, gap)
-    if (bestRows === undefined || score < bestScore - Math.max(1e-9, bestScore * 0.05)) {
+    const rowHeights = rowHeightsFor(rows, aspects, targetW, gap)
+    const floatH = floatedHeightOf(rowHeights, gap)
+    if (floatH > maxLong * MAX_FLOAT_OVERSHOOT) continue
+
+    if (baseHeights) {
+      const scale = floatH > maxLong ? maxLong / floatH : 1
+      let honoursHints = true
+      outer: for (let r = 0; r < rows.length; r++) {
+        for (const idx of rows[r]!) {
+          const eff = rowHeights[r]! * scale
+          const f = factors[idx]!
+          if (
+            (f > 1 && eff < baseHeights[idx]! * (1 - HINT_DIRECTION_TOLERANCE)) ||
+            (f < 1 && eff > baseHeights[idx]! * (1 + HINT_DIRECTION_TOLERANCE))
+          ) {
+            honoursHints = false
+            break outer
+          }
+        }
+      }
+      if (!honoursHints) continue
+    }
+
+    const devs: number[] = []
+    for (let r = 0; r < rows.length; r++) {
+      for (const idx of rows[r]!) devs.push(Math.log(rowHeights[r]!) - Math.log(factors[idx]!))
+    }
+    const mean = devs.reduce((s, d) => s + d, 0) / devs.length
+    const variance = devs.reduce((s, d) => s + (d - mean) * (d - mean), 0) / devs.length
+    const shapeDrift = Math.log(targetH / floatH)
+    const score = variance + CANVAS_ASPECT_WEIGHT * shapeDrift * shapeDrift
+
+    if (
+      bestRows === undefined ||
+      score < bestScore - Math.max(MIN_IMPROVEMENT_ABS, bestScore * MIN_IMPROVEMENT_REL)
+    ) {
       bestScore = score
       bestRows = rows
     }
   }
-
-  return emitJustifiedRows(
-    bestRows ?? [aspects.map((_, i) => i)],
-    aspects,
-    targetW,
-    targetH,
-    gap,
-  )
+  return bestRows
 }
 
 function computeGrid(
