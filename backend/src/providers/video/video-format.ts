@@ -75,3 +75,27 @@ export function videoFormatSelector(maxHeight?: number): string {
  * are the same string by construction.
  */
 export const VIDEO_FORMAT_SELECTOR = videoFormatSelector()
+
+/**
+ * SECTION HD selectors (2026-08-02 import-quality fix). A section (trim)
+ * download historically used `sectionFormatSelector` — progressive single-file
+ * streams only, because ffmpeg fetching the TWO DASH halves CONCURRENTLY
+ * through the auth proxy stalls (see youtube-video.ts). But YouTube retired
+ * most 720p progressive streams, so trims landed at 360p (format 18). The HD
+ * section path instead fetches the halves SEQUENTIALLY — one yt-dlp run for
+ * the video-only stream, one for the audio-only stream — and muxes locally,
+ * so each run fetches a SINGLE stream (the proxy-safe property) at full DASH
+ * quality.
+ *
+ * The video half prefers h264 (`avc1` — muxes into mp4 by stream copy, no
+ * re-encode); a vp9/av1 fallback is normalized by the caller's existing
+ * `reencodeToH264` pass.
+ */
+export function sectionHdVideoSelector(maxHeight?: number): string {
+  const h = maxHeight !== undefined ? `[height<=${maxHeight}]` : ""
+  return [`bv*[vcodec^=avc1]${h}`, `bv*${h}`, "bv*"].join("/")
+}
+
+/** The audio half — m4a/aac preferred (stream-copies cleanly), anything else
+ *  is re-encoded to aac at mux time. */
+export const SECTION_HD_AUDIO_SELECTOR = "ba[ext=m4a]/ba"

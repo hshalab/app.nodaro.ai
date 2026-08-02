@@ -9,6 +9,7 @@ import { spawn } from "node:child_process"
 import {
   ytMetadataProbe,
   buildYtDlpVideoArgs,
+  buildYtDlpSectionStreamArgs,
   sectionFormatSelector,
   resolveYtDlpBin,
   probeStreams,
@@ -395,8 +396,11 @@ describe("downloadYouTubeVideo — client ladder wiring", () => {
     ).rejects.toThrow("ERROR: unable to download video data: HTTP Error 403")
   })
 
-  it("every ladder rung inherits the section args — they live in the BASE args", async () => {
+  it("a SECTION download runs the HD two-stream ladder first, then the progressive fallback ladder — section args ride EVERY spawn (2026-08-02 import-quality fix)", async () => {
     vi.mocked(spawn)
+      .mockImplementationOnce(() => fakeProc({ stderr: "ERROR: hd web down", code: 1 }) as never)
+      .mockImplementationOnce(() => fakeProc({ stderr: "ERROR: hd tv down", code: 1 }) as never)
+      .mockImplementationOnce(() => fakeProc({ stderr: "ERROR: hd android down", code: 1 }) as never)
       .mockImplementationOnce(() => fakeProc({ stderr: "ERROR: web down", code: 1 }) as never)
       .mockImplementationOnce(() => fakeProc({ stderr: "ERROR: tv down", code: 1 }) as never)
       .mockImplementationOnce(() => fakeProc({ stderr: "ERROR: android down", code: 1 }) as never)
@@ -409,9 +413,19 @@ describe("downloadYouTubeVideo — client ladder wiring", () => {
       }),
     ).rejects.toThrow("android down")
 
-    expect(vi.mocked(spawn)).toHaveBeenCalledTimes(3)
+    // 3 HD attempts (the VIDEO half fails per rung) + 3 progressive attempts.
+    expect(vi.mocked(spawn)).toHaveBeenCalledTimes(6)
+    // The HD half: video-only selector, no merge flag, padded section range.
     for (const call of [0, 1, 2]) {
       const args = argsOfCall(call)
+      expect(args[args.indexOf("--format") + 1]).toBe("bv*[vcodec^=avc1]/bv*/bv*")
+      expect(args).not.toContain("--merge-output-format")
+      expect(args[args.indexOf("--download-sections") + 1]).toBe("*7-23")
+    }
+    // The progressive fallback: the proven single-stream selector, same range.
+    for (const call of [3, 4, 5]) {
+      const args = argsOfCall(call)
+      expect(args[args.indexOf("--format") + 1]).toBe("b[ext=mp4]/b/b[ext=mp4]/b")
       expect(args[args.indexOf("--download-sections") + 1]).toBe("*7-23")
     }
   })
@@ -651,5 +665,44 @@ describe("reencodeToH264 — audio-conditional args", () => {
     vi.mocked(spawn).mockImplementationOnce(() => fakeProc({ code: 0 }) as never)
     await reencodeToH264("/tmp/in.webm", "/tmp/out.mp4", null)
     expect(ffmpegArgs()).toContain("-c:a")
+  })
+})
+
+describe("buildYtDlpSectionStreamArgs — one half of an HD section download (2026-08-02 import-quality fix)", () => {
+  const section = { startSec: 10, endSec: 40 }
+
+  it("carries the padded section range + keyframe cuts, the given single-stream format, and NO merge flag", () => {
+    const args = buildYtDlpSectionStreamArgs({
+      url: "https://youtu.be/x", outTemplate: "/tmp/x.vid.%(ext)s",
+      format: "bv*[vcodec^=avc1]", section, proxyArgs: [],
+    })
+    expect(args[args.indexOf("--format") + 1]).toBe("bv*[vcodec^=avc1]")
+    expect(args[args.indexOf("--output") + 1]).toBe("/tmp/x.vid.%(ext)s")
+    expect(args[args.indexOf("--download-sections") + 1]).toBe("*7-43") // ±SECTION_PAD_SEC
+    expect(args).toContain("--force-keyframes-at-cuts")
+    // Single stream — nothing to merge; the caller muxes the halves locally.
+    expect(args).not.toContain("--merge-output-format")
+  })
+
+  it("floors the padded start at 0 (a section starting near the clip head)", () => {
+    const args = buildYtDlpSectionStreamArgs({
+      url: "https://youtu.be/x", outTemplate: "/tmp/x.aud.%(ext)s",
+      format: "ba[ext=m4a]/ba", section: { startSec: 1, endSec: 9 }, proxyArgs: [],
+    })
+    expect(args[args.indexOf("--download-sections") + 1]).toBe("*0-12")
+  })
+
+  it("writes the thumbnail sidecar ONLY when asked (the video half), and threads proxy args", () => {
+    const vid = buildYtDlpSectionStreamArgs({
+      url: "https://youtu.be/x", outTemplate: "/tmp/x.vid.%(ext)s",
+      format: "bv*", section, proxyArgs: ["--proxy", "http://127.0.0.1:9"], writeThumbnail: true,
+    })
+    expect(vid).toContain("--write-thumbnail")
+    expect(vid[vid.indexOf("--proxy") + 1]).toBe("http://127.0.0.1:9")
+    const aud = buildYtDlpSectionStreamArgs({
+      url: "https://youtu.be/x", outTemplate: "/tmp/x.aud.%(ext)s",
+      format: "ba", section, proxyArgs: [],
+    })
+    expect(aud).not.toContain("--write-thumbnail")
   })
 })

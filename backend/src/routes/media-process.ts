@@ -13,6 +13,7 @@ import {
   runFfprobe,
   createWorkDir,
   cleanupWorkDir,
+  COMBINE_DELIVERY_CRF,
 } from "../providers/video/ffmpeg-utils.js"
 
 const MIME_TYPES: Record<string, string> = {
@@ -220,7 +221,10 @@ export async function mediaProcessRoutes(app: FastifyInstance) {
       }
 
       if (type === "video") {
-        args.push("-c:v", "libx264", "-c:a", "aac", "-movflags", "+faststart")
+        // Explicit CRF — without it x264 defaults to 23, a visible generation
+        // loss on every import cut (same bug class as the combine path fixed
+        // 2026-08-02; COMBINE_DELIVERY_CRF is the platform's delivery floor).
+        args.push("-c:v", "libx264", "-crf", COMBINE_DELIVERY_CRF, "-c:a", "aac", "-movflags", "+faststart")
       } else {
         const audioCodecs: Record<string, string[]> = {
           mp3: ["-c:a", "libmp3lame"],

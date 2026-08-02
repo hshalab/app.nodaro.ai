@@ -44,6 +44,7 @@ vi.mock("@/providers/video/ffmpeg-utils.js", () => ({
   runFfprobe: vi.fn().mockResolvedValue(JSON.stringify({ streams: [], format: {} })),
   createWorkDir: vi.fn(),
   cleanupWorkDir: vi.fn().mockResolvedValue(undefined),
+  COMBINE_DELIVERY_CRF: "18",
 }))
 
 // ---------------------------------------------------------------------------
@@ -54,7 +55,7 @@ import { safeMediaExt, mediaProcessRoutes } from "../media-process.js"
 import { supabase } from "../../lib/supabase.js"
 import { uploadBufferToR2, deleteFromR2 } from "../../lib/storage.js"
 import { updateStorageUsage } from "../../utils/file-validation.js"
-import { createWorkDir } from "../../providers/video/ffmpeg-utils.js"
+import { createWorkDir, runFfmpeg } from "../../providers/video/ffmpeg-utils.js"
 
 // ---------------------------------------------------------------------------
 // safeMediaExt (pure unit tests, pre-existing)
@@ -282,5 +283,17 @@ describe("POST /v1/media/process — deleteSource", () => {
       expect.stringContaining("R2 delete failed"),
       expect.any(Error),
     )
+  })
+})
+
+describe("POST /v1/media/process — video encode quality", () => {
+  it("video cuts encode at the explicit delivery CRF (18), never x264's default 23 (2026-08-02 import-quality fix)", async () => {
+    queueSupabaseResults({ data: { id: "new-output-asset" }, error: null })
+
+    const res = await post({ sourceUrl: OUR_SOURCE_URL, type: "video" })
+    expect(res.statusCode).toBe(200)
+    const args = vi.mocked(runFfmpeg).mock.calls[0]![0] as string[]
+    expect(args).toContain("libx264")
+    expect(args[args.indexOf("-crf") + 1]).toBe("18")
   })
 })
