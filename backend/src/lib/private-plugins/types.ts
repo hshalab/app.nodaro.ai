@@ -819,6 +819,13 @@ export interface PluginHttpToolkit {
     /** Recommended segment length (seconds), clamped app-side to [4, 15];
      *  omitted → the classic pack-to-cap split. Additive-optional. */
     preferredSegmentSec?: number
+    /** EXPLICIT per-segment durations (scene-aligned split, 2026-08-03) —
+     *  validated app-side (ints 4..15, ≤24 entries, sum ===
+     *  ceil(clampedD + 0.3×(n−1)); throws otherwise) and priced VERBATIM;
+     *  echoed back on `GenerateVideoProPricing.segmentDurations`, which is how
+     *  a plugin detects an older app that ignored the field. Takes precedence
+     *  over `preferredSegmentSec`. Additive-optional (no contract bump). */
+    segmentDurations?: number[]
   }): Promise<GenerateVideoProPricing>
   /**
    * Mirrors `computeEditVideoProPricing` (`ee/billing/edit-video-pro-credits.ts`)

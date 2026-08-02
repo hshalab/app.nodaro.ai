@@ -378,3 +378,68 @@ describe("computeGenerateVideoProPricing — minimax-h3 (fixed 2K, resolution-le
     expect(await at("4k")).toBe(base)
   })
 })
+
+// EXPLICIT segmentDurations (scene-aligned split, 2026-08-03). The array is
+// produced by the plugin's `packScenesToSegments` and passed VERBATIM on the
+// wire; this side validates + prices it — never re-derives — so quote,
+// reserve, and plan cannot drift (spec caveat 4). The wire fixture below is
+// the strict min-pack of the 79.3s probe clip's 24 analysis scene ends
+// (spans [7,9,5,5,5,6,4,4,4,5,5,5,7,8] + seam extra 4 on the earliest
+// parts) — the SAME golden case pinned in the plugin's split.test.ts.
+describe("computeGenerateVideoProPricing — explicit segmentDurations (seedance-2 @ 720p)", () => {
+  const SCENE_PACK_79 = [8, 10, 6, 6, 5, 6, 4, 4, 4, 5, 5, 5, 7, 8] // n=14, Σ=83 = ceil(79 + 0.3×13)
+
+  it("79.3s scene pack: priced verbatim, clampedDurationSec stays the DELIVERED d (79, never Σ)", async () => {
+    const r = await computeGenerateVideoProPricing({
+      provider: "seedance-2",
+      resolution: "720p",
+      durationSec: 79.3,
+      segmentDurations: SCENE_PACK_79,
+    })
+    expect(r.mode).toBe("multi")
+    expect(r.clampedDurationSec).toBe(79) // delivered d — node-executor rewrites payload.duration from this
+    expect(r.segmentCount).toBe(14)
+    expect(r.totalRawSec).toBe(83)
+    expect(r.segmentDurations).toEqual(SCENE_PACK_79) // echoed verbatim (old-app detection relies on this)
+    expect(r.segmentDurations).not.toBe(SCENE_PACK_79) // defensive copy, never an alias
+    // 100 + ceil(102.5×8) + ceil(62.5×((14-1)×2 + (83-8))) = 100 + 820 + ceil(62.5×101) = 100+820+6313
+    expect(r.reserveBase).toBe(7233)
+  })
+
+  it("quote==reserve parity: an explicit array equal to the preferred split prices byte-identically", async () => {
+    const preferred = await computeGenerateVideoProPricing({
+      provider: "seedance-2", resolution: "720p", durationSec: 45, preferredSegmentSec: 6,
+    })
+    const explicit = await computeGenerateVideoProPricing({
+      provider: "seedance-2", resolution: "720p", durationSec: 45, segmentDurations: [...preferred.segmentDurations],
+    })
+    expect(explicit).toEqual(preferred)
+  })
+
+  it("explicit takes precedence over preferredSegmentSec when both are present", async () => {
+    const r = await computeGenerateVideoProPricing({
+      provider: "seedance-2", resolution: "720p", durationSec: 45,
+      segmentDurations: [6, 6, 6, 6, 6, 6, 6, 6], preferredSegmentSec: 15,
+    })
+    expect(r.segmentCount).toBe(8)
+    expect(r.reserveBase).toBe(4215)
+  })
+
+  it("n=1 explicit [d] is byte-identical to the classic single path (tier-snapped identifier and all)", async () => {
+    const classic = await computeGenerateVideoProPricing({ provider: "seedance-2", resolution: "720p", durationSec: 10 })
+    const explicit = await computeGenerateVideoProPricing({
+      provider: "seedance-2", resolution: "720p", durationSec: 10, segmentDurations: [10],
+    })
+    expect(explicit).toEqual(classic)
+  })
+
+  it("rejects sum mismatch, out-of-range entries, non-integers, and >24 segments (never a silent misprice)", async () => {
+    const at = (durationSec: number, segmentDurations: number[]) =>
+      computeGenerateVideoProPricing({ provider: "seedance-2", resolution: "720p", durationSec, segmentDurations })
+    await expect(at(16, [9, 9])).rejects.toThrow(/sum 18 != /) // expected 17
+    await expect(at(16, [3, 14])).rejects.toThrow(/integers in \[4,15\]/)
+    await expect(at(16, [8.5, 9])).rejects.toThrow(/integers in \[4,15\]/)
+    await expect(at(16, [16, 4])).rejects.toThrow(/integers in \[4,15\]/)
+    await expect(at(100, new Array<number>(25).fill(4))).rejects.toThrow(/1\.\.24 integers/)
+  })
+})
