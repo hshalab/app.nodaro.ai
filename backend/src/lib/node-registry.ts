@@ -1,4 +1,4 @@
-import { IMAGE_GEN_PROVIDERS, IMAGE_TO_VIDEO_PROVIDERS, TEXT_TO_VIDEO_PROVIDERS, VIDEO_GEN_PROVIDERS, LIP_SYNC_PROVIDERS, VOICE_CHANGER_MODEL_IDS, SEEDANCE_2_PROVIDERS, VIDEO_ANALYSIS_TIER_ORDER } from "@nodaro/shared"
+import { IMAGE_GEN_PROVIDERS, IMAGE_TO_VIDEO_PROVIDERS, TEXT_TO_VIDEO_PROVIDERS, VIDEO_GEN_PROVIDERS, LIP_SYNC_PROVIDERS, VOICE_CHANGER_MODEL_IDS, GVP_SUPPORTED_PROVIDERS, SEEDANCE_2_PROVIDERS, VIDEO_ANALYSIS_TIER_ORDER } from "@nodaro/shared"
 import type { OutputType } from "@nodaro/shared"
 import { STATIC_CREDIT_COSTS } from "../ee/billing/credits.js"
 
@@ -50,8 +50,13 @@ export interface NodeDescriptor {
   maxSpanSec?: number
 }
 
-// Canonical provider list for generate-video-pro (derived from SEEDANCE_2_PROVIDERS)
-const GVP_PROVIDERS = [...SEEDANCE_2_PROVIDERS]
+// Canonical provider list for generate-video-pro — the BLESSED shared list
+// (single source of truth; was stale-derived from SEEDANCE_2_PROVIDERS, which
+// advertised seedance-2-mini and omitted minimax-h3).
+const GVP_PROVIDERS = [...GVP_SUPPORTED_PROVIDERS]
+// edit-video-pro stays Seedance-only (no minimax-h3: it has no v2v mode /
+// -ref pricing axis — same reasoning as the frontend's EVP_PROVIDERS subset).
+const EVP_REGISTRY_PROVIDERS = [...SEEDANCE_2_PROVIDERS]
 
 /**
  * Hand-curated registry. Source of truth for `GET /v1/nodes`.
@@ -236,12 +241,12 @@ export const NODE_REGISTRY: NodeDescriptor[] = [
     description:
       "Long-form video generation — seedance-2 / seedance-2-fast / minimax-h3 (Hailuo 3, fixed 2K output). Requests above a single segment's cap (15s) are auto-split into multiple segments and seamlessly stitched into one clip. Cloud edition only.",
     outputType: "video",
-    // Multi-mode fee-base (STATIC_CREDIT_COSTS["generate-video-pro"] = 10), reserved
+    // Multi-mode fee-base (STATIC_CREDIT_COSTS["generate-video-pro"] = 100), reserved
     // on top of the per-second segment cost once the request splits into multiple
     // segments (> 15s). Below that, the node prices identically to a normal
     // single-shot t2v run on the same provider/resolution/duration. See
     // ee/billing/generate-video-pro-credits.ts for the full closed-form.
-    creditCost: 10,
+    creditCost: 100,
     providers: GVP_PROVIDERS,
     capabilities: ["long-form", "auto-segmentation", "seamless-stitch"],
     inputSchema: {
@@ -268,6 +273,10 @@ export const NODE_REGISTRY: NodeDescriptor[] = [
         { key: "wordCut", type: "boolean" },
         { key: "shotTimestamps", type: "boolean" },
         { key: "preferredSegmentSec", type: "number" },
+        // EXPLICIT per-segment durations (scene-aligned split) — ints 4-15
+        // summing to ceil(duration + 0.3×(n−1)), ≤24 entries; mutually
+        // exclusive with preferredSegmentSec.
+        { key: "segmentDurations", type: "number-array" },
         { key: "audioTail", type: "boolean" },
         { key: "overlapAnchor", type: "boolean" },
         { key: "overlapAnchorMode", type: "string" },
@@ -290,12 +299,12 @@ export const NODE_REGISTRY: NodeDescriptor[] = [
     description:
       "Replace a span of an existing video with newly generated content — Seedance-2-family reference bridge, seamlessly stitched back into the source. Cloud edition only.",
     outputType: "video",
-    // Flat fee-base (STATIC_CREDIT_COSTS["edit-video-pro"] = 10), reserved on
+    // Flat fee-base (STATIC_CREDIT_COSTS["edit-video-pro"] = 100), reserved on
     // top of the per-second reference-bridge segment cost. Unlike
     // generate-video-pro, the reserve PROBES the source video server-side —
     // see ee/billing/edit-video-pro-credits.ts for the full closed-form.
-    creditCost: 10,
-    providers: GVP_PROVIDERS,
+    creditCost: 100,
+    providers: EVP_REGISTRY_PROVIDERS,
     capabilities: ["span-replace", "reference-bridge", "seamless-stitch"],
     inputSchema: {
       fields: [

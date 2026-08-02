@@ -1883,6 +1883,12 @@ export interface GenerateVideoProNodeData {
    *  Can turn a short request into a multi-segment run (the point: A/B long
    *  vs short segments). */
   preferredSegmentSec?: number
+  /** EXPLICIT per-segment durations (scene-aligned split, 2026-08-03) —
+   *  integers 4–15 summing to ceil(duration + 0.3×(n−1)), ≤24 entries; priced
+   *  and planned VERBATIM (mutually exclusive with preferredSegmentSec). No
+   *  canvas UI — set via SDK/workflow JSON (recast derives it from analysis
+   *  scene boundaries server-side). */
+  segmentDurations?: number[]
   /** Audio context tail (experimental A/B): ride ~8s of the soundtrack-so-far
    *  as an audio reference on every continuation (guards sound drift). */
   audioTail?: boolean

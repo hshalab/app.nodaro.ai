@@ -1095,6 +1095,14 @@ export async function computeGenerateVideoProCreditOverride(
     durationSec: Number(payload.duration ?? 8),
     // Context-tail override (helper clamps to [2,5]; undefined → default 2).
     ...(typeof payload.contextTailSec === "number" ? { tailSec: payload.contextTailSec } : {}),
+    // Segment levers (2026-08-03): the DAG path must forward BOTH, or its
+    // reserve diverges from the plugin route's for the same payload
+    // (preferredSegmentSec was silently dropped here before — levered DAG
+    // runs over-reserved at the maxSeg padding).
+    ...(typeof payload.preferredSegmentSec === "number" ? { preferredSegmentSec: payload.preferredSegmentSec } : {}),
+    ...(Array.isArray(payload.segmentDurations) && payload.segmentDurations.length > 0
+      ? { segmentDurations: payload.segmentDurations as number[] }
+      : {}),
   })
 
   // DAG clamp (spec §5/§6 — the route's Zod clamp never runs on this path).

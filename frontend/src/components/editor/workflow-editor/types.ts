@@ -175,10 +175,12 @@ function gvpSplit(requestedSec: number): GvpSplitResult {
 }
 
 /** Static fallbacks — the seeded seedance-2 @ 720p 8s composites (STATIC_CREDIT_COSTS
- *  in backend/src/ee/billing/credits.ts), used only while the live cache is cold. */
-const GVP_NOREF_FALLBACK = 82
-const GVP_REF_FALLBACK = 50
-const GVP_FEE_FALLBACK = 10
+ *  in backend/src/ee/billing/credits.ts), used only while the live cache is cold.
+ *  Post-redenomination values (2026-08-03 fix — these sat at the stale pre-x10
+ *  82/50/10 while the backend charged 820/500/100). */
+const GVP_NOREF_FALLBACK = 820
+const GVP_REF_FALLBACK = 500
+const GVP_FEE_FALLBACK = 100
 
 /** Static fallback for the minimax-h3 8s composite (STATIC_CREDIT_COSTS
  *  `minimax-h3:8s` = 730) — fixed 2K output, no resolution axis, r2v rate ==
@@ -199,15 +201,62 @@ function gvpPerSecRate(provider: string, resolution: string, ref: boolean): numb
   return composite / 8
 }
 
+/** UI twin of the backend's `computePreferredSplit` (preferred-point lever,
+ *  ee/billing/generate-video-pro-credits.ts) — keep in lock-step. Before
+ *  2026-08-03 the estimate ignored `preferredSegmentSec` entirely and
+ *  misquoted every levered run. */
+function gvpPreferredSplit(requestedSec: number, preferredSec: number): GvpSplitResult {
+  const d = Math.min(Math.max(Math.round(requestedSec), GVP_SPLIT.minSeg), GVP_SPLIT.capSec)
+  const pref = Math.min(Math.max(Math.round(preferredSec), GVP_SPLIT.minSeg), GVP_SPLIT.maxSeg)
+  let n = Math.max(1, Math.round(d / pref))
+  const sOf = (k: number): number => Math.ceil(d + GVP_SPLIT.lossSec * (k - 1))
+  while (n > 1 && Math.floor(sOf(n) / n) < GVP_SPLIT.minSeg) n--
+  while (Math.ceil(sOf(n) / n) > GVP_SPLIT.maxSeg) n++
+  if (n === 1) return { mode: "single", clampedD: d, n: 1, s: d, durations: [d] }
+  const s = sOf(n)
+  const base = Math.floor(s / n)
+  const r = s - base * n
+  const durations = new Array<number>(n).fill(base)
+  for (let i = 0; i < r; i++) durations[i] += 1
+  return { mode: "multi", clampedD: d, n, s, durations }
+}
+
+/** Explicit-durations adoption (scene-aligned runs, 2026-08-03) — display-side
+ *  mirror of the backend's `explicitSplit`, minus the throw: a malformed array
+ *  returns null → classic split for the badge (the server rejects the run
+ *  loudly at reserve; the estimate must merely not lie about a valid one). */
+function gvpExplicitSplit(requestedSec: number, segmentDurations: number[]): GvpSplitResult | null {
+  const d = Math.min(Math.max(Math.round(requestedSec), GVP_SPLIT.minSeg), GVP_SPLIT.capSec)
+  const n = segmentDurations.length
+  if (
+    n < 1 || n > 24 ||
+    segmentDurations.some((x) => !Number.isInteger(x) || x < GVP_SPLIT.minSeg || x > GVP_SPLIT.maxSeg)
+  ) {
+    return null
+  }
+  const s = segmentDurations.reduce((a, b) => a + b, 0)
+  if (n === 1) return { mode: "single", clampedD: d, n: 1, s: d, durations: [d] }
+  return { mode: "multi", clampedD: d, n, s, durations: [...segmentDurations] }
+}
+
 /** Display-only credit estimate for a generate-video-pro node's popup/badge.
  *  Exported so the node's Run strip shows the SAME closed-form number the
  *  popup does (single-segment composite for ≤15s, fee + per-second segment
- *  math beyond) instead of a fixed single-segment approximation. */
+ *  math beyond) instead of a fixed single-segment approximation. Honors the
+ *  same split-selection precedence as the backend: explicit `segmentDurations`
+ *  > `preferredSegmentSec` > classic pack-to-cap. */
 export function estimateGenerateVideoProCredits(data: GenerateVideoProNodeData): number {
   const provider = data.provider || "seedance-2"
   const resolution = data.resolution || "720p"
   const duration = data.duration ?? 8
-  const split = gvpSplit(duration)
+  const explicit =
+    Array.isArray(data.segmentDurations) && data.segmentDurations.length > 0
+      ? gvpExplicitSplit(duration, data.segmentDurations)
+      : null
+  const usePreferred =
+    explicit === null && typeof data.preferredSegmentSec === "number" && Number.isFinite(data.preferredSegmentSec)
+  const split =
+    explicit ?? (usePreferred ? gvpPreferredSplit(duration, data.preferredSegmentSec as number) : gvpSplit(duration))
 
   if (split.mode === "single") {
     // Single-segment run behaves like a normal t2v run — same identifier the
@@ -228,10 +277,14 @@ export function estimateGenerateVideoProCredits(data: GenerateVideoProNodeData):
   // strip estimate tracks the real reservation when the user raises the tail.
   const tailSec = Math.min(15, Math.max(SEEDANCE_2_CONTINUATION_REF_SEC,
     typeof data.contextTailSec === "number" && Number.isFinite(data.contextTailSec) ? data.contextTailSec : SEEDANCE_2_CONTINUATION_REF_SEC))
+  // First-segment bill mirrors the backend's `firstSegBillSec`: the classic
+  // path pads at maxSeg (worst case); levered/explicit paths bill durations[0]
+  // (the constant would over-pad and can go negative in the ref term).
+  const firstSegBillSec = explicit !== null || usePreferred ? split.durations[0]! : GVP_SPLIT.maxSeg
   return (
     fee +
-    Math.ceil(noRefPerSec * GVP_SPLIT.maxSeg) +
-    Math.ceil(refPerSec * ((split.n - 1) * tailSec + (split.s - GVP_SPLIT.maxSeg)))
+    Math.ceil(noRefPerSec * firstSegBillSec) +
+    Math.ceil(refPerSec * ((split.n - 1) * tailSec + (split.s - firstSegBillSec)))
   )
 }
 
@@ -245,8 +298,9 @@ export function estimateGenerateVideoProCredits(data: GenerateVideoProNodeData):
 // ---------------------------------------------------------------------------
 
 /** Static fallback for the edit-video-pro flat fee (STATIC_CREDIT_COSTS in
- *  backend/src/ee/billing/credits.ts), used only while the live cache is cold. */
-const EVP_FEE_FALLBACK = 10
+ *  backend/src/ee/billing/credits.ts), used only while the live cache is cold.
+ *  Post-redenomination value (2026-08-03 fix — was the stale pre-x10 10). */
+const EVP_FEE_FALLBACK = 100
 
 /** Display-only estimate for an edit-video-pro node. The client can't know
  *  the source's resolution tier (server probes at reserve) — display at 720p. */

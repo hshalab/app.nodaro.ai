@@ -1993,6 +1993,13 @@ export function executeNode(
       wordCut: gvpData.wordCut === true ? true : undefined,
       shotTimestamps: gvpData.shotTimestamps === true ? true : undefined,
       preferredSegmentSec: typeof gvpData.preferredSegmentSec === "number" ? gvpData.preferredSegmentSec : undefined,
+      // EXPLICIT scene-aligned durations — passed VERBATIM (no clamping: the
+      // route + pricing validate the same array; a bad one must 400 loudly,
+      // never silently reshape into a different money outcome).
+      segmentDurations:
+        Array.isArray(gvpData.segmentDurations) && gvpData.segmentDurations.length > 0
+          ? gvpData.segmentDurations
+          : undefined,
       audioTail: gvpData.audioTail === true ? true : undefined,
       overlapAnchor: gvpData.overlapAnchor === true ? true : undefined,
       overlapAnchorMode: gvpData.overlapAnchor === true && gvpData.overlapAnchorMode === "last-frame" ? ("last-frame" as const) : undefined,

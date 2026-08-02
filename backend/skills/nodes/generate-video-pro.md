@@ -1,7 +1,7 @@
 ---
 node_type: generate-video-pro
-generated_at: 2026-07-27T19:49:12.377Z
-generated_from: 3ce2cd027
+generated_at: 2026-08-02T21:38:33.994Z
+generated_from: 1f7cbc626
 ---
 
 # Generate Video Pro
@@ -37,6 +37,7 @@ generated_from: 3ce2cd027
 - `wordCut?: boolean`
 - `shotTimestamps?: boolean`
 - `preferredSegmentSec?: number`
+- `segmentDurations?: number[]`
 - `audioTail?: boolean`
 - `overlapAnchor?: boolean`
 - `overlapAnchorMode?: "keyframe" | "last-frame"`

@@ -2728,6 +2728,13 @@ export async function generateVideoPro(body: {
    *  Omitted → the engine's 8/8 default. */
   smartCutFramesPrev?: number
   smartCutFramesNext?: number
+  /** Recommended segment length in seconds (4-15) — was shipping untyped
+   *  before 2026-08-03 (the runtime const dodged excess-property checks). */
+  preferredSegmentSec?: number
+  /** EXPLICIT per-segment durations (scene-aligned split) — ints 4-15 summing
+   *  to ceil(duration + 0.3×(n−1)), ≤24; mutually exclusive with
+   *  preferredSegmentSec. */
+  segmentDurations?: number[]
   idempotencyKey?: string
 }): Promise<{ jobId: string }> {
   const { idempotencyKey, ...rest } = body

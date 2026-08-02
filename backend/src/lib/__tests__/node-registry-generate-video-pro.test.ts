@@ -8,9 +8,9 @@ describe("generate-video-pro node registry", () => {
     expect(d?.label).toBe("Generate Video Pro")
     expect(d?.category).toBe("ai-video")
     expect(d?.outputType).toBe("video")
-    // Multi-mode fee-base only (STATIC_CREDIT_COSTS["generate-video-pro"] = 10) —
+    // Multi-mode fee-base only (STATIC_CREDIT_COSTS["generate-video-pro"] = 100) —
     // the real per-run cost is dynamic (see ee/billing/generate-video-pro-credits.ts).
-    expect(d?.creditCost).toBe(10)
+    expect(d?.creditCost).toBe(100)
     expect(d?.capabilities).toEqual(["long-form", "auto-segmentation", "seamless-stitch"])
   })
 
@@ -23,16 +23,25 @@ describe("generate-video-pro node registry", () => {
     expect(d?.maxDurationSec).toBe(120)
   })
 
-  it("providers are the 3 Seedance-2-family variants (GVP_PROVIDERS)", () => {
+  it("providers are the BLESSED shared GVP list (incl. minimax-h3; mini withdrawn from discovery)", () => {
     const d = NODE_REGISTRY.find((n) => n.type === "generate-video-pro")
+    // Single source of truth: packages/shared GVP_SUPPORTED_PROVIDERS —
+    // pinned literally here so an accidental shared-list edit surfaces in
+    // the discovery API's own test too.
+    expect(d?.providers).toEqual(["seedance-2", "seedance-2-fast", "minimax-h3"])
+  })
+
+  it("edit-video-pro stays Seedance-only (no minimax-h3 — no v2v mode / -ref axis)", () => {
+    const d = NODE_REGISTRY.find((n) => n.type === "edit-video-pro")
     expect(d?.providers).toEqual(["seedance-2", "seedance-2-fast", "seedance-2-mini"])
+    expect(d?.providers).not.toContain("minimax-h3")
   })
 
   it("exposes the expected inputSchema fields", () => {
     const d = NODE_REGISTRY.find((n) => n.type === "generate-video-pro")
     const keys = d?.inputSchema?.fields.map((f) => f.key) ?? []
     expect(keys).toEqual(
-      expect.arrayContaining(["prompt", "provider", "duration", "aspectRatio", "resolution", "generateAudio", "noBackgroundMusic"]),
+      expect.arrayContaining(["prompt", "provider", "duration", "aspectRatio", "resolution", "generateAudio", "noBackgroundMusic", "preferredSegmentSec", "segmentDurations"]),
     )
   })
 })

@@ -78,6 +78,44 @@ function computeSplit(requestedSec: number, capSec: number): SplitResult {
  * the point of the lever (more, shorter generations). The classic
  * `computeSplit` above stays byte-identical for lever-less runs.
  */
+/** Hard cap on explicit segment counts — mirrors the plugin plan schema's
+ *  24-segment ceiling (plan schema + `packScenesToSegments`' merge rule). */
+const EXPLICIT_MAX_SEGMENTS = 24
+
+/**
+ * EXPLICIT-DURATIONS SPLIT (scene-aligned mode, 2026-08-03) — validates and
+ * adopts a caller-supplied per-segment array VERBATIM (spec rule: the array is
+ * passed on the wire and never re-derived — the plugin's `packScenesToSegments`
+ * produces it, this side only validates and prices it, so quote/reserve/plan
+ * drift is impossible by construction). Throws on any violation — never a
+ * silent misprice. `clampedD` stays the DELIVERED duration (clamp(round(
+ * durationSec))), NEVER the array sum: `node-executor` rewrites
+ * `payload.duration` from `clampedDurationSec` and the plugin's drift/planOnly
+ * branches consume it as delivered-d.
+ */
+function explicitSplit(requestedSec: number, segmentDurations: number[], capSec: number): SplitResult {
+  const d = Math.min(Math.max(Math.round(requestedSec), SPLIT.minSeg), capSec)
+  const n = segmentDurations.length
+  if (
+    n < 1 ||
+    n > EXPLICIT_MAX_SEGMENTS ||
+    segmentDurations.some((x) => !Number.isInteger(x) || x < SPLIT.minSeg || x > SPLIT.maxSeg)
+  ) {
+    throw new Error(
+      `explicit segment durations: expected 1..${EXPLICIT_MAX_SEGMENTS} integers in [${SPLIT.minSeg},${SPLIT.maxSeg}]`,
+    )
+  }
+  const s = segmentDurations.reduce((a, b) => a + b, 0)
+  const expected = Math.ceil(d + SPLIT.lossSec * (n - 1))
+  if (s !== expected) {
+    throw new Error(
+      `explicit segment durations: sum ${s} != ceil(${d} + ${SPLIT.lossSec}*(${n}-1)) = ${expected} — quote and reserve would drift`,
+    )
+  }
+  if (n === 1) return { mode: "single" as const, clampedD: d, n: 1, s: d, durations: [d] }
+  return { mode: "multi" as const, clampedD: d, n, s, durations: [...segmentDurations] }
+}
+
 function computePreferredSplit(requestedSec: number, preferredSec: number, capSec: number): SplitResult {
   const d = Math.min(Math.max(Math.round(requestedSec), SPLIT.minSeg), capSec)
   const pref = Math.min(Math.max(Math.round(preferredSec), SPLIT.minSeg), SPLIT.maxSeg)
@@ -166,16 +204,25 @@ export async function computeGenerateVideoProPricing(args: {
    *  byte-identical. Money-authoritative: the plugin plans against THIS
    *  split's segmentDurations. */
   preferredSegmentSec?: number
+  /** EXPLICIT per-segment durations (scene-aligned split, 2026-08-03) —
+   *  validated and priced VERBATIM (ints 4..15, ≤24 entries, sum ===
+   *  ceil(clampedD + 0.3×(n−1)); throws otherwise). Takes precedence over
+   *  `preferredSegmentSec`. Additive-optional (no contract bump). */
+  segmentDurations?: number[]
 }): Promise<GenerateVideoProPricing> {
   const { provider, durationSec } = args
   const tailSec = clampContextTailSec(args.tailSec)
   const resolution = clampResolution(provider, args.resolution)
 
   const cap = Number(process.env.GENERATE_VIDEO_PRO_MAX_DURATION || 120)
-  const usePreferred = typeof args.preferredSegmentSec === "number" && Number.isFinite(args.preferredSegmentSec)
-  const split = usePreferred
-    ? computePreferredSplit(durationSec, args.preferredSegmentSec as number, cap)
-    : computeSplit(durationSec, cap)
+  const useExplicit = Array.isArray(args.segmentDurations) && args.segmentDurations.length > 0
+  const usePreferred =
+    !useExplicit && typeof args.preferredSegmentSec === "number" && Number.isFinite(args.preferredSegmentSec)
+  const split = useExplicit
+    ? explicitSplit(durationSec, args.segmentDurations as number[], cap)
+    : usePreferred
+      ? computePreferredSplit(durationSec, args.preferredSegmentSec as number, cap)
+      : computeSplit(durationSec, cap)
 
   // Per-second transparency fields — always derived from STATIC_CREDIT_COSTS
   // directly (never the DB-aware getter: there is no per-duration DB row for
@@ -224,11 +271,12 @@ export async function computeGenerateVideoProPricing(args: {
   // tail overlap billed at the video-ref rate (re-seeds off the previous
   // segment's tail frames). The DEFAULT path bills the first segment at the
   // maxSeg constant (worst-case padding — pinned by the golden tests); the
-  // PREFERRED-split path bills durations[0] instead: segments can be far
-  // shorter than the cap there, the constant would over-pad AND go negative
-  // in the ref term (e.g. 10s @ preferred 4 → s−15 < 0), and the engine's
-  // commitBase settles on durations[0] — reserve and commit stay aligned.
-  const firstSegBillSec = usePreferred ? split.durations[0]! : SPLIT.maxSeg
+  // PREFERRED and EXPLICIT paths bill durations[0] instead: segments can be
+  // far shorter than the cap there, the constant would over-pad AND go
+  // negative in the ref term (e.g. 10s @ preferred 4 → s−15 < 0), and the
+  // engine's commitBase settles on durations[0] — reserve and commit stay
+  // aligned.
+  const firstSegBillSec = usePreferred || useExplicit ? split.durations[0]! : SPLIT.maxSeg
   const reserveBase =
     feeBase +
     Math.ceil(noRefPerSec * firstSegBillSec) +

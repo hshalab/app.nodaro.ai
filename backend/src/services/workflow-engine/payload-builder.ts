@@ -3847,6 +3847,14 @@ export function buildPayload(
         wordCut: data.wordCut === true ? true : undefined,
         shotTimestamps: data.shotTimestamps === true ? true : undefined,
         preferredSegmentSec: typeof data.preferredSegmentSec === "number" ? data.preferredSegmentSec : undefined,
+        // EXPLICIT scene-aligned durations (2026-08-03) — passed VERBATIM; the
+        // reserve (node-executor override) and the plugin route both validate
+        // the same array, so quote/reserve/plan cannot drift. Non-number
+        // entries are left for the money-side validator to reject loudly.
+        segmentDurations:
+          Array.isArray(data.segmentDurations) && data.segmentDurations.length > 0
+            ? (data.segmentDurations as number[])
+            : undefined,
         audioTail: data.audioTail === true ? true : undefined,
         overlapAnchor: data.overlapAnchor === true ? true : undefined,
         overlapAnchorMode: data.overlapAnchor === true && data.overlapAnchorMode === "last-frame" ? "last-frame" : undefined,

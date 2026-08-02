@@ -17,8 +17,8 @@
  *
  * `getCachedCredits` (the live React Query model-cost cache) is mocked to
  * always return undefined — the golden numbers are the pure static-fallback
- * path (fee 10, refPerSec 6.25 = the seeded seedance-2 8s 720p-ref composite
- * 50 / 8).
+ * path (fee 100, refPerSec 62.5 = the seeded seedance-2 8s 720p-ref composite
+ * 500 / 8; post-redenomination values, fixed 2026-08-03).
  */
 import { describe, it, expect, vi, beforeEach } from "vitest"
 
@@ -51,33 +51,33 @@ describe("estimateNodeCredits — edit-video-pro", () => {
     vi.mocked(getCachedCredits).mockReturnValue(undefined)
   })
 
-  it("mid-video span 10, D known (20) -> 104", () => {
+  it("mid-video span 10, D known (20) -> 1038", () => {
     expect(
       estimateNodeCredits(evpNode({ spanStart: 2, spanEnd: 12, sourceDurationSec: 20 })),
-    ).toBe(104)
+    ).toBe(1038)
   })
 
-  it("A=0 span 10, D 20 -> 85", () => {
+  it("A=0 span 10, D 20 -> 850", () => {
     expect(
       estimateNodeCredits(evpNode({ spanStart: 0, spanEnd: 10, sourceDurationSec: 20 })),
-    ).toBe(85)
+    ).toBe(850)
   })
 
-  it("D unknown -> worst-cases tail+refIn (spanStart 2, spanEnd 12 -> 104)", () => {
+  it("D unknown -> worst-cases tail+refIn (spanStart 2, spanEnd 12 -> 1038)", () => {
     expect(
       estimateNodeCredits(evpNode({ spanStart: 2, spanEnd: 12, sourceDurationSec: undefined })),
-    ).toBe(104)
+    ).toBe(1038)
   })
 
-  it("B==D -> 85", () => {
+  it("B==D -> 850", () => {
     expect(
       estimateNodeCredits(evpNode({ spanStart: 10, spanEnd: 20, sourceDurationSec: 20 })),
-    ).toBe(85)
+    ).toBe(850)
   })
 
-  it("span 20 mid -> 185", () => {
+  it("span 20 mid -> 1850", () => {
     expect(
       estimateNodeCredits(evpNode({ spanStart: 5, spanEnd: 25, sourceDurationSec: 40 })),
-    ).toBe(185)
+    ).toBe(1850)
   })
 })
