@@ -4,6 +4,7 @@ import {
   VIDEO_T2V_MODELS,
   VIDEO_GEN_MODELS,
   GVP_PROVIDERS,
+  EVP_PROVIDERS,
   IMAGE_STYLE_PRESETS,
   getAspectRatiosForModel,
   getAspectRatiosForVideoModel,
@@ -647,8 +648,9 @@ const EDIT_VIDEO_PRO_SPAN_HELP_TEXT =
 
 /**
  * Edit Video Pro — span-replace sibling of Generate Video Pro (Task 14).
- * Mirrors renderGenerateVideoPro's structure: prompt + provider (same
- * GVP_PROVIDERS — the supported pro SKUs) + generateAudio. Unlike gvp,
+ * Mirrors renderGenerateVideoPro's structure: prompt + provider
+ * (EVP_PROVIDERS — the Seedance-only pro subset; gvp gained minimax-h3
+ * 2026-08-02, EVP deliberately did not) + generateAudio. Unlike gvp,
  * NO aspectRatio/resolution cases — both are source-derived by design (see
  * EditVideoProNodeData). Adds the two span fields (spanStart/spanEnd) as
  * plain numeric inputs (NumberField, not SliderField — no natural fixed
@@ -674,7 +676,7 @@ function renderEditVideoPro(
       return (
         <OptionSelect
           label={customLabel ?? "Model"}
-          options={GVP_PROVIDERS}
+          options={EVP_PROVIDERS}
           value={value}
           onChange={onChange}
           allowedValues={allowedValues}

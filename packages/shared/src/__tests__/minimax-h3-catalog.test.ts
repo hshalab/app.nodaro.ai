@@ -103,7 +103,12 @@ describe("minimax-h3 family predicate — exact membership, never prefix-matched
     expect(SEEDANCE_2_PROVIDERS.has("minimax-h3")).toBe(false)
   })
 
-  it("is NOT a GVP/EVP SKU (pro engine support is a separate, plugin-gated blessing)", () => {
-    expect([...GVP_SUPPORTED_PROVIDERS]).not.toContain("minimax-h3")
+  it("IS a blessed GVP SKU (2026-08-02; EVP keeps its Seedance-only subset) while staying OUT of the Seedance family", () => {
+    // The blessing landed: minimax-h3 is offered by the pro engine (full
+    // transport analog — shared Seedance-2 input resolver, 9/3/3 ref caps,
+    // per-second 4-15s durations). It still must NOT join SEEDANCE_2_PROVIDERS
+    // (the family set gates Seedance-specific KIE params + -ref pricing) —
+    // the test above pins that separately.
+    expect([...GVP_SUPPORTED_PROVIDERS]).toContain("minimax-h3")
   })
 })

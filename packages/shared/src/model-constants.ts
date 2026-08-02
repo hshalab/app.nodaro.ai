@@ -1163,8 +1163,18 @@ export function isMinimaxH3Provider(provider: string | undefined): boolean {
  * pro plugin routes stay tolerant of the full family so previously-saved
  * workflows keep running — the editor fail-safe snaps stale selections to a
  * supported SKU instead.
+ *
+ * `minimax-h3` (2026-08-02): the first non-Seedance SKU. Blessed because it is
+ * a full transport analog — its KIE surface reuses the SAME shared input
+ * resolver as Seedance 2 (identical 9-image/3-video/3-audio reference caps,
+ * frames-fold-into-references), takes per-second durations across the engine's
+ * whole 4–15s segment window, and generates native audio — so the pro engine's
+ * hybrid transport (context-tail video ref + last-frame anchor + identity
+ * refs) rides unchanged. Fixed 2K output: the node's resolution lever is
+ * inert for it (pricing has no resolution axis — see
+ * ee/billing/generate-video-pro-credits.ts perSecRate).
  */
-export const GVP_SUPPORTED_PROVIDERS = ["seedance-2", "seedance-2-fast"] as const
+export const GVP_SUPPORTED_PROVIDERS = ["seedance-2", "seedance-2-fast", "minimax-h3"] as const
 
 export function isGvpSupportedProvider(provider: string | undefined): boolean {
   return !!provider && (GVP_SUPPORTED_PROVIDERS as readonly string[]).includes(provider)

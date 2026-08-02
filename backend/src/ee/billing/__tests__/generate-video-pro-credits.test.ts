@@ -342,3 +342,39 @@ describe("computeGenerateVideoProContinuationPricing — golden table (seedance-
     ).rejects.toThrow(/invalid parent segment durations/)
   })
 })
+
+describe("computeGenerateVideoProPricing — minimax-h3 (fixed 2K, resolution-less identifier, refPerSec == noRefPerSec)", () => {
+  // minimax-h3:8s = 730 (credits.ts) → perSec 91.25 for BOTH rates: no
+  // resolution axis (fixed 2K output) and no -ref composites — the r2v rate
+  // equals the base rate, per minimax-h3-credits.ts. The per-image surcharge
+  // (inputs beyond 5) deliberately rides the provider margin, not user credits.
+  it("both per-second rates derive from the one minimax-h3:8s composite", async () => {
+    const r = await computeGenerateVideoProPricing({ provider: "minimax-h3", resolution: "720p", durationSec: 60 })
+    expect(r.noRefPerSec).toBe(730 / 8)
+    expect(r.refPerSec).toBe(730 / 8)
+  })
+
+  it("D=8 -> single, priced off the standard duration composite (reserveBase 730)", async () => {
+    const r = await computeGenerateVideoProPricing({ provider: "minimax-h3", resolution: "720p", durationSec: 8 })
+    expect(r.mode).toBe("single")
+    expect(r.creditIdentifier).toMatch(/^minimax-h3/)
+    expect(r.reserveBase).toBe(730)
+  })
+
+  it("D=60 -> multi, n=5, s=62: 100 (fee) + ceil(91.25×15) + ceil(91.25×(4×2+47)) = 6488", async () => {
+    const r = await computeGenerateVideoProPricing({ provider: "minimax-h3", resolution: "720p", durationSec: 60 })
+    expect(r.mode).toBe("multi")
+    expect(r.segmentDurations).toEqual([14, 12, 12, 12, 12])
+    expect(r.reserveBase).toBe(r.feeBase + Math.ceil(91.25 * 15) + Math.ceil(91.25 * (4 * 2 + 47)))
+    expect(r.reserveBase).toBe(6488)
+  })
+
+  it("the resolution lever is inert: 480p / 1080p / 4k price identically to 720p", async () => {
+    const at = async (resolution: string) =>
+      (await computeGenerateVideoProPricing({ provider: "minimax-h3", resolution, durationSec: 60 })).reserveBase
+    const base = await at("720p")
+    expect(await at("480p")).toBe(base)
+    expect(await at("1080p")).toBe(base)
+    expect(await at("4k")).toBe(base)
+  })
+})
