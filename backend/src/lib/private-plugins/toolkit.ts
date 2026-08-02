@@ -58,7 +58,8 @@ import { insertWithIdempotencyKey } from "../idempotent-insert.js"
 import { throwIfJobCancelled } from "../job-cancellation.js"
 import { hasCredits } from "../config.js"
 import { KieVideoProvider } from "../../providers/kie/video.js"
-import { videoUpscale } from "../../providers/router.js"
+import { videoUpscale, editImage } from "../../providers/router.js"
+import { assertExact2xAligned, fetchImageBuffer } from "./plate-gate.js"
 import { pollKieTask, isUpstreamKieFailure } from "../../providers/kie/client.js"
 import { combineVideos as combineVideosCore } from "../../providers/video/combine-videos.js"
 import { extractTailToFile } from "../../providers/video/extract-tail.js"
@@ -530,6 +531,20 @@ export function buildToolkit(): PluginToolkit {
       // hooks stay app-internal.
       videoUpscale: (videoUrl, model, upscaleFactor) =>
         videoUpscale(videoUrl, model, upscaleFactor).then((r) => ({ url: r.url })),
+      // IDENTITY PLATE (gvp stage 3, 2026-08-02): fixed-2x Topaz image
+      // enhancement with the exact-same-frame guarantee — verify 2x dims +
+      // pixel alignment (plate-gate.ts), then host the VERIFIED bytes on R2 so
+      // the plugin gets a durable, gate-passed URL. Any provider drift (crop/
+      // pad/resolution snap) rejects here and the plugin's non-fatal guard
+      // drops the plate for that boundary.
+      imageUpscale: async (imageUrl, model) => {
+        const r = await editImage(imageUrl, model)
+        if (!r.url) throw new Error("image upscale returned no url")
+        const [src, ups] = await Promise.all([fetchImageBuffer(imageUrl), fetchImageBuffer(r.url)])
+        const gate = await assertExact2xAligned(src, ups)
+        const ext = gate.format === "jpeg" ? "jpg" : gate.format
+        return { url: await uploadBufferToR2(ups, `images/plate-${randomUUID()}.${ext}`, `image/${gate.format}`) }
+      },
       getVideoTaskStatus,
       // The contract narrows `downloadYouTubeVideo`'s opts to {url,outPath,
       // maxFilesizeBytes?}; the core fn's extra params are all optional, so the

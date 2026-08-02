@@ -191,6 +191,19 @@ export interface PluginProvidersToolkit {
     upscaleFactor?: "1" | "2" | "4",
   ): Promise<{ url: string }>
   /**
+   * Mirrors `imageUpscale` (`toolkit.ts` composition over
+   * `providers/router.ts#editImage`) — Topaz image enhancement at a FIXED 2x
+   * factor. Added for the gvp identity-plate lever (stage 3, 2026-08-02): the
+   * boundary anchor frame Topaz-2x'd rides as an extra "person identity" ref.
+   * The wrapper VERIFIES the result is the exact same frame (2x dims + pixel
+   * alignment, `plate-gate.ts`) and re-hosts the verified bytes on R2, so the
+   * returned URL is durable and gate-passed; a gate failure rejects.
+   */
+  imageUpscale(
+    imageUrl: string,
+    model: string,
+  ): Promise<{ url: string }>
+  /**
    * Mirrors the single-shot KIE record-info query the reconcile system polls
    * — `pollKieTask` (`providers/kie/client.ts`) called with `maxAttempts=1`,
    * the same call `lib/reconcile/kie.ts`'s `singlePoll` makes for

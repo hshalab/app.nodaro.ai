@@ -8,7 +8,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 
 const { mockVideoUpscale } = vi.hoisted(() => ({ mockVideoUpscale: vi.fn() }))
-vi.mock("../../../providers/router.js", () => ({ videoUpscale: mockVideoUpscale }))
+// editImage must exist on the factory too — toolkit.ts imports it for the
+// imageUpscale member (a missing named export throws at import binding).
+vi.mock("../../../providers/router.js", () => ({ videoUpscale: mockVideoUpscale, editImage: vi.fn() }))
 
 import { buildToolkit } from "../toolkit.js"
 
