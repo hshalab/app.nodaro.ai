@@ -83,7 +83,7 @@
 	}
 
 	# Bust stale CDN cache for favicon.ico by rewriting to a versioned file
-	rewrite /favicon.ico /favicon-v10.ico
+	rewrite /favicon.ico /favicon-v11.ico
 	handle {
 		# zstd + gzip: Caddy negotiates the best supported encoding per request.
 		# zstd shaves ~15-25% more off JS/CSS than gzip alone.
