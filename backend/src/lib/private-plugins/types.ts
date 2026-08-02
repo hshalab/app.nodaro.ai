@@ -178,6 +178,19 @@ export interface PluginProvidersToolkit {
     options?: PluginVideoGenOptions,
   ): Promise<PluginVideoGenResult>
   /**
+   * Mirrors `videoUpscale` (`providers/router.ts`) — Topaz/VEO video
+   * enhancement. Added for the gvp tail-restoration lever: upscaling a
+   * continuation tail before it rides as `@video_1` resets the boundary's
+   * detail loop (2026-08-02 arm-U probe: +76% through-clip detail at 480p).
+   * Returns the provider's hosted result URL; the caller re-hosts under its
+   * own deterministic key.
+   */
+  videoUpscale(
+    videoUrl: string,
+    model: string,
+    upscaleFactor?: "1" | "2" | "4",
+  ): Promise<{ url: string }>
+  /**
    * Mirrors the single-shot KIE record-info query the reconcile system polls
    * — `pollKieTask` (`providers/kie/client.ts`) called with `maxAttempts=1`,
    * the same call `lib/reconcile/kie.ts`'s `singlePoll` makes for

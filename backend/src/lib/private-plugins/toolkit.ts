@@ -58,6 +58,7 @@ import { insertWithIdempotencyKey } from "../idempotent-insert.js"
 import { throwIfJobCancelled } from "../job-cancellation.js"
 import { hasCredits } from "../config.js"
 import { KieVideoProvider } from "../../providers/kie/video.js"
+import { videoUpscale } from "../../providers/router.js"
 import { pollKieTask, isUpstreamKieFailure } from "../../providers/kie/client.js"
 import { combineVideos as combineVideosCore } from "../../providers/video/combine-videos.js"
 import { extractTailToFile } from "../../providers/video/extract-tail.js"
@@ -523,6 +524,12 @@ export function buildToolkit(): PluginToolkit {
         new ReplicateAudioSeparationProvider().separateAudio(audioUrl, opts, reconcileOpts),
       textToVideo: pluginTextToVideo,
       imageToVideo: pluginImageToVideo,
+      // Provider-routed video enhancement (Topaz by default at the routing
+      // layer). The gvp tail-restoration lever calls this on a 2-5s tail —
+      // the contract exposes only (url, model, factor); reconcile/progress
+      // hooks stay app-internal.
+      videoUpscale: (videoUrl, model, upscaleFactor) =>
+        videoUpscale(videoUrl, model, upscaleFactor).then((r) => ({ url: r.url })),
       getVideoTaskStatus,
       // The contract narrows `downloadYouTubeVideo`'s opts to {url,outPath,
       // maxFilesizeBytes?}; the core fn's extra params are all optional, so the
