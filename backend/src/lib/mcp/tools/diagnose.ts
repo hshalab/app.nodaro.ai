@@ -128,8 +128,10 @@ export function registerDiagnose({ server, session }: RegisterDiagnoseOpts): voi
     {
       title: "Diagnose Run",
       description:
-        "Diagnose why a workflow run or single job failed. Pass a workflow execution id OR a job id; " +
-        "returns each failed node with its error, a best-effort failure class " +
+        "Diagnose a workflow run or single job. Pass a workflow execution id OR a job id; " +
+        "for an execution, returns EVERY node with its dispatched job id, type, and status (`nodes`) — " +
+        "the only surface that maps an execution's nodes to their job ids — plus each failed node with " +
+        "its error, a best-effort failure class " +
         "(content_policy / validation / rate_limited / timeout / post_processing / provider_error / unknown), " +
         "a remediation hint, and the credits actually charged.",
       inputSchema: {
@@ -191,6 +193,18 @@ export function registerDiagnose({ server, session }: RegisterDiagnoseOpts): voi
         const summary = failures.length
           ? `${failures.length} of ${total} node(s) failed`
           : "No node failures recorded"
+        // Full node→job map (2026-08-03): the execution row's node_states is
+        // the ONLY place an orchestrator-dispatched node's job id lives, and
+        // nothing else exposed it — a successful run was un-inspectable from
+        // MCP (get_job needs the id; list_jobs is media-kinds only; worker
+        // logs carry no per-node ids). Same ownership gate as the rest of
+        // this handler; ids only, no payloads.
+        const nodes = Object.entries(nodeStates).map(([nodeId, s]) => ({
+          nodeId,
+          nodeType: s.nodeType ?? null,
+          status: s.status ?? null,
+          jobId: s.jobId ?? null,
+        }))
         return {
           content: [
             {
@@ -202,6 +216,7 @@ export function registerDiagnose({ server, session }: RegisterDiagnoseOpts): voi
                   status: execution.status,
                   summary,
                   executionError: execution.error_message ?? null,
+                  nodes,
                   failures,
                   creditsNote: CREDITS_NOTE,
                 },

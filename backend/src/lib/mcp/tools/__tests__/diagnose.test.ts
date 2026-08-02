@@ -233,4 +233,27 @@ describe("diagnose_run tool", () => {
     expect(out.status).toBe("completed")
     expect(out.failures).toHaveLength(0)
   })
+
+  it("lists EVERY node's dispatched job id — the only execution→job mapping surface (2026-08-03)", async () => {
+    mockSupabase({
+      execution: {
+        id: "exec-map",
+        status: "completed",
+        node_states: {
+          "gvp-a": { status: "completed", nodeType: "generate-video-pro", jobId: "job-a" },
+          "gvp-b": { status: "completed", nodeType: "generate-video-pro", jobId: "job-b" },
+          "txt": { status: "completed", nodeType: "text-prompt" },
+        },
+        error_message: null,
+      },
+    })
+    const server = buildServer()
+    registerDiagnose({ server, session: diagnoseSession(), fastify: Fastify() })
+    const out = parse(await callTool(server, "diagnose_run", { id: "exec-map" }))
+    expect(out.nodes).toEqual([
+      { nodeId: "gvp-a", nodeType: "generate-video-pro", status: "completed", jobId: "job-a" },
+      { nodeId: "gvp-b", nodeType: "generate-video-pro", status: "completed", jobId: "job-b" },
+      { nodeId: "txt", nodeType: "text-prompt", status: "completed", jobId: null },
+    ])
+  })
 })
