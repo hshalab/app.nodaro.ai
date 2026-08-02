@@ -236,9 +236,17 @@ export async function jobRoutes(app: FastifyInstance) {
       })
     }
 
+    // `progress` and `error_message` match what GET /v1/jobs/:id/status
+    // returns: a batch poller needs the same two answers a single poller does
+    // — how far along is it, and if it failed, why. Without them a caller
+    // watching N jobs can only see which have finished, not which are moving,
+    // and every failure reads as a generic one.
+    //
+    // Same ownership filter as before, and the same fields the lean per-job
+    // status route already exposes, so this widens no boundary.
     const { data, error } = await supabase
       .from("jobs")
-      .select("id, status, output_data")
+      .select("id, status, progress, output_data, error_message")
       .in("id", ids)
       .eq("user_id", req.userId)
 

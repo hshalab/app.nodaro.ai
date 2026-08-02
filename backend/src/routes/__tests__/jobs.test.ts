@@ -133,13 +133,32 @@ afterEach(async () => {
   await app.close()
 })
 
+interface SeedJob {
+  id: string
+  user_id: string
+  status: string
+  output_data: unknown
+  progress?: number
+  error_message?: string | null
+}
+
+/** The projection the route last asked Supabase for, as a column list. */
+let capturedSelect: string[] = []
+
 /**
  * Build a chainable "jobs" select().in().eq() mock that returns the given rows.
  * The route only filters with `.in("id", ids).eq("user_id", userId)`, and the
  * test mock applies the same filter to the seed rows so we can assert that
  * cross-user rows are scoped out.
+ *
+ * The mock PROJECTS to the columns the route actually selected, exactly as
+ * PostgREST would. That matters: a mock that returns whole seed rows makes a
+ * missing column invisible to every response assertion, which is precisely how
+ * `progress` and `error_message` went missing from this endpoint unnoticed
+ * while the tests stayed green.
  */
-function seedJobs(rows: Array<{ id: string; user_id: string; status: string; output_data: unknown }>) {
+function seedJobs(rows: SeedJob[]) {
+  capturedSelect = []
   vi.mocked(supabase.from).mockImplementation((table: string) => {
     if (table !== "jobs") throw new Error(`Unexpected table "${table}"`)
     let capturedIds: string[] = []
@@ -148,14 +167,23 @@ function seedJobs(rows: Array<{ id: string; user_id: string; status: string; out
       capturedUserId = val
       const filtered = rows
         .filter((r) => capturedIds.includes(r.id) && r.user_id === capturedUserId)
-        .map((r) => ({ id: r.id, status: r.status, output_data: r.output_data }))
+        .map((r) =>
+          Object.fromEntries(
+            capturedSelect
+              .filter((col) => col in r)
+              .map((col) => [col, r[col as keyof SeedJob]]),
+          ),
+        )
       return Promise.resolve({ data: filtered, error: null })
     })
     const inFn = vi.fn().mockImplementation((_col: string, ids: string[]) => {
       capturedIds = ids
       return { eq }
     })
-    const select = vi.fn().mockReturnValue({ in: inFn })
+    const select = vi.fn().mockImplementation((cols: string) => {
+      capturedSelect = cols.split(",").map((c) => c.trim())
+      return { in: inFn }
+    })
     return { select } as never
   })
 }
@@ -181,6 +209,64 @@ describe("GET /v1/jobs/status", () => {
     const a = body.jobs.find((j: { id: string }) => j.id === "job-a")
     expect(a.status).toBe("completed")
     expect(a.output_data).toEqual({ url: "a" })
+  })
+
+  it("reports per-job progress — a batch poller must see which jobs are MOVING", async () => {
+    // Without this the only readable signal is "finished / not finished", so a
+    // client watching 4 jobs shows four identical placeholders for two minutes
+    // and cannot tell a job that is 90% done from one that has not started.
+    seedJobs([
+      { id: "job-a", user_id: TEST_USER_ID, status: "processing", output_data: null, progress: 72 },
+      { id: "job-b", user_id: TEST_USER_ID, status: "processing", output_data: null, progress: 15 },
+      { id: "job-c", user_id: TEST_USER_ID, status: "queued", output_data: null, progress: 0 },
+    ])
+
+    const res = await app.inject({
+      method: "GET",
+      url: `/v1/jobs/status?ids=job-a,job-b,job-c&__userId=${TEST_USER_ID}`,
+    })
+
+    expect(res.statusCode).toBe(200)
+    const byId = Object.fromEntries(
+      res.json().jobs.map((j: { id: string; progress?: number }) => [j.id, j.progress]),
+    )
+    expect(byId).toEqual({ "job-a": 72, "job-b": 15, "job-c": 0 })
+  })
+
+  it("reports error_message, so a failure says WHY rather than just 'failed'", async () => {
+    seedJobs([
+      {
+        id: "job-a",
+        user_id: TEST_USER_ID,
+        status: "failed",
+        output_data: null,
+        error_message: "Provider rejected the prompt",
+      },
+    ])
+
+    const res = await app.inject({
+      method: "GET",
+      url: `/v1/jobs/status?ids=job-a&__userId=${TEST_USER_ID}`,
+    })
+
+    expect(res.statusCode).toBe(200)
+    expect(res.json().jobs[0].error_message).toBe("Provider rejected the prompt")
+  })
+
+  it("asks Supabase for exactly the columns a poller needs, and no cost columns", async () => {
+    // Pinned directly, because the projection is where the two fields above
+    // were silently missing. Cost/provider columns stay out: this route does
+    // no sanitization, so anything selected here is returned verbatim.
+    seedJobs([{ id: "job-a", user_id: TEST_USER_ID, status: "queued", output_data: null }])
+    await app.inject({
+      method: "GET",
+      url: `/v1/jobs/status?ids=job-a&__userId=${TEST_USER_ID}`,
+    })
+
+    expect(capturedSelect).toEqual(["id", "status", "progress", "output_data", "error_message"])
+    for (const secret of ["provider_cost", "display_cost", "credits", "provider"]) {
+      expect(capturedSelect).not.toContain(secret)
+    }
   })
 
   it("scopes by user_id — cross-user jobs are NOT in response", async () => {
