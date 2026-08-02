@@ -293,12 +293,20 @@ export function estimateNodeCredits(node: { type?: string; data?: Record<string,
     // to the flat 1-credit placeholder for every fast/pro node).
     const model = resolveVideoAnalysisModel(node.data.llmModel as string | undefined)
     // A probed YouTube duration is trusted only while it still matches the node's
-    // current youtubeUrl (a URL edit invalidates it). No graph context here, so a
-    // wired video's duration isn't reachable — that falls to the ceiling bucket
-    // (the node's own live estimate uses the upstream duration via the hook).
+    // current youtubeUrl (a URL edit invalidates it). For a WIRED video the
+    // upstream-probe hook caches the metadata-read duration on the node as
+    // `probedVideo` (url-bound; rewritten when the upstream changes) — read it
+    // as the fallback so this estimate agrees with the node's own live badge
+    // instead of quoting the :600s ceiling (reported 2026-08-02: the confirm
+    // dialog said ~1868 for a 72s clip the run then billed at 470). No graph
+    // context here to re-verify the url, and none needed: this is display-only
+    // (the reserve is computed server-side from the real length), and a stale
+    // window only exists for the moment between rewire and the hook's re-probe.
     const probed = node.data.probedYoutube as { url: string; durationSec: number } | undefined
+    const probedWired = node.data.probedVideo as { url: string; durationSec: number } | undefined
     const durationSec =
-      probed && probed.url === node.data.youtubeUrl ? probed.durationSec : undefined
+      (probed && probed.url === node.data.youtubeUrl ? probed.durationSec : undefined) ??
+      probedWired?.durationSec
     const bucketSec = bucketSecondsFromCreditId(buildVideoAnalysisCreditId(model, durationSec))
     // The $-derived formula moved to the private @nodaroai/cloud-plugins formula (output published as VIDEO_ANALYSIS_BUCKET_CREDITS)
     // (S5) — look up the precomputed credit table instead of computing it here.
