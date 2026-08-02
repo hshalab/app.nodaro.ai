@@ -114,6 +114,25 @@ export async function adminCreditsRoutes(app: FastifyInstance) {
     return data
   })
 
+  // GET /v1/admin/users/:id/subscription - Latest subscription row, incl.
+  // scheduled-cancellation state (cancel_at / cancel_at_period_end are synced
+  // from Stripe by the subscription.updated webhook; status stays "active"
+  // until the period actually ends).
+  app.get("/v1/admin/users/:id/subscription", { preHandler: requireAdmin }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+
+    const { data, error } = await supabase
+      .from("subscriptions")
+      .select("id, stripe_subscription_id, tier, status, current_period_start, current_period_end, cancel_at_period_end, cancel_at, canceled_at, created_at")
+      .eq("user_id", id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (error) return reply.code(500).send({ error: error.message })
+    return { data }
+  })
+
   // PUT /v1/admin/users/:id/tier - Admin change user tier
   app.put("/v1/admin/users/:id/tier", { preHandler: requireAdmin }, async (request, reply) => {
     const { id } = request.params as { id: string }

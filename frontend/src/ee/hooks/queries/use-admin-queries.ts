@@ -540,6 +540,35 @@ export function useAdminSettings() {
   })
 }
 
+export interface AdminUserSubscription {
+  readonly id: string
+  readonly stripe_subscription_id: string
+  readonly tier: string
+  readonly status: string
+  readonly current_period_start: string | null
+  readonly current_period_end: string | null
+  readonly cancel_at_period_end: boolean | null
+  readonly cancel_at: string | null
+  readonly canceled_at: string | null
+  readonly created_at: string
+}
+
+export function useAdminUserSubscription(userId: string) {
+  return useQuery({
+    queryKey: queryKeys.admin.userSubscription(userId),
+    queryFn: async (): Promise<AdminUserSubscription | null> => {
+      const res = await fetch(`/v1/admin/users/${userId}/subscription`, {
+        headers: await getAuthHeaders(),
+      })
+      if (!res.ok) throw new Error("Failed to fetch subscription")
+      const json = await res.json()
+      return json.data ?? null
+    },
+    enabled: hasAdmin() && !!userId,
+    staleTime: 30_000,
+  })
+}
+
 export function useAdminUserTransactions(userId: string) {
   return useQuery({
     queryKey: queryKeys.admin.userTransactions(userId),

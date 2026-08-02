@@ -57,7 +57,7 @@ export async function billingRoutes(app: FastifyInstance) {
     const { data, error } = await supabase
       .from("subscriptions")
       .select(
-        "id, stripe_subscription_id, tier, status, stripe_price_id, current_period_start, current_period_end, canceled_at"
+        "id, stripe_subscription_id, tier, status, stripe_price_id, current_period_start, current_period_end, cancel_at_period_end, cancel_at, canceled_at"
       )
       .eq("user_id", userId)
       .order("created_at", { ascending: false })

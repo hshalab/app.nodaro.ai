@@ -226,6 +226,8 @@ export const queryKeys = {
     settings: () => ["admin", "settings"] as const,
     userTransactions: (userId: string) =>
       ["admin", "user-transactions", userId] as const,
+    userSubscription: (userId: string) =>
+      ["admin", "user-subscription", userId] as const,
     apps: (page: number, pageSize: number) =>
       ["admin", "apps", page, pageSize] as const,
     creditAnomalies: (offset: number, status: string, anomalyType: string, model: string) =>

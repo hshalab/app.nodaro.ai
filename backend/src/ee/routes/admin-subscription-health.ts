@@ -119,7 +119,28 @@ export async function adminSubscriptionHealthRoutes(app: FastifyInstance) {
         }
       }
 
-      return { data: { issues, scannedUsers: paidProfiles?.length ?? 0 } }
+      // Scheduled cancellations — informational, not sync "issues": subs the
+      // user asked to end at period close. Status stays "active" until then,
+      // so these columns (synced by the subscription.updated webhook) are the
+      // only DB trace. Newer Stripe API shape: cancel_at set while
+      // cancel_at_period_end stays false — check both.
+      const emailByUser = new Map<string, string | null>()
+      for (const p of paidProfiles ?? []) emailByUser.set(p.id, p.email)
+
+      const { data: scheduledSubs } = await supabase
+        .from("subscriptions")
+        .select("user_id, tier, cancel_at, cancel_at_period_end, current_period_end")
+        .eq("status", "active")
+        .or("cancel_at_period_end.eq.true,cancel_at.not.is.null")
+
+      const scheduledCancellations = (scheduledSubs ?? []).map((s) => ({
+        userId: s.user_id,
+        email: emailByUser.get(s.user_id) ?? null,
+        tier: s.tier,
+        cancelsAt: s.cancel_at ?? s.current_period_end,
+      }))
+
+      return { data: { issues, scannedUsers: paidProfiles?.length ?? 0, scheduledCancellations } }
     } catch (err) {
       console.error("[admin] subscription-health scan failed:", err)
       return reply.status(500).send({ error: { message: "Health check failed" } })

@@ -102,6 +102,19 @@ export async function handleSubscriptionCreated(
     return
   }
 
+  // Snapshot the pre-subscribe balance BEFORE the tier grant overwrites it.
+  // The free signup grant (or a prior post-cancel capped balance) lives in
+  // subscription_credits, and the SET below would silently destroy it —
+  // subscribing must never reduce a user's total credits. The remainder is
+  // preserved by moving it into the topup pool (which survives renewals and
+  // cancellation) after the profile update succeeds.
+  const { data: preProfile } = await supabase
+    .from("profiles")
+    .select("subscription_credits, topup_credits")
+    .eq("id", userId)
+    .single()
+  const carryover = Math.max(0, preProfile?.subscription_credits ?? 0)
+
   // Insert subscription record
   const { error: subError } = await supabase
     .from("subscriptions")
@@ -137,6 +150,30 @@ export async function handleSubscriptionCreated(
     console.error("[stripe] subscription.created: profile update failed:", profileError.message)
   }
 
+  // Carry the pre-subscribe remainder into topup AFTER the grant SET succeeded
+  // (if the profile update failed, subscription_credits still holds the old
+  // balance — granting the carryover on top would double it). The atomic RPC
+  // increments topup_credits; a redelivered created-event can't re-run this
+  // because the subscription-exists check above short-circuits first.
+  if (!profileError && carryover > 0) {
+    const { error: carryError } = await supabase.rpc("add_topup_credits", {
+      p_user_id: userId,
+      p_credits: carryover,
+    })
+    if (carryError) {
+      console.error("[stripe] subscription.created: balance carryover failed:", carryError.message)
+    } else {
+      await CreditsService.logTransaction({
+        userId,
+        amount: carryover,
+        creditType: "topup",
+        source: "subscription_created",
+        description: `Pre-subscription balance preserved: ${carryover} credits moved to top-up`,
+        balanceAfter: (preProfile?.topup_credits ?? 0) + carryover,
+      })
+    }
+  }
+
   invalidateBalanceCache(userId)
 
   // Insert transaction record (if transaction info provided)
@@ -164,6 +201,19 @@ export async function handleSubscriptionCreated(
   console.log(`[stripe] subscription.created: user=${userId} tier=${tier} credits=${credits}`)
 }
 
+/**
+ * True only when both period starts are present, parseable, and denote
+ * different instants. Nulls/garbage never count as a renewal — a renewal
+ * grants a full month of credits, so the safe default is "no grant".
+ */
+function billingPeriodMoved(stored: string | null, incoming: string | null): boolean {
+  if (!stored || !incoming) return false
+  const a = new Date(stored).getTime()
+  const b = new Date(incoming).getTime()
+  if (Number.isNaN(a) || Number.isNaN(b)) return false
+  return a !== b
+}
+
 // ── Subscription Updated ─────────────────────────────────────────
 
 interface SubscriptionUpdatedData {
@@ -173,6 +223,18 @@ interface SubscriptionUpdatedData {
   readonly status: string
   readonly currentPeriodStart: string | null
   readonly currentPeriodEnd: string | null
+  /**
+   * Scheduled-cancellation state, synced verbatim from the Stripe event so a
+   * portal "cancel at period end" is visible in the DB the moment it happens
+   * (status stays "active" until the period-end deleted event — these columns
+   * are the ONLY trace). Newer Stripe API versions express a portal cancel as
+   * `cancel_at` (timestamp) with `cancel_at_period_end` still false, so
+   * consumers must treat "scheduled" as `cancelAtPeriodEnd || cancelAt != null`.
+   * Cleared (false/null) when the user reactivates.
+   */
+  readonly cancelAtPeriodEnd: boolean
+  readonly cancelAt: string | null
+  readonly canceledAt: string | null
   readonly metadata: Record<string, string> | null
 }
 
@@ -206,8 +268,12 @@ export async function handleSubscriptionUpdated(
   // Check if this is a tier change (upgrade/downgrade)
   const tierChanged = existing.stripe_price_id !== data.priceId
 
-  // Check if this is a renewal (billing period changed)
-  const isRenewal = existing.current_period_start !== data.currentPeriodStart
+  // Check if this is a renewal (billing period actually moved). MUST compare
+  // as epochs, not strings — Postgres returns "+00:00" while the webhook
+  // computes toISOString()'s ".000Z", so a string compare flags EVERY
+  // subscription.updated (portal cancel request, payment-method change,
+  // Stripe redelivery) as a renewal and refills subscription_credits for free.
+  const isRenewal = billingPeriodMoved(existing.current_period_start, data.currentPeriodStart)
 
   if (tierChanged) {
     const isUpgrade = newCredits > oldCredits
@@ -284,6 +350,9 @@ export async function handleSubscriptionUpdated(
       status: data.status,
       current_period_start: data.currentPeriodStart,
       current_period_end: data.currentPeriodEnd,
+      cancel_at_period_end: data.cancelAtPeriodEnd,
+      cancel_at: data.cancelAt,
+      canceled_at: data.canceledAt,
       updated_at: new Date().toISOString(),
     })
     .eq("stripe_subscription_id", data.subscriptionId)

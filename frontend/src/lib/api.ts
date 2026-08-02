@@ -5399,6 +5399,12 @@ export interface SubscriptionInfo {
   stripe_price_id: string
   current_period_start: string | null
   current_period_end: string | null
+  // Scheduled-cancellation state (synced from Stripe by the webhook). Status
+  // stays "active" until the period ends; newer Stripe API versions express a
+  // portal cancel as `cancel_at` with `cancel_at_period_end` still false —
+  // derive "scheduled" via getScheduledCancelDate() in @/ee/lib/subscription.
+  cancel_at_period_end: boolean | null
+  cancel_at: string | null
   canceled_at: string | null
 }
 

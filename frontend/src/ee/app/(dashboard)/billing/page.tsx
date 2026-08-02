@@ -21,6 +21,7 @@ import { hasCredits } from "@/lib/edition"
 import { useUserCredits } from "@/ee/hooks/queries/use-credits-queries"
 import { useSubscription, useTransactions, useStorageProfile, useManageSubscriptionMutation } from "@/ee/hooks/queries/use-billing-queries"
 import { CreditTopup } from "@/ee/components/credits/CreditTopup"
+import { getScheduledCancelDate } from "@/ee/lib/subscription"
 import { PRICING_TIERS, FREE_TIER_CREDITS, getBillingCycleFromPriceId } from "@/lib/pricing-data"
 import { toast } from "sonner"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
@@ -157,6 +158,7 @@ export default function BillingPage() {
   const displayPrice = currentTier
     ? subBillingCycle === "monthly" ? currentTier.priceMonthly : currentTier.priceAnnual
     : 0
+  const scheduledCancelDate = getScheduledCancelDate(subscription)
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-8 space-y-8">
@@ -200,6 +202,17 @@ export default function BillingPage() {
           </Badge>
         </div>
 
+        {scheduledCancelDate && (
+          <div className="flex items-center gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+            <Calendar className="h-4 w-4 text-amber-500 flex-shrink-0" />
+            <p className="text-sm text-amber-700 dark:text-amber-400">
+              Your subscription is scheduled to cancel on{" "}
+              <strong>{new Date(scheduledCancelDate).toLocaleDateString()}</strong>. You keep
+              your plan and remaining credits until then.
+            </p>
+          </div>
+        )}
+
         {subLoading ? (
           <div className="h-20 flex items-center justify-center">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -221,8 +234,10 @@ export default function BillingPage() {
               )}
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Period Ends</p>
-              <p className="text-lg font-semibold">
+              <p className="text-sm text-muted-foreground">
+                {scheduledCancelDate ? "Plan Ends" : "Period Ends"}
+              </p>
+              <p className={cn("text-lg font-semibold", scheduledCancelDate && "text-amber-600 dark:text-amber-400")}>
                 {subscription?.current_period_end
                   ? new Date(subscription.current_period_end).toLocaleDateString()
                   : "--"}
