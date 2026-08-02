@@ -309,6 +309,71 @@ describe("computeCollageLayout — smart mode with per-image size hints", () => 
   })
 })
 
+describe("computeCollageLayout — near-equal portrait aspects (recast probe regression)", () => {
+  // The reported set (2026-08-02): three 896×1200 uploads and one 2448×3264 —
+  // aspects 0.7467 vs 0.75, a 0.4% spread — at recast's pinned sheet params
+  // (2K long edge, 4:3 target, gap 24). Before the balance-point close, the
+  // unhinted greedy split this 3+1 with the tail image at ~9× its peers'
+  // area, flipping to 2+2 when the odd aspect moved position; and the hinted
+  // candidate search missed the hero split, so L/S presses changed nothing or
+  // moved the hinted image OPPOSITE to the request.
+  const W = 2560
+  const H = 1920
+  const GAP = 24
+  const probe = dims([896, 1200], [896, 1200], [2448, 3264], [896, 1200])
+
+  it("unhinted: no image renders at a runaway multiple of its peers", () => {
+    const { rects, canvasW, canvasH } = computeCollageLayout(probe, W, H, { gap: GAP })
+    assertInBounds(rects, canvasW, canvasH)
+    const areas = rects.map((r) => r.w * r.h)
+    expect(Math.max(...areas) / Math.min(...areas)).toBeLessThan(2)
+  })
+
+  it("unhinted: the row structure does not flip on which position holds the odd aspect", () => {
+    const signatures = [0, 1, 2, 3].map((pos) => {
+      const uniform: Array<[number, number]> = [
+        [896, 1200],
+        [896, 1200],
+        [896, 1200],
+      ]
+      const d = dims(...uniform.slice(0, pos), [2448, 3264], ...uniform.slice(pos))
+      const { rects } = computeCollageLayout(d, W, H, { gap: GAP })
+      const perRow = new Map<number, number>()
+      for (const r of rects) perRow.set(r.y, (perRow.get(r.y) ?? 0) + 1)
+      return [...perRow.values()].sort().join(",")
+    })
+    expect(new Set(signatures).size).toBe(1)
+  })
+
+  it("a size hint never moves its image OPPOSITE to the request", () => {
+    const baseAreas = computeCollageLayout(probe, W, H, { gap: GAP }).rects.map((r) => r.w * r.h)
+    for (let i = 0; i < probe.length; i++) {
+      for (const [hint, grow] of [
+        [1, true],
+        [3, false],
+      ] as const) {
+        const sizes = [2, 2, 2, 2]
+        sizes[i] = hint
+        const { rects, canvasW, canvasH } = computeCollageLayout(probe, W, H, { gap: GAP, sizes })
+        assertInBounds(rects, canvasW, canvasH)
+        const area = rects[i]!.w * rects[i]!.h
+        // Big must never SHRINK the hinted image; small must never GROW it.
+        // Same-aspect geometry cannot honour every request (a no-op is legal)
+        // — 5% slack covers rounding and canvas-cap rescales.
+        if (grow) expect(area).toBeGreaterThan(baseAreas[i]! * 0.95)
+        else expect(area).toBeLessThan(baseAreas[i]! * 1.05)
+      }
+    }
+  })
+
+  it("big on the lead image yields a decisive hero row even with same-aspect peers", () => {
+    const { rects, canvasW, canvasH } = computeCollageLayout(probe, W, H, { gap: GAP, sizes: [1, 2, 2, 2] })
+    assertInBounds(rects, canvasW, canvasH)
+    const areas = rects.map((r) => r.w * r.h)
+    expect(areas[0]!).toBeGreaterThan(areas[1]! * 2)
+  })
+})
+
 describe("computeCollageLayout — guards", () => {
   it("throws on empty image list", () => {
     expect(() => computeCollageLayout([], 2560, 2560, { mode: "smart" })).toThrow()

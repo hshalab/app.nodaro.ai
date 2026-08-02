@@ -25,7 +25,7 @@
  *                bias the row partition so hinted-big images land in taller
  *                (less crowded) rows and hinted-small images pack denser rows
  *                — cells still keep their exact aspect ratios (no crop), and
- *                hint-free input renders byte-identically to before.
+ *                hint-free input renders identically to all-equal hints.
  *   • "grid"   — uniform ceil(√n)-column grid on the FIXED target canvas; every
  *                cell is identical. The last (partial) row is centred. Cells are
  *                letterboxed by the compositor, so no image is cropped here
@@ -121,49 +121,6 @@ function sizeFactor(size: number | undefined): number {
 function chooseRows(n: number, canvasAspect: number): number {
   const raw = Math.round(Math.sqrt(n / Math.max(0.05, canvasAspect)))
   return Math.max(1, Math.min(n, raw))
-}
-
-/**
- * Partition image indices [0..n) into exactly `rowCount` non-empty, contiguous
- * rows, balancing the sum of aspect ratios per row (so rows end up with similar
- * heights). Greedy with a "leave one image per remaining row" guard so no row
- * is ever starved.
- */
-function partitionIntoRows(aspects: readonly number[], rowCount: number): number[][] {
-  const n = aspects.length
-  if (rowCount >= n) return aspects.map((_, i) => [i])
-  if (rowCount <= 1) return [aspects.map((_, i) => i)]
-
-  const total = aspects.reduce((s, a) => s + a, 0)
-  const target = total / rowCount
-  const rows: number[][] = []
-  let cur: number[] = []
-  let curSum = 0
-
-  for (let i = 0; i < n; i++) {
-    cur.push(i)
-    curSum += aspects[i]!
-
-    // Rows still to open AFTER the current one, and images left after index i.
-    const unopenedRows = rowCount - rows.length - 1
-    const imagesRemaining = n - (i + 1)
-
-    // Close the current row when either we MUST (to leave one image per still-
-    // unopened row) or the row hit its aspect-sum target and enough images
-    // remain to fill the rest (one each). The guard keeps the final row open so
-    // it absorbs the tail.
-    if (
-      rows.length < rowCount - 1 &&
-      (imagesRemaining === unopenedRows ||
-        (curSum >= target && imagesRemaining > unopenedRows))
-    ) {
-      rows.push(cur)
-      cur = []
-      curSum = 0
-    }
-  }
-  if (cur.length > 0) rows.push(cur)
-  return rows
 }
 
 /** Round a canvas dimension DOWN to an even integer (keeps yuv420p / thumbnailer
@@ -276,19 +233,27 @@ function computeSmart(
     return computeSmartHinted(aspects, factors, rowCount, targetW, targetH, gap)
   }
 
-  const rows = partitionIntoRows(aspects, rowCount)
+  // Unhinted budgets are the plain aspects. The balance-point close matters
+  // even here: the old "close once curSum ≥ target" rule sat on a knife-edge
+  // for near-equal aspects — four ~3:4 portraits whose aspect sum landed a
+  // fraction UNDER target at two images ran on to a 3+1 split, rendering the
+  // lone tail image at ~9× its peers' area, and which side of the edge a set
+  // fell on flipped with a sub-percent aspect difference (or with reordering
+  // by the star). Closest-to-target closes 2+2 on the same inputs.
+  const rows = partitionByBudget(aspects, rowCount)
   return emitJustifiedRows(rows, aspects, targetW, targetH, gap)
 }
 
 /**
  * Partition indices [0..n) into exactly `rowCount` non-empty contiguous rows,
- * balancing the BUDGET sum per row (budget = aspect × linear size factor).
+ * balancing the BUDGET sum per row (budget = aspect × linear size factor; the
+ * unhinted path passes the aspects verbatim, i.e. all factors 1).
  * Uses an adaptive target (remaining budget / remaining rows) and a
  * balance-point close: a row closes when its sum sits at least as close to
  * the target as it would after absorbing the next image. Big images inflate
  * their budget, so they fill a row's quota with fewer companions — and a row
- * with fewer real aspects justifies TALLER. Same starvation guard as
- * `partitionIntoRows`.
+ * with fewer real aspects justifies TALLER. A "leave one image per remaining
+ * row" guard keeps any row from being starved.
  */
 function partitionByBudget(budgets: readonly number[], rowCount: number): number[][] {
   const n = budgets.length
@@ -353,15 +318,42 @@ function sizeFidelityScore(
   return devs.reduce((s, d) => s + (d - mean) * (d - mean), 0) / devs.length
 }
 
+/** Exhaustive-search bound: 2^(n-1) contiguous partitions is trivial through
+ *  n=12 (2048 candidates, each scored in O(n)) and explodes past it; larger
+ *  inputs (the route caps at 30 images) fall back to the greedy candidate
+ *  search. Recast's cast tray sits far below this bound. */
+const EXHAUSTIVE_MAX_IMAGES = 12
+
+/** Every way to split [0..n) into non-empty CONTIGUOUS rows — reading order is
+ *  part of the layout contract — encoded as break-after-i bitmasks. */
+function* contiguousPartitions(n: number): Generator<number[][]> {
+  for (let mask = 0; mask < 1 << (n - 1); mask++) {
+    const rows: number[][] = [[0]]
+    for (let i = 1; i < n; i++) {
+      if (mask & (1 << (i - 1))) rows.push([i])
+      else rows[rows.length - 1]!.push(i)
+    }
+    yield rows
+  }
+}
+
 /**
  * Smart layout with per-image size hints. Within a justified row every cell
  * shares the row height (that is what makes it crop-free), so relative size
  * is expressed BETWEEN rows: hinted-big images get rows with fewer
- * companions (taller), hinted-small images pack denser rows (shorter). We
- * try the unhinted row count and its neighbours, partition each by weighted
- * budget, and keep the candidate whose realized row heights best match the
- * requested factors. Geometry emission is shared with the unhinted path —
- * the no-crop invariant is untouched.
+ * companions (taller), hinted-small images pack denser rows (shorter).
+ *
+ * Candidate partitions are enumerated EXHAUSTIVELY (bounded — see
+ * `EXHAUSTIVE_MAX_IMAGES`) and ranked by `sizeFidelityScore`. The previous
+ * greedy (`partitionByBudget` at the unhinted row count ± 1) routinely missed
+ * the optimum on same-aspect sets: for four ~3:4 portraits with one image
+ * hinted big it kept a uniform 2+2 (score ≈ 0.09) when the hero split
+ * [1][2,3,4] (score ≈ 0.03) was available — so S/M/L presses produced no
+ * visible change, or worse, moved the layout OPPOSITE to the request when the
+ * unhinted baseline was itself degenerate. Candidates whose row count sits
+ * nearest the unhinted count are ranked first and only a STRICTLY better
+ * score moves away — ties keep today's shape. Geometry emission is shared
+ * with the unhinted path — the no-crop invariant is untouched.
  */
 function computeSmartHinted(
   aspects: readonly number[],
@@ -372,20 +364,36 @@ function computeSmartHinted(
   gap: number,
 ): CollageLayoutResult {
   const n = aspects.length
-  const budgets = aspects.map((a, i) => a * factors[i]!)
 
-  const candidates = [...new Set([baseRowCount, baseRowCount - 1, baseRowCount + 1])].filter(
-    (r) => r >= 1 && r <= n,
-  )
+  const candidates: number[][][] =
+    n <= EXHAUSTIVE_MAX_IMAGES
+      ? [...contiguousPartitions(n)].sort(
+          // Stable sort: within one distance band, bitmask order keeps the
+          // enumeration deterministic.
+          (a, b) => Math.abs(a.length - baseRowCount) - Math.abs(b.length - baseRowCount),
+        )
+      : [...new Set([baseRowCount, baseRowCount - 1, baseRowCount + 1])]
+          .filter((r) => r >= 1 && r <= n)
+          .map((r) =>
+            partitionByBudget(
+              aspects.map((a, i) => a * factors[i]!),
+              r,
+            ),
+          )
 
-  // Iteration starts at the unhinted row count, and only a STRICTLY better
-  // score moves away from it — ties keep today's shape.
+  // A candidate only displaces the incumbent on a MEANINGFUL improvement.
+  // Same-aspect sets produce whole families of equally-unrealizable no-op
+  // partitions whose scores differ by fractions of a percent (noise from the
+  // per-row gap accounting) — with a strict epsilon, a degenerate single-row
+  // strip can edge out the balanced grid on such noise. Genuine realizations
+  // (a hero row vs a uniform grid) improve the score 2–3×, so a 5% relative
+  // bar cleanly separates them while ties-by-noise keep the shape ranked
+  // closest to the unhinted layout.
   let bestRows: number[][] | undefined
   let bestScore = Infinity
-  for (const rowCount of candidates) {
-    const rows = partitionByBudget(budgets, rowCount)
+  for (const rows of candidates) {
     const score = sizeFidelityScore(rows, aspects, factors, targetW, gap)
-    if (score < bestScore - 1e-9) {
+    if (bestRows === undefined || score < bestScore - Math.max(1e-9, bestScore * 0.05)) {
       bestScore = score
       bestRows = rows
     }

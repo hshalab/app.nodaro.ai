@@ -64,8 +64,12 @@ describe("resolveCollageGeometry", () => {
   })
 
   it("reacts to hints that actually differ", () => {
+    // A plumbing guard: the hints must REACH the engine. The vector leans
+    // against the unhinted shape (which already gives the landscape image a
+    // solo row, so big-on-it is an honest no-op under the fidelity search):
+    // shrinking the solo image while growing the pair forces a repartition.
     const flat = resolveCollageGeometry({ ...BASE, imageSizes: [2, 2, 2] })
-    const leaning = resolveCollageGeometry({ ...BASE, imageSizes: [1, 3, 3] })
+    const leaning = resolveCollageGeometry({ ...BASE, imageSizes: [3, 1, 1] })
     expect(leaning.rects).not.toEqual(flat.rects)
   })
 
