@@ -52,7 +52,7 @@ export function NodaroLogo({
       <span className={cn(ICON_SIZES[size], "inline-flex shrink-0")}>
         <LogoImg className="h-full w-full" />
       </span>
-      <span className={cn("font-bold text-zinc-900 dark:text-white", TEXT_SIZES[size])}>
+      <span className={cn("font-brand font-bold text-zinc-900 dark:text-white", TEXT_SIZES[size])}>
         odaro{showDotAi && ".ai"}
       </span>
     </span>
