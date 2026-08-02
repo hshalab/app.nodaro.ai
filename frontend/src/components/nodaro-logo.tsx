@@ -12,23 +12,23 @@ interface NodaroLogoProps {
 
 const ICON_SIZES = {
   sm: "size-[18px]",
-  md: "size-[18px]",
-  lg: "size-9",
+  md: "size-7",
+  lg: "size-10",
   xl: "size-8",
 } as const
 
 const TEXT_SIZES = {
   sm: "text-[20px] leading-none",
-  md: "text-[20px] leading-none",
-  lg: "text-2xl leading-none",
+  md: "text-[28px] leading-none",
+  lg: "text-[40px] leading-none",
   xl: "text-[36px] leading-none",
 } as const
 
 function LogoImg({ className, alt = "" }: { className?: string; alt?: string }) {
   return (
     <>
-      <img src="/logo-light.svg?v=3" alt={alt} className={cn("dark:hidden", className)} />
-      <img src="/logo-dark.svg?v=3" alt={alt} className={cn("hidden dark:block", className)} />
+      <img src="/logo-light.svg?v=4" alt={alt} className={cn("dark:hidden", className)} />
+      <img src="/logo-dark.svg?v=4" alt={alt} className={cn("hidden dark:block", className)} />
     </>
   )
 }
@@ -52,7 +52,7 @@ export function NodaroLogo({
       <span className={cn(ICON_SIZES[size], "inline-flex shrink-0")}>
         <LogoImg className="h-full w-full" />
       </span>
-      <span className={cn("font-bold text-zinc-900 dark:text-white", TEXT_SIZES[size])}>
+      <span className={cn("font-brand font-bold text-zinc-900 dark:text-white", TEXT_SIZES[size])}>
         odaro{showDotAi && ".ai"}
       </span>
     </span>
