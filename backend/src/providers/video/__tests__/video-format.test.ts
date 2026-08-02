@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { videoFormatSelector, VIDEO_FORMAT_SELECTOR } from "../video-format.js"
+import { videoFormatSelector, VIDEO_FORMAT_SELECTOR, sectionHdVideoSelector, SECTION_HD_AUDIO_SELECTOR } from "../video-format.js"
 
 // The exact uncapped selector shipping today. Hardcoded (not derived) so this
 // test FAILS if the constant ever drifts — it's the byte-for-byte backward-
@@ -59,5 +59,19 @@ describe("videoFormatSelector — capped (maxHeight set)", () => {
     // The route owns range-clamping; the builder is a pure string substitution.
     expect(videoFormatSelector(144)).toContain("[height<=144]")
     expect(videoFormatSelector(4320)).toContain("[height<=4320]")
+  })
+})
+
+describe("sectionHdVideoSelector — the HD section download's video half (2026-08-02 import-quality fix)", () => {
+  it("uncapped: h264-first video-only branches, bare bv* last resort — never a progressive/muxed selector", () => {
+    expect(sectionHdVideoSelector()).toBe("bv*[vcodec^=avc1]/bv*/bv*")
+  })
+
+  it("capped: injects [height<=H] into the preferring branches, keeps the uncapped last resort", () => {
+    expect(sectionHdVideoSelector(1080)).toBe("bv*[vcodec^=avc1][height<=1080]/bv*[height<=1080]/bv*")
+  })
+
+  it("audio half prefers m4a (clean aac), falls back to any audio", () => {
+    expect(SECTION_HD_AUDIO_SELECTOR).toBe("ba[ext=m4a]/ba")
   })
 })

@@ -9,7 +9,8 @@ import {
   isAllowedSocialVideoUrl,
   isAllowedVideoImportUrl,
 } from "../../lib/url-validator.js"
-import { videoFormatSelector } from "./video-format.js"
+import { videoFormatSelector, sectionHdVideoSelector, SECTION_HD_AUDIO_SELECTOR } from "./video-format.js"
+import { COMBINE_DELIVERY_CRF } from "./ffmpeg-utils.js"
 import { ytProxyArgs, resolveAttemptChain } from "./yt-proxy.js"
 import { startProxyAuthShim } from "./proxy-auth-shim.js"
 import { ytDataApiProbe } from "./youtube-data-api.js"
@@ -126,6 +127,39 @@ export const SECTION_PAD_SEC = 3
 export function sectionFormatSelector(maxHeight?: number): string {
   const h = maxHeight ? `[height<=${maxHeight}]` : ""
   return [`b[ext=mp4]${h}`, `b${h}`, "b[ext=mp4]", "b"].join("/")
+}
+
+/**
+ * yt-dlp args for ONE half of an HD section download (video-only or
+ * audio-only — see `sectionHdVideoSelector`). Same spine as
+ * `buildYtDlpVideoArgs` minus `--merge-output-format` (single stream, nothing
+ * to merge); the caller muxes the two halves locally. Exported for tests.
+ */
+export function buildYtDlpSectionStreamArgs(opts: {
+  url: string
+  outTemplate: string
+  format: string
+  section: { startSec: number; endSec: number }
+  proxyArgs: string[]
+  writeThumbnail?: boolean
+}): string[] {
+  const start = Math.max(0, opts.section.startSec - SECTION_PAD_SEC)
+  const end = opts.section.endSec + SECTION_PAD_SEC
+  return [
+    opts.url,
+    "--format", opts.format,
+    "--output", opts.outTemplate,
+    "--no-playlist",
+    "--no-check-certificates",
+    "--force-overwrites",
+    ...(opts.writeThumbnail ? ["--write-thumbnail", "--convert-thumbnails", "jpg"] : []),
+    ...YT_SPOOF_ARGS,
+    ...opts.proxyArgs,
+    "--newline",
+    "--progress-template", "download:%(progress._percent_str)s",
+    "--download-sections", `*${start}-${end}`,
+    "--force-keyframes-at-cuts",
+  ]
 }
 
 /**
@@ -450,7 +484,9 @@ export function reencodeToH264(
       "-i", inputPath,
       "-c:v", "libx264",
       "-preset", "fast",
-      "-crf", "23",
+      // Delivery-floor CRF (was 23 — a visible generation loss on every
+      // VP9/AV1 download this normalizes; 2026-08-02 import-quality fix).
+      "-crf", COMBINE_DELIVERY_CRF,
       ...audioArgs,
       "-movflags", "+faststart",
       "-y",
@@ -538,6 +574,82 @@ function spawnYtDlpDownload(args: string[], onProgress?: (pct: number) => void):
       }),
     )
   })
+}
+
+/**
+ * Mux an HD section's two stream halves into `outPath`. The video stream is
+ * COPIED (no quality loss — the whole point of the HD path); audio re-encodes
+ * to aac (cheap, and normalizes an opus/webm fallback half). `-shortest`
+ * squares off the halves' slightly different section boundaries. Same
+ * promise/watchdog pattern as `reencodeToH264`.
+ */
+function muxSectionStreams(videoPath: string, audioPath: string, outPath: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const proc = spawn("ffmpeg", [
+      "-y",
+      "-i", videoPath,
+      "-i", audioPath,
+      "-c:v", "copy",
+      "-c:a", "aac",
+      "-movflags", "+faststart",
+      "-shortest",
+      outPath,
+    ], { stdio: ["ignore", "ignore", "pipe"] })
+    const watchdog = setTimeout(() => proc.kill("SIGKILL"), 10 * 60 * 1000)
+    let stderrBuf = ""
+    proc.stderr.on("data", (chunk: Buffer) => { stderrBuf += chunk.toString() })
+    proc.on("error", (err) => { clearTimeout(watchdog); reject(err) })
+    proc.on("close", (code) => {
+      clearTimeout(watchdog)
+      if (code === 0) resolve()
+      else reject(new Error(`ffmpeg section mux exited with code ${code}: ${stderrBuf.trim().split("\n").pop()}`))
+    })
+  })
+}
+
+/**
+ * HD SECTION DOWNLOAD (2026-08-02 import-quality fix): fetch the section's
+ * DASH halves SEQUENTIALLY — one yt-dlp run for the video-only stream, one
+ * for the audio-only stream — then mux locally into `outPath`.
+ *
+ * WHY sequential: the measured "trim hangs forever" stall was ONE ffmpeg
+ * fetching TWO DASH streams CONCURRENTLY through the auth proxy (see
+ * `sectionFormatSelector`). One stream per run keeps the proxy-safe property
+ * while restoring full DASH quality — the progressive-only fallback tops out
+ * at 720p, and in practice YouTube retired most progressive streams, so trims
+ * landed at 360p (the "YouTube import quality is very low" report).
+ *
+ * The thumbnail sidecar rides the VIDEO pass and is renamed onto `outPath`'s
+ * basename (where the download-video route looks for it). Stream temps are
+ * cleaned best-effort; the caller's temp workdir owns anything left behind.
+ * Throws on any failure — the caller falls back to the progressive path.
+ */
+async function downloadSectionHd(opts: {
+  url: string
+  outPath: string
+  maxHeight?: number
+  section: { startSec: number; endSec: number }
+  proxyArgs: string[]
+  extractorArgs: string[]
+  onProgress?: (pct: number) => void
+}): Promise<void> {
+  const base = opts.outPath.replace(/\.[^./\\]+$/, "")
+  const vidArgs = buildYtDlpSectionStreamArgs({
+    url: opts.url, outTemplate: `${base}.vid.%(ext)s`, format: sectionHdVideoSelector(opts.maxHeight),
+    section: opts.section, proxyArgs: opts.proxyArgs, writeThumbnail: true,
+  })
+  await spawnYtDlpDownload([...vidArgs, ...opts.extractorArgs], opts.onProgress)
+  const audArgs = buildYtDlpSectionStreamArgs({
+    url: opts.url, outTemplate: `${base}.aud.%(ext)s`, format: SECTION_HD_AUDIO_SELECTOR,
+    section: opts.section, proxyArgs: opts.proxyArgs,
+  })
+  await spawnYtDlpDownload([...audArgs, ...opts.extractorArgs])
+  const videoPath = await findDownloadedFile(`${base}.vid.mp4`)
+  const audioPath = await findDownloadedFile(`${base}.aud.m4a`)
+  await muxSectionStreams(videoPath, audioPath, opts.outPath)
+  await fs.rename(`${base}.vid.jpg`, `${base}.jpg`).catch(() => {})
+  await fs.unlink(videoPath).catch(() => {})
+  await fs.unlink(audioPath).catch(() => {})
 }
 
 /**
@@ -634,12 +746,30 @@ export async function downloadYouTubeVideo(opts: {
     let spawned = false
     try {
       const proxyArgs = proxy ? ["--proxy", shim ? shim.url : proxy] : []
-      const args = buildYtDlpVideoArgs({ url, outPath, maxFilesizeBytes, maxHeight, section, proxyArgs })
-      // YouTube 429s the default (web) client on the watch page from datacenter
-      // IPs, so within each proxy we still retry web → tv → android.
-      await runThroughClientLadder(url, (rung) =>
-        spawnYtDlpDownload([...args, ...rung.extractorArgs], onProgress),
-      )
+      if (section) {
+        // HD section first (sequential two-stream — full DASH quality), with
+        // the proven progressive single-stream path as the in-attempt
+        // fallback. See downloadSectionHd / sectionFormatSelector.
+        try {
+          await runThroughClientLadder(url, (rung) =>
+            downloadSectionHd({ url, outPath, maxHeight, section, proxyArgs, extractorArgs: [...rung.extractorArgs], onProgress }),
+          )
+        } catch (hdErr) {
+          const firstLine = (hdErr instanceof Error ? hdErr.message : String(hdErr)).split("\n")[0]
+          console.log(`[download-video] HD section download failed (${firstLine}); progressive section fallback`)
+          const args = buildYtDlpVideoArgs({ url, outPath, maxFilesizeBytes, maxHeight, section, proxyArgs })
+          await runThroughClientLadder(url, (rung) =>
+            spawnYtDlpDownload([...args, ...rung.extractorArgs], onProgress),
+          )
+        }
+      } else {
+        const args = buildYtDlpVideoArgs({ url, outPath, maxFilesizeBytes, maxHeight, section, proxyArgs })
+        // YouTube 429s the default (web) client on the watch page from datacenter
+        // IPs, so within each proxy we still retry web → tv → android.
+        await runThroughClientLadder(url, (rung) =>
+          spawnYtDlpDownload([...args, ...rung.extractorArgs], onProgress),
+        )
+      }
       spawned = true
     } catch (err) {
       lastError = err
