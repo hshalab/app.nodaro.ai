@@ -374,6 +374,100 @@ describe("computeCollageLayout — near-equal portrait aspects (recast probe reg
   })
 })
 
+describe("computeCollageLayout — stability and hint direction (stress regression)", () => {
+  // Property tests distilled from the 2026-08-02 stress harness. The prior
+  // selection was greedy (then exhaustive with a purely relative adoption
+  // bar), and three classes of failure survived it: ±0.5% dimension jitter
+  // flipped WHICH same-aspect image got a 4× hero cell, a hint could move its
+  // image OPPOSITE to the request (restacking perfects the RATIOS while
+  // growing everything), and mixed six-image sets collapsed into a one-row
+  // strip of thumbnail cells.
+  const W = 2560
+  const H = 1920
+  const GAP = 24
+
+  // Deterministic PRNG — no Math.random in tests.
+  let seed = 987654
+  const rnd = () => {
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff
+    return seed / 0x7fffffff
+  }
+  const fromAspects = (aspects: number[]): ImageDim[] =>
+    aspects.map((a) => {
+      const h = 1000 + Math.round(rnd() * 500)
+      return { w: Math.max(1, Math.round(h * a)), h }
+    })
+  const jitter = (d: ImageDim[]): ImageDim[] =>
+    d.map((x) => ({
+      w: Math.max(1, Math.round(x.w * (1 + (rnd() - 0.5) * 0.01))),
+      h: Math.max(1, Math.round(x.h * (1 + (rnd() - 0.5) * 0.01))),
+    }))
+  const areasOf = (d: ImageDim[], sizes?: number[]) =>
+    computeCollageLayout(d, W, H, { gap: GAP, ...(sizes ? { sizes } : {}) }).rects.map(
+      (r) => r.w * r.h,
+    )
+
+  const FAMILIES: Array<{ name: string; aspects: number[] }> = [
+    { name: "three same squares", aspects: [1, 1, 1] },
+    { name: "five same squares", aspects: [1, 1, 1, 1, 1] },
+    { name: "four near-equal portraits", aspects: [0.7467, 0.7467, 0.75, 0.7467] },
+    { name: "six photo mix", aspects: [0.5625, 0.75, 1, 1.333, 1.778, 0.5625] },
+    { name: "five random moderate", aspects: [0.62, 1.41, 0.98, 1.13, 0.77] },
+  ]
+
+  it("±0.5% dimension jitter never swings an unhinted image's area beyond 1.6×", () => {
+    for (const fam of FAMILIES) {
+      const d = fromAspects(fam.aspects)
+      const base = areasOf(d)
+      for (let t = 0; t < 20; t++) {
+        const ja = areasOf(jitter(d))
+        ja.forEach((a, i) => {
+          const r = a / base[i]!
+          expect(r, `${fam.name} img ${i + 1} trial ${t}`).toBeGreaterThan(1 / 1.6)
+          expect(r, `${fam.name} img ${i + 1} trial ${t}`).toBeLessThan(1.6)
+        })
+      }
+    }
+  })
+
+  it("a size hint never moves its image opposite to the request, across families", () => {
+    for (const fam of FAMILIES) {
+      const d = fromAspects(fam.aspects)
+      const base = areasOf(d)
+      for (let i = 0; i < d.length; i++) {
+        for (const [hint, grow] of [
+          [1, true],
+          [3, false],
+        ] as const) {
+          const sizes = Array(d.length).fill(2)
+          sizes[i] = hint
+          const a = areasOf(d, sizes)[i]!
+          if (grow) expect(a, `${fam.name} L@${i + 1}`).toBeGreaterThan(base[i]! * 0.95)
+          else expect(a, `${fam.name} S@${i + 1}`).toBeLessThan(base[i]! * 1.05)
+        }
+      }
+    }
+  })
+
+  it("mixed photo sets keep a usable multi-row shape unhinted (no thumbnail strip)", () => {
+    const d = fromAspects([0.5625, 0.75, 1, 1.333, 1.778, 0.5625])
+    const { rects, canvasW, canvasH } = computeCollageLayout(d, W, H, { gap: GAP })
+    assertInBounds(rects, canvasW, canvasH)
+    expect(canvasW / canvasH).toBeLessThan(4)
+    expect(new Set(rects.map((r) => r.y)).size).toBeGreaterThan(1)
+  })
+
+  it("three same-aspect images lay out FAIR — no arbitrary 4× hero — and jitter keeps it", () => {
+    const d = fromAspects([1, 1, 1])
+    const base = areasOf(d)
+    expect(Math.max(...base) / Math.min(...base)).toBeLessThan(1.1)
+    for (let t = 0; t < 10; t++) {
+      const ja = areasOf(jitter(d))
+      expect(Math.max(...ja) / Math.min(...ja)).toBeLessThan(1.1)
+    }
+  })
+})
+
 describe("computeCollageLayout — guards", () => {
   it("throws on empty image list", () => {
     expect(() => computeCollageLayout([], 2560, 2560, { mode: "smart" })).toThrow()
