@@ -54,8 +54,8 @@ the VOD to become available). Any source is capped at **10 minutes (600s)**.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| Analysis Quality (`llmModel`) | Select | `pro` | `smart` (highest accuracy — a single deep pass that reads the footage frame by frame, finds its own shot boundaries and identifies the cast by appearance; pick this when the shot list will drive regeneration), `fast` (economy), `pro` (default), or `mixed` / `mixed-fast` (several economy passes combined for completeness). See [Credit Cost](#credit-cost) |
-| Result Selection (`selectionMode`) | Select | `choose` | `choose` — the standard result. `combine` — an enhanced result with additional verification for maximum captured detail (slightly slower, recommended) |
+| Analysis Quality (`llmModel`) | Select | `pro` | `smart` (highest accuracy — a hybrid pass that blends a native skeleton read with several donor analysis rolls, then always refines the merged result; pick this when the shot list will drive regeneration), `fast` (economy), `pro` (default), or `mixed` / `mixed-fast` (several economy passes combined for completeness). See [Credit Cost](#credit-cost) |
+| Result Selection (`selectionMode`) | Select | `choose` | `choose` — the standard result. `combine` — an enhanced result with additional verification for maximum captured detail (slightly slower, recommended). **Does not apply to `smart`** — that tier always refines regardless of this setting |
 | Cast variations (`variations`) | Checkbox | off | On — the analysis may also detect per-entity appearance variations (dream, flashback, disguise, costume, transformation, era looks) and bind each look to the scenes where it is active (`slots[].variations` + `scenes[].slotVariations`). Off — the result keeps the pre-variations shape. Note: on single-pass tiers this option can reduce how many entities are extracted; leave it off unless you need the looks |
 | Translate speech (`translateSpeechToEnglish`) | Checkbox | off | On — spoken and sung words come back in English. See [Output language](#output-language) |
 | Translate on-screen text (`translateOnScreenTextToEnglish`) | Checkbox | off | On — signs, captions, and titles come back in English. Independent of the speech checkbox |
@@ -74,6 +74,11 @@ additional verification to maximize captured detail — named places, on-screen
 text, brands, concurrent audio — and is guaranteed to return at least the
 standard result's quality. Use `combine` whenever completeness matters; `choose`
 is the faster baseline.
+
+**Not on `smart`.** The `smart` tier ignores `selectionMode` entirely — its
+hybrid analysis plan (see [Credit Cost](#credit-cost)) always includes the
+equivalent of the `combine` verification pass, so there is nothing extra to
+opt into and the field has no effect when this tier is selected.
 
 ### Output language
 
@@ -325,10 +330,10 @@ charged) — generated and drift-guarded internally, never hand-written.
 
 | Tier | ≤60s | ≤180s | ≤360s | ≤600s |
 |------|------|-------|-------|-------|
-| `fast` (economy) | 24 | 33 | 86 | 143 |
-| `pro` (default) | 87 | 116 | 305 | 509 |
-| `mixed` / `mixed-fast` | 110 | 149 | 390 | 651 |
-| `smart` (highest accuracy) | 333 | 470 | 1135 | 1868 |
+| `fast` (economy) | 180 | 185 | 514 | 846 |
+| `pro` (default) | 215 | 231 | 636 | 1050 |
+| `mixed` / `mixed-fast` | 228 | 249 | 684 | 1129 |
+| `smart` (highest accuracy) | 410 | 500 | 1259 | 2064 |
 
 The two mixed tiers are variants of the same advanced analysis and share one
 price: `mixed` is tuned for maximum result quality; `mixed-fast` for the most
@@ -336,11 +341,23 @@ consistent output character run-to-run.
 
 > These values are the internal pricing formula's current outputs.
 
+> **Hybrid smart plan + measured judge/refine terms, 2026-08-03.** The `smart`
+> tier is now a **hybrid plan**: one native skeleton pass blended with several
+> economy-transport donor rolls, with the merged result always refined —
+> `smart` ignores [`selectionMode`](#configuration) and always applies the
+> equivalent of `combine`. Every multi-roll tier (`mixed` and `smart`) now
+> carries its own explicit judge and refine terms instead of an implicit share
+> of a single-pass budget, trued up from measurement. This is a full reprice —
+> every tier and bucket rises, including the economy tiers, so the numbers
+> above reflect real, sustainable per-run cost rather than an introductory
+> rate.
+
 > **Smart re-based, 2026-07-31.** The `smart` tier's video sampling was re-tuned
 > after a measurement campaign found the same analysis quality — and more
-> consistent casting — at a much lower sampling cost, so its prices drop 27–47%
-> per bucket. The other tiers tick up 3–6% from a re-measurement of fixed
-> analysis overhead. Analyses also now always report a camera `angle` per scene.
+> consistent casting — at a much lower sampling cost, so its prices dropped
+> 27–47% per bucket at the time (superseded by the 2026-08-03 reprice above).
+> The other tiers ticked up 3–6% from a re-measurement of fixed analysis
+> overhead. Analyses also now always report a camera `angle` per scene.
 
 > **Credit re-denomination, 2026-07-30.** A credit is now worth a tenth of what
 > it was, so every number in this table is ~10× its old value — the price in
@@ -360,10 +377,12 @@ video over 180s is split into ~150-second windows), and higher tiers cost more
 per window.
 
 Every tier also analyzes each window **several times independently** and keeps
-the best result — three passes on `fast` and `pro`, and six on the mixed tiers
-(three of each model, so their readings can be compared and combined). That
-repetition is the main reason a tier costs what it does, and it is why the mixed
-tiers sit roughly twice the price of a single-model tier.
+(or merges) the best result — three passes on `fast` and `pro`, and six on the
+mixed tiers (three of each model, so their readings can be compared and
+combined). `smart` runs its own hybrid roll plan — a native skeleton pass plus
+several economy-tier donor rolls — and always refines the merged result. That
+repetition is the main reason a tier costs what it does, and it is why the
+mixed and smart tiers sit well above a single-model tier.
 
 **±3-second duration tolerance.** Credits are reserved up front from the bucket
 that fits the probed (metadata) duration. After download, the worker re-probes

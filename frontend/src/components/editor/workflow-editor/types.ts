@@ -111,7 +111,10 @@ export const NODE_CREDIT_COSTS: Record<string, number> = {
   "web-scrape": 20,
   // Flash floor — the real per-run cost is duration/model-bucketed (see
   // estimateNodeCredits below + the node's live useModelCredits estimate).
-  "video-analysis": 3496,
+  // Kept equal to VIDEO_ANALYSIS_BUCKET_CREDITS' table-wide ceiling
+  // (smart:600s) so this rare-path fallback never under-quotes; re-sync by
+  // hand whenever that table reprices (last: 2026-08-03, task A3).
+  "video-analysis": 2064,
 };
 
 /** Motion-transfer composite credit costs (mirrors STATIC_CREDIT_COSTS in backend) */
