@@ -491,8 +491,24 @@ export function renderAnalyzedScene(scene: { visual: string }, slots: EntitySlot
   return scene.visual.replace(SLOT_TOKEN_RE, (_whole, id: string) => castMap?.[id] ?? byId.get(id)?.description ?? id)
 }
 
+/**
+ * Float slack for the oversize comparison.
+ *
+ * Scene boundaries arrive as decimal seconds and the duration is derived by
+ * SUBTRACTING two of them, which does not land on the cap exactly: a real job
+ * produced a 12.67 → 20.67 scene whose computed length is 8.000000000000002,
+ * so a scene sitting precisely ON the 8s cap was flagged oversized and carried
+ * a `oversized: true` defect marker downstream for no reason.
+ *
+ * A microsecond is orders of magnitude below any boundary precision the
+ * analyzer can actually resolve (windows land on ~0.01s at best), so this can
+ * never mask a genuinely oversized scene — the smallest real overshoot is
+ * still ~10000x larger than the tolerance.
+ */
+const OVERSIZE_TOLERANCE_SEC = 1e-6
+
 export function isOversizedScene(startSec: number, endSec: number): boolean {
-  return endSec - startSec > VIDEO_ANALYSIS_MAX_SCENE_SEC
+  return endSec - startSec > VIDEO_ANALYSIS_MAX_SCENE_SEC + OVERSIZE_TOLERANCE_SEC
 }
 
 const STANDARD_RATIOS: Array<[string, number]> = [
