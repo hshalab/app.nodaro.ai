@@ -200,6 +200,26 @@ describe("payload-builder: generate-video-pro dispatch", () => {
     const result = buildPayload(n, JOB_ID, inputs, undefined, { nodes: [n], edges: [], nodeStates: {} })
     expect(result.payload.startFrameUrl).toBe("https://wired.example/generic-image.png")
   })
+
+  it("passes renderMethod through to the payload when set to keyframes", () => {
+    const n = gvpNode({ prompt: "a cat", renderMethod: "keyframes" })
+    const result = buildPayload(n, JOB_ID, {}, undefined, { nodes: [n], edges: [], nodeStates: {} })
+    expect(result.payload.renderMethod).toBe("keyframes")
+  })
+
+  it("emits no renderMethod key on the wire when absent or extend (additive default)", () => {
+    for (const data of [{ prompt: "a cat" }, { prompt: "a cat", renderMethod: "extend" }]) {
+      const n = gvpNode(data)
+      const result = buildPayload(n, JOB_ID, {}, undefined, { nodes: [n], edges: [], nodeStates: {} })
+      expect(result.payload.renderMethod).toBeUndefined()
+      // undefined-valued keys are dropped by JSON serialization (the BullMQ
+      // wire format) — the enqueued payload stays byte-identical to
+      // pre-renderMethod builds.
+      expect(JSON.stringify(result.payload)).not.toContain("renderMethod")
+      // Reserve surface unchanged: same flat model identifier either way.
+      expect(result.modelIdentifier).toBe("generate-video-pro")
+    }
+  })
 })
 
 // ---------------------------------------------------------------------------

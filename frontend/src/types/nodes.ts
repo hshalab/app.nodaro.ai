@@ -1862,6 +1862,8 @@ export interface GenerateVideoProNodeData {
    *  more boundary-motion context for slow camera moves / tempo, at a small
    *  per-join surcharge (billed at the ref rate). */
   contextTailSec?: number
+  /** Render method: "extend" (default; video-chain continuation tails) or "keyframes" (per-scene generated start/end anchor frames — scenes re-render independently; music is added post-render). */
+  renderMethod?: "extend" | "keyframes"
   /** AUTO-CAST: inject analysis-supplied per-slot reference frames as identity
    *  refs. OPT-IN (default off — v1 is text-only; the stamps become v2's
    *  user-editable cast gallery). */
