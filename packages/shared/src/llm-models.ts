@@ -712,14 +712,17 @@ export const VIDEO_ANALYSIS_MIXED_TIERS = ["mixed", "mixed-fast", "smart"] as co
 export type VideoAnalysisMixedTier = (typeof VIDEO_ANALYSIS_MIXED_TIERS)[number]
 /**
  * `smart` is an ENGINE-PLAN sentinel like the mixed tiers — it names a plan, not a
- * model — but it is the opposite kind of plan, and the distinction is the whole
+ * model — but it is a different SHAPE of plan, and the distinction is the whole
  * reason it exists as a separate tier rather than a repricing of the others.
  *
  * The economy tiers (`fast`, `pro`, `mixed`, `mixed-fast`) run several passes on
- * the cheaper proxied transport and vote. That transport is 3-4x cheaper per token
- * and additionally does no deep reasoning, which is why they cost single-digit
- * credits — and also why they are less accurate. `smart` runs ONE pass on the
- * native transport with everything turned up, which is where the accuracy is.
+ * the cheaper proxied transport and vote. That transport is cheaper per token and
+ * additionally does no deep reasoning, which is why they cost less — and also why
+ * they are less accurate. `smart` is a HYBRID plan (2026-08-03 re-plan): one
+ * native-transport skeleton pass with everything turned up, blended with several
+ * economy-transport donor rolls, and the merged result is always refined —
+ * `selectionMode` (the `choose`/`combine` toggle the other tiers expose) does not
+ * apply to `smart`; it always applies the equivalent of `combine`.
  *
  * As with the mixed sentinels, what the plan does internally is deliberately not
  * published here; only the wire vocabulary is contract.

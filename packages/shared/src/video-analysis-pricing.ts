@@ -67,38 +67,64 @@ export const VIDEO_ANALYSIS_WINDOW = { LEN: WINDOW_LEN, STRIDE: WINDOW_STRIDE, O
 // Net effect: smart drops 27–47% per bucket — the 24 fps token spend was also
 // partly paying for media tokens the provider clamped and never counted — and
 // the economy rows tick up 3–6% from the prompt-token true-up.
+//
+// REGENERATED 2026-08-03 — V1 hybrid-smart reprice (task A3), from the
+// plugin's own generator (`scripts/gen-va-buckets.mjs`) at
+// nodaroai/nodaro-cloud-plugins commit eef077d (branch fix/va-cost-trueup).
+// This is the V1 true-up of task P6's provisional judge/refine/frame-judge
+// constants, re-derived from a 2026-08-03 staging measurement and approved by
+// Tal (the constants themselves, like the rest of the $-derived formula, stay
+// private in the plugin repo — never in this public package). `smart` is now
+// a HYBRID plan — one native 6fps skeleton pass plus 2 fast + 2 pro donor
+// rolls, always refined (`selectionMode` does not apply to `smart`; it always
+// refines) — and every multi-roll tier now carries its own explicit
+// judge/refine terms instead of an implicit share of a single-pass budget.
+// This is the full, honest reprice Tal approved, including the economy tiers
+// (fast 33->185 @180s ends a below-cost combine exposure that existed at the
+// old price). Net effect, per bucket (every row rises):
+//
+//   gemini-3-flash    60s   24->180   180s   33->185   360s   86-> 514   600s  143-> 846
+//   gemini-3.6-flash  60s   65->203   180s   92->218   360s  237-> 598   600s  395-> 986
+//   gemini-3.1-pro    60s   87->215   180s  116->231   360s  305-> 636   600s  509->1050
+//   mixed             60s  110->228   180s  149->249   360s  390-> 684   600s  651->1129
+//   smart             60s  333->410   180s  470->500   360s 1135->1259   600s 1868->2064
+//
+// Values are pasted verbatim from the plugin generator's output — never hand
+// computed. The plugin's cost test cross-checks every row, sentinels included.
 export const VIDEO_ANALYSIS_BUCKET_CREDITS: Record<string, number> = {
   // Legacy fast-tier model (pre-2026-07) — kept for stored raw-id configs.
-  "video-analysis:gemini-3-flash:60s": 24,
-  "video-analysis:gemini-3-flash:180s": 33,
-  "video-analysis:gemini-3-flash:360s": 86,
-  "video-analysis:gemini-3-flash:600s": 143,
+  "video-analysis:gemini-3-flash:60s": 180,
+  "video-analysis:gemini-3-flash:180s": 185,
+  "video-analysis:gemini-3-flash:360s": 514,
+  "video-analysis:gemini-3-flash:600s": 846,
   // Current fast tier — regenerated from the private formula for its backing
   // model; higher than the legacy fast schedule but still ≤ pro per bucket.
-  "video-analysis:gemini-3.6-flash:60s": 65,
-  "video-analysis:gemini-3.6-flash:180s": 92,
-  "video-analysis:gemini-3.6-flash:360s": 237,
-  "video-analysis:gemini-3.6-flash:600s": 395,
-  "video-analysis:gemini-3.1-pro:60s": 87,
-  "video-analysis:gemini-3.1-pro:180s": 116,
-  "video-analysis:gemini-3.1-pro:360s": 305,
-  "video-analysis:gemini-3.1-pro:600s": 509,
+  "video-analysis:gemini-3.6-flash:60s": 203,
+  "video-analysis:gemini-3.6-flash:180s": 218,
+  "video-analysis:gemini-3.6-flash:360s": 598,
+  "video-analysis:gemini-3.6-flash:600s": 986,
+  "video-analysis:gemini-3.1-pro:60s": 215,
+  "video-analysis:gemini-3.1-pro:180s": 231,
+  "video-analysis:gemini-3.1-pro:360s": 636,
+  "video-analysis:gemini-3.1-pro:600s": 1050,
   // Mixed tiers (`mixed` + `mixed-fast`) share ONE credit family — they are
   // variants of the same engine plan (plan internals live in the private
   // analysis plugin). Admin-tunable via model_pricing like every other row.
-  "video-analysis:mixed:60s": 110,
-  "video-analysis:mixed:180s": 149,
-  "video-analysis:mixed:360s": 390,
-  "video-analysis:mixed:600s": 651,
-  // SMART — the one native-transport plan: a single pass with reasoning turned
-  // all the way up at a measured-optimal sampling rate. Priced above the
-  // economy tiers because it genuinely costs more to run; the only tier whose
-  // accuracy is validated against a hand-counted edit list, re-validated at
-  // the current sampling rate before this schedule shipped.
-  "video-analysis:smart:60s": 333,
-  "video-analysis:smart:180s": 470,
-  "video-analysis:smart:360s": 1135,
-  "video-analysis:smart:600s": 1868,
+  "video-analysis:mixed:60s": 228,
+  "video-analysis:mixed:180s": 249,
+  "video-analysis:mixed:360s": 684,
+  "video-analysis:mixed:600s": 1129,
+  // SMART — the accuracy tier, and since the 2026-08-03 hybrid re-plan a
+  // multi-roll plan like the others: one native 6fps skeleton pass plus 2
+  // fast + 2 pro donor rolls, always refined (`selectionMode` does not apply
+  // here — smart always refines; it never offers a cheaper "choose" path).
+  // Priced above the economy tiers because it genuinely costs more to run;
+  // the only tier whose accuracy is validated against a hand-counted edit
+  // list, re-validated at the current plan before this schedule shipped.
+  "video-analysis:smart:60s": 410,
+  "video-analysis:smart:180s": 500,
+  "video-analysis:smart:360s": 1259,
+  "video-analysis:smart:600s": 2064,
 }
 
 /**

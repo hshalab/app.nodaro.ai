@@ -1856,11 +1856,11 @@ const VIDEO_MODELS: Record<string, ModelCatalogEntry> = {
     description: "Legacy fast-tier analysis model (pre-2026-07). Kept so stored raw-model configs keep running and keep pricing under their own identifier; new fast-tier runs use the current fast model.",
     useCases: ["video-analysis", "shot-list", "fast"],
     pricing: [
-      { identifier: "video-analysis:gemini-3-flash", credits: 143, note: "10-min ceiling (no duration given)" },
-      { identifier: "video-analysis:gemini-3-flash:60s", credits: 24 },
-      { identifier: "video-analysis:gemini-3-flash:180s", credits: 33 },
-      { identifier: "video-analysis:gemini-3-flash:360s", credits: 86 },
-      { identifier: "video-analysis:gemini-3-flash:600s", credits: 143, note: "10-min ceiling" },
+      { identifier: "video-analysis:gemini-3-flash", credits: 846, note: "10-min ceiling (no duration given)" },
+      { identifier: "video-analysis:gemini-3-flash:60s", credits: 180 },
+      { identifier: "video-analysis:gemini-3-flash:180s", credits: 185 },
+      { identifier: "video-analysis:gemini-3-flash:360s", credits: 514 },
+      { identifier: "video-analysis:gemini-3-flash:600s", credits: 846, note: "10-min ceiling" },
     ],
   },
   "gemini-3.6-flash-video-analysis": {
@@ -1873,11 +1873,11 @@ const VIDEO_MODELS: Record<string, ModelCatalogEntry> = {
     description: "Analyze a video into a structured shot list (scenes, camera, audio) — fast, economy tier. Billed per duration bucket.",
     useCases: ["video-analysis", "shot-list", "fast"],
     pricing: [
-      { identifier: "video-analysis:gemini-3.6-flash", credits: 395, note: "10-min ceiling (no duration given)" },
-      { identifier: "video-analysis:gemini-3.6-flash:60s", credits: 65 },
-      { identifier: "video-analysis:gemini-3.6-flash:180s", credits: 92 },
-      { identifier: "video-analysis:gemini-3.6-flash:360s", credits: 237 },
-      { identifier: "video-analysis:gemini-3.6-flash:600s", credits: 395, note: "10-min ceiling" },
+      { identifier: "video-analysis:gemini-3.6-flash", credits: 986, note: "10-min ceiling (no duration given)" },
+      { identifier: "video-analysis:gemini-3.6-flash:60s", credits: 203 },
+      { identifier: "video-analysis:gemini-3.6-flash:180s", credits: 218 },
+      { identifier: "video-analysis:gemini-3.6-flash:360s", credits: 598 },
+      { identifier: "video-analysis:gemini-3.6-flash:600s", credits: 986, note: "10-min ceiling" },
     ],
   },
   "gemini-3.1-pro-video-analysis": {
@@ -1890,11 +1890,11 @@ const VIDEO_MODELS: Record<string, ModelCatalogEntry> = {
     description: "Analyze a video into a structured shot list (scenes, camera, audio) — higher-fidelity, default tier. Billed per duration bucket.",
     useCases: ["video-analysis", "shot-list", "cinematic"],
     pricing: [
-      { identifier: "video-analysis:gemini-3.1-pro", credits: 509, note: "10-min ceiling (no duration given)" },
-      { identifier: "video-analysis:gemini-3.1-pro:60s", credits: 87 },
-      { identifier: "video-analysis:gemini-3.1-pro:180s", credits: 116 },
-      { identifier: "video-analysis:gemini-3.1-pro:360s", credits: 305 },
-      { identifier: "video-analysis:gemini-3.1-pro:600s", credits: 509, note: "10-min ceiling" },
+      { identifier: "video-analysis:gemini-3.1-pro", credits: 1050, note: "10-min ceiling (no duration given)" },
+      { identifier: "video-analysis:gemini-3.1-pro:60s", credits: 215 },
+      { identifier: "video-analysis:gemini-3.1-pro:180s", credits: 231 },
+      { identifier: "video-analysis:gemini-3.1-pro:360s", credits: 636 },
+      { identifier: "video-analysis:gemini-3.1-pro:600s", credits: 1050, note: "10-min ceiling" },
     ],
   },
   // Both mixed tiers are variants of the same advanced multi-engine analysis
@@ -1910,17 +1910,18 @@ const VIDEO_MODELS: Record<string, ModelCatalogEntry> = {
     description: "Our most advanced analysis tier — multiple analysis engines combined into one result for maximum completeness and accuracy. Billed per duration bucket.",
     useCases: ["video-analysis", "shot-list", "premium", "most-complete"],
     pricing: [
-      { identifier: "video-analysis:mixed", credits: 651, note: "10-min ceiling (no duration given)" },
-      { identifier: "video-analysis:mixed:60s", credits: 110 },
-      { identifier: "video-analysis:mixed:180s", credits: 149 },
-      { identifier: "video-analysis:mixed:360s", credits: 390 },
-      { identifier: "video-analysis:mixed:600s", credits: 651, note: "10-min ceiling" },
+      { identifier: "video-analysis:mixed", credits: 1129, note: "10-min ceiling (no duration given)" },
+      { identifier: "video-analysis:mixed:60s", credits: 228 },
+      { identifier: "video-analysis:mixed:180s", credits: 249 },
+      { identifier: "video-analysis:mixed:360s", credits: 684 },
+      { identifier: "video-analysis:mixed:600s", credits: 1129, note: "10-min ceiling" },
     ],
   },
-  // SMART — the accuracy tier, and the only one that does not rely on voting.
-  // Every other tier runs several cheap passes and has a grader pick between them;
-  // this one runs a single pass with reasoning and frame sampling turned all the
-  // way up. Priced well above them because it genuinely costs more to run.
+  // SMART — the accuracy tier. Since the 2026-08-03 hybrid re-plan it is a
+  // multi-roll plan like the others: a native skeleton pass blended with
+  // several donor analysis rolls, with the merged result always refined
+  // (it ignores `selectionMode` — see video-analysis-pricing.ts). Priced
+  // well above them because it genuinely costs more to run.
   "smart-video-analysis": {
     id: "smart-video-analysis",
     kind: "video",
@@ -1928,14 +1929,14 @@ const VIDEO_MODELS: Record<string, ModelCatalogEntry> = {
     family: "Nodaro",
     label: "Video Analysis (Smart)",
     series: "Video Analysis",
-    description: "Highest-accuracy analysis — a single deep pass that reads the footage frame by frame, finds its own shot boundaries, and identifies the cast by appearance. Best choice when the shot list will drive regeneration. Billed per duration bucket.",
+    description: "Highest-accuracy analysis — a hybrid pass that blends a native skeleton read with several donor analysis rolls, then always refines the merged result to find shot boundaries and identify the cast by appearance. Best choice when the shot list will drive regeneration. Billed per duration bucket.",
     useCases: ["video-analysis", "shot-list", "premium", "most-accurate"],
     pricing: [
-      { identifier: "video-analysis:smart", credits: 1868, note: "10-min ceiling (no duration given)" },
-      { identifier: "video-analysis:smart:60s", credits: 333 },
-      { identifier: "video-analysis:smart:180s", credits: 470 },
-      { identifier: "video-analysis:smart:360s", credits: 1135 },
-      { identifier: "video-analysis:smart:600s", credits: 1868, note: "10-min ceiling" },
+      { identifier: "video-analysis:smart", credits: 2064, note: "10-min ceiling (no duration given)" },
+      { identifier: "video-analysis:smart:60s", credits: 410 },
+      { identifier: "video-analysis:smart:180s", credits: 500 },
+      { identifier: "video-analysis:smart:360s", credits: 1259 },
+      { identifier: "video-analysis:smart:600s", credits: 2064, note: "10-min ceiling" },
     ],
   },
 }
