@@ -59,7 +59,7 @@ import { insertWithIdempotencyKey } from "../idempotent-insert.js"
 import { throwIfJobCancelled } from "../job-cancellation.js"
 import { hasCredits } from "../config.js"
 import { KieVideoProvider } from "../../providers/kie/video.js"
-import { videoUpscale, editImage } from "../../providers/router.js"
+import { videoUpscale, editImage, generateImage } from "../../providers/router.js"
 import { assertExact2xAligned, fetchImageBuffer } from "./plate-gate.js"
 import { pollKieTask, isUpstreamKieFailure } from "../../providers/kie/client.js"
 import { combineVideos as combineVideosCore } from "../../providers/video/combine-videos.js"
@@ -71,7 +71,7 @@ import { randomUUID } from "node:crypto"
 import { dirname, join } from "node:path"
 import { promises as fs } from "node:fs"
 import type { ZodType } from "zod"
-import type { PluginToolkit, PluginLlmRequest, PluginLlmMultimodalRequest, PluginVideoGenOptions, PluginVideoGenResult, PipelineSnapshot } from "./types.js"
+import type { PluginToolkit, PluginLlmRequest, PluginLlmMultimodalRequest, PluginVideoGenOptions, PluginVideoGenResult, PluginImageGenOptions, PluginImageGenResult, PipelineSnapshot } from "./types.js"
 
 /**
  * Assembles the real `PluginToolkit` dependency-injection surface handed to
@@ -99,16 +99,19 @@ import type { PluginToolkit, PluginLlmRequest, PluginLlmMultimodalRequest, Plugi
  */
 
 /**
- * Adapts `PluginVideoGenOptions.onTaskCreated` (return type `void |
- * Promise<void>`, per the contract) into `ReconcileOpts.onTaskCreated`
- * (return type strictly `Promise<void>`, per `provider.interface.ts`) — the
- * two aren't directly assignable, since a callback that might return plain
- * `void` doesn't satisfy a slot the KIE client always awaits as a promise.
- * Returns `undefined` (omitting `reconcileOpts` entirely) when there's no
- * callback — never wires `makeOnTaskCreated` (spec §6: `provider_task_id` is
- * never written by this path; only the plugin's own checkpoint is).
+ * Adapts `PluginVideoGenOptions`/`PluginImageGenOptions`' `onTaskCreated`
+ * (return type `void | Promise<void>`, per the contract) into
+ * `ReconcileOpts.onTaskCreated` (return type strictly `Promise<void>`, per
+ * `provider.interface.ts`) — the two aren't directly assignable, since a
+ * callback that might return plain `void` doesn't satisfy a slot the KIE
+ * client always awaits as a promise. Returns `undefined` (omitting
+ * `reconcileOpts` entirely) when there's no callback — never wires
+ * `makeOnTaskCreated` (spec §6: `provider_task_id` is never written by this
+ * path; only the plugin's own checkpoint is).
  */
-function toReconcileOpts(options: PluginVideoGenOptions | undefined): ReconcileOpts | undefined {
+function toReconcileOpts(
+  options: { onTaskCreated?: (taskId: string) => void | Promise<void> } | undefined,
+): ReconcileOpts | undefined {
   const onTaskCreated = options?.onTaskCreated
   if (!onTaskCreated) return undefined
   return {
@@ -176,6 +179,37 @@ async function pluginImageToVideo(
     // closing-frame reference hint. Undefined for every other segment.
     options?.endFrameUrl,
     toProviderOptions(options, aspectRatio),
+    toReconcileOpts(options),
+  )
+  return { url: result.url, taskId: result.kieTaskId }
+}
+
+/**
+ * `tk.providers.generateImage` — wraps `generateImage` (`providers/router.ts`)
+ * for the gvp keyframes anchor lever (ADDITIVE 2026-08-03). Option fields map
+ * onto the router's snake_case `extraParams` exactly like
+ * `workers/handlers/image-ai.ts`'s composition (unset fields omitted; an
+ * empty bag passed as `undefined`). Cost fields stay app-internal; the
+ * provider task id rides back as `taskId` (`RouteResult.kieTaskId` — image-
+ * lane providers don't populate it today, so engines checkpoint via
+ * `onTaskCreated`).
+ */
+async function pluginGenerateImage(
+  prompt: string,
+  model: string,
+  options?: PluginImageGenOptions,
+): Promise<PluginImageGenResult> {
+  const { aspectRatio, resolution, negativePrompt } = options ?? {}
+  const extraParams: Record<string, unknown> = {
+    ...(aspectRatio && { aspect_ratio: aspectRatio }),
+    ...(resolution && { resolution }),
+    ...(negativePrompt && { negative_prompt: negativePrompt }),
+  }
+  const result = await generateImage(
+    prompt,
+    model,
+    options?.referenceImageUrls,
+    Object.keys(extraParams).length > 0 ? extraParams : undefined,
     toReconcileOpts(options),
   )
   return { url: result.url, taskId: result.kieTaskId }
@@ -591,6 +625,7 @@ export function buildToolkit(): PluginToolkit {
         new ReplicateAudioSeparationProvider().separateAudio(audioUrl, opts, reconcileOpts),
       textToVideo: pluginTextToVideo,
       imageToVideo: pluginImageToVideo,
+      generateImage: pluginGenerateImage,
       // Provider-routed video enhancement (Topaz by default at the routing
       // layer). The gvp tail-restoration lever calls this on a 2-5s tail —
       // the contract exposes only (url, model, factor); reconcile/progress

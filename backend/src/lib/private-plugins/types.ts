@@ -142,6 +142,36 @@ export interface PluginVideoGenResult {
   taskId?: string
 }
 
+/**
+ * Mirrors the options `generateImage` (`providers/router.ts`) accepts, folded
+ * into one bag: `referenceImageUrls` maps to the router's positional param;
+ * `aspectRatio`/`resolution`/`negativePrompt` map onto the snake_case
+ * `extraParams` composition (`workers/handlers/image-ai.ts`); `onTaskCreated`
+ * maps to `ReconcileOpts.onTaskCreated` (same adapter as
+ * `PluginVideoGenOptions.onTaskCreated` — the engine checkpoints the task id;
+ * `jobs.provider_task_id` is NEVER written by this path). ADDITIVE
+ * (2026-08-03, gvp keyframes anchors).
+ */
+export interface PluginImageGenOptions {
+  referenceImageUrls?: string[]
+  aspectRatio?: string
+  resolution?: string
+  negativePrompt?: string
+  onTaskCreated?: (taskId: string) => void | Promise<void>
+}
+
+/**
+ * Mirrors the resolved-generation subset of `RouteResult`
+ * (`providers/router.ts`) exposed for image generation — url plus the
+ * provider task id (`RouteResult.kieTaskId`; image-lane providers don't
+ * populate it today, so rely on `onTaskCreated` for checkpointing). ADDITIVE
+ * (2026-08-03).
+ */
+export interface PluginImageGenResult {
+  url: string
+  taskId?: string
+}
+
 export interface PluginProvidersToolkit {
   /** Mirrors `directVoiceChanger` (`providers/elevenlabs/voice-changer.ts`). */
   directVoiceChanger(
@@ -203,6 +233,24 @@ export interface PluginProvidersToolkit {
     imageUrl: string,
     model: string,
   ): Promise<{ url: string }>
+  /**
+   * Mirrors `generateImage` (`providers/router.ts`) — provider-routed image
+   * generation, folded to one options bag (`PluginImageGenOptions`; the
+   * toolkit maps its fields onto the router's positional refs + snake_case
+   * `extraParams`). Added for the gvp keyframes render method (2026-08-03):
+   * the engine generates per-scene start/end anchor frames, hosts them, and
+   * rides them as i2v start/end inputs — scenes re-render independently
+   * instead of chaining continuation tails.
+   *
+   * OPTIONAL (additive-contract convention): absent → the app predates this
+   * member; callers feature-guard (keyframes runs respond 503 "backend update
+   * required" rather than crashing).
+   */
+  generateImage?(
+    prompt: string,
+    model: string,
+    options?: PluginImageGenOptions,
+  ): Promise<PluginImageGenResult>
   /**
    * Mirrors the single-shot KIE record-info query the reconcile system polls
    * — `pollKieTask` (`providers/kie/client.ts`) called with `maxAttempts=1`,
@@ -761,6 +809,18 @@ export interface GenerateVideoProPricing {
    *  including the first new one, which re-seeds off the parent prefix).
    *  Absent / 1 → the classic formula, byte-identical. */
   billFromSegment?: number
+  /** KEYFRAMES render method (2026-08-03) — present ONLY when the run was
+   *  priced under it (scene-decomposed: every segment at the no-ref rate, no
+   *  continuation-tail term). Absent → the classic extend chain. This is also
+   *  how a plugin detects an app that predates the field: request
+   *  `renderMethod: "keyframes"` and check whether it comes back. */
+  renderMethod?: "keyframes"
+  /** KEYFRAMES anchor budget (pre-markup, already included in `reserveBase`)
+   *  — WORST CASE: 2 anchor images per segment at the anchor image model's
+   *  base credit. The engine commits actuals (metered down), so this only
+   *  ever refunds. Absent on extend runs and on keyframes CONTINUATIONS,
+   *  which re-use the parent's already-paid-for anchors. */
+  anchorReserve?: number
 }
 
 /**
@@ -862,6 +922,12 @@ export interface PluginHttpToolkit {
      *  a plugin detects an older app that ignored the field. Takes precedence
      *  over `preferredSegmentSec`. Additive-optional (no contract bump). */
     segmentDurations?: number[]
+    /** RENDER METHOD (2026-08-03) — "keyframes" prices the scene-decomposed
+     *  shape: every segment at the no-ref rate, NO continuation-tail term,
+     *  plus a worst-case 2-anchors-per-segment budget (see
+     *  `GenerateVideoProPricing.renderMethod`/`anchorReserve`). Omitted /
+     *  "extend" → the classic chain, byte-identical. Additive-optional. */
+    renderMethod?: "extend" | "keyframes"
   }): Promise<GenerateVideoProPricing>
   /**
    * Mirrors `computeEditVideoProPricing` (`ee/billing/edit-video-pro-credits.ts`)
@@ -899,6 +965,11 @@ export interface PluginHttpToolkit {
     fromSegment: number
     /** Per-join continuation-tail seconds, clamped app-side to [2,5]. */
     tailSec?: number
+    /** RENDER METHOD (2026-08-03) — "keyframes" bills the re-rendered
+     *  segments at the no-ref rate with NO continuation tails and NO anchor
+     *  reserve (the parent's anchors are re-used). Omitted / "extend" → the
+     *  classic continuation, byte-identical. Additive-optional. */
+    renderMethod?: "extend" | "keyframes"
   }): Promise<GenerateVideoProPricing>
   /**
    * Mirrors `sendInternalError` (`lib/http-errors.ts`) — logs `err` server-side

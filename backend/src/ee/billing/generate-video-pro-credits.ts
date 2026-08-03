@@ -31,6 +31,39 @@ export interface GenerateVideoProPricing {
    *  plugin's `commitBase` twin bills feeBase + segments ≥ this index (all at
    *  the ref rate + one continuation tail each). Absent/1 → classic. */
   billFromSegment?: number
+  /** KEYFRAMES render method (2026-08-03) — set ONLY when the run was priced
+   *  under it. Scene-decomposed rendering: each segment is generated from its
+   *  own start/end anchor frames instead of a continuation tail off the
+   *  previous segment, so every segment bills at the NO-ref per-second rate
+   *  and the `refPerSec × tailSec × (n−1)` continuation term is gone. Absent
+   *  → the classic extend chain, byte-identical. */
+  renderMethod?: "keyframes"
+  /** KEYFRAMES anchor budget (pre-markup, included in `reserveBase`) —
+   *  WORST CASE: 2 anchor images per segment at the anchor image model's base
+   *  credit. The engine generates fewer whenever a scene reuses a neighbour's
+   *  frame, and its metered commit settles the actual count, so this only ever
+   *  refunds DOWN. Absent on extend runs and on keyframes CONTINUATIONS (which
+   *  reuse the parent's already-paid-for anchors). */
+  anchorReserve?: number
+}
+
+/** Image model the keyframes engine generates scene anchors with. Priced
+ *  through the DB-aware `getModelCreditBaseCost` so an admin reprice of the
+ *  row moves the anchor reserve automatically (hard-fails, never silently
+ *  under-reserves). */
+const KEYFRAME_ANCHOR_MODEL = "nano-banana-pro"
+/** Worst-case anchors per segment (start + end frame). */
+const ANCHORS_PER_SEGMENT = 2
+
+/**
+ * Keyframes reserve for a set of segment durations: every segment at the
+ * NO-ref per-second rate (each is generated from its own anchors — nothing
+ * re-seeds off a previous segment's tail), with no continuation-tail term.
+ * Per-segment `ceil` so a continuation of a keyframes run bills exactly the
+ * parent's terms for the segments it re-renders.
+ */
+function keyframesSegmentsBase(durations: number[], noRefPerSec: number): number {
+  return durations.reduce((sum, d) => sum + Math.ceil(d * noRefPerSec), 0)
 }
 
 // ---------------------------------------------------------------------------
@@ -215,6 +248,11 @@ export async function computeGenerateVideoProPricing(args: {
    *  ceil(clampedD + 0.3×(n−1)); throws otherwise). Takes precedence over
    *  `preferredSegmentSec`. Additive-optional (no contract bump). */
   segmentDurations?: number[]
+  /** Render method (2026-08-03): "keyframes" prices the scene-decomposed
+   *  shape (every segment at the no-ref rate, no continuation tail, plus the
+   *  worst-case anchor budget). Omitted / "extend" → the classic chain,
+   *  byte-identical. Additive-optional (no contract bump). */
+  renderMethod?: "extend" | "keyframes"
 }): Promise<GenerateVideoProPricing> {
   const { provider, durationSec } = args
   const tailSec = clampContextTailSec(args.tailSec)
@@ -237,6 +275,37 @@ export async function computeGenerateVideoProPricing(args: {
   // mode surfaces them for display/transparency (e.g. "priced at N cr/sec").
   const noRefPerSec = perSecRate(provider, resolution, false)
   const refPerSec = perSecRate(provider, resolution, true)
+
+  // KEYFRAMES (2026-08-03) — one formula for BOTH modes: nothing re-seeds off
+  // a previous segment, so every segment (single or not) bills at the no-ref
+  // rate, the continuation-tail term disappears, and the run reserves the
+  // worst-case anchor budget on top. Single mode deliberately does NOT set
+  // `creditIdentifier`: the flat per-duration composite is the extend-chain
+  // price and would under-reserve the anchors, so keyframes always takes the
+  // dynamic reserve path. `feeBase` is the same plan-fee row multi uses — the
+  // keyframes engine plans scenes for a single segment too.
+  if (args.renderMethod === "keyframes") {
+    const feeBase = STATIC_CREDIT_COSTS["generate-video-pro"]
+    if (feeBase === undefined) {
+      throw new PriceNotConfiguredError("generate-video-pro")
+    }
+    const { creditCost: anchorCost } = await getModelCreditBaseCost(KEYFRAME_ANCHOR_MODEL)
+    const anchorReserve = split.n * ANCHORS_PER_SEGMENT * anchorCost
+    return {
+      mode: split.mode,
+      clampedDurationSec: split.clampedD,
+      segmentCount: split.n,
+      totalRawSec: split.s,
+      segmentDurations: split.durations,
+      feeBase,
+      noRefPerSec,
+      refPerSec,
+      tailSec,
+      reserveBase: feeBase + keyframesSegmentsBase(split.durations, noRefPerSec) + anchorReserve,
+      renderMethod: "keyframes",
+      anchorReserve,
+    }
+  }
 
   if (split.mode === "single") {
     // Single-segment run behaves exactly like a normal t2v run — same
@@ -331,6 +400,12 @@ export async function computeGenerateVideoProContinuationPricing(args: {
   /** 1-based first segment the child regenerates (and pays for). */
   fromSegment: number
   tailSec?: number
+  /** Render method (2026-08-03) — "keyframes" bills the re-rendered segments
+   *  at the no-ref rate with no continuation tails and NO anchor reserve (the
+   *  parent already generated, and paid for, the anchors this continuation
+   *  re-uses). Omitted / "extend" → the classic continuation, byte-identical.
+   *  Additive-optional (no contract bump). */
+  renderMethod?: "extend" | "keyframes"
 }): Promise<GenerateVideoProPricing> {
   const { provider } = args
   const tailSec = clampContextTailSec(args.tailSec)
@@ -353,11 +428,20 @@ export async function computeGenerateVideoProContinuationPricing(args: {
     throw new PriceNotConfiguredError("generate-video-pro")
   }
   const total = durations.reduce((a, b) => a + b, 0)
-  const reserveBase = k > 1
-    ? feeBase + Math.ceil(refPerSec * ((n - k + 1) * tailSec + durations.slice(k - 1).reduce((a, b) => a + b, 0)))
-    : feeBase +
-      Math.ceil(noRefPerSec * durations[0]!) +
-      (n > 1 ? Math.ceil(refPerSec * ((n - 1) * tailSec + (total - durations[0]!))) : 0)
+  // KEYFRAMES continuation: the child re-renders scenes k..N from their OWN
+  // anchors — no segment re-seeds off previous footage, so every one bills at
+  // the no-ref rate with no continuation tail, and there is no anchor reserve
+  // (the parent's anchors are re-used). Per-segment `ceil` matches the fresh
+  // keyframes run's terms exactly, so re-rendering a scene costs the same
+  // whether it lands in the parent run or a continuation.
+  const keyframes = args.renderMethod === "keyframes"
+  const reserveBase = keyframes
+    ? feeBase + keyframesSegmentsBase(durations.slice(k - 1), noRefPerSec)
+    : k > 1
+      ? feeBase + Math.ceil(refPerSec * ((n - k + 1) * tailSec + durations.slice(k - 1).reduce((a, b) => a + b, 0)))
+      : feeBase +
+        Math.ceil(noRefPerSec * durations[0]!) +
+        (n > 1 ? Math.ceil(refPerSec * ((n - 1) * tailSec + (total - durations[0]!))) : 0)
   return {
     mode: "multi",
     clampedDurationSec: total,
@@ -370,5 +454,6 @@ export async function computeGenerateVideoProContinuationPricing(args: {
     tailSec,
     reserveBase,
     billFromSegment: k,
+    ...(keyframes ? { renderMethod: "keyframes" as const } : {}),
   }
 }

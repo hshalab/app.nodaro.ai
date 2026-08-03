@@ -3855,6 +3855,10 @@ export function buildPayload(
           Array.isArray(data.segmentDurations) && data.segmentDurations.length > 0
             ? (data.segmentDurations as number[])
             : undefined,
+        // Render method (2026-08-03): only the "keyframes" opt-in rides the
+        // wire — absent/"extend" emits undefined (dropped by JSON
+        // serialization), keeping pre-renderMethod payloads byte-identical.
+        renderMethod: data.renderMethod === "keyframes" ? "keyframes" : undefined,
         audioTail: data.audioTail === true ? true : undefined,
         overlapAnchor: data.overlapAnchor === true ? true : undefined,
         overlapAnchorMode: data.overlapAnchor === true && data.overlapAnchorMode === "last-frame" ? "last-frame" : undefined,
