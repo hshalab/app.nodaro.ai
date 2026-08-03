@@ -78,6 +78,7 @@ export function pickLatestCompletedJobPerNode(items: readonly ExecItemLike[]): C
 function nodeHasResult(data: Record<string, unknown>): boolean {
   if (data.executionStatus === "completed") return true
   if (data.generatedVideoUrl || data.generatedImageUrl || data.generatedAudioUrl || data.sourceImageUrl) return true
+  if (data.generatedJson) return true // video-analysis: the scene breakdown IS the result
   const gr = data.generatedResults as readonly GeneratedResult[] | undefined
   return Array.isArray(gr) && gr.length > 0
 }
@@ -96,6 +97,17 @@ export function buildCompletedResultPatch(
   timestamp: string,
 ): Record<string, unknown> | null {
   if (!output) return null
+  // Video-analysis is the one node whose result is a JSON payload
+  // (`output_data.json` → `data.generatedJson`), not a media URL — without this
+  // branch a completed analysis fell through every recovery layer and the node
+  // stayed empty after any reload whose live poll died (billed, result in My
+  // Library, nothing on canvas — reported 2026-08-03). Type-gated so a stray
+  // `json` field on a media job can never shadow its real URL result.
+  if (nodeType === "video-analysis") {
+    return output.json && typeof output.json === "object"
+      ? { executionStatus: "completed", generatedJson: output.json }
+      : null
+  }
   const videoUrl = typeof output.videoUrl === "string" ? output.videoUrl : undefined
   const imageUrl = typeof output.imageUrl === "string" ? output.imageUrl : undefined
   const audioUrl = typeof output.audioUrl === "string" ? output.audioUrl : undefined
