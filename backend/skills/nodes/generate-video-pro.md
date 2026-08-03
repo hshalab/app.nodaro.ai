@@ -1,7 +1,7 @@
 ---
 node_type: generate-video-pro
-generated_at: 2026-08-03T13:47:43.418Z
-generated_from: 70aa68e66
+generated_at: 2026-08-03T18:00:02.324Z
+generated_from: 4e62bfeb7
 ---
 
 # Generate Video Pro
@@ -58,6 +58,7 @@ generated_from: 70aa68e66
 - `gvpStoppedAtSegment?: number`
 - `gvpDeliveredSegments?: number`
 - `gvpSegmentCount?: number`
+- `contentPolicyRewrites?: ContentPolicyRewriteEntry[]`
 - `gvpContinueFromJobId?: string`
 - `gvpContinueFromSegment?: number`
 
