@@ -914,10 +914,13 @@ const VIDEO_MODELS: Record<string, ModelCatalogEntry> = {
   },
   // MiniMax Hailuo 3 (KIE "minimax-h3") — t2v / i2v (first and/or last frame) /
   // reference-to-video (9 images / 3 videos ≤15s total / 3 audios ≤15s total;
-  // audio refs require an image or video ref alongside). Fixed 2K output — NO
-  // resolution lever, so pricing is per-second only: 36.5 KIE cr/s billed on
-  // output + input-video seconds, input images beyond the first 5 add 11 KIE cr
-  // each, reference audio free. Mirrors the Seedance 2 multimodal surface.
+  // audio refs require an image or video ref alongside). Two-rate resolution
+  // lever (768P added 2026-08-03): 2K (KIE default) at 36.5 KIE cr/s, 768P at
+  // 22.5 KIE cr/s — billed on output + input-video seconds at the SELECTED
+  // resolution's rate; input images beyond the first 5 add 11 KIE cr each,
+  // reference audio free. Bare duration composites stay the 2K rate (identical
+  // to the pre-lever seeded rows); 768P appends ":768p". Mirrors the Seedance 2
+  // multimodal surface.
   // docs.kie.ai/market/minimax-h3/{text,image,reference}-to-video.
   "minimax-h3": {
     id: "minimax-h3",
@@ -926,16 +929,23 @@ const VIDEO_MODELS: Record<string, ModelCatalogEntry> = {
     family: "MiniMax",
     label: "Hailuo 3 (H3)",
     series: "Hailuo",
-    description: "MiniMax Hailuo 3 — premium multimodal tier: first/last frame + image/video/audio references, native audio, fixed 2K output, 4-15s per-second pricing.",
+    description: "MiniMax Hailuo 3 — premium multimodal tier: first/last frame + image/video/audio references, native audio, 2K (default) or 768P output, 4-15s per-second pricing.",
     useCases: ["premium", "narrative"],
     features: ["end-frame", "audio", "reference-image"],
     aspectRatios: VIDEO_RATIOS_SEEDANCE_2,
     durations: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    // First entry = default (the UI dropdown + fail-safe snap use opts[0], and
+    // 2K is the KIE-side default). Uppercase values are the exact KIE wire enum.
+    resolutions: ["2K", "768P"],
+    valueLabels: { "2K": "2K (default)" },
     pricing: [
-      { identifier: "minimax-h3", credits: 550, note: "default 6s — see :Ns variants" },
-      { identifier: "minimax-h3:4s", credits: 370, note: "4s (min)" },
-      { identifier: "minimax-h3:8s", credits: 730, note: "8s" },
-      { identifier: "minimax-h3:15s", credits: 1370, note: "15s (max)" },
+      { identifier: "minimax-h3", credits: 550, note: "default 6s @2K — see :Ns variants" },
+      { identifier: "minimax-h3:4s", credits: 370, note: "4s @2K (min)" },
+      { identifier: "minimax-h3:8s", credits: 730, note: "8s @2K" },
+      { identifier: "minimax-h3:15s", credits: 1370, note: "15s @2K (max)" },
+      { identifier: "minimax-h3:4s:768p", credits: 230, note: "4s @768P (min)" },
+      { identifier: "minimax-h3:8s:768p", credits: 450, note: "8s @768P" },
+      { identifier: "minimax-h3:15s:768p", credits: 850, note: "15s @768P (max)" },
     ],
   },
   "hailuo-2.3-pro": {

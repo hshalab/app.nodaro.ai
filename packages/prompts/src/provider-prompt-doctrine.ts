@@ -122,7 +122,7 @@ const MINIMAX_H3_DOCTRINE: ProviderPromptDoctrine = {
   heading: "MiniMax Hailuo 3 (minimax-h3)",
   tips: [
     "Natural-language prompts up to 7000 chars. Front-load what matters: subject → action → scene/environment → lighting → camera move → style. One camera movement per shot.",
-    "Fixed 2K output — no resolution lever. Aspect: pure text-to-video needs a concrete ratio (21:9/16:9/4:3/1:1/3:4/9:16); reference runs default to adaptive (match the input).",
+    "Output 2K (default) or 768P (cheaper tier). Aspect: pure text-to-video needs a concrete ratio (21:9/16:9/4:3/1:1/3:4/9:16); reference runs default to adaptive (match the input).",
     "References go by ordinal in attachment order (@Image 1, Video 1) — earlier = higher priority. Caps: 9 images, 3 videos (2-15s each, ≤15s total), 3 audio clips (≤15s total).",
     "Reference audio drives speech/lip-sync but never rides alone — pair it with an image or video reference. Audio input is free; the first 5 input images are free, extras bill per image.",
     "No negative-prompt parameter — put constraints in the prompt text: 'keep it subtitle-free, do not generate a watermark, do not generate a logo'.",

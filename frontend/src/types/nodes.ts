@@ -44,6 +44,11 @@ export interface GeneratedResult {
   // Avatar audio was auto-trimmed to the 600s cap). Surfaced as a banner, NOT
   // an error — the clip is valid and the user is charged for it.
   readonly warningMessage?: string
+  // Suno chaining ids, merged per-result from job output_data (poll-job
+  // extraFields). Downstream Suno nodes (extend / replace / separate / …)
+  // resolve these from the ACTIVE result; the suno-generate node displays them.
+  readonly sunoTaskId?: string
+  readonly sunoTrackId?: string
 }
 
 export interface ManualReferenceImage {
@@ -2613,6 +2618,8 @@ export type SunoGenerateData = {
   customMode?: boolean
   advancedOpen?: boolean
   instrumental?: boolean
+  /** Song length in seconds (10-360). KIE honors it only in custom mode on V5_5. */
+  duration?: number
   personaId?: string
   personaModel?: SunoPersonaModel
   fieldMappings: FieldMappings
@@ -2768,11 +2775,19 @@ export type SunoMashupData = {
 export type SunoReplaceSectionData = {
   [key: string]: unknown
   label: string
+  /** Manual Suno task ID (auto-filled from a connected Suno node when wired) */
+  taskId?: string
+  /** Manual Suno audio/track ID (auto-filled from a connected Suno node when wired) */
+  audioId?: string
   infillStartS: number
   infillEndS: number
   prompt: string
   tags: string
   title: string
+  /** Complete post-edit lyrics of the whole song (KIE lists this as required). */
+  fullLyrics?: string
+  /** Styles to exclude from the replacement segment */
+  negativeTags?: string
   fieldMappings: FieldMappings
   executionStatus?: "idle" | "running" | "completed" | "failed"
   errorMessage?: string
@@ -2800,6 +2815,10 @@ export type SunoAddInstrumentalData = {
   [key: string]: unknown
   label: string
   model: "V4_5PLUS" | "V5" | "V5_5"
+  /** Manual Suno task ID (auto-filled from a connected Suno node when wired) */
+  taskId?: string
+  /** Manual Suno audio/track ID (auto-filled from a connected Suno node when wired) */
+  audioId?: string
   fieldMappings: FieldMappings
   executionStatus?: "idle" | "running" | "completed" | "failed"
   errorMessage?: string
@@ -2814,6 +2833,10 @@ export type SunoAddVocalsData = {
   [key: string]: unknown
   label: string
   model: "V4_5PLUS" | "V5" | "V5_5"
+  /** Manual Suno task ID (auto-filled from a connected Suno node when wired) */
+  taskId?: string
+  /** Manual Suno audio/track ID (auto-filled from a connected Suno node when wired) */
+  audioId?: string
   fieldMappings: FieldMappings
   executionStatus?: "idle" | "running" | "completed" | "failed"
   errorMessage?: string
@@ -2827,6 +2850,10 @@ export type SunoAddVocalsData = {
 export type SunoConvertWavData = {
   [key: string]: unknown
   label: string
+  /** Manual Suno task ID (auto-filled from a connected Suno node when wired) */
+  taskId?: string
+  /** Manual Suno audio/track ID (auto-filled from a connected Suno node when wired) */
+  audioId?: string
   fieldMappings: FieldMappings
   executionStatus?: "idle" | "running" | "completed" | "failed"
   errorMessage?: string

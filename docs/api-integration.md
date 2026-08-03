@@ -592,11 +592,12 @@ so a value the model doesn't support is ignored, never a 400:
   `aspectRatio: "adaptive"` (plus `"21:9"`). `seedance-2-fast` and
   `seedance-2-mini` are **480p / 720p only** (no 1080p, no 4K).
 - **`minimax-h3`** (MiniMax Hailuo 3) takes the same reference fields with the
-  same 9 / 3 / 3 caps but renders at a **fixed 2K** — any `resolution` value is
-  dropped (no lever). `aspectRatio: "adaptive"` is the default; a pure
-  text-to-video call needs a concrete ratio (adaptive coerces to 16:9 there).
-  Reference audio must ride with an image or video reference; input images
-  beyond the first 5 add a per-image surcharge.
+  same 9 / 3 / 3 caps and renders at `resolution: "2K"` (default) or `"768P"`
+  (the cheaper per-second rate) — any other resolution value renders and bills
+  as 2K. `aspectRatio: "adaptive"` is the default; a pure text-to-video call
+  needs a concrete ratio (adaptive coerces to 16:9 there). Reference audio
+  must ride with an image or video reference; input images beyond the first 5
+  add a per-image surcharge.
 - **Frames + references coexist.** When any reference (image / video / audio)
   is wired alongside a start/end frame, the frames become prompt-directed
   `Image N` references rather than pinned endpoints — the resolver decides the

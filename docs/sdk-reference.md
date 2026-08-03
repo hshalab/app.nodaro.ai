@@ -748,9 +748,11 @@ if ("jobId" in result) {
 > `seedance-2` (full) accepts `resolution: "4k"` and `aspectRatio: "adaptive"`
 > (plus `"21:9"`); `seedance-2-fast` / `seedance-2-mini` are 480p / 720p only.
 > **MiniMax Hailuo 3** (`minimax-h3`) takes the same reference fields (9 images /
-> 3 videos / 3 audio) at a fixed 2K output — `resolution` is ignored, ref-video
-> input seconds bill like Seedance 2, and input images beyond the first 5 add a
-> per-image surcharge (audio refs are free but must accompany an image/video ref).
+> 3 videos / 3 audio) at `resolution: "2K"` (default) or `"768P"` (cheaper
+> per-second rate; any other value renders and bills as 2K) — ref-video input
+> seconds bill like Seedance 2 at the selected tier's rate, and input images
+> beyond the first 5 add a per-image surcharge (audio refs are free but must
+> accompany an image/video ref).
 > `resolution` / `aspectRatio` are pass-through strings — an unsupported value
 > is ignored, never a 400. Start/end frames and references can coexist (the
 > frames become prompt-directed `Image N` references; the resolver picks the

@@ -2022,6 +2022,7 @@ export function registerAudioVerbs({ server, session, fastify }: RegisterOpts): 
         style_weight: z.number().min(0).max(1).optional(),
         weirdness: z.number().min(0).max(1).optional(),
         audio_weight: z.number().min(0).max(1).optional(),
+        duration: z.number().min(10).max(360).optional().describe("Song length in seconds (10-360). Only honored when custom_mode=true and model=V5_5; ignored otherwise."),
       },
       outputSchema: JOB_OUTPUT_SCHEMA,
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
@@ -2044,6 +2045,7 @@ export function registerAudioVerbs({ server, session, fastify }: RegisterOpts): 
         ...(args.style_weight !== undefined ? { styleWeight: args.style_weight } : {}),
         ...(args.weirdness !== undefined ? { weirdnessConstraint: args.weirdness } : {}),
         ...(args.audio_weight !== undefined ? { audioWeight: args.audio_weight } : {}),
+        ...(args.duration !== undefined ? { duration: args.duration } : {}),
         mcp_client: session.clientName,
         userId: session.userId,
       }
@@ -2131,10 +2133,12 @@ export function registerAudioVerbs({ server, session, fastify }: RegisterOpts): 
       inputSchema: {
         audio_asset_id: z.string().min(1).describe("Nodaro audio job id of a Suno track."),
         infill_start_s: z.number().min(0).describe("Start time in seconds of the region to replace."),
-        infill_end_s: z.number().min(6).max(60).describe("End time in seconds (must be ≥ start + 6, max 60)."),
+        infill_end_s: z.number().min(6).describe("End time in seconds. The replaced interval (end − start) must be 6-60s and at most 50% of the song."),
         prompt: z.string().min(1).max(3000).describe("Description of what to generate for the replaced region."),
         tags: z.string().max(500).describe("Style tags for the replacement segment."),
         title: z.string().max(SUNO_TITLE_MAX).optional(),
+        full_lyrics: z.string().max(5000).optional().describe("Complete post-edit lyrics of the whole song (modified + unmodified parts)."),
+        negative_tags: z.string().max(500).optional().describe("Styles to exclude from the replacement segment."),
       },
       outputSchema: JOB_OUTPUT_SCHEMA,
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
@@ -2154,6 +2158,8 @@ export function registerAudioVerbs({ server, session, fastify }: RegisterOpts): 
         prompt: args.prompt,
         tags: args.tags,
         ...(args.title ? { title: args.title } : {}),
+        ...(args.full_lyrics ? { fullLyrics: args.full_lyrics } : {}),
+        ...(args.negative_tags ? { negativeTags: args.negative_tags } : {}),
         mcp_client: session.clientName,
         userId: session.userId,
       }

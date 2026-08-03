@@ -1,7 +1,7 @@
 import type { WorkflowNode, WorkflowEdge, GenerateVideoProNodeData, EditVideoProNodeData } from "@/types/nodes";
 import { StorageExceededError } from "@/lib/api";
 import { useWorkflowStore } from "@/hooks/use-workflow-store";
-import { buildMotionCreditModelIdentifier, isDefaultSelectorConfig, selectListItems, type SelectorFields, getEffectiveRepeatCount, buildScraperCreditId, isScraperActor, SCRAPER_CREDIT_COSTS, buildVideoAnalysisCreditId, resolveVideoAnalysisModel, bucketSecondsFromCreditId, VIDEO_ANALYSIS_BUCKET_CREDITS, FAN_OUT_EACH_TYPES, buildVideoCreditModelIdentifier, SEEDANCE_2_CONTINUATION_REF_SEC, isMinimaxH3Provider } from "@nodaro/shared"
+import { buildMotionCreditModelIdentifier, isDefaultSelectorConfig, selectListItems, type SelectorFields, getEffectiveRepeatCount, buildScraperCreditId, isScraperActor, SCRAPER_CREDIT_COSTS, buildVideoAnalysisCreditId, resolveVideoAnalysisModel, bucketSecondsFromCreditId, VIDEO_ANALYSIS_BUCKET_CREDITS, FAN_OUT_EACH_TYPES, buildVideoCreditModelIdentifier, SEEDANCE_2_CONTINUATION_REF_SEC, isMinimaxH3Provider, normalizeMinimaxH3Resolution } from "@nodaro/shared"
 // getCachedCredits reads the live React-Query model-cost cache (an `ee/`
 // concern — credits are enterprise-only). Allowlisted in
 // tools/check-ee-imports.mjs (same coupling as ./run-handlers.ts).
@@ -182,18 +182,24 @@ const GVP_NOREF_FALLBACK = 820
 const GVP_REF_FALLBACK = 500
 const GVP_FEE_FALLBACK = 100
 
-/** Static fallback for the minimax-h3 8s composite (STATIC_CREDIT_COSTS
- *  `minimax-h3:8s` = 730) — fixed 2K output, no resolution axis, r2v rate ==
- *  base rate, so ONE composite backs both rates. */
+/** Static fallbacks for the minimax-h3 8s composites (STATIC_CREDIT_COSTS
+ *  `minimax-h3:8s` = 730, `minimax-h3:8s:768p` = 450) — the r2v rate equals
+ *  the base rate of the selected tier, so ONE composite per tier backs both
+ *  rates. */
 const GVP_MINIMAX_H3_FALLBACK = 730
+const GVP_MINIMAX_H3_768P_FALLBACK = 450
 
 /** Per-second BASE rate for a (provider, resolution, ref) combination, read from the
  *  live cached composite when available (mirrors the backend's perSecRate identifier
- *  scheme exactly: `${provider}:8s:${resolution}[-ref]`, minimax-h3 → the
- *  resolution-less `minimax-h3:8s`), else a static fallback. */
+ *  scheme exactly: `${provider}:8s:${resolution}[-ref]`, minimax-h3 → the bare
+ *  `minimax-h3:8s` for 2K/anything-else and `minimax-h3:8s:768p` for a
+ *  verified 768P selection), else a static fallback. */
 function gvpPerSecRate(provider: string, resolution: string, ref: boolean): number {
   if (isMinimaxH3Provider(provider)) {
-    const composite = getCachedCredits(`${provider}:8s`) ?? GVP_MINIMAX_H3_FALLBACK
+    const is768p = normalizeMinimaxH3Resolution(resolution) === "768P"
+    const composite = is768p
+      ? (getCachedCredits(`${provider}:8s:768p`) ?? GVP_MINIMAX_H3_768P_FALLBACK)
+      : (getCachedCredits(`${provider}:8s`) ?? GVP_MINIMAX_H3_FALLBACK)
     return composite / 8
   }
   const identifier = `${provider}:8s:${resolution}${ref ? "-ref" : ""}`

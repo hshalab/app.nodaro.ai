@@ -62,7 +62,7 @@ Generate Video covers the union of the legacy image-to-video and text-to-video c
 | Gemini Omni | `gemini-omni-video` | T2V, I2V, video-edit (V2V) | 4 / 6 / 8 / 10s; 720p / 1080p / 4K (4K not on free tier); no prompt-baked audio (external `audio_ids` only — see section); up to 7 reference images; V2V uses trim window ≤ 10 s |
 | Kling | `kling`, `kling-turbo`, `kling-3.0`, `kling-master` | T2V, I2V (`kling-master` is I2V-only) | 5 / 10s (Kling 3.0: continuous 3–15s) |
 | Seedance / Seedance 2 | `seedance`, `seedance-2`, `seedance-2-fast`, `seedance-2-mini` | T2V, I2V, reference (S2) | S2: 4–15s; aspect 16:9 / 9:16 / 1:1 / 4:3 / 3:4 / **21:9** / **adaptive** — **`adaptive` is the default** (output matches the wired input; was `16:9`). Resolution by variant (separate KIE models): `seedance-2` (full) **480p / 720p / 1080p / 4K**; `seedance-2-fast` **480p / 720p only** (no 1080p, no 4K); `seedance-2-mini` **480p / 720p only**. Up to 9 image + 3 video + 3 audio refs |
-| MiniMax Hailuo 3 | `minimax-h3` | T2V, I2V (first/last frame), reference | 4–15s (any second, default 6); **fixed 2K output — no resolution lever**; aspect 21:9 / 16:9 / 4:3 / 1:1 / 3:4 / 9:16 + **adaptive** (default; pure T2V requires a concrete ratio and renders 16:9 when left on adaptive). Up to 9 image + 3 video + 3 audio refs; audio always on |
+| MiniMax Hailuo 3 | `minimax-h3` | T2V, I2V (first/last frame), reference | 4–15s (any second, default 6); resolution **2K (default) / 768P** (768P is the cheaper per-second rate); aspect 21:9 / 16:9 / 4:3 / 1:1 / 3:4 / 9:16 + **adaptive** (default; pure T2V requires a concrete ratio and renders 16:9 when left on adaptive). Up to 9 image + 3 video + 3 audio refs; audio always on |
 | Hailuo | `hailuo-2.3-pro`, `hailuo-2.3`, `hailuo-standard` | T2V (`hailuo-standard`), I2V | 6 / 10s |
 | Bytedance | `bytedance-lite`, `bytedance-pro`, `bytedance-pro-fast` | T2V (lite, pro), I2V | 5 / 10s |
 | MiniMax | `minimax` | T2V, I2V | Fixed 5s, end-frame supported |
@@ -197,11 +197,14 @@ If neither has the identifier, the route returns HTTP 503 `price_not_configured`
 | `kling-turbo` | 5s | — | i2v | — | 110 |
 | `kling-3.0` | 10s | — | i2v | sound on | ~1.5× the silent rate |
 | `minimax` | 5s | — | i2v | — | 143 |
-| `minimax-h3` | 6s | 2K (fixed) | any | ≤ 5 input images | 550 |
-| `minimax-h3` | 8s | 2K (fixed) | any | ≤ 5 input images | 730 |
-| `minimax-h3` | 15s | 2K (fixed) | any | ≤ 5 input images | 1370 |
-| `minimax-h3` | 8s out | 2K (fixed) | reference | + 5s reference video | 1187 |
-| `minimax-h3` | 6s | 2K (fixed) | reference | 8 input images (3 over the free 5) | 630 |
+| `minimax-h3` | 6s | 2K (default) | any | ≤ 5 input images | 550 |
+| `minimax-h3` | 8s | 2K (default) | any | ≤ 5 input images | 730 |
+| `minimax-h3` | 15s | 2K (default) | any | ≤ 5 input images | 1370 |
+| `minimax-h3` | 8s | 768P | any | ≤ 5 input images | 450 |
+| `minimax-h3` | 15s | 768P | any | ≤ 5 input images | 850 |
+| `minimax-h3` | 8s out | 2K (default) | reference | + 5s reference video | 1187 |
+| `minimax-h3` | 8s out | 768P | reference | + 5s reference video | 732 |
+| `minimax-h3` | 6s | 2K (default) | reference | 8 input images (3 over the free 5) | 630 |
 | `seedance-2` | 8s | 720p | i2v | no ref | 820 |
 | `seedance-2` | 8s | 1080p | i2v | no ref | 2040 |
 | `seedance-2` | 8s | 1080p | i2v | with ref | 1240 |
@@ -232,12 +235,12 @@ If neither has the identifier, the route returns HTTP 503 `price_not_configured`
 
 So at 8s: 1080p = `ceil(102×8/4) × 10` = **2040** no-ref / `ceil(62×8/4) × 10` = **1240** with-ref; 4K = `ceil(208×8/4) × 10` = **4160** no-ref / `ceil(128×8/4) × 10` = **2560** with-ref. Wiring any reference (image / video / audio) selects the cheaper `-ref` ladder. 4K is the full `seedance-2` only — `seedance-2-fast` (480p / 720p) and `seedance-2-mini` (480p / 720p) are separate, cheaper KIE models with their own ladders (neither has a 1080p SKU).
 
-**MiniMax Hailuo 3** (`minimax-h3`) is per-second priced via the duration-only composite `minimax-h3:<N>s` (N = 4–15) — output is fixed 2K, so there is no resolution or `-ref` dimension. Credits = `ceil(36.5 × seconds / 4) × 10` (36.5 = the KIE per-second rate). Examples: 4s = 370, 6s = 550 (the default duration), 8s = 730, 15s = 1370. Two extra billing dimensions are reserved dynamically on top of the composite:
+**MiniMax Hailuo 3** (`minimax-h3`) is per-second priced at two resolution rates. The composite is `minimax-h3:<N>s` (N = 4–15) for **2K** — the default, and what any non-768P resolution value renders and bills as — and `minimax-h3:<N>s:768p` for **768P**, the cheaper tier. Credits = `ceil(rate × seconds / 4) × 10`, with rate = 36.5 KIE cr/s @2K and 22.5 @768P. Examples: @2K 4s = 370, 6s = 550 (the default duration), 8s = 730, 15s = 1370; @768P 4s = 230, 6s = 340, 8s = 450, 15s = 850. There is no `-ref` dimension. Two extra billing dimensions are reserved dynamically on top of the composite:
 
-- **Reference-video input seconds** bill at the same per-second rate: total = `ceil(91.25 × (Σ reference_video_seconds + output_seconds))` base credits, where 91.25 = the 8s composite ÷ 8. Example: 8s output + a 5s reference video = `ceil(91.25 × 13)` = **1187**.
-- **Input images beyond the first 5** (counting frames folded into the reference pool) add 27.5 base credits each (11 KIE cr/image). Example: 6s output with 8 pool images = `ceil(91.25 × 6 + 3 × 27.5)` = **630**. Reference audio is free.
+- **Reference-video input seconds** bill at the selected resolution's per-second rate: total = `ceil(perSec × (Σ reference_video_seconds + output_seconds))` base credits, where perSec = the selected tier's 8s composite ÷ 8 (91.25 @2K, 56.25 @768P). Examples: 8s output + a 5s reference video = `ceil(91.25 × 13)` = **1187** @2K, `ceil(56.25 × 13)` = **732** @768P.
+- **Input images beyond the first 5** (counting frames folded into the reference pool) add 27.5 base credits each (11 KIE cr/image, resolution-independent). Example @2K: 6s output with 8 pool images = `ceil(91.25 × 6 + 3 × 27.5)` = **630**. Reference audio is free.
 
-**Reference videos bill input + output duration.** KIE bills "with video input" runs as `per_sec × (input_video_duration + output_duration)`, not output alone. When one or more reference videos are wired, the runtime ffprobes their durations at reservation time and reserves the full scaled base up front (per-second base rate = the provider's 8s composite ÷ 8, on the `-ref` ladder for Seedance 2 and the flat ladder for MiniMax H3) — credits can only be refunded (never up-charged) at commit, so the full duration is reserved. A probe failure assumes the 15s cap (KIE limits total reference video to ≤ 15s) so a blip never under-charges. Reference **images** and **audio** do not add input duration — only reference **videos** do (and for `minimax-h3`, images beyond the first 5 add the per-image surcharge above).
+**Reference videos bill input + output duration.** KIE bills "with video input" runs as `per_sec × (input_video_duration + output_duration)`, not output alone. When one or more reference videos are wired, the runtime ffprobes their durations at reservation time and reserves the full scaled base up front (per-second base rate = the provider's 8s composite ÷ 8, on the `-ref` ladder for Seedance 2 and the selected resolution tier's ladder for MiniMax H3) — credits can only be refunded (never up-charged) at commit, so the full duration is reserved. A probe failure assumes the 15s cap (KIE limits total reference video to ≤ 15s) so a blip never under-charges. Reference **images** and **audio** do not add input duration — only reference **videos** do (and for `minimax-h3`, images beyond the first 5 add the per-image surcharge above).
 
 Cross-check the runtime table in `/admin/models` for the live numbers — the worked examples above match the `STATIC_CREDIT_COSTS` snapshot at the time of this writing.
 

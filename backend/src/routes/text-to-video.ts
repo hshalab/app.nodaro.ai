@@ -109,6 +109,7 @@ export async function textToVideoRoutes(app: FastifyInstance) {
                 outputDurationSec: Number(b.duration ?? 6),
                 referenceVideoUrls: refVideos,
                 referenceImageCount: refImageCount,
+                resolution: b.resolution,
               })
             }
             // No ref videos and ≤5 images → the seeded duration composite prices it.

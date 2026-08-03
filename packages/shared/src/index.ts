@@ -110,6 +110,8 @@ export {
   isSeedance2Provider,
   MINIMAX_H3_PROVIDERS,
   isMinimaxH3Provider,
+  MINIMAX_H3_DEFAULT_RESOLUTION,
+  normalizeMinimaxH3Resolution,
   GVP_SUPPORTED_PROVIDERS,
   isGvpSupportedProvider,
   defaultVideoAspectRatio,

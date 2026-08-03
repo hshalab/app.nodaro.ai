@@ -58,6 +58,12 @@ export interface SunoGenerateParams {
   customMode?: boolean
   /** Whether the song is instrumental (no vocals) */
   instrumental?: boolean
+  /**
+   * Requested song length in seconds (KIE: 10–360, default 20). KIE only
+   * honors it when customMode is true AND model is V5_5; sunoGenerate gates
+   * the send on exactly those conditions so other models never see it.
+   */
+  duration?: number
   /** Custom voice persona id (from /api/v1/voice/generate). Sent as `personaId`. */
   personaId?: string
   /** Persona kind. Defaults to "voice_persona" when personaId is set. */
@@ -191,14 +197,22 @@ export interface SunoReplaceSectionParams {
   audioId: string
   /** Start time of section to replace (seconds) */
   infillStartS: number
-  /** End time of section to replace (seconds, 6-60s, max 50% of song) */
+  /** End time of section to replace (seconds; the end−start interval must be 6-60s, max 50% of song) */
   infillEndS: number
-  /** Replacement prompt */
+  /** Replacement prompt (the new lyrics for the replaced section) */
   prompt: string
   /** Style / genre tags */
   tags: string
   /** Song title */
   title?: string
+  /**
+   * Complete post-edit lyrics of the WHOLE song (modified + unmodified parts).
+   * Listed as required by the current KIE spec; optional here so pre-existing
+   * callers keep working while KIE tolerates its absence.
+   */
+  fullLyrics?: string
+  /** Styles to exclude from the replacement segment */
+  negativeTags?: string
 }
 
 export interface SunoStyleBoostParams {
@@ -526,6 +540,12 @@ export async function sunoGenerate(
   if (params.styleWeight != null) body.style_weight = params.styleWeight
   if (params.weirdnessConstraint != null) body.weirdness_constraint = params.weirdnessConstraint
   if (params.audioWeight != null) body.audio_weight = params.audioWeight
+  // Per docs.kie.ai/suno-api/generate-music: "only effective when custom_mode
+  // is true and model is V5_5" — this send-gate is the single chokepoint, so a
+  // stale duration on a node switched to another model can never leak through.
+  if (params.duration != null && (params.customMode ?? false) && model === "V5_5") {
+    body.duration = params.duration
+  }
   if (params.personaId) {
     body.personaId = params.personaId
     body.personaModel = params.personaModel ?? "voice_persona"
@@ -1086,6 +1106,11 @@ export async function sunoReplaceSection(
   const body: Record<string, unknown> = {
     taskId: params.taskId,
     audioId: params.audioId,
+    // The current KIE spec names these camelCase (infillStartS/infillEndS);
+    // the snake_case twins are what this client historically sent and KIE
+    // accepted, so both are included until the old form is confirmed dead.
+    infillStartS: params.infillStartS,
+    infillEndS: params.infillEndS,
     infill_start_s: params.infillStartS,
     infill_end_s: params.infillEndS,
     prompt: params.prompt,
@@ -1094,6 +1119,8 @@ export async function sunoReplaceSection(
   }
 
   if (params.title) body.title = params.title
+  if (params.fullLyrics) body.fullLyrics = params.fullLyrics
+  if (params.negativeTags) body.negativeTags = params.negativeTags
 
   if (DEBUG) console.log(`[Suno] Replacing section for task ${params.taskId}`)
   if (DEBUG) console.log(`[Suno] Request:`, JSON.stringify(body, null, 2))

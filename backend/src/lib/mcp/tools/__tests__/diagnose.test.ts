@@ -74,6 +74,14 @@ describe("classifyFailure", () => {
     expect(classifyFailure("NSFW content detected").class).toBe("content_policy")
   })
 
+  it("flags copyright blocks as content_policy (the sanitized KIE copyright message)", () => {
+    expect(
+      classifyFailure(
+        "Blocked for copyright: the provider refused this generation because the output may contain copyrighted material (recognizable characters, footage, music, or logos). Change the input image/clip or rephrase the prompt — retrying the same request will fail again.",
+      ).class,
+    ).toBe("content_policy")
+  })
+
   it("flags input validation errors", () => {
     expect(classifyFailure("prompt is required").class).toBe("validation")
     expect(classifyFailure("Invalid aspect ratio: 7:3").class).toBe("validation")

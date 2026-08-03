@@ -1,7 +1,7 @@
 ---
 node_type: suno-convert-wav
-generated_at: 2026-05-18T13:23:37.454Z
-generated_from: cb1e786d
+generated_at: 2026-08-03T12:33:47.344Z
+generated_from: 4260ead1d
 ---
 
 # Suno Convert WAV
@@ -18,6 +18,8 @@ generated_from: cb1e786d
 - `fieldMappings: FieldMappings`
 
 **Optional data fields:**
+- `taskId?: string`
+- `audioId?: string`
 - `executionStatus?: "idle" | "running" | "completed" | "failed"`
 - `errorMessage?: string`
 - `generatedAudioUrl?: string`

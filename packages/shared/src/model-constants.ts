@@ -1142,9 +1142,10 @@ export function isSeedance2Provider(provider: string | undefined): boolean {
  * covers three KIE endpoints (text-to-video / image-to-video /
  * reference-to-video); the provider layer swaps the endpoint by which inputs
  * are present. Mirrors the Seedance 2 multimodal surface (frames + image/video/
- * audio references) but with a FIXED 2K output (no resolution lever) and
- * uniform per-second pricing. Exact-membership set — NEVER match on a
- * "minimax" prefix (the unrelated Hailuo 02 id "minimax" would collide).
+ * audio references) with a two-rate resolution lever (2K default / 768P,
+ * added 2026-08-03) and per-second pricing at the selected resolution's rate.
+ * Exact-membership set — NEVER match on a "minimax" prefix (the unrelated
+ * Hailuo 02 id "minimax" would collide).
  */
 export const MINIMAX_H3_PROVIDERS = new Set<string>([
   "minimax-h3",
@@ -1152,6 +1153,23 @@ export const MINIMAX_H3_PROVIDERS = new Set<string>([
 
 export function isMinimaxH3Provider(provider: string | undefined): boolean {
   return !!provider && MINIMAX_H3_PROVIDERS.has(provider)
+}
+
+/** MiniMax Hailuo 3 resolution the model renders when the param is omitted or
+ *  unknown — the KIE-side default. */
+export const MINIMAX_H3_DEFAULT_RESOLUTION = "2K"
+
+/**
+ * SINGLE normalization for the MiniMax Hailuo 3 resolution lever (KIE wire
+ * enum "768P" | "2K", default 2K) — shared by billing (credit-identifier
+ * suffix, r2v compute hook, GVP per-second anchor) and the provider layer's
+ * KIE forwarding. Only a case-insensitive "768p" selects the cheaper tier;
+ * ANYTHING else (undefined, a stale Seedance "720p", garbage) collapses to
+ * "2K" — exactly what KIE renders when the param is omitted/unknown, so the
+ * billed tier can never undercut the rendered one.
+ */
+export function normalizeMinimaxH3Resolution(resolution: string | undefined): "768P" | "2K" {
+  return resolution?.trim().toLowerCase() === "768p" ? "768P" : MINIMAX_H3_DEFAULT_RESOLUTION
 }
 
 /**
@@ -1170,9 +1188,10 @@ export function isMinimaxH3Provider(provider: string | undefined): boolean {
  * frames-fold-into-references), takes per-second durations across the engine's
  * whole 4–15s segment window, and generates native audio — so the pro engine's
  * hybrid transport (context-tail video ref + last-frame anchor + identity
- * refs) rides unchanged. Fixed 2K output: the node's resolution lever is
- * inert for it (pricing has no resolution axis — see
- * ee/billing/generate-video-pro-credits.ts perSecRate).
+ * refs) rides unchanged. Two-rate resolution lever (2K default / 768P,
+ * 2026-08-03): the node's catalog-driven resolution select applies, and
+ * perSecRate prices the matching composite (bare :8s = 2K, :8s:768p — see
+ * ee/billing/generate-video-pro-credits.ts).
  */
 export const GVP_SUPPORTED_PROVIDERS = ["seedance-2", "seedance-2-fast", "minimax-h3"] as const
 
@@ -1653,10 +1672,11 @@ export const VIDEO_VARIABLE_PRICING: Record<string, "duration" | "duration+audio
   "seedance-2": "duration+resolution+ref",
   "seedance-2-fast": "duration+resolution+ref",
   "seedance-2-mini": "duration+resolution+ref",
-  // MiniMax Hailuo 3 — fixed 2K output, uniform per-second rate: duration is
-  // the only composite dimension (ref-video input seconds + extra input
-  // images are billed via the dedicated compute hook, not the identifier).
-  "minimax-h3": "duration",
+  // MiniMax Hailuo 3 — per-second rate at two resolution tiers (2K default /
+  // 768P). Duration + resolution form the composite (bare = 2K, ":768p"
+  // appended for the cheaper tier); ref-video input seconds + extra input
+  // images are billed via the dedicated compute hook, not the identifier.
+  "minimax-h3": "duration+resolution",
   // Grok Imagine Video 1.5 — per-second billing split 480p/720p (no video-ref dimension).
   "grok-imagine-video-1.5": "duration+resolution",
 }
@@ -1761,9 +1781,10 @@ export const VIDEO_DURATION_TIERS: Record<string, Array<{ maxSeconds: number; su
     { maxSeconds: 12, suffix: "12s" },
     { maxSeconds: 15, suffix: "15s" },
   ],
-  // MiniMax Hailuo 3 — true per-second billing (KIE 36.5 cr/s, fixed 2K). One
-  // tier per allowed second (4-15s) so the composite identifier maps 1:1 to
-  // the seeded price — no rounding/overcharge for any on-menu duration.
+  // MiniMax Hailuo 3 — true per-second billing (KIE 36.5 cr/s @2K, 22.5 cr/s
+  // @768P). One tier per allowed second (4-15s) so the composite identifier
+  // maps 1:1 to the seeded price — no rounding/overcharge for any on-menu
+  // duration; the ":768p" resolution suffix is appended after the tier.
   "minimax-h3": [
     { maxSeconds: 4, suffix: "4s" },
     { maxSeconds: 5, suffix: "5s" },

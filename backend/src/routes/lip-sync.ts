@@ -78,10 +78,12 @@ export function resolveLipSyncIdentifier(body: Record<string, unknown> | undefin
   // credit-identifiers.ts. Without this, seedance-2-fast/-mini + 4k (and -mini +
   // 1080p) emit an unseeded composite that 503s under the hard-fail credit guard.
   // seedance-2 4k→:8s:4k-ref; -fast 4k→:8s:1080p-ref; -mini 4k|1080p→:8s:720p-ref.
-  // MiniMax Hailuo 3 — same audio-as-reference mechanism but a fixed 2K
-  // output: no resolution dimension and the r2v rate equals the base rate, so
-  // ANY requested resolution collapses onto the seeded 8s duration composite
-  // (the reservation tier; the worker decides actual duration).
+  // MiniMax Hailuo 3 — same audio-as-reference mechanism. The lip-sync
+  // surface's resolution enum (480p-4k) never names H3's own 768P tier, so
+  // every request reserves the 2K-rate 8s composite (the top tier — KIE
+  // renders 2K when the param is omitted, and the worker decides actual
+  // duration). If H3 lip-sync ever exposes the 768P lever, route the id
+  // through normalizeMinimaxH3Resolution like the video routes do.
   if (isMinimaxH3Provider(provider)) {
     return "minimax-h3:8s"
   }

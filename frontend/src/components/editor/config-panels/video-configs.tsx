@@ -1078,8 +1078,28 @@ function ImageToVideoConfigImpl({ data, onUpdate, sources, fieldMappings, onMapF
 
       {isMinimaxH3Provider(data.provider) && (
         <>
-          {/* Fixed 2K output — no resolution lever (deliberately NO Resolution
-              select; the fail-safe effect clears any stale data.resolution). */}
+          {/* Two-rate resolution lever (2K default / 768P cheaper) — options
+              are catalog-driven; the fail-safe effect snaps stale values to
+              opts[0] ("2K"). */}
+          {(() => {
+            const opts = getVideoResolutionOptions(currentI2VProvider)
+            return opts && opts.length > 0 ? (
+              <div>
+                <Label className="text-xs">Resolution</Label>
+                <Select
+                  value={(data.resolution as string) || opts[0].value}
+                  onValueChange={(v) => onUpdate({ resolution: v })}
+                >
+                  <SelectTrigger aria-label="Resolution"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {opts.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null
+          })()}
           <MappableField field="aspectRatio" label="Aspect Ratio" sources={sources} fieldMappings={fieldMappings} onMapField={onMapField}>
             <AspectRatioSelector
               options={getAspectRatiosForVideoModel(currentI2VProvider)}
@@ -1088,7 +1108,7 @@ function ImageToVideoConfigImpl({ data, onUpdate, sources, fieldMappings, onMapF
             />
           </MappableField>
           <p className="text-[10px] text-muted-foreground px-1">
-            Fixed 2K output. “adaptive” matches the wired input; pure text-to-video renders 16:9 unless a concrete ratio is picked. Audio is always generated — lip-synced to reference audio when connected.
+            2K (default) or 768P output — 768P bills at the cheaper per-second rate. “adaptive” matches the wired input; pure text-to-video renders 16:9 unless a concrete ratio is picked. Audio is always generated — lip-synced to reference audio when connected.
           </p>
         </>
       )}
@@ -2292,9 +2312,32 @@ function TextToVideoConfigImpl({ data, onUpdate, sources, fieldMappings, onMapFi
       )}
 
       {isMinimaxH3 && (
-        <p className="text-[10px] text-muted-foreground px-1">
-          Fixed 2K output. Audio is always generated — lip-synced to reference audio when connected.
-        </p>
+        <>
+          {/* Two-rate resolution lever (2K default / 768P cheaper) — catalog-
+              driven; the fail-safe effect snaps stale values to opts[0]. */}
+          {(() => {
+            const opts = getVideoResolutionOptions(currentProvider)
+            return opts && opts.length > 0 ? (
+              <div>
+                <Label className="text-xs">Resolution</Label>
+                <Select
+                  value={(data.resolution as string) || opts[0].value}
+                  onValueChange={(v) => onUpdate({ resolution: v })}
+                >
+                  <SelectTrigger aria-label="Resolution"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {opts.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null
+          })()}
+          <p className="text-[10px] text-muted-foreground px-1">
+            2K (default) or 768P output — 768P bills at the cheaper per-second rate. Audio is always generated — lip-synced to reference audio when connected.
+          </p>
+        </>
       )}
 
       {isSeedance2 && (
@@ -3240,8 +3283,28 @@ function GenerateVideoConfigImpl({ data: rawData, onUpdate: rawOnUpdate, sources
 
       {isMinimaxH3 && (
         <>
-          {/* Fixed 2K output — no resolution lever (deliberately NO Resolution
-              select; the fail-safe effect clears any stale data.resolution). */}
+          {/* Two-rate resolution lever (2K default / 768P cheaper) — options
+              are catalog-driven; the fail-safe effect snaps stale values to
+              opts[0] ("2K"). */}
+          {(() => {
+            const opts = getVideoResolutionOptions(currentProvider)
+            return opts && opts.length > 0 ? (
+              <div>
+                <Label className="text-xs">Resolution</Label>
+                <Select
+                  value={(data.resolution as string) || opts[0].value}
+                  onValueChange={(v) => onUpdate({ resolution: v })}
+                >
+                  <SelectTrigger aria-label="Resolution"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {opts.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null
+          })()}
           <MappableField field="aspectRatio" label="Aspect Ratio" sources={sources} fieldMappings={fieldMappings} onMapField={onMapField}>
             <AspectRatioSelector
               options={getAspectRatiosForVideoModel(currentProvider)}
@@ -3250,7 +3313,7 @@ function GenerateVideoConfigImpl({ data: rawData, onUpdate: rawOnUpdate, sources
             />
           </MappableField>
           <p className="text-[10px] text-muted-foreground px-1">
-            Fixed 2K output. “adaptive” matches the wired input; pure text-to-video renders 16:9 unless a concrete ratio is picked. Audio is always generated — lip-synced to reference audio when connected.
+            2K (default) or 768P output — 768P bills at the cheaper per-second rate. “adaptive” matches the wired input; pure text-to-video renders 16:9 unless a concrete ratio is picked. Audio is always generated — lip-synced to reference audio when connected.
           </p>
         </>
       )}

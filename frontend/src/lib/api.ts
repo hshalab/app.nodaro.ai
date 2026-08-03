@@ -3802,6 +3802,7 @@ export async function sunoGenerateApi(params: {
   audioWeight?: number
   customMode?: boolean
   instrumental?: boolean
+  duration?: number
   personaId?: string
   personaModel?: "voice_persona" | "style_persona"
   userId?: string
@@ -3816,6 +3817,7 @@ export async function sunoGenerateApi(params: {
   if (params.styleWeight != null) body.styleWeight = params.styleWeight
   if (params.weirdnessConstraint != null) body.weirdnessConstraint = params.weirdnessConstraint
   if (params.audioWeight != null) body.audioWeight = params.audioWeight
+  if (params.duration != null) body.duration = params.duration
   body.customMode = params.customMode ?? false
   body.instrumental = params.instrumental ?? false
   if (params.personaId) {
@@ -4002,10 +4004,14 @@ export async function sunoReplaceSectionApi(params: {
   prompt: string
   tags: string
   title?: string
+  fullLyrics?: string
+  negativeTags?: string
   userId?: string
 }): Promise<{ jobId: string }> {
   const body: Record<string, unknown> = { taskId: params.taskId, audioId: params.audioId, infillStartS: params.infillStartS, infillEndS: params.infillEndS, prompt: params.prompt, tags: params.tags }
   if (params.title) body.title = params.title
+  if (params.fullLyrics) body.fullLyrics = params.fullLyrics
+  if (params.negativeTags) body.negativeTags = params.negativeTags
   if (params.userId) body.userId = params.userId
   return apiJson("/v1/suno/replace-section", {
     body,

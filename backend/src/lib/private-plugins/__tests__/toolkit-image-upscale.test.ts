@@ -96,4 +96,64 @@ describe("tk.providers.imageUpscale", () => {
       .rejects.toThrow("topaz 502")
     expect(mockUploadBuffer).not.toHaveBeenCalled()
   })
+
+  // KIE's market ingest can fail transiently on a seconds-old object and the
+  // failure sticks to that exact URL for a window (2026-08-03: 422 "Field
+  // required" replayed ~2h while Seedance ingested the same URL fine). The
+  // retry rides a fresh query nonce so KIE sees a new cache key.
+  it("retries once under a fresh query nonce when the provider rejects, and plates from the retry", async () => {
+    const src = await checkerPng(W, H)
+    const plate = await sharp(src).resize(W * 2, H * 2, { kernel: "lanczos3" }).png().toBuffer()
+    mockEditImage
+      .mockRejectedValueOnce(new Error("Image editing failed: Field required"))
+      .mockResolvedValueOnce({ url: "https://provider/plate.png" })
+    mockFetchImage.mockImplementation(async (url: string) =>
+      url === "https://r2/anchor.png" ? src : plate)
+    mockUploadBuffer.mockResolvedValue("https://cdn/images/plate-x.png")
+    const tk = buildToolkit()
+
+    const result = await tk.providers.imageUpscale("https://r2/anchor.png", "topaz-image-upscale")
+
+    expect(mockEditImage).toHaveBeenCalledTimes(2)
+    expect(mockEditImage.mock.calls[0]).toEqual(["https://r2/anchor.png", "topaz-image-upscale"])
+    expect(mockEditImage.mock.calls[1][0]).toMatch(/^https:\/\/r2\/anchor\.png\?n=[0-9a-f]{8}$/)
+    expect(mockEditImage.mock.calls[1][1]).toBe("topaz-image-upscale")
+    expect(result).toEqual({ url: "https://cdn/images/plate-x.png" })
+  })
+
+  it("nonce joins with & when the source URL already carries a query string", async () => {
+    const src = await checkerPng(W, H)
+    const plate = await sharp(src).resize(W * 2, H * 2, { kernel: "lanczos3" }).png().toBuffer()
+    mockEditImage
+      .mockRejectedValueOnce(new Error("Field required"))
+      .mockResolvedValueOnce({ url: "https://provider/plate.png" })
+    mockFetchImage.mockImplementation(async (url: string) =>
+      url.startsWith("https://r2/anchor.png?w=1") ? src : plate)
+    mockUploadBuffer.mockResolvedValue("https://cdn/images/plate-x.png")
+    const tk = buildToolkit()
+
+    await tk.providers.imageUpscale("https://r2/anchor.png?w=1", "topaz-image-upscale")
+
+    expect(mockEditImage.mock.calls[1][0]).toMatch(/^https:\/\/r2\/anchor\.png\?w=1&n=[0-9a-f]{8}$/)
+  })
+
+  it("gives up after the nonce retry — exactly two provider attempts, error propagates", async () => {
+    mockEditImage.mockRejectedValue(new Error("Field required"))
+    const tk = buildToolkit()
+
+    await expect(tk.providers.imageUpscale("https://r2/anchor.png", "topaz-image-upscale"))
+      .rejects.toThrow("Field required")
+    expect(mockEditImage).toHaveBeenCalledTimes(2)
+    expect(mockUploadBuffer).not.toHaveBeenCalled()
+  })
+
+  it("an unreadable source fails BEFORE any provider attempt is spent", async () => {
+    mockFetchImage.mockRejectedValue(new Error("plate gate: fetch 404 for https://r2/anchor.png"))
+    const tk = buildToolkit()
+
+    await expect(tk.providers.imageUpscale("https://r2/anchor.png", "topaz-image-upscale"))
+      .rejects.toThrow(/fetch 404/)
+    expect(mockEditImage).not.toHaveBeenCalled()
+    expect(mockUploadBuffer).not.toHaveBeenCalled()
+  })
 })

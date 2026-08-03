@@ -1,7 +1,7 @@
 ---
 node_type: suno-add-vocals
-generated_at: 2026-05-18T13:23:37.448Z
-generated_from: cb1e786d
+generated_at: 2026-08-03T12:33:47.335Z
+generated_from: 4260ead1d
 ---
 
 # Suno Add Vocals
@@ -19,6 +19,8 @@ generated_from: cb1e786d
 - `fieldMappings: FieldMappings`
 
 **Optional data fields:**
+- `taskId?: string`
+- `audioId?: string`
 - `executionStatus?: "idle" | "running" | "completed" | "failed"`
 - `errorMessage?: string`
 - `generatedAudioUrl?: string`

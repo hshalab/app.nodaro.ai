@@ -620,6 +620,42 @@ export interface PluginJobsToolkit {
    * stop surface; the stop route responds 503 instead of crashing.
    */
   requestJobStop?(jobId: string): Promise<void>
+  /**
+   * Route-side CAS fail for SYNCHRONOUS priced routes (first consumer:
+   * `/v1/recast/revise`, which has no worker to own its failure path).
+   * Flips only LIVE rows (pending/processing) and returns whether WE
+   * flipped it — callers refund only on true, mirroring the workers'
+   * only-if-we-flipped discipline.
+   *
+   * OPTIONAL (additive-contract convention): absent → 503 "backend update
+   * required" from the consuming route.
+   */
+  markJobFailed?(jobId: string, errorMessage: string): Promise<boolean>
+  /**
+   * Exposes the worker-layer refund (`workers/shared.ts` `refundJobCredits`)
+   * to routes. Falsy usageLogId no-ops; a string reason always refunds
+   * (pre-provider failures — the only kind a synchronous route produces).
+   *
+   * OPTIONAL (additive-contract convention): absent → 503 from the route.
+   */
+  refundJobCredits?(usageLogId: string, jobId: string, reason: string): Promise<void>
+  /**
+   * The recast direction gate's re-take waiver predicate, as ONE dedicated
+   * query (six filters + an OR — the generic select mirror cannot express
+   * it, and `maybeSingle()` errors on ≥2 rows). True iff a completed recast
+   * PLANNING row (`input_data.type === "recast"`, never `recast-revise`)
+   * exists for this user + workflow + analysis AND (created before
+   * `cutoverIso` OR `input_data.direction` present).
+   *
+   * OPTIONAL (additive-contract convention): absent → the gate treats the
+   * waiver as un-checkable and responds 503 rather than mis-gating.
+   */
+  hasWaivingRecastRun?(q: {
+    userId: string
+    workflowId: string
+    analysisJobId: string
+    cutoverIso: string
+  }): Promise<boolean>
 }
 
 // ============================================================================

@@ -4059,6 +4059,8 @@ export function buildPayload(
         prompt: promptFor("suno-replace-section"),
         tags: data.tags,
         title: data.title,
+        fullLyrics: data.fullLyrics || undefined,
+        negativeTags: data.negativeTags || undefined,
         usageLogId,
       })
 

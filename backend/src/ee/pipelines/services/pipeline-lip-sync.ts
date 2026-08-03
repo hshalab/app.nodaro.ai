@@ -63,8 +63,9 @@ export async function pipelineLipSync(
     throw new Error("pipelineLipSync requires either videoUrl or imageUrl")
   }
 
-  // Mirror routes/lip-sync.ts credit-identifier construction. (minimax-h3 has
-  // no resolution dimension — its duration composite prices every tier.)
+  // Mirror routes/lip-sync.ts credit-identifier construction. (minimax-h3
+  // reserves the 2K-rate 8s composite — the lip-sync surface never sends
+  // H3's own 768P tier, and KIE renders 2K when the param is omitted.)
   const modelIdentifier =
     provider === "infinitalk"
       ? `infinitalk:${resolution ?? "720p"}`

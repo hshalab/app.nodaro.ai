@@ -10,12 +10,14 @@ Suno Replace Section targets a precise time range within an existing Suno track 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | Start Time | number (seconds) | `0` | Beginning of the section to replace (minimum 0). |
-| End Time | number (seconds) | `30` | End of the section to replace (minimum 6, maximum 60). |
-| Prompt | string (max 3000) | `""` | Description of the replacement content (required). |
+| End Time | number (seconds) | `30` | End of the section to replace. The replaced **interval** (End − Start) must be between 6 and 60 seconds and at most 50% of the song — the end timestamp itself can be anywhere in the track (e.g. 100s→130s is valid). |
+| Prompt | string (max 3000) | `""` | The new lyrics/content for the replaced section (required). |
 | Tags | string (max 500) | `""` | Style/genre tags for the replacement section (required). |
 | Title | string (max 200) | `""` | Optional title for the replacement. |
-| Task ID | string | `""` | Suno task ID from an upstream Suno node (required, resolved automatically). |
-| Audio ID | string | `""` | Suno audio ID from an upstream Suno node (required, resolved automatically). |
+| Full Lyrics | string | `""` | Complete post-edit lyrics of the **whole song** — modified and unmodified parts combined. Suno uses it as the full lyric sheet after the replacement. |
+| Negative Tags | string (max 500) | `""` | Styles to exclude from the replacement segment (e.g. "rock"). |
+| Task ID | string | `""` | Suno task ID — auto-filled from a connected Suno node, or paste one manually to edit a track from an earlier session. |
+| Audio ID | string | `""` | Suno audio ID — auto-filled from a connected Suno node, or paste one manually. |
 
 ## Inputs & Outputs
 
@@ -23,7 +25,8 @@ Suno Replace Section targets a precise time range within an existing Suno track 
 - **Outputs:** `audio` -- modified audio URL with the replaced section
 ## Best Practices
 
-- Keep the replacement window between 6 and 60 seconds -- shorter or longer ranges are not supported.
+- Keep the replacement window (End − Start) between 6 and 60 seconds -- shorter or longer intervals are not supported. The window can sit anywhere in the track.
+- Provide Full Lyrics (the complete post-edit lyric sheet) so Suno blends the replacement into the song's overall lyrics coherently.
 - Provide both a descriptive prompt and relevant tags for the best replacement quality.
 - Listen to the source track carefully to identify precise start and end timestamps before replacing.
 - Use this node iteratively to refine individual sections without affecting the rest of the song.
@@ -39,7 +42,7 @@ Suno Replace Section targets a precise time range within an existing Suno track 
 
 ## Tips
 
-- The End Time must be at least 6 seconds and at most 60 seconds. The minimum replacement length is 6 seconds.
-- Both Task ID and Audio ID are resolved automatically when connected to an upstream Suno node.
+- The replaced interval (End − Start) must be 6–60 seconds; the timestamps themselves are unrestricted.
+- Both Task ID and Audio ID are resolved automatically when connected to an upstream Suno node — a live connection overrides manual values. Copy them from a Suno Generate node (shown under its player) to edit a track from an earlier session.
 - The Tags field is required by the backend validation -- always provide at least basic genre tags.
 - This is one of the most cost-efficient Suno nodes, making it ideal for iterative refinement workflows.

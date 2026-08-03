@@ -1,4 +1,5 @@
 import { resolveSeedance2Inputs } from "@nodaro/prompts"
+import { normalizeMinimaxH3Resolution } from "@nodaro/shared"
 import { STATIC_CREDIT_COSTS, PriceNotConfiguredError } from "./credits.js"
 import { probeMediaDuration } from "../../providers/video/ffmpeg-utils.js"
 
@@ -65,27 +66,34 @@ export function minimaxH3BillableRefImageCount(args: {
 /**
  * BASE (0%-markup) credit total for a MiniMax Hailuo 3 run that the seeded
  * duration composites cannot express: reference-video input (KIE bills
- * `unit × (input_video_duration + output_duration)`) and/or more than 5 input
- * images (11 KIE cr each beyond the first 5).
+ * `unit × (input_video_duration + output_duration)` at the SELECTED
+ * resolution's rate) and/or more than 5 input images (11 KIE cr each beyond
+ * the first 5 — resolution-independent).
  *
- * The per-second base rate is derived EXACTLY from the seeded 8s composite —
- * `perSecBase = STATIC_CREDIT_COSTS["minimax-h3:8s"] / 8` (= 91.25) — the same
- * derivation seedance2RefVideoBaseCredits uses, so DB/table repricing flows
- * through automatically. There is NO resolution dimension (fixed 2K output)
- * and the r2v rate equals the base rate.
+ * The per-second base rate is derived EXACTLY from the seeded 8s composite of
+ * the selected resolution tier — `STATIC_CREDIT_COSTS["minimax-h3:8s"] / 8`
+ * (= 91.25) for 2K, `STATIC_CREDIT_COSTS["minimax-h3:8s:768p"] / 8` (= 56.25)
+ * for 768P — the same derivation seedance2RefVideoBaseCredits uses, so
+ * DB/table repricing flows through automatically. `resolution` collapses via
+ * normalizeMinimaxH3Resolution (anything not exactly 768P bills at 2K —
+ * matching what KIE renders for omitted/unknown values); the r2v rate equals
+ * the base rate of the tier.
  *
- * Hard-fail policy: throws `PriceNotConfiguredError` when the 8s composite is
- * missing (matches getModelCreditBaseCost's policy — never silently
- * under-reserve).
+ * Hard-fail policy: throws `PriceNotConfiguredError` when the anchor
+ * composite is missing (matches getModelCreditBaseCost's policy — never
+ * silently under-reserve).
  */
 export function minimaxH3BaseCredits(args: {
   outputDurationSec: number
   inputVideoDurationSec: number
   referenceImageCount: number
+  resolution?: unknown
 }): number {
-  const composite8s = STATIC_CREDIT_COSTS["minimax-h3:8s"]
+  const res = normalizeMinimaxH3Resolution(typeof args.resolution === "string" ? args.resolution : undefined)
+  const anchorId = res === "768P" ? "minimax-h3:8s:768p" : "minimax-h3:8s"
+  const composite8s = STATIC_CREDIT_COSTS[anchorId]
   if (composite8s === undefined) {
-    throw new PriceNotConfiguredError("minimax-h3:8s")
+    throw new PriceNotConfiguredError(anchorId)
   }
   const perSecBase = composite8s / 8
   const extraImages = Math.max(0, args.referenceImageCount - MINIMAX_H3_FREE_INPUT_IMAGES)
@@ -113,6 +121,7 @@ export async function minimaxH3BaseCreditsFromUrls(args: {
   outputDurationSec: number
   referenceVideoUrls: readonly unknown[]
   referenceImageCount: number
+  resolution?: unknown
 }): Promise<number> {
   const candidates = args.referenceVideoUrls
     .slice(0, MAX_REF_VIDEOS)
@@ -129,5 +138,6 @@ export async function minimaxH3BaseCreditsFromUrls(args: {
     outputDurationSec: args.outputDurationSec,
     inputVideoDurationSec,
     referenceImageCount: args.referenceImageCount,
+    resolution: args.resolution,
   })
 }

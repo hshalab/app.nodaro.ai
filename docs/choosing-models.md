@@ -140,7 +140,7 @@ Many video models support **both** `t2v` and `i2v` from the same id — the Gene
 | ⭐ Kling 3.0 | Kuaishou | Premium | 500 | i2v, t2v | Premium Kling 3.0 — variable 3-15s duration, native audio, 720P/1080P. |
 | Video Analysis (Pro) | Nodaro | Premium | 509 | video-analysis | Analyze a video into a structured shot list (scenes, camera, audio) — higher-fidelity, default tier. Billed per duration bucket. |
 | Seedance 2 Extend | Bytedance | Premium | 530 | extend | Extend ANY video: generates the continuation (audio included) and trim-stitches it into one seamless clip. |
-| Hailuo 3 (H3) | MiniMax | Premium | 550 | i2v, t2v | MiniMax Hailuo 3 — premium multimodal tier: first/last frame + image/video/audio references, native audio, fixed 2K output, 4-15s per-second pricing. |
+| Hailuo 3 (H3) | MiniMax | Premium | 550 | i2v, t2v | MiniMax Hailuo 3 — premium multimodal tier: first/last frame + image/video/audio references, native audio, 2K (default) or 768P output, 4-15s per-second pricing. |
 | Kling Avatar Pro | Kuaishou | Premium | 560 | lip-sync | Premium lip-sync — better mouth shape and timing. |
 | Video Analysis (Mixed) | Nodaro | Premium | 651 | video-analysis | Our most advanced analysis tier — multiple analysis engines combined into one result for maximum completeness and accuracy. Billed per duration bucket. |
 | ⭐ VEO 3.1 Quality | Google | Premium | 1000 | i2v, t2v | Google VEO 3.1 Quality — premium cinematic video. 4/6/8s clips, optional end frame, native audio. Flat per-generation pricing across durations. |

@@ -146,6 +146,18 @@ export function createSanitizedError(
     sanitizedMessage =
       "Input file exceeds the size or duration limit. Please use a shorter or smaller file."
   } else if (
+    // BEFORE the generic content-policy group: "copyright violation" must get
+    // this message, not the "violat" match below. KIE's copyright failMsg says
+    // "restrictions", not "violation", so without these patterns it fell to the
+    // generic "please try again" fallback — actively wrong advice, the block is
+    // deterministic on the same inputs (prod report 2026-08-03).
+    lowerMsg.includes("copyright") ||
+    lowerMsg.includes("intellectual property") ||
+    lowerMsg.includes("trademark")
+  ) {
+    sanitizedMessage =
+      "Blocked for copyright: the provider refused this generation because the output may contain copyrighted material (recognizable characters, footage, music, or logos). Change the input image/clip or rephrase the prompt — retrying the same request will fail again."
+  } else if (
     lowerMsg.includes("filtered") ||
     lowerMsg.includes("prohibited") ||
     lowerMsg.includes("content policy") ||

@@ -88,19 +88,19 @@ async function finalizeSunoJob(
 }
 
 const handleSunoGenerate: HandlerFn = async function handleSunoGenerate(job, ctx) {
-  const { prompt, model, lyrics, style, title, negativeStyle, vocalGender, styleWeight, weirdnessConstraint, audioWeight, customMode, instrumental, personaId, personaModel } = job.data as {
+  const { prompt, model, lyrics, style, title, negativeStyle, vocalGender, styleWeight, weirdnessConstraint, audioWeight, customMode, instrumental, duration, personaId, personaModel } = job.data as {
     jobId: string; prompt: string; model?: SunoModel; lyrics?: string; style?: string; title?: string
     negativeStyle?: string; vocalGender?: string; styleWeight?: number; weirdnessConstraint?: number; audioWeight?: number
-    customMode?: boolean; instrumental?: boolean
+    customMode?: boolean; instrumental?: boolean; duration?: number
     personaId?: string; personaModel?: "voice_persona" | "style_persona"
   }
-  console.log(`[worker] suno-generate ${ctx.jobId} (model: ${model ?? "V5"}, customMode: ${customMode}, instrumental: ${instrumental}${personaId ? `, persona: ${personaModel ?? "voice_persona"}` : ""})`)
+  console.log(`[worker] suno-generate ${ctx.jobId} (model: ${model ?? "V5"}, customMode: ${customMode}, instrumental: ${instrumental}${duration != null ? `, duration: ${duration}s` : ""}${personaId ? `, persona: ${personaModel ?? "voice_persona"}` : ""})`)
   const onTaskCreated = makeOnTaskCreated(ctx.jobId, providerKindForSuno())
   const result = await withProgressRamp(
     job,
     ctx.jobId,
     { start: 5, cap: 45 },
-    () => sunoGenerate({ prompt, model, lyrics, style, title, negativeStyle, vocalGender, styleWeight, weirdnessConstraint, audioWeight, customMode, instrumental, personaId, personaModel }, { onTaskCreated }),
+    () => sunoGenerate({ prompt, model, lyrics, style, title, negativeStyle, vocalGender, styleWeight, weirdnessConstraint, audioWeight, customMode, instrumental, duration, personaId, personaModel }, { onTaskCreated }),
   )
   await finalizeSunoJob(job, ctx, result, "Suno returned no tracks")
 }
@@ -261,8 +261,9 @@ const handleSunoMashup: HandlerFn = async function handleSunoMashup(job, ctx) {
 }
 
 const handleSunoReplaceSection: HandlerFn = async function handleSunoReplaceSection(job, ctx) {
-  const { taskId: sunoTaskId, audioId, infillStartS, infillEndS, prompt, tags, title } = job.data as {
+  const { taskId: sunoTaskId, audioId, infillStartS, infillEndS, prompt, tags, title, fullLyrics, negativeTags } = job.data as {
     jobId: string; taskId: string; audioId: string; infillStartS: number; infillEndS: number; prompt: string; tags: string; title?: string
+    fullLyrics?: string; negativeTags?: string
   }
   console.log(`[worker] suno-replace-section ${ctx.jobId} (audioId: ${audioId}, ${infillStartS}s-${infillEndS}s)`)
   const onTaskCreated = makeOnTaskCreated(ctx.jobId, providerKindForSuno())
@@ -270,7 +271,7 @@ const handleSunoReplaceSection: HandlerFn = async function handleSunoReplaceSect
     job,
     ctx.jobId,
     { start: 5, cap: 45 },
-    () => sunoReplaceSection({ taskId: sunoTaskId, audioId, infillStartS, infillEndS, prompt, tags, title }, { onTaskCreated }),
+    () => sunoReplaceSection({ taskId: sunoTaskId, audioId, infillStartS, infillEndS, prompt, tags, title, fullLyrics, negativeTags }, { onTaskCreated }),
   )
   await finalizeSunoJob(job, ctx, result, "Suno replace-section returned no tracks")
 }

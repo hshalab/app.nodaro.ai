@@ -42,6 +42,7 @@ import {
   setJobProgress,
   withProgressRamp,
   commitJobCredits,
+  refundJobCredits,
   uploadVideoMaybeWatermark,
   requestJobStop,
 } from "../../workers/shared.js"
@@ -416,6 +417,71 @@ async function readJob(jobId: string): Promise<{
 }
 
 /**
+ * `tk.jobs.markJobFailed` — route-side CAS fail for SYNCHRONOUS priced routes
+ * (first consumer: `/v1/recast/revise`, which has no worker to own its
+ * failure path). Flips only LIVE rows — the same live-status gate as the
+ * worker failure paths (`workers/video-worker.ts`) so a concurrent
+ * completion/cancel is never clobbered — and reports whether WE flipped it
+ * (the caller refunds only on true, mirroring the worker's only-if-we-flipped
+ * refund discipline).
+ */
+async function pluginMarkJobFailed(jobId: string, errorMessage: string): Promise<boolean> {
+  const { data } = await supabase
+    .from("jobs")
+    .update({
+      status: "failed",
+      error_message: errorMessage,
+      completed_at: new Date().toISOString(),
+    })
+    .eq("id", jobId)
+    .in("status", ["pending", "processing"])
+    .select("id")
+  return Array.isArray(data) && data.length > 0
+}
+
+/**
+ * `tk.jobs.refundJobCredits` — exposes the worker-layer refund to routes.
+ * Falsy usageLogId no-ops (the reserve never landed / was already aborted);
+ * a plain string reason always refunds (`workers/shared.ts` treats a string
+ * as carrying no post-delivery signal — correct for pre-provider revise
+ * failures, the only kind a synchronous route produces).
+ */
+async function pluginRefundJobCredits(usageLogId: string, jobId: string, reason: string): Promise<void> {
+  if (!usageLogId) return
+  await refundJobCredits(usageLogId, jobId, reason)
+}
+
+/**
+ * `tk.jobs.hasWaivingRecastRun` — the recast direction gate's re-take waiver
+ * predicate as ONE dedicated query. Deliberately NOT the generic select
+ * mirror: the predicate needs six filters plus an OR, and `maybeSingle()`
+ * would ERROR on any user with ≥2 completed runs — hence `.limit(1)`.
+ * Waives iff a completed recast PLANNING row (never `recast-revise` rows —
+ * a paid revise must not disarm the gate) exists for this user + workflow +
+ * analysis, AND it either predates the gate cutover or itself carried
+ * direction.
+ */
+async function hasWaivingRecastRun(q: {
+  userId: string
+  workflowId: string
+  analysisJobId: string
+  cutoverIso: string
+}): Promise<boolean> {
+  const { data } = await supabase
+    .from("jobs")
+    .select("id")
+    .eq("user_id", q.userId)
+    .eq("workflow_id", q.workflowId)
+    .eq("app_slug", "recast")
+    .eq("status", "completed")
+    .eq("input_data->>type", "recast")
+    .eq("input_data->>analysisJobId", q.analysisJobId)
+    .or(`created_at.lt.${q.cutoverIso},input_data->direction.not.is.null`)
+    .limit(1)
+  return Array.isArray(data) && data.length > 0
+}
+
+/**
  * `tk.pipelines.getSnapshot` — user-scoped status/progress read for a seeded
  * run. Three reads: the ownership-scoped `pipelines` row (`.eq("user_id",
  * userId)` → null on a foreign caller or a missing id, since the service-role
@@ -538,9 +604,28 @@ export function buildToolkit(): PluginToolkit {
       // pad/resolution snap) rejects here and the plugin's non-fatal guard
       // drops the plate for that boundary.
       imageUpscale: async (imageUrl, model) => {
-        const r = await editImage(imageUrl, model)
+        // Source fetch doubles as a readability preflight: the gate needs
+        // these bytes anyway, and an unreadable anchor should fail here
+        // before a provider task is spent on it.
+        const src = await fetchImageBuffer(imageUrl)
+        // KIE's market ingest can fail transiently on a seconds-old object
+        // and the failure sticks to that exact URL for a window (2026-08-03:
+        // 422 "Field required" replayed for ~2h while Seedance ingested the
+        // same URL fine). Retry once under a fresh query nonce — the CDN
+        // serves identical bytes, KIE sees a new cache key. Safe here because
+        // this lane only ever receives our own bare R2/CDN URLs.
+        let r: Awaited<ReturnType<typeof editImage>>
+        try {
+          r = await editImage(imageUrl, model)
+        } catch (err) {
+          console.warn(
+            `[private-plugins/imageUpscale] first attempt failed (${err instanceof Error ? err.message : String(err)}) — retrying under a fresh nonce`,
+          )
+          const sep = imageUrl.includes("?") ? "&" : "?"
+          r = await editImage(`${imageUrl}${sep}n=${randomUUID().replace(/-/g, "").slice(0, 8)}`, model)
+        }
         if (!r.url) throw new Error("image upscale returned no url")
-        const [src, ups] = await Promise.all([fetchImageBuffer(imageUrl), fetchImageBuffer(r.url)])
+        const ups = await fetchImageBuffer(r.url)
         const gate = await assertExact2xAligned(src, ups)
         const ext = gate.format === "jpeg" ? "jpg" : gate.format
         return { url: await uploadBufferToR2(ups, `images/plate-${randomUUID()}.${ext}`, `image/${gate.format}`) }
@@ -610,6 +695,9 @@ export function buildToolkit(): PluginToolkit {
         markProviderCallStart(jobId, kind as Parameters<typeof markProviderCallStart>[1]),
       readJob,
       requestJobStop,
+      markJobFailed: pluginMarkJobFailed,
+      refundJobCredits: pluginRefundJobCredits,
+      hasWaivingRecastRun,
     },
     http: {
       supabase,

@@ -10,7 +10,7 @@ Suno Generate creates complete songs from text prompts. It supports multiple Sun
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | Prompt | string | `""` | Main text prompt describing the song (in custom mode, the lyrics). Supports Suno metatag autocomplete. Max length is per-version: **5000** for V4.5 / V4.5PLUS / V4.5ALL / V5 / V5.5, **3000** for V4; **500** in non-custom (inspiration) mode. Over-long input is truncated to the model's limit — the editor warns first so you can switch model or shorten. |
-| Model | enum | `"V5"` | Suno model version: `V5`, `V4_5ALL`, `V4_5PLUS`, `V4_5`, `V4`. |
+| Model | enum | `"V5_5"` | Suno model version: `V5_5`, `V5`, `V4_5PLUS`, `V4_5ALL`, `V4_5`, `V4`. |
 | Title | string (max 80) | `""` | Title for the generated song (Suno caps titles at 80 characters). |
 | Lyrics | string | `""` | Song lyrics with metatag support (`[Verse]`, `[Chorus]`, `[Bridge]`, etc.). Same per-version max as Prompt (5000 for V4.5+/V5, 3000 for V4). |
 | Style | string (max 1000) | `""` | Genre and style tags (e.g., "pop rock, upbeat, energetic"). Max **1000** for V4.5+/V5, **200** for V4. |
@@ -21,6 +21,7 @@ Suno Generate creates complete songs from text prompts. It supports multiple Sun
 | Audio Weight | number | `0.5` | Balance between prompt and audio characteristics (0.0 to 1.0). |
 | Custom Mode | boolean | `false` | Enables advanced parameter control. |
 | Instrumental | boolean | `false` | When true, generates instrumental-only (no vocals). |
+| Duration | number (10–360) | auto | Requested song length in seconds. **V5.5 + custom mode only** — with any other model, or outside custom mode, Suno ignores it and picks the length itself. Leave empty for automatic. |
 
 ## Inputs & Outputs
 
@@ -41,6 +42,8 @@ The four **Advanced** handles appear when you expand **Advanced ▾** on the nod
 **Outputs**
 
 - `audio` — generated audio URL
+
+The result also carries the Suno **Task ID** and **Track ID**, shown on the node under the player (click to copy). Downstream Suno nodes (Extend, Replace Section, Separate, Music Video, Add Instrumental / Vocals, Convert WAV) pick them up automatically when connected — or paste them into those nodes' Task ID / Audio ID fields to work with a track from an earlier session.
 
 ## Bottom-strip controls
 

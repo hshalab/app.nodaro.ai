@@ -3847,6 +3847,8 @@ export function executeNode(
           prompt: promptOf("suno-replace-section"),
           tags: d.tags?.trim() || "",
           title: d.title?.trim() || undefined,
+          fullLyrics: d.fullLyrics?.trim() || undefined,
+          negativeTags: d.negativeTags?.trim() || undefined,
           userId: ctx.userId,
         }),
       "generatedAudioUrl",

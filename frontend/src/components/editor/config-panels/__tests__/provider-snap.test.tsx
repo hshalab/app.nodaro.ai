@@ -594,14 +594,24 @@ describe("ImageToVideoConfig — provider-snap useEffect", () => {
     expect(onUpdate).toHaveBeenCalledWith(expect.objectContaining({ resolution: undefined }))
   })
 
-  it("clears stale seedance resolution when switching to minimax-h3 (fixed 2K, no lever)", () => {
-    // A node configured for seedance-2 carries resolution "720p"; minimax-h3
-    // has no VIDEO_RESOLUTION_OPTIONS entry, so the fail-safe must clear it —
-    // otherwise the stale value ships to a provider with no resolution param.
+  it("snaps stale seedance resolution to 2K when switching to minimax-h3 (two-rate lever, 2K default)", () => {
+    // A node configured for seedance-2 carries resolution "720p"; minimax-h3's
+    // catalog lever is ["2K", "768P"], so the fail-safe must snap the stale
+    // value to opts[0] ("2K" — the KIE default and what billing collapses
+    // non-768P values to anyway).
     const onUpdate = vi.fn()
     const data = baseImageToVideoData({ provider: "minimax-h3", resolution: "720p" })
     render(<ImageToVideoConfig {...commonProps(onUpdate, data)} />)
-    expect(onUpdate).toHaveBeenCalledWith(expect.objectContaining({ resolution: undefined }))
+    expect(onUpdate).toHaveBeenCalledWith(expect.objectContaining({ resolution: "2K" }))
+  })
+
+  it("preserves a valid 768P selection on minimax-h3 (no snap)", () => {
+    const onUpdate = vi.fn()
+    const data = baseImageToVideoData({ provider: "minimax-h3", resolution: "768P" })
+    render(<ImageToVideoConfig {...commonProps(onUpdate, data)} />)
+    expect(onUpdate).not.toHaveBeenCalledWith(
+      expect.objectContaining({ resolution: expect.anything() }),
+    )
   })
 
   it("preserves resolution when valid for the current provider", () => {
