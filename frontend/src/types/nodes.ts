@@ -1822,6 +1822,13 @@ export type GenerateVideoNodeData =
     referenceImageOrder?: readonly string[]
   }
 
+/** Content-policy rewrite disclosure entry (Task A4, 2026-08-03). Mirrors the
+ *  plugin repo's `ContentPolicyRewriteEntry` shape byte-for-byte
+ *  (`src/plugins/generate-video-pro/engine/content-policy.ts`) — duplicated
+ *  here rather than imported (no cross-repo type sharing), same as the two
+ *  independently-maintained rewrite system prompts. */
+export type ContentPolicyRewriteEntry = { segment: number; original: string; rewritten: string }
+
 /**
  * Generate Video Pro node data — Seedance-2-family-only multi-segment stitch
  * variant of Generate Video. Above a single segment's 15s cap, the backend
@@ -1937,6 +1944,22 @@ export interface GenerateVideoProNodeData {
   gvpStoppedAtSegment?: number
   gvpDeliveredSegments?: number
   gvpSegmentCount?: number
+  /** Disclosed content-policy rewrite-and-retry per delivered segment (Task
+   *  A4, 2026-08-03) — the plugin's finalize.ts surfaces this as a top-level
+   *  array on the completed job's result JSON (sibling of `videoUrl`/`pro`,
+   *  NOT nested under `pro`) when the provider's output-side IP screen
+   *  rejected a segment's composed prompt and one disclosed LLM rewrite
+   *  succeeded. Absent when no segment needed a rewrite (the common case).
+   *  Threaded through by execute-node's gvpProExtractor (live run) and the
+   *  reload/resume readers (reconcile-completed-jobs, run-handlers'
+   *  applyRestoredJobCompletion, use-workflow-persistence's
+   *  syncNodeResultsFromDB) — every path that reads this job's raw
+   *  `output_data`. NOT surfaced through the orchestrator/whole-workflow
+   *  `NodeExecutionState.output` projection (applyBackendExecutionState /
+   *  applyCompletedExecutionResults / syncNodeStatesToStore) — that shape is
+   *  backend-constructed and doesn't carry this field; adding it there would
+   *  need a backend change, out of scope here (frontend-only). */
+  contentPolicyRewrites?: ContentPolicyRewriteEntry[]
   /** TRANSIENT continue-intent: set by the Continue affordance right before it
    *  fires the node's Run — execute-node's gvp path then dispatches
    *  `continueGenerateVideoPro(fromJobId, fromSegment)` instead of a fresh run

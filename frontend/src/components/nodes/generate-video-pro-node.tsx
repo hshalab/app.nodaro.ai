@@ -22,14 +22,7 @@ import { VISUAL_PARAMETER_PICKER_NODE_TYPES } from "@/lib/parameter-picker-types
 import { buildVideoCreditModelIdentifier } from "@nodaro/shared"
 import { estimateGenerateVideoProCredits } from "@/components/editor/workflow-editor/types"
 import { computeDeleteResultUpdates } from "@/lib/utils"
-import type { GenerateVideoProNodeData, GeneratedResult } from "@/types/nodes"
-
-/** Content-policy rewrite disclosure entry (Task A4, 2026-08-03). Mirrors the
- *  plugin repo's `ContentPolicyRewriteEntry` shape byte-for-byte
- *  (`src/plugins/generate-video-pro/engine/content-policy.ts`) — duplicated
- *  here rather than imported (no cross-repo type sharing), same as the two
- *  independently-maintained rewrite system prompts. */
-type ContentPolicyRewriteEntry = { segment: number; original: string; rewritten: string }
+import type { GenerateVideoProNodeData, GeneratedResult, ContentPolicyRewriteEntry } from "@/types/nodes"
 
 // Stable, module-level `accepts` predicates — see generate-image-node.tsx /
 // generate-video-node.tsx for why these live outside the component (avoids a
@@ -94,10 +87,16 @@ function GenerateVideoProNodeComponent({ id, data, selected }: NodeProps) {
   // older, non-rewritten result via history never shows a stale notice),
   // falling back to the top-level node field (mirrors
   // GeneratedResult.warningMessage's exact convention — see ai-avatar-node.tsx).
+  // The node-data field is wired by execute-node's gvpProExtractor (live run)
+  // and the reload/resume readers (reconcile-completed-jobs.ts,
+  // run-handlers.ts's applyRestoredJobCompletion, use-workflow-persistence.ts's
+  // syncNodeResultsFromDB) — see GenerateVideoProNodeData.contentPolicyRewrites
+  // for the full path list. `GeneratedResult` itself doesn't declare the
+  // field (kept off that shared 40+-node-type interface), hence the cast.
   const contentPolicyRewrites =
     (activeResult as unknown as { contentPolicyRewrites?: ContentPolicyRewriteEntry[] } | undefined)
       ?.contentPolicyRewrites ??
-    (nodeData.contentPolicyRewrites as ContentPolicyRewriteEntry[] | undefined) ??
+    nodeData.contentPolicyRewrites ??
     []
   const contentPolicyNotice =
     contentPolicyRewrites.length > 0
