@@ -62,6 +62,7 @@ import { KieVideoProvider } from "../../providers/kie/video.js"
 import { videoUpscale, editImage, generateImage } from "../../providers/router.js"
 import { assertExact2xAligned, fetchImageBuffer } from "./plate-gate.js"
 import { pollKieTask, isUpstreamKieFailure } from "../../providers/kie/client.js"
+import { sunoGenerate } from "../../providers/kie/suno-client.js"
 import { combineVideos as combineVideosCore } from "../../providers/video/combine-videos.js"
 import { extractTailToFile } from "../../providers/video/extract-tail.js"
 import { llmCompleteStructured } from "../llm-client.js"
@@ -71,7 +72,7 @@ import { randomUUID } from "node:crypto"
 import { dirname, join } from "node:path"
 import { promises as fs } from "node:fs"
 import type { ZodType } from "zod"
-import type { PluginToolkit, PluginLlmRequest, PluginLlmMultimodalRequest, PluginVideoGenOptions, PluginVideoGenResult, PluginImageGenOptions, PluginImageGenResult, PipelineSnapshot } from "./types.js"
+import type { PluginToolkit, PluginLlmRequest, PluginLlmMultimodalRequest, PluginVideoGenOptions, PluginVideoGenResult, PluginImageGenOptions, PluginImageGenResult, PluginMusicGenOptions, PluginMusicGenResult, PipelineSnapshot } from "./types.js"
 
 /**
  * Assembles the real `PluginToolkit` dependency-injection surface handed to
@@ -213,6 +214,44 @@ async function pluginGenerateImage(
     toReconcileOpts(options),
   )
   return { url: result.url, taskId: result.kieTaskId }
+}
+
+/**
+ * `tk.providers.generateMusic` — wraps `sunoGenerate`
+ * (`providers/kie/suno-client.ts`) reduced to ONE track for the gvp
+ * keyframes music lane (ADDITIVE 2026-08-04). DESCRIPTION mode pinned:
+ * Suno's custom mode redefines `prompt` as lyrics, so a score BRIEF must
+ * ride non-custom — which also gates away the provider's duration hint
+ * (custom-mode-only per the send-gate in sunoGenerate); `durationSec` is
+ * therefore advisory and the plugin cuts to exact length itself.
+ * Instrumental defaults ON (voices live in the video; the score is post-
+ * muxed under them). Suno returns up to two takes — the first track wins;
+ * an empty result throws so the caller's non-fatal music guard can degrade
+ * to a silent mux rather than shipping a broken URL.
+ */
+async function pluginGenerateMusic(
+  prompt: string,
+  options?: PluginMusicGenOptions,
+): Promise<PluginMusicGenResult> {
+  const result = await sunoGenerate(
+    {
+      prompt,
+      model: "V5_5",
+      customMode: false,
+      instrumental: options?.instrumental !== false,
+      ...(options?.style ? { style: options.style } : {}),
+    },
+    toReconcileOpts(options),
+  )
+  const track = result.tracks[0]
+  if (!track?.audioUrl) {
+    throw new Error("music generation returned no track")
+  }
+  return {
+    url: track.audioUrl,
+    ...(typeof track.duration === "number" && Number.isFinite(track.duration) ? { durationSec: track.duration } : {}),
+    taskId: result.taskId,
+  }
 }
 
 /**
@@ -626,6 +665,7 @@ export function buildToolkit(): PluginToolkit {
       textToVideo: pluginTextToVideo,
       imageToVideo: pluginImageToVideo,
       generateImage: pluginGenerateImage,
+      generateMusic: pluginGenerateMusic,
       // Provider-routed video enhancement (Topaz by default at the routing
       // layer). The gvp tail-restoration lever calls this on a 2-5s tail —
       // the contract exposes only (url, model, factor); reconcile/progress

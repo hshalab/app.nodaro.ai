@@ -536,6 +536,52 @@ describe("computeGenerateVideoProContinuationPricing — keyframes render method
       computeGenerateVideoProContinuationPricing({ ...base, segmentDurations: [99, 12], fromSegment: 1 }),
     ).rejects.toThrow(/invalid parent segment durations/)
   })
+
+  // ── SCENE-SET continue (2026-08-04) ────────────────────────────────────────
+
+  it("segments [2,5]: fee + exactly those members' no-ref seconds; billSegments echoes the set, billFromSegment carries min(set)", async () => {
+    const r = await computeGenerateVideoProContinuationPricing({ ...base, segments: [2, 5] })
+    expect(r.renderMethod).toBe("keyframes")
+    expect(r.billSegments).toEqual([2, 5])
+    expect(r.billFromSegment).toBe(2)
+    expect(r.anchorReserve).toBeUndefined()
+    expect(r.reserveBase).toBe(FEE + 2 * Math.ceil(12 * NO_REF_PER_SEC))
+  })
+
+  it("a suffix-shaped set prices byte-identically to the same fromSegment (one formula, two spellings)", async () => {
+    const set = await computeGenerateVideoProContinuationPricing({ ...base, segments: [4, 5] })
+    const suffix = await computeGenerateVideoProContinuationPricing({ ...base, fromSegment: 4 })
+    expect(set.reserveBase).toBe(suffix.reserveBase)
+    expect(set.billFromSegment).toBe(4)
+  })
+
+  it("the set arrives wire-shaped: duplicates dropped, order normalized", async () => {
+    const r = await computeGenerateVideoProContinuationPricing({ ...base, segments: [5, 2, 2] })
+    expect(r.billSegments).toEqual([2, 5])
+  })
+
+  it("a set REQUIRES keyframes (extend chains segments — a mid-run member cannot re-render without cascading), bounds its members, and needs at least one lever", async () => {
+    await expect(
+      computeGenerateVideoProContinuationPricing({ ...base, renderMethod: "extend", segments: [2] }),
+    ).rejects.toThrow(/requires renderMethod "keyframes"/)
+    await expect(
+      computeGenerateVideoProContinuationPricing({ ...base, segments: [0, 2] }),
+    ).rejects.toThrow(/segments outside/)
+    await expect(
+      computeGenerateVideoProContinuationPricing({ ...base, segments: [6] }),
+    ).rejects.toThrow(/segments outside/)
+    await expect(
+      computeGenerateVideoProContinuationPricing({ ...base, segments: [] }),
+    ).rejects.toThrow(/segments outside/)
+    await expect(
+      computeGenerateVideoProContinuationPricing({ provider: "seedance-2", resolution: "720p", segmentDurations: [14, 12], renderMethod: "keyframes" }),
+    ).rejects.toThrow(/one of fromSegment or segments/)
+  })
+
+  it("suffix continuations stay byte-identical: no billSegments key without the lever", async () => {
+    const r = await computeGenerateVideoProContinuationPricing({ ...base, fromSegment: 4 })
+    expect(r.billSegments).toBeUndefined()
+  })
 })
 
 describe("computeGenerateVideoProPricing — minimax-h3 (two-rate resolution lever, refPerSec == noRefPerSec per tier)", () => {

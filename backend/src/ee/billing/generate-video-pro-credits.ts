@@ -45,6 +45,17 @@ export interface GenerateVideoProPricing {
    *  refunds DOWN. Absent on extend runs and on keyframes CONTINUATIONS (which
    *  reuse the parent's already-paid-for anchors). */
   anchorReserve?: number
+  /** SCENE-SET continue (2026-08-04, keyframes only): the EXACT sorted,
+   *  deduped 1-based segments the child regenerates — an arbitrary set, not a
+   *  suffix. Set ONLY by `computeGenerateVideoProContinuationPricing` when the
+   *  caller passed `segments`; its presence is also the CAPABILITY ECHO the
+   *  plugin feature-detects (an older app ignores the arg and returns
+   *  suffix-shaped pricing with this field absent → the plugin 503s rather
+   *  than dispatching a mispriced run). The plugin's `commitBase` twin bills
+   *  feeBase + only the DONE members of this set, each at the no-ref rate.
+   *  `billFromSegment` still carries `min(set)` beside it for every consumer
+   *  that reasons about the adopted prefix. */
+  billSegments?: number[]
 }
 
 /** Image model the keyframes engine generates scene anchors with. Priced
@@ -397,8 +408,10 @@ export async function computeGenerateVideoProContinuationPricing(args: {
   /** The PARENT plan's per-segment durations (from its checkpoint's embedded
    *  pricing — money-authoritative; never recomputed from a split). */
   segmentDurations: number[]
-  /** 1-based first segment the child regenerates (and pays for). */
-  fromSegment: number
+  /** 1-based first segment the child regenerates (and pays for). OPTIONAL
+   *  since the scene-SET lever landed — when `segments` is passed it derives
+   *  as `min(segments)`; exactly one of the two must be present. */
+  fromSegment?: number
   tailSec?: number
   /** Render method (2026-08-03) — "keyframes" bills the re-rendered segments
    *  at the no-ref rate with no continuation tails and NO anchor reserve (the
@@ -406,6 +419,12 @@ export async function computeGenerateVideoProContinuationPricing(args: {
    *  re-uses). Omitted / "extend" → the classic continuation, byte-identical.
    *  Additive-optional (no contract bump). */
   renderMethod?: "extend" | "keyframes"
+  /** SCENE-SET continue (2026-08-04): the exact 1-based segments the child
+   *  regenerates — KEYFRAMES ONLY (the extend transport chains segments, so a
+   *  mid-run member cannot re-render without cascading; passing a set there
+   *  throws rather than silently suffix-pricing). Deduped + sorted here; the
+   *  echo rides back as `billSegments` (the capability signal). */
+  segments?: number[]
 }): Promise<GenerateVideoProPricing> {
   const { provider } = args
   const tailSec = clampContextTailSec(args.tailSec)
@@ -417,7 +436,23 @@ export async function computeGenerateVideoProContinuationPricing(args: {
   if (n < 1 || durations.some((d) => !Number.isFinite(d) || d < 1 || d > SPLIT.maxSeg)) {
     throw new Error("continuation pricing: invalid parent segment durations")
   }
-  const k = Math.round(args.fromSegment)
+  // SCENE-SET validation — before k derives from it. Same wire-path
+  // discipline as the durations: round, bound, dedup, sort.
+  let billSegments: number[] | undefined
+  if (args.segments !== undefined) {
+    if (args.renderMethod !== "keyframes") {
+      throw new Error('continuation pricing: a segment SET requires renderMethod "keyframes"')
+    }
+    const set = [...new Set(args.segments.map((s) => Math.round(s)))].sort((a, b) => a - b)
+    if (set.length < 1 || set.some((s) => !Number.isFinite(s) || s < 1 || s > n)) {
+      throw new Error(`continuation pricing: segments outside 1..${n}`)
+    }
+    billSegments = set
+  }
+  if (args.fromSegment === undefined && billSegments === undefined) {
+    throw new Error("continuation pricing: one of fromSegment or segments is required")
+  }
+  const k = args.fromSegment !== undefined ? Math.round(args.fromSegment) : billSegments![0]!
   if (!Number.isFinite(k) || k < 1 || k > n) {
     throw new Error(`continuation pricing: fromSegment ${args.fromSegment} outside 1..${n}`)
   }
@@ -435,13 +470,18 @@ export async function computeGenerateVideoProContinuationPricing(args: {
   // keyframes run's terms exactly, so re-rendering a scene costs the same
   // whether it lands in the parent run or a continuation.
   const keyframes = args.renderMethod === "keyframes"
-  const reserveBase = keyframes
-    ? feeBase + keyframesSegmentsBase(durations.slice(k - 1), noRefPerSec)
-    : k > 1
-      ? feeBase + Math.ceil(refPerSec * ((n - k + 1) * tailSec + durations.slice(k - 1).reduce((a, b) => a + b, 0)))
-      : feeBase +
-        Math.ceil(noRefPerSec * durations[0]!) +
-        (n > 1 ? Math.ceil(refPerSec * ((n - 1) * tailSec + (total - durations[0]!))) : 0)
+  // SCENE-SET reserve: fee + exactly the set's members at the fresh keyframes
+  // per-segment terms — re-rendering a scene costs the same whether it lands
+  // in the parent run, a suffix continuation, or a set continuation.
+  const reserveBase = billSegments !== undefined
+    ? feeBase + keyframesSegmentsBase(billSegments.map((s) => durations[s - 1]!), noRefPerSec)
+    : keyframes
+      ? feeBase + keyframesSegmentsBase(durations.slice(k - 1), noRefPerSec)
+      : k > 1
+        ? feeBase + Math.ceil(refPerSec * ((n - k + 1) * tailSec + durations.slice(k - 1).reduce((a, b) => a + b, 0)))
+        : feeBase +
+          Math.ceil(noRefPerSec * durations[0]!) +
+          (n > 1 ? Math.ceil(refPerSec * ((n - 1) * tailSec + (total - durations[0]!))) : 0)
   return {
     mode: "multi",
     clampedDurationSec: total,
@@ -455,5 +495,6 @@ export async function computeGenerateVideoProContinuationPricing(args: {
     reserveBase,
     billFromSegment: k,
     ...(keyframes ? { renderMethod: "keyframes" as const } : {}),
+    ...(billSegments !== undefined ? { billSegments } : {}),
   }
 }
