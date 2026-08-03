@@ -13,7 +13,7 @@ const { mockEditImage, mockFetchImage, mockUploadBuffer } = vi.hoisted(() => ({
   mockFetchImage: vi.fn(),
   mockUploadBuffer: vi.fn(),
 }))
-vi.mock("../../../providers/router.js", () => ({ editImage: mockEditImage, videoUpscale: vi.fn() }))
+vi.mock("../../../providers/router.js", () => ({ editImage: mockEditImage, videoUpscale: vi.fn(), generateImage: vi.fn() }))
 vi.mock("../plate-gate.js", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../plate-gate.js")>()),
   fetchImageBuffer: mockFetchImage,

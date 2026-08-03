@@ -142,6 +142,36 @@ export interface PluginVideoGenResult {
   taskId?: string
 }
 
+/**
+ * Mirrors the options `generateImage` (`providers/router.ts`) accepts, folded
+ * into one bag: `referenceImageUrls` maps to the router's positional param;
+ * `aspectRatio`/`resolution`/`negativePrompt` map onto the snake_case
+ * `extraParams` composition (`workers/handlers/image-ai.ts`); `onTaskCreated`
+ * maps to `ReconcileOpts.onTaskCreated` (same adapter as
+ * `PluginVideoGenOptions.onTaskCreated` — the engine checkpoints the task id;
+ * `jobs.provider_task_id` is NEVER written by this path). ADDITIVE
+ * (2026-08-03, gvp keyframes anchors).
+ */
+export interface PluginImageGenOptions {
+  referenceImageUrls?: string[]
+  aspectRatio?: string
+  resolution?: string
+  negativePrompt?: string
+  onTaskCreated?: (taskId: string) => void | Promise<void>
+}
+
+/**
+ * Mirrors the resolved-generation subset of `RouteResult`
+ * (`providers/router.ts`) exposed for image generation — url plus the
+ * provider task id (`RouteResult.kieTaskId`; image-lane providers don't
+ * populate it today, so rely on `onTaskCreated` for checkpointing). ADDITIVE
+ * (2026-08-03).
+ */
+export interface PluginImageGenResult {
+  url: string
+  taskId?: string
+}
+
 export interface PluginProvidersToolkit {
   /** Mirrors `directVoiceChanger` (`providers/elevenlabs/voice-changer.ts`). */
   directVoiceChanger(
@@ -203,6 +233,24 @@ export interface PluginProvidersToolkit {
     imageUrl: string,
     model: string,
   ): Promise<{ url: string }>
+  /**
+   * Mirrors `generateImage` (`providers/router.ts`) — provider-routed image
+   * generation, folded to one options bag (`PluginImageGenOptions`; the
+   * toolkit maps its fields onto the router's positional refs + snake_case
+   * `extraParams`). Added for the gvp keyframes render method (2026-08-03):
+   * the engine generates per-scene start/end anchor frames, hosts them, and
+   * rides them as i2v start/end inputs — scenes re-render independently
+   * instead of chaining continuation tails.
+   *
+   * OPTIONAL (additive-contract convention): absent → the app predates this
+   * member; callers feature-guard (keyframes runs respond 503 "backend update
+   * required" rather than crashing).
+   */
+  generateImage?(
+    prompt: string,
+    model: string,
+    options?: PluginImageGenOptions,
+  ): Promise<PluginImageGenResult>
   /**
    * Mirrors the single-shot KIE record-info query the reconcile system polls
    * — `pollKieTask` (`providers/kie/client.ts`) called with `maxAttempts=1`,

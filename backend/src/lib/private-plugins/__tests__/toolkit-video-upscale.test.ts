@@ -8,9 +8,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 
 const { mockVideoUpscale } = vi.hoisted(() => ({ mockVideoUpscale: vi.fn() }))
-// editImage must exist on the factory too — toolkit.ts imports it for the
-// imageUpscale member (a missing named export throws at import binding).
-vi.mock("../../../providers/router.js", () => ({ videoUpscale: mockVideoUpscale, editImage: vi.fn() }))
+// editImage + generateImage must exist on the factory too — toolkit.ts
+// imports them for the imageUpscale/generateImage members (a missing named
+// export throws at import binding).
+vi.mock("../../../providers/router.js", () => ({ videoUpscale: mockVideoUpscale, editImage: vi.fn(), generateImage: vi.fn() }))
 
 import { buildToolkit } from "../toolkit.js"
 
