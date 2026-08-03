@@ -239,7 +239,7 @@ export const NODE_REGISTRY: NodeDescriptor[] = [
     label: "Generate Video Pro",
     category: "ai-video",
     description:
-      "Long-form video generation — seedance-2 / seedance-2-fast / minimax-h3 (Hailuo 3, fixed 2K output). Requests above a single segment's cap (15s) are auto-split into multiple segments and seamlessly stitched into one clip. Cloud edition only.",
+      "Long-form video generation — seedance-2 / seedance-2-fast / minimax-h3 (Hailuo 3, 2K default or 768P output). Requests above a single segment's cap (15s) are auto-split into multiple segments and seamlessly stitched into one clip. Cloud edition only.",
     outputType: "video",
     // Multi-mode fee-base (STATIC_CREDIT_COSTS["generate-video-pro"] = 100), reserved
     // on top of the per-second segment cost once the request splits into multiple

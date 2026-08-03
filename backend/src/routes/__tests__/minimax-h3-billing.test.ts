@@ -219,6 +219,72 @@ describe("/v1/generate-video minimax-h3 dynamic billing", () => {
     expect(probeSpy).not.toHaveBeenCalled()
     await app.close()
   })
+
+  it("768P prices the :768p composite (450) on the plain path — no dynamic branch", async () => {
+    const app = await buildGenerateVideoApp()
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/generate-video",
+      payload: {
+        imageUrl: "https://r2.example.com/img.png",
+        provider: "minimax-h3",
+        duration: 8,
+        resolution: "768P",
+      },
+    })
+    expect(res.statusCode).toBe(200)
+    // Strict i2v mode → identifier "minimax-h3:8s:768p" → STATIC 450.
+    expect(reserveSpy).toHaveBeenCalledWith(
+      "u-1", "job-1", expect.any(String), 0, 0,
+      expect.objectContaining({ creditOverride: 450 }),
+    )
+    expect(h3CreditsSpy).not.toHaveBeenCalled()
+    await app.close()
+  })
+
+  it("768P bills ref-video input seconds at the 768P rate: 5s ref @ 8s out → ceil(56.25 × 13) = 732", async () => {
+    const app = await buildGenerateVideoApp()
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/generate-video",
+      payload: {
+        provider: "minimax-h3",
+        duration: 8,
+        resolution: "768P",
+        referenceVideoUrls: ["https://r2.example.com/ref.mp4"],
+      },
+    })
+    expect(res.statusCode).toBe(200)
+    // perSecBase = 450/8 = 56.25 → ceil(56.25 × (5 + 8)) = 732 (vs 1187 @2K)
+    expect(reserveSpy).toHaveBeenCalledWith(
+      "u-1", "job-1", expect.any(String), 0, 0,
+      expect.objectContaining({ creditOverride: 732 }),
+    )
+    expect(h3CreditsSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ outputDurationSec: 8, resolution: "768P" }),
+    )
+    await app.close()
+  })
+
+  it("a stale non-H3 resolution collapses to the 2K rate (what KIE renders for it)", async () => {
+    const app = await buildGenerateVideoApp()
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/generate-video",
+      payload: {
+        provider: "minimax-h3",
+        duration: 8,
+        resolution: "720p", // stale Seedance value carried across a provider switch
+        referenceVideoUrls: ["https://r2.example.com/ref.mp4"],
+      },
+    })
+    expect(res.statusCode).toBe(200)
+    expect(reserveSpy).toHaveBeenCalledWith(
+      "u-1", "job-1", expect.any(String), 0, 0,
+      expect.objectContaining({ creditOverride: 1187 }),
+    )
+    await app.close()
+  })
 })
 
 describe("/v1/text-to-video minimax-h3 dynamic billing", () => {

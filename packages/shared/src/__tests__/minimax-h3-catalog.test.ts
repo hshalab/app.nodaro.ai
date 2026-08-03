@@ -29,8 +29,10 @@ describe("minimax-h3 catalog", () => {
     expect([...entry.modes].sort()).toEqual(["i2v", "t2v"])
   })
 
-  it("declares NO resolutions — fixed 2K output, no lever (pricing is duration-only)", () => {
-    expect(entry.resolutions).toBeUndefined()
+  it("declares the two-rate resolution lever with 2K first (the UI/default tier = KIE default)", () => {
+    // Order matters: opts[0] is both the dropdown default and the fail-safe
+    // snap target, and 2K is what KIE renders when the param is omitted.
+    expect(entry.resolutions).toEqual(["2K", "768P"])
   })
 
   it("offers every second 4-15 and the seven-ratio aspect set incl. adaptive + 21:9", () => {

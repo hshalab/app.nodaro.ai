@@ -490,13 +490,16 @@ export const STATIC_CREDIT_COSTS: Record<string, number> = {
   "seedance-2-mini:8s:720p-ref": 250,
   "seedance-2-mini:12s:720p-ref": 380,
   "seedance-2-mini:15s:720p-ref": 470,
-  // ── MiniMax Hailuo 3 — per-second billing, fixed 2K (no resolution lever) ──
-  // KIE 36.5 cr/s; Nodaro = ceil(36.5 × duration / 4) × 10 (at cost, like
-  // Seedance-2). One seeded tier per allowed second (4-15s). Reference-video
-  // runs bill unit × (input + output) seconds and input images beyond the
-  // first 5 add 11 KIE cr (27.5 credits) each — both reserved via the
-  // minimax-h3-credits computeCredits hook, NOT via extra composites.
-  // Reference audio is free. Base fallback = 6s (the KIE default duration).
+  // ── MiniMax Hailuo 3 — per-second billing at two resolution rates ──
+  // KIE 36.5 cr/s @2K (default) and 22.5 cr/s @768P (lever added 2026-08-03);
+  // Nodaro = ceil(rate × duration / 4) × 10 (at cost, like Seedance-2). One
+  // seeded tier per allowed second (4-15s); bare ids are the 2K rate
+  // (byte-identical to the pre-lever rows), ":768p" appends the cheaper tier.
+  // Reference-video runs bill unit × (input + output) seconds AT THE SELECTED
+  // resolution's rate, and input images beyond the first 5 add 11 KIE cr
+  // (27.5 credits) each — both reserved via the minimax-h3-credits
+  // computeCredits hook, NOT via extra composites. Reference audio is free.
+  // Base fallback = 6s @2K (the KIE default duration + resolution).
   "minimax-h3": 550,
   "minimax-h3:4s": 370,
   "minimax-h3:5s": 460,
@@ -510,6 +513,18 @@ export const STATIC_CREDIT_COSTS: Record<string, number> = {
   "minimax-h3:13s": 1190,
   "minimax-h3:14s": 1280,
   "minimax-h3:15s": 1370,
+  "minimax-h3:4s:768p": 230,
+  "minimax-h3:5s:768p": 290,
+  "minimax-h3:6s:768p": 340,
+  "minimax-h3:7s:768p": 400,
+  "minimax-h3:8s:768p": 450,
+  "minimax-h3:9s:768p": 510,
+  "minimax-h3:10s:768p": 570,
+  "minimax-h3:11s:768p": 620,
+  "minimax-h3:12s:768p": 680,
+  "minimax-h3:13s:768p": 740,
+  "minimax-h3:14s:768p": 790,
+  "minimax-h3:15s:768p": 850,
   // ── Gemini Omni Video (KIE) —; Nodaro. Lowercase 4k. ──
   "gemini-omni-video": 315,         // base = 720p/1080p 4s
   "gemini-omni-video:4": 230,

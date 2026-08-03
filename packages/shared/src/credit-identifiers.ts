@@ -19,6 +19,8 @@ import {
   MOTION_DURATION_TIERS,
   T2I_TO_I2I_VARIANT,
   isVeoProvider,
+  isMinimaxH3Provider,
+  normalizeMinimaxH3Resolution,
   getVideoAudioCapability,
 } from "./model-constants.js"
 import { isFlux2Model } from "./flux2-pricing.js"
@@ -274,6 +276,16 @@ export function buildVideoCreditModelIdentifier(
   if (resTiers) {
     const res = resolution && resTiers.includes(resolution) ? resolution : resTiers[0]!
     identifier += `:${res}`
+  }
+
+  // MiniMax Hailuo 3 (768P lever, 2026-08-03): bare duration composites stay
+  // the 2K (default) rate — byte-identical to the pre-lever seeded rows, so
+  // existing workflows and admin overrides keep their ids — and only a
+  // verified 768P selection appends ":768p". normalizeMinimaxH3Resolution
+  // collapses anything else to 2K, matching what KIE renders for an
+  // omitted/unknown value, so billing can never undercut the render.
+  if (isMinimaxH3Provider(effectiveProvider) && normalizeMinimaxH3Resolution(resolution) === "768P") {
+    identifier += ":768p"
   }
 
   return identifier

@@ -19,7 +19,7 @@ import type {
   ProviderOptions,
   ReconcileOpts,
 } from "../provider.interface.js"
-import { isSeedance2Provider, isMinimaxH3Provider, isVeoProvider, getLipSyncMaxAudioSeconds, applyVideoNegativePrompt, applyVideoAudioToggle, getModel, DEFAULT_VIDEO_PROVIDER } from "@nodaro/shared"
+import { isSeedance2Provider, isMinimaxH3Provider, normalizeMinimaxH3Resolution, isVeoProvider, getLipSyncMaxAudioSeconds, applyVideoNegativePrompt, applyVideoAudioToggle, getModel, DEFAULT_VIDEO_PROVIDER } from "@nodaro/shared"
 import { resolveSeedance2Inputs } from "@nodaro/prompts"
 import {
   createSanitizedError,
@@ -159,9 +159,12 @@ const MINIMAX_H3_FIXED_ASPECTS = new Set(["21:9", "16:9", "4:3", "1:1", "3:4", "
  *   neither (t2v entry path)       → minimax-h3/text-to-video
  *
  * Param hygiene per H3's per-endpoint schemas:
- *   - `resolution` / `web_search` / `nsfw_checker` / `generate_audio` are NOT
- *     H3 params on any endpoint — always dropped (output is fixed 2K; audio
- *     is always on, there is no toggle).
+ *   - `resolution` IS an H3 param on all three endpoints (enum 768P | 2K,
+ *     default 2K — lever added 2026-08-03): normalized via the shared
+ *     normalizeMinimaxH3Resolution and ALWAYS sent, so the render is pinned
+ *     to exactly the tier billing collapsed to (anything not 768P → 2K).
+ *   - `web_search` / `nsfw_checker` / `generate_audio` are NOT H3 params on
+ *     any endpoint — always dropped (audio is always on, there is no toggle).
  *   - `aspect_ratio`: i2v has none (inferred from frame) → dropped; r2v is
  *     optional with an "adaptive" default → forwarded only when documented;
  *     t2v REQUIRES a member of the fixed enum → adaptive/unknown coerce to
@@ -172,7 +175,13 @@ export function applyMinimaxH3Params(
   input: Record<string, unknown>,
   options: ProviderOptions | undefined,
 ): void {
-  delete input.resolution
+  // Two-rate resolution lever: normalize and ALWAYS send the KIE enum value —
+  // "768P" only for a verified selection, anything else pins the "2K" default
+  // explicitly, so the render can never drift from the billed tier (billing
+  // collapses through the SAME shared normalize).
+  input.resolution = normalizeMinimaxH3Resolution(
+    typeof input.resolution === "string" ? input.resolution : undefined,
+  )
   delete input.web_search
   delete input.nsfw_checker
   delete input.generate_audio

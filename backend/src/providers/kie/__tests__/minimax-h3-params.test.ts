@@ -6,7 +6,7 @@ const T2V_MODEL = "minimax-h3/text-to-video"
 const R2V_MODEL = "minimax-h3/reference-to-video"
 
 describe("applyMinimaxH3Params — param hygiene", () => {
-  it("drops every non-H3 param (resolution / web_search / nsfw_checker / generate_audio) and integerizes duration", () => {
+  it("drops every non-H3 param (web_search / nsfw_checker / generate_audio) and integerizes duration", () => {
     const input: Record<string, unknown> = {
       prompt: "p",
       duration: "8",
@@ -18,10 +18,43 @@ describe("applyMinimaxH3Params — param hygiene", () => {
     }
     applyMinimaxH3Params(input, undefined)
     expect(input.duration).toBe(8)
-    expect(input.resolution).toBeUndefined()
+    // A stale non-H3 resolution collapses to the explicit "2K" default — the
+    // SAME value the credit identifier bills for it, never a pass-through.
+    expect(input.resolution).toBe("2K")
     expect(input.web_search).toBeUndefined()
     expect(input.nsfw_checker).toBeUndefined()
     expect(input.generate_audio).toBeUndefined()
+  })
+
+  it("resolution lever: 768P forwards (case-normalized), everything else pins the 2K default", () => {
+    for (const [raw, expected] of [
+      ["768P", "768P"],
+      ["768p", "768P"],
+      ["2K", "2K"],
+      ["2k", "2K"],
+      [undefined, "2K"],
+      ["1080p", "2K"],
+      ["garbage", "2K"],
+    ] as const) {
+      const input: Record<string, unknown> = { prompt: "p", first_frame_url: "f" }
+      if (raw !== undefined) input.resolution = raw
+      applyMinimaxH3Params(input, undefined)
+      expect(input.resolution).toBe(expected)
+    }
+  })
+
+  it("resolution rides every mode — strict frames, reference, and pure t2v", () => {
+    const frames: Record<string, unknown> = { prompt: "p", first_frame_url: "f", resolution: "768P" }
+    applyMinimaxH3Params(frames, undefined)
+    expect(frames.resolution).toBe("768P")
+
+    const refs: Record<string, unknown> = { prompt: "p", resolution: "768P" }
+    applyMinimaxH3Params(refs, { referenceImageUrls: ["r"] })
+    expect(refs.resolution).toBe("768P")
+
+    const t2v: Record<string, unknown> = { prompt: "p", resolution: "768P" }
+    applyMinimaxH3Params(t2v, undefined)
+    expect(t2v.resolution).toBe("768P")
   })
 })
 

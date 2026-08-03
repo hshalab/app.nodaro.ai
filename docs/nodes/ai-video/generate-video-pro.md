@@ -33,7 +33,7 @@ Generate Video Pro exposes **exactly Generate Video's input handles** — same n
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| Provider | Select | `seedance-2` | `seedance-2` (full), `seedance-2-fast`, or `minimax-h3` (Hailuo 3, fixed 2K output) — the only providers the pro engine currently supports |
+| Provider | Select | `seedance-2` | `seedance-2` (full), `seedance-2-fast`, or `minimax-h3` (Hailuo 3, 2K default / 768P) — the only providers the pro engine currently supports |
 | Prompt | Text | — | Describes the video; also settable via the `prompt` handle |
 | Duration | Number (4–cap) | 8s | Minimum 4s. Maximum is the configured cap (120s by default) — see [Duration cap](#duration-cap) |
 | Aspect Ratio | Select | `adaptive` | 16:9 / 9:16 / 1:1 / 4:3 / 3:4 / 21:9 / Adaptive (matches the wired input) |
@@ -71,9 +71,9 @@ Generate Video Pro is scoped to providers whose reference surface supports the p
 |---|---|---|
 | `seedance-2` | Seedance 2.0 | 480p / 720p / 1080p / 4K |
 | `seedance-2-fast` | Seedance 2.0 Fast | 480p / 720p only |
-| `minimax-h3` | Hailuo 3 (H3) | Fixed 2K output — the Resolution selector does not apply |
+| `minimax-h3` | Hailuo 3 (H3) | 2K (default) or 768P — the Resolution selector offers H3's own two tiers; 768P bills the cheaper per-second rate |
 
-Hailuo 3 shares Seedance 2's multimodal reference surface (the same 9-image / 3-video / 3-audio reference semantics), so the whole continuation transport carries over unchanged. Its per-second price has no resolution or with-reference axis: both segment rates derive from the one `minimax-h3:8s` composite (see [Credit cost](#credit-cost)).
+Hailuo 3 shares Seedance 2's multimodal reference surface (the same 9-image / 3-video / 3-audio reference semantics), so the whole continuation transport carries over unchanged. Its per-second price has no with-reference axis; both segment rates derive from the one 8s composite of the selected resolution tier (`minimax-h3:8s` @2K, `minimax-h3:8s:768p` @768P — see [Credit cost](#credit-cost)).
 
 Other models (including Seedance 2.0 Mini) are not currently supported by the pro engine and are not offered in selection. Workflows saved with a since-withdrawn provider keep running, and the editor snaps their selection to `seedance-2` the next time the panel is opened.
 
@@ -170,7 +170,7 @@ reserve = 100 (fee) + ceil(noRefPerSec × 15) + ceil(refPerSec × ((N − 1) × 
 
 **Levered splits (Preferred segment length or explicit `segmentDurations`).** The same formula applies over the levered split's own durations, with one refinement: the first segment reserves at its **actual** planned length (`durations[0]`) instead of the worst-case 15s cap (which could over-pad — or even go negative in the reference term — when segments are short). Example: a 79.3s request with the scene-aligned array `[8, 10, 6, 6, 5, 6, 4, 4, 4, 5, 5, 5, 7, 8]` (N = 14, S = 83) reserves `100 + ceil(102.5 × 8) + ceil(62.5 × (13 × 2 + 75)) = 100 + 820 + 6313 = 7233` credits at 720p.
 
-**Hailuo 3 (`minimax-h3`) rates.** The same formula applies, but Hailuo 3 has no resolution or with-reference rate axis: **noRefPerSec = refPerSec = 91.25** credits/sec, both derived from the one `minimax-h3:8s` composite (730 ÷ 8 — output is fixed 2K, and its reference-to-video rate equals its base rate; each continuation's T-second context tail is billed as input seconds at that same rate, which is exactly the formula's `refPerSec × (N − 1) × T` term). A 60s request (5 segments, S = 62) reserves `100 + ceil(91.25 × 15) + ceil(91.25 × (4 × 2 + 47)) = 100 + 1369 + 5019 = 6488` credits.
+**Hailuo 3 (`minimax-h3`) rates.** The same formula applies, but Hailuo 3 has no with-reference rate axis: **noRefPerSec = refPerSec**, both derived from the one 8s composite of the selected resolution tier — **91.25** credits/sec @2K (`minimax-h3:8s` = 730 ÷ 8; the default, and what any non-768P resolution value collapses to) or **56.25** credits/sec @768P (`minimax-h3:8s:768p` = 450 ÷ 8). Its reference-to-video rate equals its base rate; each continuation's T-second context tail is billed as input seconds at that same rate, which is exactly the formula's `refPerSec × (N − 1) × T` term. A 60s request (5 segments, S = 62) reserves `100 + ceil(91.25 × 15) + ceil(91.25 × (4 × 2 + 47)) = 100 + 1369 + 5019 = 6488` credits @2K, or `100 + ceil(56.25 × 15) + ceil(56.25 × 55) = 100 + 844 + 3094 = 4038` @768P.
 
 #### Worked examples (720p, `seedance-2`)
 

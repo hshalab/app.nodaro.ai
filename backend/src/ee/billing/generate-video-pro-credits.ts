@@ -1,4 +1,4 @@
-import { MODEL_CATALOG, buildVideoCreditModelIdentifier, SEEDANCE_2_CONTINUATION_REF_SEC, isMinimaxH3Provider } from "@nodaro/shared"
+import { MODEL_CATALOG, buildVideoCreditModelIdentifier, SEEDANCE_2_CONTINUATION_REF_SEC, isMinimaxH3Provider, normalizeMinimaxH3Resolution } from "@nodaro/shared"
 import { STATIC_CREDIT_COSTS, PriceNotConfiguredError, getModelCreditBaseCost } from "./credits.js"
 
 /**
@@ -156,6 +156,10 @@ export function clampContextTailSec(v: unknown): number {
  * Mirrors `seedance2-ref-video-credits.ts` / `packages/shared/src/credit-identifiers.ts`.
  */
 function clampResolution(provider: string, resolution: string): string {
+  // MiniMax Hailuo 3: its own two-value space ("2K" default / "768P") with its
+  // own collapse rule — anything not exactly 768P (incl. a stale Seedance
+  // "720p" carried across a provider switch) bills AND renders as 2K.
+  if (isMinimaxH3Provider(provider)) return normalizeMinimaxH3Resolution(resolution)
   const supported = MODEL_CATALOG[provider]?.resolutions ?? ["480p", "720p", "1080p"]
   const want = resolution === "4k" ? "4k" : resolution === "1080p" ? "1080p" : resolution === "720p" ? "720p" : "480p"
   return supported.includes(want) ? want : (supported[supported.length - 1] ?? "480p")
@@ -167,23 +171,25 @@ function clampResolution(provider: string, resolution: string): string {
  * the 8s tier is used as the canonical anchor regardless of the actual
  * segment duration — mirrors `seedance2RefVideoBaseCredits`).
  *
- * `minimax-h3` (2026-08-02) has a DIFFERENT identifier shape: fixed 2K output
- * (no resolution axis) and no `-ref` composites — its r2v rate equals the base
- * rate, and KIE bills reference-VIDEO input as `unit × (input + output)`
- * seconds (see minimax-h3-credits.ts). Both rates therefore derive from the
- * one `minimax-h3:8s` composite, and the multi-segment reserve formula's
- * `refPerSec × (n−1) × tailSec` term prices each continuation's context-tail
- * input seconds exactly. The per-image surcharge (inputs beyond 5, 27.5 base
- * each) deliberately rides the provider margin, NOT user credits — the same
- * treatment as tailUpscale/identityPlate (a pro segment sends anchor + plate +
- * a few cast refs, typically within the free tier).
+ * `minimax-h3` (2026-08-02; 768P lever 2026-08-03) has a DIFFERENT identifier
+ * shape: a two-rate resolution axis (bare = 2K default, ":768p" = cheaper
+ * tier) and no `-ref` composites — its r2v rate equals the base rate of the
+ * selected tier, and KIE bills reference-VIDEO input as `unit × (input +
+ * output)` seconds at that tier's rate (see minimax-h3-credits.ts). Both
+ * rates therefore derive from the ONE 8s composite of the selected tier
+ * (`minimax-h3:8s` or `minimax-h3:8s:768p`), and the multi-segment reserve
+ * formula's `refPerSec × (n−1) × tailSec` term prices each continuation's
+ * context-tail input seconds exactly. The per-image surcharge (inputs beyond
+ * 5, 27.5 base each) deliberately rides the provider margin, NOT user
+ * credits — the same treatment as tailUpscale/identityPlate (a pro segment
+ * sends anchor + plate + a few cast refs, typically within the free tier).
  *
  * Hard-fail policy: throws `PriceNotConfiguredError` when the composite is
  * missing — never silently falls back to a wrong (under-)reservation.
  */
 function perSecRate(provider: string, resolution: string, ref: boolean): number {
   const identifier = isMinimaxH3Provider(provider)
-    ? `${provider}:8s`
+    ? (normalizeMinimaxH3Resolution(resolution) === "768P" ? `${provider}:8s:768p` : `${provider}:8s`)
     : `${provider}:8s:${resolution}${ref ? "-ref" : ""}`
   const composite = STATIC_CREDIT_COSTS[identifier]
   if (composite === undefined) {

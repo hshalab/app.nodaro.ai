@@ -343,15 +343,22 @@ describe("computeGenerateVideoProContinuationPricing — golden table (seedance-
   })
 })
 
-describe("computeGenerateVideoProPricing — minimax-h3 (fixed 2K, resolution-less identifier, refPerSec == noRefPerSec)", () => {
-  // minimax-h3:8s = 730 (credits.ts) → perSec 91.25 for BOTH rates: no
-  // resolution axis (fixed 2K output) and no -ref composites — the r2v rate
-  // equals the base rate, per minimax-h3-credits.ts. The per-image surcharge
-  // (inputs beyond 5) deliberately rides the provider margin, not user credits.
-  it("both per-second rates derive from the one minimax-h3:8s composite", async () => {
+describe("computeGenerateVideoProPricing — minimax-h3 (two-rate resolution lever, refPerSec == noRefPerSec per tier)", () => {
+  // minimax-h3:8s = 730 → perSec 91.25 @2K; minimax-h3:8s:768p = 450 → perSec
+  // 56.25 @768P (lever added 2026-08-03). No -ref composites — the r2v rate
+  // equals the base rate of the selected tier, per minimax-h3-credits.ts. The
+  // per-image surcharge (inputs beyond 5) deliberately rides the provider
+  // margin, not user credits.
+  it("both per-second rates derive from the one 2K composite for non-768P resolutions", async () => {
     const r = await computeGenerateVideoProPricing({ provider: "minimax-h3", resolution: "720p", durationSec: 60 })
     expect(r.noRefPerSec).toBe(730 / 8)
     expect(r.refPerSec).toBe(730 / 8)
+  })
+
+  it("both per-second rates derive from the one :768p composite when 768P is selected", async () => {
+    const r = await computeGenerateVideoProPricing({ provider: "minimax-h3", resolution: "768P", durationSec: 60 })
+    expect(r.noRefPerSec).toBe(450 / 8)
+    expect(r.refPerSec).toBe(450 / 8)
   })
 
   it("D=8 -> single, priced off the standard duration composite (reserveBase 730)", async () => {
@@ -359,6 +366,13 @@ describe("computeGenerateVideoProPricing — minimax-h3 (fixed 2K, resolution-le
     expect(r.mode).toBe("single")
     expect(r.creditIdentifier).toMatch(/^minimax-h3/)
     expect(r.reserveBase).toBe(730)
+  })
+
+  it("D=8 @768P -> single, priced off the :768p composite (reserveBase 450)", async () => {
+    const r = await computeGenerateVideoProPricing({ provider: "minimax-h3", resolution: "768P", durationSec: 8 })
+    expect(r.mode).toBe("single")
+    expect(r.creditIdentifier).toBe("minimax-h3:8s:768p")
+    expect(r.reserveBase).toBe(450)
   })
 
   it("D=60 -> multi, n=5, s=62: 100 (fee) + ceil(91.25×15) + ceil(91.25×(4×2+47)) = 6488", async () => {
@@ -369,13 +383,24 @@ describe("computeGenerateVideoProPricing — minimax-h3 (fixed 2K, resolution-le
     expect(r.reserveBase).toBe(6488)
   })
 
-  it("the resolution lever is inert: 480p / 1080p / 4k price identically to 720p", async () => {
+  it("D=60 @768P -> same split at the 768P rate: 100 + ceil(56.25×15) + ceil(56.25×55) = 4038", async () => {
+    const r = await computeGenerateVideoProPricing({ provider: "minimax-h3", resolution: "768P", durationSec: 60 })
+    expect(r.mode).toBe("multi")
+    expect(r.segmentDurations).toEqual([14, 12, 12, 12, 12])
+    expect(r.reserveBase).toBe(r.feeBase + Math.ceil(56.25 * 15) + Math.ceil(56.25 * (4 * 2 + 47)))
+    expect(r.reserveBase).toBe(4038)
+  })
+
+  it("non-H3 resolutions collapse to the 2K rate: 480p / 720p / 1080p / 4k price identically", async () => {
     const at = async (resolution: string) =>
       (await computeGenerateVideoProPricing({ provider: "minimax-h3", resolution, durationSec: 60 })).reserveBase
     const base = await at("720p")
     expect(await at("480p")).toBe(base)
     expect(await at("1080p")).toBe(base)
     expect(await at("4k")).toBe(base)
+    // ...and the 768P tier is strictly cheaper than the 2K collapse.
+    const r768 = await computeGenerateVideoProPricing({ provider: "minimax-h3", resolution: "768P", durationSec: 60 })
+    expect(r768.reserveBase).toBeLessThan(base)
   })
 })
 

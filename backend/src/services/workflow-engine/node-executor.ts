@@ -1045,6 +1045,7 @@ async function computeMinimaxH3CreditOverride(
     outputDurationSec: Number(payload.duration ?? 6),
     referenceVideoUrls: refVideos,
     referenceImageCount: refImageCount,
+    resolution: payload.resolution,
   })
 
   // Apply the admin markup ONCE — identical formula + guard to credit-guard-impl.ts.
