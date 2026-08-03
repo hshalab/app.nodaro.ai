@@ -809,6 +809,18 @@ export interface GenerateVideoProPricing {
    *  including the first new one, which re-seeds off the parent prefix).
    *  Absent / 1 → the classic formula, byte-identical. */
   billFromSegment?: number
+  /** KEYFRAMES render method (2026-08-03) — present ONLY when the run was
+   *  priced under it (scene-decomposed: every segment at the no-ref rate, no
+   *  continuation-tail term). Absent → the classic extend chain. This is also
+   *  how a plugin detects an app that predates the field: request
+   *  `renderMethod: "keyframes"` and check whether it comes back. */
+  renderMethod?: "keyframes"
+  /** KEYFRAMES anchor budget (pre-markup, already included in `reserveBase`)
+   *  — WORST CASE: 2 anchor images per segment at the anchor image model's
+   *  base credit. The engine commits actuals (metered down), so this only
+   *  ever refunds. Absent on extend runs and on keyframes CONTINUATIONS,
+   *  which re-use the parent's already-paid-for anchors. */
+  anchorReserve?: number
 }
 
 /**
@@ -910,6 +922,12 @@ export interface PluginHttpToolkit {
      *  a plugin detects an older app that ignored the field. Takes precedence
      *  over `preferredSegmentSec`. Additive-optional (no contract bump). */
     segmentDurations?: number[]
+    /** RENDER METHOD (2026-08-03) — "keyframes" prices the scene-decomposed
+     *  shape: every segment at the no-ref rate, NO continuation-tail term,
+     *  plus a worst-case 2-anchors-per-segment budget (see
+     *  `GenerateVideoProPricing.renderMethod`/`anchorReserve`). Omitted /
+     *  "extend" → the classic chain, byte-identical. Additive-optional. */
+    renderMethod?: "extend" | "keyframes"
   }): Promise<GenerateVideoProPricing>
   /**
    * Mirrors `computeEditVideoProPricing` (`ee/billing/edit-video-pro-credits.ts`)
@@ -947,6 +965,11 @@ export interface PluginHttpToolkit {
     fromSegment: number
     /** Per-join continuation-tail seconds, clamped app-side to [2,5]. */
     tailSec?: number
+    /** RENDER METHOD (2026-08-03) — "keyframes" bills the re-rendered
+     *  segments at the no-ref rate with NO continuation tails and NO anchor
+     *  reserve (the parent's anchors are re-used). Omitted / "extend" → the
+     *  classic continuation, byte-identical. Additive-optional. */
+    renderMethod?: "extend" | "keyframes"
   }): Promise<GenerateVideoProPricing>
   /**
    * Mirrors `sendInternalError` (`lib/http-errors.ts`) — logs `err` server-side

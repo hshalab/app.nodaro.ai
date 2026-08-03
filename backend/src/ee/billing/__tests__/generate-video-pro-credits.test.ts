@@ -65,6 +65,9 @@ describe("golden-table composite sanity (seedance-2 family, credits.ts)", () => 
   it("generate-video-pro fee row", () => {
     expect(STATIC_CREDIT_COSTS["generate-video-pro"]).toBe(100)
   })
+  it("nano-banana-pro anchor-image row (keyframes anchor reserve)", () => {
+    expect(STATIC_CREDIT_COSTS["nano-banana-pro"]).toBe(45)
+  })
 })
 
 describe("computeGenerateVideoProPricing — golden table (seedance-2 @ 720p unless noted)", () => {
@@ -339,6 +342,198 @@ describe("computeGenerateVideoProContinuationPricing — golden table (seedance-
     ).rejects.toThrow(/invalid parent segment durations/)
     await expect(
       computeGenerateVideoProContinuationPricing({ ...base, segmentDurations: [], fromSegment: 1 }),
+    ).rejects.toThrow(/invalid parent segment durations/)
+  })
+})
+
+// KEYFRAMES render method (2026-08-03). Scene-decomposed rendering: each
+// segment is generated from its own start/end anchor frames instead of
+// chaining a continuation tail off the previous segment, so (a) EVERY segment
+// bills at the NO-ref per-second rate, (b) the `refPerSec × tailSec × (n−1)`
+// continuation term disappears entirely, and (c) the run reserves worst-case
+// 2 anchor images per segment at the anchor model's base credit (the engine
+// commits actuals — metered down). Extend mode with the key absent must stay
+// byte-identical: the regression block below locks that.
+describe("computeGenerateVideoProPricing — keyframes render method (seedance-2 @ 720p)", () => {
+  const NO_REF_PER_SEC = STATIC_CREDIT_COSTS["seedance-2:8s:720p"]! / 8 // 102.5
+  const FEE = STATIC_CREDIT_COSTS["generate-video-pro"]!
+  const ANCHOR = STATIC_CREDIT_COSTS["nano-banana-pro"]!
+  const expected = (durations: number[]): number =>
+    FEE +
+    durations.reduce((sum, d) => sum + Math.ceil(d * NO_REF_PER_SEC), 0) +
+    durations.length * 2 * ANCHOR
+
+  it("D=16 multi: every segment at the no-ref rate, no continuation tail, + 2 anchors/segment", async () => {
+    const r = await computeGenerateVideoProPricing({
+      provider: "seedance-2", resolution: "720p", durationSec: 16, renderMethod: "keyframes",
+    })
+    expect(r.mode).toBe("multi")
+    expect(r.segmentDurations).toEqual([9, 8])
+    expect(r.renderMethod).toBe("keyframes")
+    expect(r.anchorReserve).toBe(2 * 2 * ANCHOR)
+    // 100 + (ceil(9×102.5)=923 + ceil(8×102.5)=820) + 180
+    expect(r.reserveBase).toBe(expected([9, 8]))
+    expect(r.reserveBase).toBe(2023)
+  })
+
+  it("D=60 multi: n=5 split priced entirely at the no-ref rate + 10 anchors", async () => {
+    const r = await computeGenerateVideoProPricing({
+      provider: "seedance-2", resolution: "720p", durationSec: 60, renderMethod: "keyframes",
+    })
+    expect(r.segmentDurations).toEqual([14, 12, 12, 12, 12])
+    expect(r.anchorReserve).toBe(5 * 2 * ANCHOR)
+    expect(r.reserveBase).toBe(expected([14, 12, 12, 12, 12]))
+    expect(r.reserveBase).toBe(6905)
+  })
+
+  it("the tail lever is inert under keyframes (no continuation-tail term to move)", async () => {
+    const t2 = await computeGenerateVideoProPricing({
+      provider: "seedance-2", resolution: "720p", durationSec: 60, renderMethod: "keyframes",
+    })
+    const t15 = await computeGenerateVideoProPricing({
+      provider: "seedance-2", resolution: "720p", durationSec: 60, renderMethod: "keyframes", tailSec: 15,
+    })
+    expect(t15.reserveBase).toBe(t2.reserveBase)
+  })
+
+  it("keyframes is strictly the no-ref shape: reserve differs from the extend reserve for the same split", async () => {
+    const extend = await computeGenerateVideoProPricing({
+      provider: "seedance-2", resolution: "720p", durationSec: 60,
+    })
+    const keyframes = await computeGenerateVideoProPricing({
+      provider: "seedance-2", resolution: "720p", durationSec: 60, renderMethod: "keyframes",
+    })
+    expect(keyframes.segmentDurations).toEqual(extend.segmentDurations)
+    expect(keyframes.reserveBase).not.toBe(extend.reserveBase)
+    expect(extend.renderMethod).toBeUndefined()
+    expect(extend.anchorReserve).toBeUndefined()
+  })
+
+  it("D=8 single: same formula over one segment + 2 anchors, and NO creditIdentifier (dynamic reserve path)", async () => {
+    const r = await computeGenerateVideoProPricing({
+      provider: "seedance-2", resolution: "720p", durationSec: 8, renderMethod: "keyframes",
+    })
+    expect(r.mode).toBe("single")
+    expect(r.segmentDurations).toEqual([8])
+    expect(r.creditIdentifier).toBeUndefined() // dynamic reserve — never the flat composite path
+    expect(r.renderMethod).toBe("keyframes")
+    expect(r.anchorReserve).toBe(2 * ANCHOR)
+    expect(r.reserveBase).toBe(expected([8]))
+    expect(r.reserveBase).toBe(1010)
+  })
+
+  it("explicit scene-aligned durations price verbatim under keyframes too", async () => {
+    const SCENE_PACK_79 = [8, 10, 6, 6, 5, 6, 4, 4, 4, 5, 5, 5, 7, 8]
+    const r = await computeGenerateVideoProPricing({
+      provider: "seedance-2", resolution: "720p", durationSec: 79.3,
+      segmentDurations: SCENE_PACK_79, renderMethod: "keyframes",
+    })
+    expect(r.segmentDurations).toEqual(SCENE_PACK_79)
+    expect(r.anchorReserve).toBe(14 * 2 * ANCHOR)
+    expect(r.reserveBase).toBe(expected(SCENE_PACK_79))
+  })
+
+  it("keeps the hard-fail policy: an unseeded provider still throws PriceNotConfiguredError", async () => {
+    await expect(
+      computeGenerateVideoProPricing({
+        provider: "totally-unseeded-provider-xyz", resolution: "720p", durationSec: 16, renderMethod: "keyframes",
+      }),
+    ).rejects.toThrow(PriceNotConfiguredError)
+  })
+})
+
+// ADDITIVE-ONLY guard: `renderMethod` absent (or explicitly "extend") must
+// leave every pre-existing reserve byte-identical — these lock the exact
+// golden numbers from the table above through the new code path.
+describe("renderMethod absent/extend — byte-identical regression", () => {
+  it("D=60 multi keeps reserveBase 5076 and emits no keyframes fields", async () => {
+    const absent = await computeGenerateVideoProPricing({
+      provider: "seedance-2", resolution: "720p", durationSec: 60,
+    })
+    expect(absent.reserveBase).toBe(5076)
+    expect(absent.segmentDurations).toEqual([14, 12, 12, 12, 12])
+    expect("renderMethod" in absent).toBe(false)
+    expect("anchorReserve" in absent).toBe(false)
+    const extend = await computeGenerateVideoProPricing({
+      provider: "seedance-2", resolution: "720p", durationSec: 60, renderMethod: "extend",
+    })
+    expect(extend).toEqual(absent)
+  })
+
+  it("D=8 single keeps reserveBase 820 + its flat creditIdentifier", async () => {
+    const absent = await computeGenerateVideoProPricing({
+      provider: "seedance-2", resolution: "720p", durationSec: 8,
+    })
+    expect(absent.reserveBase).toBe(820)
+    expect(absent.creditIdentifier).toBe("seedance-2:8s:720p")
+    expect("renderMethod" in absent).toBe(false)
+    expect("anchorReserve" in absent).toBe(false)
+    const extend = await computeGenerateVideoProPricing({
+      provider: "seedance-2", resolution: "720p", durationSec: 8, renderMethod: "extend",
+    })
+    expect(extend).toEqual(absent)
+  })
+
+  it("continuation fromSegment=4 keeps reserveBase 1850 and emits no keyframes fields", async () => {
+    const absent = await computeGenerateVideoProContinuationPricing({
+      provider: "seedance-2", resolution: "720p",
+      segmentDurations: [14, 12, 12, 12, 12], fromSegment: 4,
+    })
+    expect(absent.reserveBase).toBe(1850)
+    expect(absent.billFromSegment).toBe(4)
+    expect("renderMethod" in absent).toBe(false)
+    expect("anchorReserve" in absent).toBe(false)
+    const extend = await computeGenerateVideoProContinuationPricing({
+      provider: "seedance-2", resolution: "720p",
+      segmentDurations: [14, 12, 12, 12, 12], fromSegment: 4, renderMethod: "extend",
+    })
+    expect(extend).toEqual(absent)
+  })
+})
+
+// Keyframes CONTINUATION: the child re-renders scenes ≥ fromSegment from
+// their own anchors, so each bills at the no-ref rate with no continuation
+// tail — and NO anchor reserve, since the parent already generated (and paid
+// for) the anchors this continuation reuses.
+describe("computeGenerateVideoProContinuationPricing — keyframes render method", () => {
+  const NO_REF_PER_SEC = STATIC_CREDIT_COSTS["seedance-2:8s:720p"]! / 8 // 102.5
+  const FEE = STATIC_CREDIT_COSTS["generate-video-pro"]!
+  const base = {
+    provider: "seedance-2", resolution: "720p",
+    segmentDurations: [14, 12, 12, 12, 12],
+    renderMethod: "keyframes" as const,
+  }
+
+  it("fromSegment=4: fee + the no-ref seconds of segments 4-5 only, no tails, no anchors", async () => {
+    const r = await computeGenerateVideoProContinuationPricing({ ...base, fromSegment: 4 })
+    expect(r.renderMethod).toBe("keyframes")
+    expect(r.billFromSegment).toBe(4)
+    expect(r.anchorReserve).toBeUndefined() // parent's anchors are reused
+    expect(r.reserveBase).toBe(FEE + 2 * Math.ceil(12 * NO_REF_PER_SEC))
+    expect(r.reserveBase).toBe(2560)
+  })
+
+  it("fromSegment=1 bills every segment at the no-ref rate (matches the fresh keyframes run minus anchors)", async () => {
+    const r = await computeGenerateVideoProContinuationPricing({ ...base, fromSegment: 1 })
+    const fresh = await computeGenerateVideoProPricing({
+      provider: "seedance-2", resolution: "720p", durationSec: 60, renderMethod: "keyframes",
+    })
+    expect(r.billFromSegment).toBe(1)
+    expect(r.reserveBase).toBe(fresh.reserveBase - fresh.anchorReserve!)
+  })
+
+  it("the tail lever is inert under keyframes continuations", async () => {
+    const t2 = await computeGenerateVideoProContinuationPricing({ ...base, fromSegment: 4 })
+    const t15 = await computeGenerateVideoProContinuationPricing({ ...base, fromSegment: 4, tailSec: 15 })
+    expect(t15.reserveBase).toBe(t2.reserveBase)
+  })
+
+  it("keeps the parent-durations / fromSegment validation (never a silent misprice)", async () => {
+    await expect(
+      computeGenerateVideoProContinuationPricing({ ...base, fromSegment: 6 }),
+    ).rejects.toThrow(/fromSegment/)
+    await expect(
+      computeGenerateVideoProContinuationPricing({ ...base, segmentDurations: [99, 12], fromSegment: 1 }),
     ).rejects.toThrow(/invalid parent segment durations/)
   })
 })

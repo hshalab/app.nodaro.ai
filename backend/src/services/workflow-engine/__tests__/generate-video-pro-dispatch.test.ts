@@ -321,6 +321,71 @@ describe("computeGenerateVideoProCreditOverride", () => {
     expect(result?.override).toBe(50)
   })
 
+  it("threads renderMethod: keyframes into the pricing args when the payload carries it", async () => {
+    mockGetAppSettings.mockResolvedValue({ cost_markup_percent: 0 })
+    mockComputeGvpPricing.mockResolvedValue({
+      mode: "multi",
+      clampedDurationSec: 16,
+      segmentCount: 2,
+      totalRawSec: 17,
+      segmentDurations: [9, 8],
+      feeBase: 100,
+      noRefPerSec: 102.5,
+      refPerSec: 62.5,
+      tailSec: 2,
+      reserveBase: 2023,
+      renderMethod: "keyframes",
+      anchorReserve: 180,
+    })
+    const payload: Record<string, unknown> = {
+      type: "generate-video-pro",
+      provider: "seedance-2",
+      resolution: "720p",
+      duration: 16,
+      renderMethod: "keyframes",
+    }
+
+    const result = await computeGenerateVideoProCreditOverride(payload)
+
+    expect(mockComputeGvpPricing).toHaveBeenCalledWith(
+      expect.objectContaining({ renderMethod: "keyframes" }),
+    )
+    expect(result?.override).toBe(2023)
+    expect(payload.proPricing).toEqual(
+      expect.objectContaining({ renderMethod: "keyframes", anchorReserve: 180 }),
+    )
+  })
+
+  it("omits renderMethod from the pricing args entirely when absent or extend (additive default)", async () => {
+    mockGetAppSettings.mockResolvedValue({ cost_markup_percent: 0 })
+    mockComputeGvpPricing.mockResolvedValue({
+      mode: "single",
+      clampedDurationSec: 8,
+      segmentCount: 1,
+      totalRawSec: 8,
+      segmentDurations: [8],
+      feeBase: 0,
+      noRefPerSec: 102.5,
+      refPerSec: 62.5,
+      tailSec: 2,
+      reserveBase: 820,
+      creditIdentifier: "seedance-2:8s:720p",
+    })
+
+    for (const renderMethod of [undefined, "extend"]) {
+      mockComputeGvpPricing.mockClear()
+      await computeGenerateVideoProCreditOverride({
+        type: "generate-video-pro",
+        provider: "seedance-2",
+        resolution: "720p",
+        duration: 8,
+        ...(renderMethod ? { renderMethod } : {}),
+      })
+      const args = mockComputeGvpPricing.mock.calls[0][0] as Record<string, unknown>
+      expect("renderMethod" in args).toBe(false)
+    }
+  })
+
   it("defaults provider/resolution/duration when the payload omits them", async () => {
     mockGetAppSettings.mockResolvedValue({ cost_markup_percent: 0 })
     mockComputeGvpPricing.mockResolvedValue({
