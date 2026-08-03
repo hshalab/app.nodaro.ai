@@ -150,6 +150,30 @@ describe("createSanitizedError", () => {
     expect(error.internalDetails).toBe("Request timed out after 30s")
     expect(error.context).toBe("Video generation")
   })
+
+  it("maps copyright-restriction failures to a copyright message, not the generic retry fallback", () => {
+    // Verbatim prod failMsg (2026-08-03): the generic "please try again" answer
+    // is actively wrong for this class — the block is deterministic on the same
+    // inputs, so retrying only burns credits.
+    const error = createSanitizedError(
+      "task failed: [500] The request failed because the output video may be related to copyright restrictions.",
+      "Generation"
+    )
+
+    expect(error).toBeInstanceOf(KieError)
+    expect(error.message).toBe(
+      "Blocked for copyright: the provider refused this generation because the output may contain copyrighted material (recognizable characters, footage, music, or logos). Change the input image/clip or rephrase the prompt — retrying the same request will fail again."
+    )
+    expect(error.internalDetails).toContain("copyright restrictions")
+  })
+
+  it("prefers the copyright message when a message mentions both copyright and violation", () => {
+    const error = createSanitizedError(
+      "copyright violation detected in output",
+      "Generation"
+    )
+    expect(error.message).toContain("Blocked for copyright")
+  })
 })
 
 describe("pollDelay", () => {

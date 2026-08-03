@@ -57,7 +57,7 @@ export function classifyFailure(
 ): { class: FailureClass; remediation: string } {
   const m = (message ?? "").toLowerCase().trim()
   if (!m) return mk("unknown")
-  if (/moderat|nsfw|safety|sensitive|content policy|flagged|prohibited/.test(m))
+  if (/moderat|nsfw|safety|sensitive|content policy|flagged|prohibited|copyright/.test(m))
     return mk("content_policy")
   if (
     /rate.?limit|too many requests|\b429\b|quota|insufficient.*(balance|credit)|out of credit/.test(
