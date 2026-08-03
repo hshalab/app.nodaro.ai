@@ -854,4 +854,45 @@ describe("restorePollingForRunningJobs", () => {
     await vi.advanceTimersByTimeAsync(3000)
     expect(mockGetJobStatus).toHaveBeenCalledTimes(3)
   })
+
+  // 23. Video-analysis: the restored completion writes the JSON scene breakdown
+  // onto generatedJson — NOT a blank-url media result. Without the type branch
+  // the generic path completed the node empty (reported 2026-08-03: analysis
+  // billed + completed while the poll was dead, node showed nothing).
+  it("writes generatedJson for a restored video-analysis completion", async () => {
+    const analysis = {
+      meta: { durationSec: 72 },
+      slots: [{ slotId: "man-1" }],
+      scenes: [{ sceneNumber: 1, startSec: 0, endSec: 2.1 }],
+    }
+    mockNodes = [makeNode("n1", "video-analysis")]
+    mockGetJobStatus.mockResolvedValue({
+      status: "completed",
+      output_data: { json: analysis },
+    })
+
+    const ctx = makeCtx()
+    restorePollingForRunningJobs(
+      [{ nodeId: "n1", jobId: "j1", nodeType: "video-analysis" }],
+      ctx,
+      vi.fn(),
+    )
+
+    await vi.advanceTimersByTimeAsync(3000)
+
+    expect(mockUpdateNodeData).toHaveBeenCalledWith("n1", {
+      executionStatus: "completed",
+      generatedJson: analysis,
+      currentJobId: undefined,
+      currentJobProgress: undefined,
+    })
+    // The analysis node renders generatedJson only — no generatedResults entry,
+    // and certainly not the generic path's blank-url one.
+    const completionCall = mockUpdateNodeData.mock.calls.find(
+      (call: unknown[]) =>
+        call[0] === "n1" &&
+        (call[1] as Record<string, unknown>).executionStatus === "completed",
+    )
+    expect((completionCall![1] as Record<string, unknown>).generatedResults).toBeUndefined()
+  })
 })

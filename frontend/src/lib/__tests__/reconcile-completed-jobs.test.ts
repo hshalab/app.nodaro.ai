@@ -163,3 +163,53 @@ describe("reconcileCompletedSingleNodeJobs", () => {
     expect(updateNodeData).not.toHaveBeenCalled()
   })
 })
+
+describe("video-analysis result recovery", () => {
+  /** A completed analysis lands in `output_data.json` — NOT a media URL — so it
+   *  used to fall through every recovery layer: the node stayed empty after any
+   *  reload whose live poll died, even though the run billed and completed
+   *  (reported 2026-08-03: mixed run billed 149, node showed nothing). */
+  const ANALYSIS = {
+    meta: { durationSec: 72 },
+    slots: [{ slotId: "man-1", role: "person", label: "Protagonist" }],
+    scenes: [{ sceneNumber: 1, startSec: 0, endSec: 2.1, label: "establishing" }],
+  }
+
+  it("buildCompletedResultPatch maps output_data.json onto generatedJson", () => {
+    const patch = buildCompletedResultPatch("video-analysis", { json: ANALYSIS }, "j", NOW)
+    expect(patch).toEqual({ executionStatus: "completed", generatedJson: ANALYSIS })
+  })
+
+  it("still returns null for a video-analysis job with no json payload", () => {
+    expect(buildCompletedResultPatch("video-analysis", { foo: "bar" }, "j", NOW)).toBeNull()
+    expect(buildCompletedResultPatch("video-analysis", null, "j", NOW)).toBeNull()
+  })
+
+  it("does not treat a stray json field as a result for other node types", () => {
+    expect(buildCompletedResultPatch("generate-video-pro", { json: ANALYSIS }, "j", NOW)).toBeNull()
+  })
+
+  it("computeCompletedJobPatches recovers an analysis onto an empty node", async () => {
+    const patches = await computeCompletedJobPatches(
+      [{ nodeId: "va", jobId: "j1" }],
+      [node("va", "video-analysis", { llmModel: "mixed" })],
+      vi.fn(async () => ({ status: "completed", output_data: { json: ANALYSIS } })),
+      NOW,
+    )
+    expect(patches).toEqual([
+      { nodeId: "va", updates: { executionStatus: "completed", generatedJson: ANALYSIS } },
+    ])
+  })
+
+  it("skips a node that already carries a saved analysis (guard short-circuits the fetch)", async () => {
+    const fetch = vi.fn(async () => ({ status: "completed", output_data: { json: ANALYSIS } }))
+    const patches = await computeCompletedJobPatches(
+      [{ nodeId: "va", jobId: "j1" }],
+      [node("va", "video-analysis", { generatedJson: { scenes: [] } })],
+      fetch,
+      NOW,
+    )
+    expect(patches).toEqual([])
+    expect(fetch).not.toHaveBeenCalled()
+  })
+})

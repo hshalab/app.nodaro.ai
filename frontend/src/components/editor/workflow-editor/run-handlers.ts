@@ -819,6 +819,25 @@ function applyRestoredJobCompletion(
   jobId: string,
 ): void {
   const { updateNodeData } = useWorkflowStore.getState();
+
+  // Video-analysis: the result is a JSON scene breakdown (`output_data.json`
+  // → `data.generatedJson`), not a media URL — the generic path below would
+  // complete the node EMPTY plus a blank-url generatedResults entry (the
+  // analysis node renders generatedJson only). Same gap as
+  // reconcile-completed-jobs (reported 2026-08-03: run billed + completed
+  // while the poll was dead; node showed nothing).
+  if (nodeType === "video-analysis") {
+    const json = job.output_data?.json;
+    updateNodeData(nodeId, {
+      executionStatus: "completed",
+      ...(json && typeof json === "object" ? { generatedJson: json } : {}),
+      currentJobId: undefined,
+      currentJobProgress: undefined,
+    });
+    toast.success("Background job completed");
+    return;
+  }
+
   const node = useWorkflowStore.getState().nodes.find((n) => n.id === nodeId);
   const existingResults = ((node?.data as Record<string, unknown> | undefined)
     ?.generatedResults ?? []) as GeneratedResult[];
