@@ -874,6 +874,16 @@ function applyRestoredJobCompletion(
     updates.generatedScript = job.output_data.script;
   }
 
+  // CONTENT-POLICY DISCLOSURE passthrough (Task A4 follow-up, 2026-08-03) —
+  // GVP-only; this function restores a job that finished while the tab was
+  // away (poll resumed via restorePollingForRunningJobs), the same long-run
+  // scenario reconcile-completed-jobs.ts documents. `job.output_data` carries
+  // an index signature (see the param type above), so this reads straight off it.
+  if (nodeType === "generate-video-pro") {
+    const rewrites = job.output_data?.contentPolicyRewrites;
+    if (Array.isArray(rewrites) && rewrites.length > 0) updates.contentPolicyRewrites = rewrites;
+  }
+
   updateNodeData(nodeId, updates);
   toast.success("Background job completed");
 }

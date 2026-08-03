@@ -1,0 +1,174 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
+
+// ---------------------------------------------------------------------------
+// Mocks
+// ---------------------------------------------------------------------------
+
+vi.mock("@/lib/config.js", () => ({
+  config: { KIE_API_KEY: "test-key", NODE_ENV: "test" },
+}))
+
+// ---------------------------------------------------------------------------
+// Import module under test (after mocks are registered)
+// ---------------------------------------------------------------------------
+
+import {
+  classifyContentPolicy,
+  CONTENT_POLICY_MESSAGE,
+  KieError,
+  createUpstreamFailureError,
+  isUpstreamKieFailure,
+  pollKieTask,
+} from "../client.js"
+
+describe("KIE content-policy classification", () => {
+  it("matches copyright/IP/policy failMsgs", () => {
+    expect(
+      classifyContentPolicy(
+        "The request failed because the output video may be related to copyright restrictions."
+      )
+    ).toBe(true)
+    expect(classifyContentPolicy("flagged by content policy")).toBe(true)
+    expect(classifyContentPolicy("public figure detected")).toBe(true)
+  })
+
+  it("does not match transient/technical failures", () => {
+    expect(classifyContentPolicy("internal error")).toBe(false)
+    expect(classifyContentPolicy("timeout while generating")).toBe(false)
+  })
+})
+
+describe("createUpstreamFailureError — contentPolicy + userMessage options", () => {
+  beforeEach(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {})
+  })
+
+  it("sets contentPolicy=true and uses userMessage verbatim when the caller classified it", () => {
+    const err = createUpstreamFailureError(
+      "task failed: [500] The request failed because the output video may be related to copyright restrictions.",
+      "Generation",
+      { contentPolicy: true, userMessage: CONTENT_POLICY_MESSAGE }
+    )
+
+    expect(err).toBeInstanceOf(KieError)
+    expect(err.contentPolicy).toBe(true)
+    expect(err.isUpstreamFailure).toBe(true)
+    expect(err.message).toBe(CONTENT_POLICY_MESSAGE)
+    expect(isUpstreamKieFailure(err)).toBe(true)
+  })
+
+  it("defaults contentPolicy to false when options is omitted (every pre-existing call site)", () => {
+    const err = createUpstreamFailureError("task failed: [400] audio too long", "Generation")
+
+    expect(err.contentPolicy).toBe(false)
+    expect(err.isUpstreamFailure).toBe(true)
+    expect(err.internalDetails).toBe("task failed: [400] audio too long")
+  })
+
+  it("stays false when the caller passes contentPolicy:false and no userMessage (non-content-policy fail)", () => {
+    const err = createUpstreamFailureError("task failed: [500] internal error", "Generation", {
+      contentPolicy: false,
+      userMessage: undefined,
+    })
+
+    expect(err.contentPolicy).toBe(false)
+    expect(err.isUpstreamFailure).toBe(true)
+    expect(err.message).not.toBe(CONTENT_POLICY_MESSAGE)
+  })
+})
+
+describe("KieError.contentPolicy", () => {
+  it("defaults to false for a plain constructor call (existing 3-arg / 4-arg call sites unaffected)", () => {
+    const threeArg = new KieError("msg", "internal details", "context")
+    expect(threeArg.contentPolicy).toBe(false)
+
+    const fourArg = new KieError("msg", "internal details", "context", true)
+    expect(fourArg.contentPolicy).toBe(false)
+    expect(fourArg.isUpstreamFailure).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Poll-path: state:"fail" with a copyright failMsg → the thrown KieError is
+// classified as contentPolicy + isUpstreamFailure with the real user-facing
+// message. Mirrors the fetch-mock + fake-timer harness used in
+// client.test.ts's "split tasks" / "VEO onTaskCreated" describe blocks.
+// ---------------------------------------------------------------------------
+describe('pollKieTask — state:"fail" content-policy classification', () => {
+  let fetchMock: ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
+    fetchMock = vi.fn()
+    vi.stubGlobal("fetch", fetchMock)
+    vi.useFakeTimers()
+    vi.spyOn(console, "error").mockImplementation(() => {})
+    vi.spyOn(console, "warn").mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.useRealTimers()
+  })
+
+  async function withTimers<T>(fn: () => Promise<T>, advanceMs = 60_000): Promise<T> {
+    const promise = fn()
+    promise.catch(() => undefined)
+    await vi.advanceTimersByTimeAsync(advanceMs)
+    return promise
+  }
+
+  it("classifies the real prod copyright failMsg (task 1ff42f76, seedance-2)", async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes("/recordInfo")) {
+        return new Response(
+          JSON.stringify({
+            code: 0,
+            data: {
+              taskId: "1ff42f76",
+              state: "fail",
+              failCode: "500",
+              failMsg:
+                "The request failed because the output video may be related to copyright restrictions.",
+            },
+          }),
+          { status: 200 }
+        )
+      }
+      throw new Error(`unexpected url ${url}`)
+    })
+
+    const err = await withTimers(() => pollKieTask("1ff42f76")).catch((e) => e)
+
+    expect(err).toBeInstanceOf(KieError)
+    expect((err as KieError).contentPolicy).toBe(true)
+    expect((err as KieError).isUpstreamFailure).toBe(true)
+    expect((err as KieError).message).toBe(CONTENT_POLICY_MESSAGE)
+  })
+
+  it("does NOT classify a transient/technical failMsg as content policy", async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes("/recordInfo")) {
+        return new Response(
+          JSON.stringify({
+            code: 0,
+            data: {
+              taskId: "task-2",
+              state: "fail",
+              failCode: "500",
+              failMsg: "internal error",
+            },
+          }),
+          { status: 200 }
+        )
+      }
+      throw new Error(`unexpected url ${url}`)
+    })
+
+    const err = await withTimers(() => pollKieTask("task-2")).catch((e) => e)
+
+    expect(err).toBeInstanceOf(KieError)
+    expect((err as KieError).contentPolicy).toBe(false)
+    expect((err as KieError).isUpstreamFailure).toBe(true)
+    expect((err as KieError).message).not.toBe(CONTENT_POLICY_MESSAGE)
+  })
+})

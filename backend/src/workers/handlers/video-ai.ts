@@ -11,7 +11,7 @@ import {
 } from "../../providers/index.js"
 import { KIE_LIP_SYNC_MODELS } from "../../providers/kie/models.js"
 import type { ProgressCallback } from "../../providers/provider.interface.js"
-import { runVeoExtendTask, runVeo1080pTask, runVeo4kTask } from "../../providers/kie/client.js"
+import { runVeoExtendTask, runVeo1080pTask, runVeo4kTask, KieError } from "../../providers/kie/client.js"
 
 import { runRunwayExtendTask } from "../../providers/kie/runway-client.js"
 import { replicateLipSync } from "../../providers/replicate/lip-sync.js"
@@ -45,6 +45,7 @@ import { readFile, rm } from "node:fs/promises"
 import { uploadBufferToR2, uploadFileToR2 } from "../../lib/storage.js"
 import { randomUUID } from "node:crypto"
 import { runPostProcessing } from "../../lib/post-processing-error.js"
+import { rewriteForContentPolicy } from "../../lib/content-policy-rewrite.js"
 import { KieAudioProvider, isKieAcceptedVoice } from "../../providers/kie/audio.js"
 import { extractAudioTrack } from "../../providers/video/extract-audio-track.js"
 import { probeVideoSource } from "../../providers/video/ffmpeg-utils.js"
@@ -557,9 +558,31 @@ const handleTextToVideo: HandlerFn = async function handleTextToVideo(job, ctx) 
   // VEO direct-4K: run the base at VEO_4K_BASE_RESOLUTION, then chain get-4k-video below.
   const wantsVeo4k = resolution === "4k" && isVeoProvider(provider)
   const baseResolution = wantsVeo4k ? VEO_4K_BASE_RESOLUTION : resolution
+  // Extracted to a const so the content-policy retry below resubmits with
+  // byte-identical options — only the prompt text differs between the two
+  // textToVideo calls.
+  const t2vOpts = { mode, sound, negativePrompt, cfgScale, multiShots: multiShot, multiPrompt, klingElements, seed, resolution: baseResolution, generateAudio, referenceImageUrls, referenceVideoUrls, referenceAudioUrls, webSearch, nsfwChecker, enableTranslation }
   let result
+  // Content-policy rewrite-once (Task A2, 2026-08-03): a `contentPolicy`-
+  // classified KieError (see classifyContentPolicy in providers/kie/client.ts)
+  // means the identical prompt will fail again deterministically on a bare
+  // retry, so this rewrites ONCE via an LLM (rewriteForContentPolicy) and
+  // resubmits with the rewritten text. Any other error, a null rewrite, or a
+  // second flagged failure all propagate untouched — fail-fast refund
+  // semantics via isUpstreamFailure are unaffected. Sibling of the private
+  // plugin repo's GVP rewrite-once (Task P5) — see content-policy-rewrite.ts's
+  // header for the hand-sync contract.
+  let contentPolicyRewrite: { original: string; rewritten: string } | undefined
   try {
-    result = await textToVideo(prompt, resolvedT2vProvider, duration, aspectRatio, { mode, sound, negativePrompt, cfgScale, multiShots: multiShot, multiPrompt, klingElements, seed, resolution: baseResolution, generateAudio, referenceImageUrls, referenceVideoUrls, referenceAudioUrls, webSearch, nsfwChecker, enableTranslation }, { onTaskCreated: t2vOnTaskCreated })
+    try {
+      result = await textToVideo(prompt, resolvedT2vProvider, duration, aspectRatio, t2vOpts, { onTaskCreated: t2vOnTaskCreated })
+    } catch (err) {
+      if (!(err instanceof KieError) || !err.contentPolicy) throw err
+      const rewritten = await rewriteForContentPolicy(prompt)
+      if (!rewritten) throw err
+      result = await textToVideo(rewritten, resolvedT2vProvider, duration, aspectRatio, t2vOpts, { onTaskCreated: t2vOnTaskCreated })
+      contentPolicyRewrite = { original: prompt, rewritten }
+    }
   } finally {
     t2vRamp.stop()
   }
@@ -592,7 +615,11 @@ const handleTextToVideo: HandlerFn = async function handleTextToVideo(job, ctx) 
     jobType: "text-to-video",
     result,
     mediaUrl: r2Url,
-    extraOutputData: { thumbnailUrl: thumbUrl, ...buildProviderMeta(result) },
+    extraOutputData: {
+      thumbnailUrl: thumbUrl,
+      ...buildProviderMeta(result),
+      ...(contentPolicyRewrite && { contentPolicyRewrite }),
+    },
   })
   if (!ok) return
   console.log(`[worker] Job ${ctx.jobId} completed: ${r2Url} (provider: ${result.providerUsed}, cost: $${result.cost?.toFixed(6) ?? "N/A"})`)

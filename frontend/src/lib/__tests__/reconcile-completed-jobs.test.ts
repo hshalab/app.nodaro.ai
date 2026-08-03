@@ -213,3 +213,51 @@ describe("video-analysis result recovery", () => {
     expect(fetch).not.toHaveBeenCalled()
   })
 })
+
+describe("content-policy rewrite disclosure recovery (Task A4 follow-up)", () => {
+  /** A long GVP run (10-40+ min — this whole file's motivating scenario) that
+   *  disclosed a rewritten segment must still show the notice after a
+   *  dead-poll reload, not just on a live run (execute-node.ts's
+   *  gvpProExtractor covers that path — see generate-video-pro-node.tsx). */
+  const REWRITES = [{ segment: 2, original: "a busy city street", rewritten: "a busy urban street" }]
+
+  it("buildCompletedResultPatch carries contentPolicyRewrites through for generate-video-pro", () => {
+    const patch = buildCompletedResultPatch(
+      "generate-video-pro",
+      { videoUrl: "https://r2/v.mp4", contentPolicyRewrites: REWRITES },
+      "job-1",
+      NOW,
+    )
+    expect(patch?.contentPolicyRewrites).toEqual(REWRITES)
+  })
+
+  it("omits contentPolicyRewrites when the job disclosed none (the common case)", () => {
+    const patch = buildCompletedResultPatch("generate-video-pro", { videoUrl: "https://r2/v.mp4" }, "job-1", NOW)
+    expect(patch).not.toHaveProperty("contentPolicyRewrites")
+  })
+
+  it("does not attach a stray contentPolicyRewrites field for a different node type", () => {
+    const patch = buildCompletedResultPatch(
+      "generate-video",
+      { videoUrl: "https://r2/v.mp4", contentPolicyRewrites: REWRITES },
+      "job-1",
+      NOW,
+    )
+    expect(patch).not.toHaveProperty("contentPolicyRewrites")
+  })
+
+  it("computeCompletedJobPatches recovers the disclosure onto an empty GVP node after a dead-poll reload", async () => {
+    const patches = await computeCompletedJobPatches(
+      [{ nodeId: "n1", jobId: "j1" }],
+      [node("n1", "generate-video-pro")],
+      vi.fn(async () => ({
+        status: "completed",
+        output_data: { videoUrl: "https://r2/v.mp4", contentPolicyRewrites: REWRITES },
+      })),
+      NOW,
+    )
+    expect(patches).toEqual([
+      { nodeId: "n1", updates: expect.objectContaining({ contentPolicyRewrites: REWRITES }) },
+    ])
+  })
+})

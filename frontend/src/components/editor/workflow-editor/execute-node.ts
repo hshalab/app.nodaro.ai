@@ -209,6 +209,7 @@ import type {
   CinematicAvatarData,
   GenerateVideoProNodeData,
   EditVideoProNodeData,
+  ContentPolicyRewriteEntry,
 } from "@/types/nodes";
 import {
   WorkflowStaleError,
@@ -1879,11 +1880,26 @@ export function executeNode(
         stopped?: boolean; stoppedAtSegment?: number; deliveredSegments?: number; plan?: { segments?: unknown[] }
       };
       const segCount = Array.isArray(pro.plan?.segments) ? pro.plan!.segments!.length : undefined;
+      // CONTENT-POLICY DISCLOSURE (Task A4 follow-up, 2026-08-03): a TOP-LEVEL
+      // sibling of `videoUrl`/`pro` (finalize.ts's collectContentPolicyDisclosure
+      // writes it there, NOT nested under `pro`) — read separately. Absent
+      // (undefined) when no segment needed a rewrite, so handleJobCompleted's
+      // extraFields spread writes no stray `contentPolicyRewrites: undefined`
+      // key onto the GeneratedResult or node data. This return value is the
+      // ONLY carrier for the live-run path (both fresh and Continue runs share
+      // this extractor); the reload/resume readers (reconcile-completed-jobs.ts,
+      // run-handlers.ts's applyRestoredJobCompletion, use-workflow-persistence.ts's
+      // syncNodeResultsFromDB) each read outputData.contentPolicyRewrites the
+      // same way independently, since they never go through this extractor.
+      const contentPolicyRewrites = Array.isArray(outputData?.contentPolicyRewrites)
+        ? (outputData.contentPolicyRewrites as ContentPolicyRewriteEntry[])
+        : undefined;
       return {
         gvpStopped: pro.stopped === true ? true : undefined,
         gvpStoppedAtSegment: typeof pro.stoppedAtSegment === "number" ? pro.stoppedAtSegment : undefined,
         gvpDeliveredSegments: typeof pro.deliveredSegments === "number" ? pro.deliveredSegments : undefined,
         gvpSegmentCount: typeof segCount === "number" ? segCount : undefined,
+        contentPolicyRewrites,
       };
     };
     // CONTINUE mode (set by the node's Continue affordance): resume a
