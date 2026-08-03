@@ -538,9 +538,28 @@ export function buildToolkit(): PluginToolkit {
       // pad/resolution snap) rejects here and the plugin's non-fatal guard
       // drops the plate for that boundary.
       imageUpscale: async (imageUrl, model) => {
-        const r = await editImage(imageUrl, model)
+        // Source fetch doubles as a readability preflight: the gate needs
+        // these bytes anyway, and an unreadable anchor should fail here
+        // before a provider task is spent on it.
+        const src = await fetchImageBuffer(imageUrl)
+        // KIE's market ingest can fail transiently on a seconds-old object
+        // and the failure sticks to that exact URL for a window (2026-08-03:
+        // 422 "Field required" replayed for ~2h while Seedance ingested the
+        // same URL fine). Retry once under a fresh query nonce — the CDN
+        // serves identical bytes, KIE sees a new cache key. Safe here because
+        // this lane only ever receives our own bare R2/CDN URLs.
+        let r: Awaited<ReturnType<typeof editImage>>
+        try {
+          r = await editImage(imageUrl, model)
+        } catch (err) {
+          console.warn(
+            `[private-plugins/imageUpscale] first attempt failed (${err instanceof Error ? err.message : String(err)}) — retrying under a fresh nonce`,
+          )
+          const sep = imageUrl.includes("?") ? "&" : "?"
+          r = await editImage(`${imageUrl}${sep}n=${randomUUID().replace(/-/g, "").slice(0, 8)}`, model)
+        }
         if (!r.url) throw new Error("image upscale returned no url")
-        const [src, ups] = await Promise.all([fetchImageBuffer(imageUrl), fetchImageBuffer(r.url)])
+        const ups = await fetchImageBuffer(r.url)
         const gate = await assertExact2xAligned(src, ups)
         const ext = gate.format === "jpeg" ? "jpg" : gate.format
         return { url: await uploadBufferToR2(ups, `images/plate-${randomUUID()}.${ext}`, `image/${gate.format}`) }
