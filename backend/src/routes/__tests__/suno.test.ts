@@ -230,6 +230,28 @@ describe("POST /v1/suno/generate", () => {
     )
   })
 
+  it("passes duration to the queue (V5_5 custom mode)", async () => {
+    const res = await authedPost("/v1/suno/generate", {
+      prompt: "A pop song",
+      customMode: true,
+      style: "pop",
+      title: "Timed",
+      duration: 120,
+    })
+    expect(res.statusCode).toBe(200)
+    expect(mockVideoQueueAdd).toHaveBeenCalledWith(
+      "suno-generate",
+      expect.objectContaining({ duration: 120 }),
+    )
+  })
+
+  it("returns 400 for out-of-range duration", async () => {
+    const below = await authedPost("/v1/suno/generate", { prompt: "A song", duration: 5 })
+    expect(below.statusCode).toBe(400)
+    const above = await authedPost("/v1/suno/generate", { prompt: "A song", duration: 400 })
+    expect(above.statusCode).toBe(400)
+  })
+
   it("returns 400 for invalid model", async () => {
     const res = await authedPost("/v1/suno/generate", {
       prompt: "Song",
@@ -501,6 +523,55 @@ describe("POST /v1/suno/replace-section", () => {
         infillEndS: 20,
         prompt: "New verse",
         tags: "rock",
+      }),
+    )
+  })
+
+  it("accepts a section past the 60s mark — the 6-60s cap is on the INTERVAL, not the end timestamp", async () => {
+    const res = await authedPost("/v1/suno/replace-section", {
+      taskId: "task-1",
+      audioId: "audio-1",
+      infillStartS: 100,
+      infillEndS: 130,
+      prompt: "New bridge",
+      tags: "rock",
+    })
+    expect(res.statusCode).toBe(200)
+    expect(mockVideoQueueAdd).toHaveBeenCalledWith(
+      "suno-replace-section",
+      expect.objectContaining({ infillStartS: 100, infillEndS: 130 }),
+    )
+  })
+
+  it("returns 400 when the replaced interval exceeds 60s", async () => {
+    const res = await authedPost("/v1/suno/replace-section", {
+      taskId: "task-1",
+      audioId: "audio-1",
+      infillStartS: 0,
+      infillEndS: 90,
+      prompt: "Too long",
+      tags: "rock",
+    })
+    expect(res.statusCode).toBe(400)
+  })
+
+  it("forwards fullLyrics and negativeTags to the queue", async () => {
+    const res = await authedPost("/v1/suno/replace-section", {
+      taskId: "task-1",
+      audioId: "audio-1",
+      infillStartS: 10,
+      infillEndS: 20,
+      prompt: "New verse",
+      tags: "rock",
+      fullLyrics: "[Verse]\nAll the lyrics after the edit",
+      negativeTags: "metal",
+    })
+    expect(res.statusCode).toBe(200)
+    expect(mockVideoQueueAdd).toHaveBeenCalledWith(
+      "suno-replace-section",
+      expect.objectContaining({
+        fullLyrics: "[Verse]\nAll the lyrics after the edit",
+        negativeTags: "metal",
       }),
     )
   })

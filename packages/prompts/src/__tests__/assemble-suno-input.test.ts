@@ -179,6 +179,26 @@ describe("assembleSunoInput — persona spread", () => {
   })
 })
 
+describe("assembleSunoInput — duration pass-through", () => {
+  it("carries data.duration onto the result verbatim (the provider client gates the send)", () => {
+    const r = assembleSunoInput({
+      node: node({ customMode: true, style: "pop", model: "V5_5", duration: 120 }),
+      graph: emptyGraph,
+      userPrompt: "song",
+    })
+    expect(r.duration).toBe(120)
+  })
+
+  it("no data.duration → undefined", () => {
+    const r = assembleSunoInput({
+      node: node({ model: "V5_5" }),
+      graph: emptyGraph,
+      userPrompt: "song",
+    })
+    expect(r.duration).toBeUndefined()
+  })
+})
+
 describe("assembleSunoInput — || undefined normalization (divergence E)", () => {
   it("empty model/style/title/negativeStyle normalize to undefined", () => {
     const r = assembleSunoInput({

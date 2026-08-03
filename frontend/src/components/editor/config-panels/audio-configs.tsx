@@ -462,6 +462,21 @@ export function SunoGenerateConfig({ data, onUpdate, sources, fieldMappings, onM
         </Select>
       </MappableField>
       <ModelDescriptionHint modelId={data.model} />
+      {(data.model || "V5_5") === "V5_5" && (
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-medium text-muted-foreground">Duration (seconds, optional)</label>
+          <Input
+            type="number" min={10} max={360} step={1}
+            value={data.duration ?? ""}
+            onChange={(e) => onUpdate({ duration: e.target.value === "" ? undefined : parseFloat(e.target.value) })}
+            placeholder="Auto"
+          />
+          <p className="text-[10px] text-muted-foreground">
+            10–360s, V5.5 only. Applies in custom mode (with style / title / lyrics set)
+            {getEffectiveSunoCustomMode(data) ? "." : " — currently inactive, Suno picks the length."}
+          </p>
+        </div>
+      )}
       {(["title", "lyrics", "style", "negativeStyle"] as const).map((f) => {
         const meta = SUNO_FIELD_EDIT_META[f]
         return (
@@ -781,6 +796,33 @@ export function SunoLyricsConfig({ data, onUpdate, sources, fieldMappings, onMap
   )
 }
 
+/**
+ * Shared manual Task ID / Audio ID entry for Suno consumer nodes (separate /
+ * music-video / replace-section / add-instrumental / add-vocals / convert-wav).
+ * At run time a wired Suno connection wins over these fields (inputs-first in
+ * both the FE run and the orchestrator); manual entry unlocks running against
+ * a track from an earlier session without re-generating it.
+ */
+function SunoIdFields({ taskId, audioId, onUpdate }: {
+  readonly taskId?: string
+  readonly audioId?: string
+  readonly onUpdate: (updates: { taskId?: string; audioId?: string }) => void
+}) {
+  return (
+    <>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs font-medium text-muted-foreground">Task ID</label>
+        <Input value={taskId ?? ""} onChange={(e) => onUpdate({ taskId: e.target.value })} placeholder="Suno task ID" />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs font-medium text-muted-foreground">Audio ID</label>
+        <Input value={audioId ?? ""} onChange={(e) => onUpdate({ audioId: e.target.value })} placeholder="Suno audio ID" />
+      </div>
+      <p className="text-[10px] text-muted-foreground">Auto-filled from a connected Suno node — a live connection overrides manual values.</p>
+    </>
+  )
+}
+
 export function SunoSeparateConfig({ data, onUpdate }: { readonly data: SunoSeparateData; readonly onUpdate: (updates: Partial<SunoSeparateData>) => void }) {
   return (
     <div className="flex flex-col gap-3">
@@ -794,14 +836,7 @@ export function SunoSeparateConfig({ data, onUpdate }: { readonly data: SunoSepa
           </SelectContent>
         </Select>
       </div>
-      <div className="flex flex-col gap-1.5">
-        <label className="text-xs font-medium text-muted-foreground">Task ID</label>
-        <Input value={data.taskId} onChange={(e) => onUpdate({ taskId: e.target.value })} placeholder="Suno task ID" />
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <label className="text-xs font-medium text-muted-foreground">Audio ID</label>
-        <Input value={data.audioId} onChange={(e) => onUpdate({ audioId: e.target.value })} placeholder="Suno audio ID" />
-      </div>
+      <SunoIdFields taskId={data.taskId} audioId={data.audioId} onUpdate={onUpdate} />
       {data.vocalUrl && (
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-muted-foreground">Vocal</label>
@@ -921,16 +956,7 @@ export function AudioSeparationConfig({ data, onUpdate }: { readonly data: Audio
 export function SunoMusicVideoConfig({ data, onUpdate }: { readonly data: SunoMusicVideoData; readonly onUpdate: (updates: Partial<SunoMusicVideoData>) => void }) {
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-1.5">
-        <label className="text-xs font-medium text-muted-foreground">Task ID</label>
-        <Input value={data.taskId} onChange={(e) => onUpdate({ taskId: e.target.value })} placeholder="From upstream Suno node" />
-        <p className="text-[10px] text-muted-foreground mt-1">Auto-filled when connected to a Suno node</p>
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <label className="text-xs font-medium text-muted-foreground">Audio ID</label>
-        <Input value={data.audioId} onChange={(e) => onUpdate({ audioId: e.target.value })} placeholder="From upstream Suno node" />
-        <p className="text-[10px] text-muted-foreground mt-1">Auto-filled when connected to a Suno node</p>
-      </div>
+      <SunoIdFields taskId={data.taskId} audioId={data.audioId} onUpdate={onUpdate} />
       {data.generatedVideoUrl && (
         <div className="rounded-md border overflow-hidden">
           <video src={data.generatedVideoUrl} controls className="w-full" />
@@ -995,6 +1021,7 @@ export function SunoReplaceSectionConfig({ data, onUpdate, sources, fieldMapping
   return (
     <div className="flex flex-col gap-3">
       <p className="text-xs text-muted-foreground">Replace a section of an existing track. Connect an audio source.</p>
+      <SunoIdFields taskId={data.taskId} audioId={data.audioId} onUpdate={onUpdate} />
       <MappableField field="infillStartS" label="Start Time (seconds)" sources={sources} fieldMappings={fieldMappings} onMapField={onMapField}>
         <Input type="number" min={0} step={1} value={data.infillStartS ?? ""} onChange={(e) => onUpdate({ infillStartS: e.target.value === "" ? undefined : parseFloat(e.target.value) })} placeholder="0" />
       </MappableField>
@@ -1020,6 +1047,12 @@ export function SunoReplaceSectionConfig({ data, onUpdate, sources, fieldMapping
       </MappableField>
       <MappableField field="title" label="Title (optional)" sources={sources} fieldMappings={fieldMappings} onMapField={onMapField}>
         <Input value={data.title ?? ""} maxLength={200} onChange={(e) => onUpdate({ title: e.target.value })} placeholder="Song title" />
+      </MappableField>
+      <MappableField field="fullLyrics" label="Full Lyrics (post-edit)" sources={sources} fieldMappings={fieldMappings} onMapField={onMapField}>
+        <TagTextarea rows={4} value={data.fullLyrics ?? ""} onChange={(v) => { if (v.length <= SUNO_TEXT_MAX) onUpdate({ fullLyrics: v }) }} placeholder="Complete lyrics of the whole song after the replacement (modified + unmodified parts)..." maxLength={SUNO_TEXT_MAX} tagMode="suno" customTags={SUNO_SUGGESTION_ITEMS} nodeRefs={nodeRefs} displayMode={variableDisplayMode} refMap={refMap} />
+      </MappableField>
+      <MappableField field="negativeTags" label="Negative Tags (optional)" sources={sources} fieldMappings={fieldMappings} onMapField={onMapField}>
+        <Input value={data.negativeTags ?? ""} maxLength={500} onChange={(e) => onUpdate({ negativeTags: e.target.value })} placeholder="Styles to avoid in the replacement (e.g. rock)" />
       </MappableField>
     </div>
   )
@@ -1084,6 +1117,7 @@ export function SunoAddInstrumentalConfig({ data, onUpdate, sources, fieldMappin
   return (
     <div className="flex flex-col gap-3">
       <p className="text-xs text-muted-foreground">Add instrumental accompaniment to a track. Connect an audio source.</p>
+      <SunoIdFields taskId={data.taskId} audioId={data.audioId} onUpdate={onUpdate} />
       <MappableField field="model" label="Model" sources={sources} fieldMappings={fieldMappings} onMapField={onMapField}>
         <Select value={data.model || "V5_5"} onValueChange={(v) => onUpdate({ model: v as SunoAddInstrumentalData["model"] })}>
           <SelectTrigger aria-label="Model"><SelectValue /></SelectTrigger>
@@ -1103,6 +1137,7 @@ export function SunoAddVocalsConfig({ data, onUpdate, sources, fieldMappings, on
   return (
     <div className="flex flex-col gap-3">
       <p className="text-xs text-muted-foreground">Add vocals to an instrumental track. Connect an audio source.</p>
+      <SunoIdFields taskId={data.taskId} audioId={data.audioId} onUpdate={onUpdate} />
       <MappableField field="model" label="Model" sources={sources} fieldMappings={fieldMappings} onMapField={onMapField}>
         <Select value={data.model || "V5_5"} onValueChange={(v) => onUpdate({ model: v as SunoAddVocalsData["model"] })}>
           <SelectTrigger aria-label="Model"><SelectValue /></SelectTrigger>
@@ -1118,11 +1153,11 @@ export function SunoAddVocalsConfig({ data, onUpdate, sources, fieldMappings, on
   )
 }
 
-export function SunoConvertWavConfig({ data }: { readonly data: SunoConvertWavData; readonly onUpdate: (updates: Partial<SunoConvertWavData>) => void }) {
+export function SunoConvertWavConfig({ data, onUpdate }: { readonly data: SunoConvertWavData; readonly onUpdate: (updates: Partial<SunoConvertWavData>) => void }) {
   return (
     <div className="flex flex-col gap-3">
       <p className="text-xs text-muted-foreground">Convert a Suno track to WAV format. Connect an audio source.</p>
-      <p className="text-[10px] text-muted-foreground">No additional settings required. The connected audio will be converted to high-quality WAV.</p>
+      <SunoIdFields taskId={data.taskId} audioId={data.audioId} onUpdate={onUpdate} />
     </div>
   )
 }

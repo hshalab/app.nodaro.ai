@@ -9,8 +9,8 @@ Suno Convert WAV takes a Suno-generated audio track and converts it from compres
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| Task ID | string | `""` | Suno task ID from an upstream Suno node (resolved automatically). |
-| Audio ID | string | `""` | Suno audio ID from an upstream Suno node (resolved automatically). |
+| Task ID | string | `""` | Suno task ID — auto-filled from a connected Suno node, or paste one manually to work with a track from an earlier session. |
+| Audio ID | string | `""` | Suno audio ID — auto-filled from a connected Suno node, or paste one manually. |
 
 No additional configuration fields. The conversion is automatic.
 

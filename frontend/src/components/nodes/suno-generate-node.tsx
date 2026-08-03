@@ -2,7 +2,7 @@
 
 import { memo, useState, useEffect, useMemo } from "react"
 import { Position, useUpdateNodeInternals, type NodeProps } from "@xyflow/react"
-import { Music, Loader2, AlertCircle, Volume2, Type, LayoutGrid, Sparkles, Mic } from "lucide-react"
+import { Music, Loader2, AlertCircle, Volume2, Type, LayoutGrid, Sparkles, Mic, Copy, Check } from "lucide-react"
 import { SUNO_FIELD_HANDLE_FIELDS } from "@nodaro/shared"
 import { BaseNode } from "./base-node"
 import { NodeJobProgress } from "./node-job-progress"
@@ -22,6 +22,30 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { SunoFieldEditModal } from "./suno-field-edit-modal"
 import { SUNO_FIELD_EDIT_META, type SunoEditField } from "@/components/editor/config-panels/suno-field-editor"
 import type { SunoGenerateData } from "@/types/nodes"
+
+/** One compact copyable Suno id line (Task / Track) shown under the result —
+ *  downstream nodes (extend / replace / separate / …) take these ids, so the
+ *  node surfaces them for manual reuse in a later session. */
+function SunoIdRow({ label, value }: { readonly label: string; readonly value: string }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <button
+      type="button"
+      className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground font-mono max-w-full"
+      title={`${label} ID: ${value} — click to copy`}
+      onClick={(e) => {
+        e.stopPropagation()
+        void navigator.clipboard.writeText(value)
+        setCopied(true)
+        window.setTimeout(() => setCopied(false), 1200)
+      }}
+    >
+      <span className="uppercase tracking-wide text-[9px] shrink-0">{label}</span>
+      <span className="truncate">{value}</span>
+      {copied ? <Check className="w-3 h-3 shrink-0 text-green-500" /> : <Copy className="w-3 h-3 shrink-0" />}
+    </button>
+  )
+}
 
 const isVisualPicker = (s: string) => VISUAL_PARAMETER_PICKER_NODE_TYPES.has(s)
 const ACCEPTS_PROMPT      = (t: string) => isValidSunoGenerateConnection("prompt",      t, isVisualPicker)
@@ -93,6 +117,10 @@ function SunoGenerateNodeComponent({ id, data, selected }: NodeProps) {
   const activeIndex = nodeData.activeResultIndex ?? 0
   const activeResult = results[activeIndex]
   const activeUrl = activeResult?.url ?? nodeData.generatedAudioUrl
+  // Suno ids for the ACTIVE result (per-result wins so switching tracks shows
+  // that track's ids), falling back to the node-level fields the run merges in.
+  const sunoTaskId = activeResult?.sunoTaskId ?? (nodeData.sunoTaskId as string | undefined)
+  const sunoTrackId = activeResult?.sunoTrackId ?? (nodeData.sunoTrackId as string | undefined)
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
   const [showThumbnails, setShowThumbnails] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
@@ -223,6 +251,13 @@ function SunoGenerateNodeComponent({ id, data, selected }: NodeProps) {
           <span className="text-xs">Suno {nodeData.model ?? "V5"}</span>
           {nodeData.title && <span className="text-xs truncate max-w-[120px]">{nodeData.title}</span>}
         </div>
+
+        {(sunoTaskId || sunoTrackId) && (
+          <div className="flex flex-col">
+            {sunoTaskId && <SunoIdRow label="Task" value={sunoTaskId} />}
+            {sunoTrackId && <SunoIdRow label="Track" value={sunoTrackId} />}
+          </div>
+        )}
 
         <div className="flex items-center gap-3 self-start">
           <button type="button"

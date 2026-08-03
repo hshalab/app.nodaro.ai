@@ -72,6 +72,9 @@ const sunoGenerateBody = z.object({
   audioWeight: z.number().min(0).max(1).optional(),
   customMode: z.boolean().optional().default(false),
   instrumental: z.boolean().optional().default(false),
+  // Song length in seconds — KIE honors it only in custom mode on V5_5
+  // (the provider client gates the send; other models silently ignore it).
+  duration: z.number().min(10).max(360).optional(),
   personaId: z.string().min(1).max(200).optional(),
   personaModel: personaModelEnum.optional(),
   userId: z.string().uuid().optional(),
@@ -147,13 +150,21 @@ const sunoReplaceSectionBody = z.object({
   taskId: z.string().min(1),
   audioId: z.string().min(1),
   infillStartS: z.number().min(0),
-  infillEndS: z.number().min(6).max(60),
+  infillEndS: z.number().min(0),
   prompt: z.string().min(1).max(SUNO_TEXT_MAX),
   userPrompt: z.string().max(8000).optional(),
   tags: z.string().max(500),
   title: z.string().max(SUNO_TITLE_MAX).optional(),
+  fullLyrics: z.string().max(SUNO_TEXT_MAX).optional(),
+  negativeTags: z.string().max(500).optional(),
   userId: z.string().uuid().optional(),
-})
+}).refine(
+  // KIE constrains the REPLACED INTERVAL (end − start) to 6-60s — not the end
+  // timestamp itself (the old `.max(60)` on infillEndS wrongly rejected any
+  // replacement past the first minute of a song).
+  (v) => v.infillEndS - v.infillStartS >= 6 && v.infillEndS - v.infillStartS <= 60,
+  { message: "The replaced interval (infillEndS − infillStartS) must be between 6 and 60 seconds", path: ["infillEndS"] },
+)
 
 const sunoStyleBoostBody = z.object({
   content: z.string().min(1).max(SUNO_TEXT_MAX),
@@ -267,7 +278,7 @@ export async function sunoRoutes(app: FastifyInstance) {
         prompt, model, lyrics, style, title,
         negativeStyle, vocalGender, styleWeight,
         weirdnessConstraint, audioWeight, customMode,
-        instrumental, personaId, personaModel,
+        instrumental, duration, personaId, personaModel,
       } = parsed.data
       const userId = req.userId
 
@@ -312,6 +323,7 @@ export async function sunoRoutes(app: FastifyInstance) {
         audioWeight,
         customMode,
         instrumental,
+        duration,
         personaId,
         personaModel: personaId ? (personaModel ?? "voice_persona") : undefined,
         usageLogId,
@@ -710,7 +722,7 @@ export async function sunoRoutes(app: FastifyInstance) {
         })
       }
 
-      const { taskId, audioId, infillStartS, infillEndS, prompt, tags, title } = parsed.data
+      const { taskId, audioId, infillStartS, infillEndS, prompt, tags, title, fullLyrics, negativeTags } = parsed.data
       const userId = req.userId
 
       if (!userId) {
@@ -748,6 +760,8 @@ export async function sunoRoutes(app: FastifyInstance) {
         prompt,
         tags,
         title,
+        fullLyrics,
+        negativeTags,
         usageLogId,
       })
 

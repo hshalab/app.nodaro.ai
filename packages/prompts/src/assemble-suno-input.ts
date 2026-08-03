@@ -84,6 +84,13 @@ export interface AssembleSunoResult {
   customMode: boolean
   instrumental: boolean
   model?: string
+  /**
+   * Requested song length in seconds (KIE: 10–360). Passed through from
+   * `data.duration` unconditionally — the provider client is the single
+   * gate that only sends it when customMode && model V5_5 (KIE ignores it
+   * elsewhere), so the assembler stays a faithful field carrier.
+   */
+  duration?: number
   personaId?: string
   personaModel?: "voice_persona" | "style_persona"
 }
@@ -140,6 +147,7 @@ export function assembleSunoInput(input: AssembleSunoInput): AssembleSunoResult 
     styleWeight: data.styleWeight as number | undefined,
     weirdnessConstraint: data.weirdnessConstraint as number | undefined,
     audioWeight: data.audioWeight as number | undefined,
+    duration: data.duration as number | undefined,
     customMode,
     instrumental: (data.instrumental as boolean | undefined) ?? false,
     ...(input.persona ?? {}),

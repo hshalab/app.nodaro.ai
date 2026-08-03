@@ -31,7 +31,7 @@ export const NODE_MAPPABLE_FIELDS: Readonly<Record<string, readonly string[]>> =
   "suno-cover":          ["prompt", "lyrics", "style", "title", "negativeStyle"],
   "suno-extend":         ["prompt", "style", "title"],
   "suno-lyrics":         ["prompt"],
-  "suno-replace-section":["prompt", "tags", "title"],
+  "suno-replace-section":["prompt", "tags", "title", "fullLyrics", "negativeTags"],
   "suno-style-boost":    ["content"],
   "suno-upload-extend":  ["prompt", "style", "title"],
   "suno-mashup":         ["style", "title", "negativeStyle"],

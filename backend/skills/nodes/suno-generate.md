@@ -1,7 +1,7 @@
 ---
 node_type: suno-generate
-generated_at: 2026-06-29T12:56:27.078Z
-generated_from: 14d5f54b3
+generated_at: 2026-08-03T12:33:47.252Z
+generated_from: 4260ead1d
 ---
 
 # Suno Generate
@@ -32,6 +32,7 @@ generated_from: 14d5f54b3
 - `customMode?: boolean`
 - `advancedOpen?: boolean`
 - `instrumental?: boolean`
+- `duration?: number`
 - `personaId?: string`
 - `personaModel?: SunoPersonaModel`
 - `executionStatus?: "idle" | "running" | "completed" | "failed"`
@@ -75,6 +76,7 @@ generated_from: 14d5f54b3
 - `style_weight`
 - `weirdness`
 - `audio_weight`
+- `duration`
 <!-- AUTO-GEN:END mcp-call -->
 
 ## Common gotchas

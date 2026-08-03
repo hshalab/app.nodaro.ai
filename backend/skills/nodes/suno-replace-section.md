@@ -1,7 +1,7 @@
 ---
 node_type: suno-replace-section
-generated_at: 2026-06-16T08:22:28.340Z
-generated_from: 877dfa01a
+generated_at: 2026-08-03T12:33:47.313Z
+generated_from: 4260ead1d
 ---
 
 # Suno Replace Section
@@ -23,6 +23,10 @@ generated_from: 877dfa01a
 - `fieldMappings: FieldMappings`
 
 **Optional data fields:**
+- `taskId?: string`
+- `audioId?: string`
+- `fullLyrics?: string`
+- `negativeTags?: string`
 - `executionStatus?: "idle" | "running" | "completed" | "failed"`
 - `errorMessage?: string`
 - `generatedAudioUrl?: string`
@@ -59,6 +63,8 @@ generated_from: 877dfa01a
 - `prompt`
 - `tags`
 - `title`
+- `full_lyrics`
+- `negative_tags`
 <!-- AUTO-GEN:END mcp-call -->
 
 ## Common gotchas
