@@ -46,18 +46,27 @@ export class KieError extends Error {
    *  fail-fast + refund instead of bumping toward the 18-attempt exhaustion.
    *  The raw failCode/failMsg stay in `internalDetails` (and are logged). */
   public readonly isUpstreamFailure: boolean
+  /** True when the terminal failure was classified as a content-policy
+   *  failure (copyright/IP, public figure/celebrity likeness, moderation —
+   *  see `classifyContentPolicy`). A SUBSET of `isUpstreamFailure` — always
+   *  implies it, never the reverse. This property name is a duck-typed
+   *  cross-repo contract (the private plugin toolkit's `isContentPolicyError`
+   *  checks `err.contentPolicy === true`) — do not rename. */
+  public readonly contentPolicy: boolean
 
   constructor(
     sanitizedMessage: string,
     internalDetails: string,
     context: string,
     isUpstreamFailure = false,
+    contentPolicy = false,
   ) {
     super(sanitizedMessage)
     this.name = "KieError"
     this.internalDetails = internalDetails
     this.context = context
     this.isUpstreamFailure = isUpstreamFailure
+    this.contentPolicy = contentPolicy
   }
 
   /** Get full error message including internal details (for logging/debugging) */
@@ -75,6 +84,7 @@ export function createSanitizedError(
   internalMessage: string,
   context: string,
   isUpstreamFailure = false,
+  contentPolicy = false,
 ): KieError {
   // Log the full internal error for debugging (visible in Railway logs)
   console.error(
@@ -175,7 +185,7 @@ export function createSanitizedError(
     sanitizedMessage = `${context} failed. Please try again or contact support if the issue persists.`
   }
 
-  return new KieError(sanitizedMessage, internalMessage, context, isUpstreamFailure)
+  return new KieError(sanitizedMessage, internalMessage, context, isUpstreamFailure, contentPolicy)
 }
 
 /** Construct a KieError for a TERMINAL upstream provider failure (KIE reported
@@ -183,9 +193,27 @@ export function createSanitizedError(
  *  so the reconcile cron fails the job fast + refunds instead of bumping it
  *  toward the 18-attempt / 90-min exhaustion. Use this at EVERY terminal-failure
  *  throw in the poll clients — a transient/timeout/no-result error must NOT use
- *  it (those should keep bumping for the next cron tick). */
-export function createUpstreamFailureError(internalMessage: string, context: string): KieError {
-  return createSanitizedError(internalMessage, context, true)
+ *  it (those should keep bumping for the next cron tick).
+ *
+ *  `options.contentPolicy` / `options.userMessage` let a caller that has
+ *  already classified the failure (see `classifyContentPolicy`) override the
+ *  generic sanitized-message pattern matching with a real, specific
+ *  user-facing reason. Omitting `options` (every existing call site) is
+ *  behavior-identical to before this param was added. */
+export function createUpstreamFailureError(
+  internalMessage: string,
+  context: string,
+  options?: { contentPolicy?: boolean; userMessage?: string },
+): KieError {
+  const contentPolicy = options?.contentPolicy ?? false
+  if (options?.userMessage) {
+    // Mirrors createSanitizedError's debug logging — we skip calling it below
+    // (its generic pattern matching would clobber the caller-supplied
+    // userMessage), so log here instead to keep the same Railway visibility.
+    console.error(`[KIE.ai INTERNAL ERROR] ${context}: ${internalMessage}`)
+    return new KieError(options.userMessage, internalMessage, context, true, contentPolicy)
+  }
+  return createSanitizedError(internalMessage, context, true, contentPolicy)
 }
 
 /** True for a KieError marking a terminal upstream provider failure (vs a
@@ -195,6 +223,33 @@ export function createUpstreamFailureError(internalMessage: string, context: str
 export function isUpstreamKieFailure(err: unknown): boolean {
   return err instanceof KieError && err.isUpstreamFailure
 }
+
+// =============================================================================
+// CONTENT POLICY CLASSIFICATION
+// =============================================================================
+
+/** Matches a KIE `failMsg` classified as a content-policy failure: copyright/
+ *  IP, public figure or celebrity likeness, or a generic content-policy/
+ *  prohibited/sensitive-content moderation block. Deliberately loose (no word
+ *  boundaries) — a false positive here just picks the more specific, still
+ *  correct message; a false negative falls back to the generic sanitized
+ *  fallback, which is worse (a canned "try again" for a request that will
+ *  fail again deterministically on retry). */
+const CONTENT_POLICY_RE = /copyright|intellectual.?property|public.?figure|celebrit|content.?polic|prohibited.?content|sensitive.?content/i
+
+/** Classifies a KIE `failMsg` string as a content-policy failure. Used at the
+ *  `state:"fail"` terminal-failure site (`pollKieTask`) to set
+ *  `KieError.contentPolicy` and pick between `CONTENT_POLICY_MESSAGE` and the
+ *  generic sanitized fallback. */
+export function classifyContentPolicy(failMsg: string): boolean {
+  return CONTENT_POLICY_RE.test(failMsg)
+}
+
+/** User-facing message for a classified content-policy failure — replaces the
+ *  generic "please try again" fallback with the real reason, since retrying
+ *  the identical prompt/input will fail again deterministically. */
+export const CONTENT_POLICY_MESSAGE =
+  "The provider declined this generation: the output may resemble protected (copyrighted) content. Rephrasing the prompt usually resolves this."
 
 // =============================================================================
 // TYPES
@@ -540,9 +595,14 @@ export async function pollKieTask(
         `  Full response: ${JSON.stringify(detailData, null, 2)}`
       )
       // Terminal upstream failure → reconcile fails fast + refunds.
+      // Content-policy failures are a SUBSET of upstream failures (both flags
+      // end up true) — classify so the thrown error carries a real,
+      // actionable reason instead of the generic sanitized fallback.
+      const contentPolicy = classifyContentPolicy(failMsg)
       throw createUpstreamFailureError(
         `task failed: [${failCode}] ${failMsg}`,
         "Generation",
+        { contentPolicy, userMessage: contentPolicy ? CONTENT_POLICY_MESSAGE : undefined },
       )
     }
 
