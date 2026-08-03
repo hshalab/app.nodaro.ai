@@ -2,7 +2,7 @@
 
 import { memo, useState, useMemo, useEffect } from "react"
 import { Position, useUpdateNodeInternals, type NodeProps } from "@xyflow/react"
-import { Clapperboard, Loader2, AlertCircle, Type, Image as ImageIcon, Images, Film, Minus, Volume2, Music, Users, Aperture, Sparkles, Copy, ListChecks } from "lucide-react"
+import { Clapperboard, Loader2, AlertCircle, AlertTriangle, Type, Image as ImageIcon, Images, Film, Minus, Volume2, Music, Users, Aperture, Sparkles, Copy, ListChecks } from "lucide-react"
 import { BaseNode } from "./base-node"
 import { NodeQuickStrip } from "./node-quick-strip"
 import { GvpContinueControl } from "./gvp-continue-control"
@@ -23,6 +23,13 @@ import { buildVideoCreditModelIdentifier } from "@nodaro/shared"
 import { estimateGenerateVideoProCredits } from "@/components/editor/workflow-editor/types"
 import { computeDeleteResultUpdates } from "@/lib/utils"
 import type { GenerateVideoProNodeData, GeneratedResult } from "@/types/nodes"
+
+/** Content-policy rewrite disclosure entry (Task A4, 2026-08-03). Mirrors the
+ *  plugin repo's `ContentPolicyRewriteEntry` shape byte-for-byte
+ *  (`src/plugins/generate-video-pro/engine/content-policy.ts`) — duplicated
+ *  here rather than imported (no cross-repo type sharing), same as the two
+ *  independently-maintained rewrite system prompts. */
+type ContentPolicyRewriteEntry = { segment: number; original: string; rewritten: string }
 
 // Stable, module-level `accepts` predicates — see generate-image-node.tsx /
 // generate-video-node.tsx for why these live outside the component (avoids a
@@ -78,6 +85,25 @@ function GenerateVideoProNodeComponent({ id, data, selected }: NodeProps) {
   const activeIndex = (nodeData.activeResultIndex as number | undefined) ?? 0
   const activeResult = results[activeIndex]
   const activeUrl = activeResult?.url ?? (nodeData.generatedVideoUrl as string | undefined)
+
+  // CONTENT-POLICY DISCLOSURE (Task A4, 2026-08-03): the GVP plugin's
+  // finalize.ts surfaces a segment's disclosed rewrite-and-retry as a
+  // top-level `contentPolicyRewrites` array on the completed job's result
+  // JSON — non-fatal, the delivered video is valid and billed. Read it the
+  // same way `videoUrl` is read: the ACTIVE result first (so browsing an
+  // older, non-rewritten result via history never shows a stale notice),
+  // falling back to the top-level node field (mirrors
+  // GeneratedResult.warningMessage's exact convention — see ai-avatar-node.tsx).
+  const contentPolicyRewrites =
+    (activeResult as unknown as { contentPolicyRewrites?: ContentPolicyRewriteEntry[] } | undefined)
+      ?.contentPolicyRewrites ??
+    (nodeData.contentPolicyRewrites as ContentPolicyRewriteEntry[] | undefined) ??
+    []
+  const contentPolicyNotice =
+    contentPolicyRewrites.length > 0
+      ? `Segment ${contentPolicyRewrites.map((r) => r.segment).join(", ")} prompt${contentPolicyRewrites.length > 1 ? "s were" : " was"} adjusted to pass the provider's content screen.`
+      : undefined
+
   const provider = nodeData.provider ?? "seedance-2"
 
   // PLAN-ONLY result — the engine's full per-segment configuration (no video).
@@ -324,6 +350,17 @@ function GenerateVideoProNodeComponent({ id, data, selected }: NodeProps) {
           onSettings={() => selectNode(isSettingsOpen ? null : id)}
           isSettingsOpen={isSettingsOpen}
         />
+      )}
+
+      {/* CONTENT-POLICY DISCLOSURE (Task A4, 2026-08-03): non-fatal notice —
+          same convention as GeneratedResult.warningMessage (ai-avatar-node.tsx):
+          amber, AlertTriangle, always visible (not hover-gated). Layered above
+          VideoResultOverlay's own z-10 wrapper so it's never hidden behind it. */}
+      {hasVideoResult && contentPolicyNotice && (
+        <div className="absolute inset-x-2 top-2 z-20 flex items-start gap-1.5 rounded-md bg-amber-500/90 backdrop-blur-sm px-2 py-1.5 text-[10px] text-amber-950 shadow-sm">
+          <AlertTriangle className="w-3 h-3 shrink-0 mt-px" />
+          <span className="leading-snug line-clamp-3">{contentPolicyNotice}</span>
+        </div>
       )}
 
       {/* FULL 11 typed input pips + 1 output pip — generate-video's exact
