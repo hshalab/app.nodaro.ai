@@ -1,6 +1,6 @@
 import type { WorkflowNode, WorkflowEdge, FieldMappings } from "@/types/nodes"
 import type { SourceNodeInfo } from "./types"
-import { buildCreditModelIdentifier as sharedBuildCreditModelIdentifier, buildVideoCreditModelIdentifier, buildMotionCreditModelIdentifier, buildLlmCreditIdentifier, LLM_FEATURE_DEFAULTS, motionGraphicsFeature, buildScraperCreditId, isScraperActor, isKineticCaptionStyle, resolveAiAvatarCreditId, resolveCinematicCreditId, referenceSheetCreditId } from "@nodaro/shared"
+import { buildCreditModelIdentifier as sharedBuildCreditModelIdentifier, buildVideoCreditModelIdentifier, buildMotionCreditModelIdentifier, buildLlmCreditIdentifier, LLM_FEATURE_DEFAULTS, motionGraphicsFeature, buildScraperCreditId, isScraperActor, isKineticCaptionStyle, resolveAiAvatarCreditId, resolveCinematicCreditId, referenceSheetCreditId, buildVideoAnalysisCreditId, resolveVideoAnalysisModel } from "@nodaro/shared"
 import type { LlmFeature } from "@nodaro/shared"
 /** Every node type whose output is prose/text. Used to build the compatible
  *  source list for any text-shaped field so the MappableField dropdown is
@@ -332,6 +332,24 @@ export function getModelIdentifier(node: WorkflowNode): string {
       return "add-captions:kinetic"
     }
     return "add-captions"
+  }
+
+  // Video-analysis: tier+duration composite — the SAME id the node badge
+  // requests, so the run-level estimates (Execute badge, run-confirm dialog,
+  // precheck) hit the same model-cost row. Falling through to the bare
+  // "video-analysis" key priced EVERY run at that row's seeded worst case
+  // (smart @ 600s ceiling — the dialog quoted ~1868 for a run that billed 149,
+  // 2026-08-03). Duration mirrors estimateNodeCredits: the YouTube probe is
+  // trusted only while it still matches the node's current youtubeUrl; a wired
+  // video's url-bound probe is the fallback; unknown → the TIER'S own ceiling
+  // bucket (never the smart ceiling).
+  if (nodeType === "video-analysis") {
+    const probedYoutube = data.probedYoutube as { url: string; durationSec: number } | undefined
+    const probedVideo = data.probedVideo as { url: string; durationSec: number } | undefined
+    const durationSec =
+      (probedYoutube && probedYoutube.url === data.youtubeUrl ? probedYoutube.durationSec : undefined) ??
+      probedVideo?.durationSec
+    return buildVideoAnalysisCreditId(resolveVideoAnalysisModel(data.llmModel as string | undefined), durationSec)
   }
 
   // HeyGen avatar nodes + reference sheet are COMPOSITE-only priced (duration/
