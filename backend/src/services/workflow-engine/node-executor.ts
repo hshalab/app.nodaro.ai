@@ -1104,6 +1104,10 @@ export async function computeGenerateVideoProCreditOverride(
     ...(Array.isArray(payload.segmentDurations) && payload.segmentDurations.length > 0
       ? { segmentDurations: payload.segmentDurations as number[] }
       : {}),
+    // Render method (2026-08-03): only the "keyframes" opt-in is forwarded —
+    // absent/"extend" must leave the pricing args (and thus the reserve)
+    // byte-identical to pre-renderMethod runs.
+    ...(payload.renderMethod === "keyframes" ? { renderMethod: "keyframes" as const } : {}),
   })
 
   // DAG clamp (spec §5/§6 — the route's Zod clamp never runs on this path).

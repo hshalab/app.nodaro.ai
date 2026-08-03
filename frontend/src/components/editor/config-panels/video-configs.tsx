@@ -3724,6 +3724,33 @@ function GenerateVideoProConfigImpl({ data, onUpdate, sources, fieldMappings, on
         </div>
       )}
 
+      {/* Render method — how the segments are produced: the classic extend
+          chain (each segment continues the previous one's tail) or keyframes
+          (each scene is rendered from its own generated start/end frames, so
+          scenes are independent and can be re-rendered one at a time).
+          "extend" is written EXPLICITLY rather than cleared to undefined —
+          `updateNodeData` merges by spread and never deletes keys, and the
+          payload builder only puts the field on the wire when it is exactly
+          "keyframes" (same pattern as the Planner style select above). */}
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="gvp-render-method">Render method</Label>
+        <Select
+          value={data.renderMethod ?? "extend"}
+          onValueChange={(v) => onUpdate({ renderMethod: v === "keyframes" ? "keyframes" : "extend" })}
+        >
+          <SelectTrigger id="gvp-render-method" className="h-9 text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="extend">Extend (video chain)</SelectItem>
+            <SelectItem value="keyframes">Keyframes (scene anchors)</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-[11px] text-muted-foreground">
+          Keyframes renders each scene from generated start/end frames — scenes re-render independently. Music is added after render, not by the video model.
+        </p>
+      </div>
+
       {/* Planner model — the LLM that splits the script into segment prompts. */}
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="gvp-planner-model">Planner model</Label>
