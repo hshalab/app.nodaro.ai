@@ -1,11 +1,44 @@
-import { describe, it, expect } from "vitest"
-import { createElement } from "react"
+import { describe, it, expect, vi } from "vitest"
+import { Children, createElement, type ReactNode } from "react"
 import { render } from "@testing-library/react"
+
+// The GVP panel block below renders the REAL GenerateVideoProConfig. Two
+// module-level mocks make that possible without a router/query provider tree
+// (the prompt-snippet hook reaches useAuth -> useNavigate) and make Radix's
+// portal-mounted Select observable in jsdom: every `<Select>` registers its
+// (value, onValueChange) under its trigger id, and items render inline as
+// <option> so their labels land in the DOM. Everything else — including the
+// select module's other exports — stays real.
+const { selectRegistry } = vi.hoisted(() => ({
+  selectRegistry: new Map<string, { value: unknown; onValueChange?: (v: string) => void }>(),
+}))
+
+vi.mock("@/hooks/queries/use-prompt-snippets-queries", () => ({
+  useSnippetPool: () => [],
+}))
+
+vi.mock("@/components/ui/select", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  Select: ({ children, value, onValueChange }: { children?: ReactNode; value?: unknown; onValueChange?: (v: string) => void }) => {
+    const triggerId = Children.toArray(children)
+      .map((c) => (c as { props?: { id?: string } })?.props?.id)
+      .find((id): id is string => typeof id === "string")
+    if (triggerId) selectRegistry.set(triggerId, { value, onValueChange })
+    return createElement("div", { "data-select-id": triggerId }, children)
+  },
+  SelectContent: ({ children }: { children?: ReactNode }) => createElement("div", null, children),
+  SelectItem: ({ children, value }: { children?: ReactNode; value?: string }) =>
+    createElement("option", { value }, children),
+  SelectTrigger: ({ children, id }: { children?: ReactNode; id?: string }) => createElement("div", { id }, children),
+  SelectValue: () => createElement("span"),
+}))
+
 import {
   buildVideoRefAutocomplete,
   toRefImageItems,
   buildVideoRefVideoAutocomplete,
   buildVideoRefAudioAutocomplete,
+  GenerateVideoProConfig,
 } from "../video-configs"
 import {
   buildImageConnectedReferences,
@@ -214,5 +247,65 @@ describe("FramesAndReferencesTip", () => {
 
     rerender(createElement(FramesAndReferencesTip, { hasFrame: false, hasReference: false }))
     expect(container).toBeEmptyDOMElement()
+  })
+})
+
+// =============================================================================
+// GenerateVideoProConfig — render method toggle (keyframes, 2026-08-03)
+// =============================================================================
+
+const RENDER_METHOD_ID = "gvp-render-method"
+
+function renderGvp(data: Record<string, unknown> = {}) {
+  selectRegistry.clear()
+  const onUpdate = vi.fn()
+  const view = render(
+    createElement(GenerateVideoProConfig as never, {
+      data: { label: "Generate Video Pro", provider: "seedance-2", duration: 8, ...data },
+      onUpdate,
+      sources: [],
+      fieldMappings: {},
+      onMapField: vi.fn(),
+      nodes: [],
+    }),
+  )
+  return { ...view, onUpdate, select: () => selectRegistry.get(RENDER_METHOD_ID) }
+}
+
+describe("GenerateVideoProConfig — render method", () => {
+  it("offers both methods with their labels and the post-render music caption", () => {
+    const { container } = renderGvp()
+    expect(container.textContent).toContain("Render method")
+    expect(container.textContent).toContain("Extend (video chain)")
+    expect(container.textContent).toContain("Keyframes (scene anchors)")
+    expect(container.textContent).toContain(
+      "Keyframes renders each scene from generated start/end frames — scenes re-render independently. Music is added after render, not by the video model.",
+    )
+  })
+
+  it("defaults to extend when the node carries no renderMethod", () => {
+    const { select, onUpdate } = renderGvp()
+    expect(select()?.value).toBe("extend")
+    // Purely presentational default — nothing is written back on mount, so an
+    // untouched node stays byte-identical on the wire.
+    expect(onUpdate.mock.calls.flatMap(([u]) => Object.keys(u as object))).not.toContain("renderMethod")
+  })
+
+  it("reflects a persisted keyframes selection", () => {
+    const { select } = renderGvp({ renderMethod: "keyframes" })
+    expect(select()?.value).toBe("keyframes")
+  })
+
+  it("writes keyframes on selection and writes extend back explicitly", () => {
+    const { select, onUpdate } = renderGvp()
+    select()?.onValueChange?.("keyframes")
+    expect(onUpdate).toHaveBeenLastCalledWith({ renderMethod: "keyframes" })
+
+    const back = renderGvp({ renderMethod: "keyframes" })
+    back.select()?.onValueChange?.("extend")
+    // "extend" is written explicitly rather than cleared to undefined — the
+    // store merges by spread and never deletes keys; the payload builder only
+    // puts the field on the wire when it is exactly "keyframes".
+    expect(back.onUpdate).toHaveBeenLastCalledWith({ renderMethod: "extend" })
   })
 })
