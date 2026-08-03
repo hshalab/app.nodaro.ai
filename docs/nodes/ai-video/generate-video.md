@@ -302,6 +302,10 @@ Example: `veo3.1` 8s / 1080p i2v voiced = 17 (base) + 4 (revoice) = **21 credits
 
 > **Phase 1 scope.** Single-speaker clips are fully supported in both modes. A multi-speaker prompt produces a correct multi-voice **audio** track (Dialogue v3 voices each line separately) for a single-subject `audio_driven` clip; true per-face lip-sync across multiple on-screen speakers is not yet supported. The silent / ambient-only chain (separate-stems → voice-change → re-merge → lip-sync) for `none` / `ambient` models is deferred to Phase 2.
 
+## Content policy
+
+Some providers screen generated output against content policies (for example, resemblance to protected film/TV content) and reject a job after generation. When that happens, Generate Video doesn't just fail: it asks an LLM to rewrite the prompt once — keeping the same subjects, camera language, and mood while removing or softening whatever triggered the screen — and automatically retries with the rewritten prompt, at no extra credit cost. If the retry succeeds, the job completes normally and the result records what changed (`contentPolicyRewrite` in the job output for this node; [Generate Video Pro](./generate-video-pro.md) records the equivalent per-segment as `contentPolicyRewrites`). If the provider rejects the rewritten prompt too, or the rewrite itself doesn't produce a usable result, the job fails with the provider's real rejection reason rather than a generic error.
+
 ## Configuration
 
 Most provider-specific fields are exposed in the node's config panel only when the wired provider supports them. The config panel reads from the node's data and writes back the user's choices. The full per-provider matrix is documented in the legacy [Image to Video](./image-to-video.md) page for I2V parameters and [Text to Video](./text-to-video.md) page for T2V parameters — both pages redirect here but the parameter tables remain valid because Generate Video forwards to the same worker handlers.

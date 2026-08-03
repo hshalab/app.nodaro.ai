@@ -69,11 +69,12 @@ for (const resolution of Object.keys(CINEMATIC_RATE_USD_PER_SEC) as CinematicRes
 // and the model_pricing rows (migrations 247+248) — extend all of them together
 // if a third video+audio model ships.
 //
-// Current values:
-//   gemini-3-flash   → bare 3 · 60s 1 · 180s 1 · 360s 2 · 600s 3 (legacy fast)
-//   gemini-3.6-flash → bare 9 · 60s 2 · 180s 2 · 360s 5 · 600s 9 (fast tier)
-//   gemini-3.1-pro   → bare 11 · 60s 2 · 180s 3 · 360s 7 · 600s 11
-//   mixed            → bare 14 · 60s 3 · 180s 4 · 360s 9 · 600s 14
+// Current values are deliberately NOT listed here — this comment hand-copied
+// them once and then sat stale through five repricings (last caught 2026-08-03,
+// task A3: the block still quoted pre-6fps-rebase, pre-redenomination numbers
+// and never mentioned `smart` at all). Read the live numbers from
+// VIDEO_ANALYSIS_BUCKET_CREDITS in `@nodaro/shared` (video-analysis-pricing.ts),
+// `/admin/models`, or `GET /v1/credits/model-cost`.
 // `mixed` is the shared credit family for BOTH mixed analysis tiers
 // (`mixed` + `mixed-fast` — variants of one engine plan; internals live in
 // the private analysis plugin); videoAnalysisCreditSegment maps the sentinels.

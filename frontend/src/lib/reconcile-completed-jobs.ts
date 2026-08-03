@@ -129,6 +129,16 @@ export function buildCompletedResultPatch(
     if (nodeType && ["character", "face", "object", "location"].includes(nodeType)) patch.sourceImageUrl = imageUrl
     else patch.generatedImageUrl = imageUrl
   } else if (audioUrl) patch.generatedAudioUrl = audioUrl
+
+  // CONTENT-POLICY DISCLOSURE passthrough (Task A4 follow-up, 2026-08-03) —
+  // GVP-only, mirrors the video-analysis special case above: this function's
+  // own motivating scenario is a long GVP run (10-40+ min) whose result lands
+  // while the tab is closed, so a disclosed rewritten segment must still show
+  // the notice after reload, not just on a live run (execute-node.ts's
+  // gvpProExtractor already covers that path — see generate-video-pro-node.tsx).
+  if (nodeType === "generate-video-pro" && Array.isArray(output.contentPolicyRewrites) && output.contentPolicyRewrites.length > 0) {
+    patch.contentPolicyRewrites = output.contentPolicyRewrites
+  }
   return patch
 }
 

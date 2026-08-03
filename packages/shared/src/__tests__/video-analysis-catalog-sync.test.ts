@@ -90,9 +90,12 @@ describe("bare video-analysis node-type credit id", () => {
     // 279 wrote 739, 283 wrote 346, 284 wrote 350 — `smart` owns the ceiling and
     // gained the continuity pass — 288 wrote 3500 as a x10 of that, 293
     // corrected it to 3496 by RE-DERIVING `smart:600s` from the plugin formula,
-    // and 294 wrote 1868: the smart re-base measured 6 fps equal-or-better than
-    // 24 and the schedule regenerated ~47% lower at the ceiling bucket).
-    expect(ceiling).toBe(1868)
+    // 294 wrote 1868: the smart re-base measured 6 fps equal-or-better than
+    // 24 and the schedule regenerated ~47% lower at the ceiling bucket, and 300
+    // wrote 2064: the V1 hybrid-smart reprice (task A3) moved `smart` to a
+    // multi-roll plan (native skeleton + donor rolls, always refined) and
+    // trued up every tier's judge/refine terms from staging measurement).
+    expect(ceiling).toBe(2064)
   })
 
   it("the bare id still bounds the default tier at the ceiling bucket", () => {

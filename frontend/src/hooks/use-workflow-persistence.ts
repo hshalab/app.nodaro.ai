@@ -259,6 +259,16 @@ async function syncNodeResultsFromDB(nodes: WorkflowNode[]): Promise<{ nodes: Wo
         }
       }
 
+      // CONTENT-POLICY DISCLOSURE passthrough (Task A4 follow-up, 2026-08-03) —
+      // GVP-only. `BatchJobStatus.output_data` (api.ts) is narrowly typed with
+      // no index signature, so this reads through a local cast rather than
+      // widening that shared type. Same long-run reload scenario as
+      // reconcile-completed-jobs.ts / run-handlers.ts's applyRestoredJobCompletion.
+      if (nodeType === "generate-video-pro") {
+        const rewrites = (job.output_data as Record<string, unknown> | null)?.contentPolicyRewrites
+        if (Array.isArray(rewrites) && rewrites.length > 0) newData.contentPolicyRewrites = rewrites
+      }
+
       return { ...node, data: newData }
     } else if (job.status === "failed") {
       // Job failed - update node with error
