@@ -172,6 +172,33 @@ export interface PluginImageGenResult {
   taskId?: string
 }
 
+/**
+ * Mirrors the description-mode subset of `SunoGenerateParams`
+ * (`providers/kie/suno-client.ts`). Deliberately NOT custom mode: Suno's
+ * custom mode redefines `prompt` as LYRICS, while a film-score brief is a
+ * description — so the wrapper pins description mode and `durationSec` is
+ * ADVISORY only (Suno's duration hint is custom-mode-gated; the caller cuts
+ * the track to exact length with its own ffmpeg). ADDITIVE (2026-08-04, gvp
+ * keyframes music post-mux).
+ */
+export interface PluginMusicGenOptions {
+  /** Style tags rides alongside the brief ("cinematic orchestral, 120 BPM"). */
+  style?: string
+  /** Default TRUE — scores ride instrumental; voices live in the video. */
+  instrumental?: boolean
+  /** Advisory target seconds (see interface doc — the caller cuts to length). */
+  durationSec?: number
+  onTaskCreated?: (taskId: string) => void | Promise<void>
+}
+
+/** First track of the Suno result (`SunoTaskResult.tracks[0]`) — url +
+ *  reported seconds + the provider task id for checkpointing. */
+export interface PluginMusicGenResult {
+  url: string
+  durationSec?: number
+  taskId?: string
+}
+
 export interface PluginProvidersToolkit {
   /** Mirrors `directVoiceChanger` (`providers/elevenlabs/voice-changer.ts`). */
   directVoiceChanger(
@@ -251,6 +278,22 @@ export interface PluginProvidersToolkit {
     model: string,
     options?: PluginImageGenOptions,
   ): Promise<PluginImageGenResult>
+  /**
+   * Mirrors `sunoGenerate` (`providers/kie/suno-client.ts`) reduced to ONE
+   * track from a prose brief — the gvp keyframes music lane (spec point 7):
+   * the engine renders the plan's music brief as a single instrumental
+   * track, cuts it to the stitched length, and muxes it AFTER finalize.
+   * Music is never conditioned into the video model (Seedance mode
+   * exclusivity), which is exactly why this is a separate audio-lane member
+   * and not a video option.
+   *
+   * OPTIONAL (additive-contract convention): absent → the app predates this
+   * member; callers feature-guard (music degrades to none, never crashes).
+   */
+  generateMusic?(
+    prompt: string,
+    options?: PluginMusicGenOptions,
+  ): Promise<PluginMusicGenResult>
   /**
    * Mirrors the single-shot KIE record-info query the reconcile system polls
    * — `pollKieTask` (`providers/kie/client.ts`) called with `maxAttempts=1`,
