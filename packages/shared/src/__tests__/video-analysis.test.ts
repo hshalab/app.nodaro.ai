@@ -353,6 +353,19 @@ describe("misc", () => {
     expect(isOversizedScene(0, 8)).toBe(false)
     expect(isOversizedScene(0, 8.5)).toBe(true)
   })
+
+  it("does not flag an exactly-8s scene whose float subtraction overshoots", () => {
+    // Real job bdc9c8eb: 12.67 → 20.67 computes as 8.000000000000002.
+    expect(20.67 - 12.67).toBeGreaterThan(8) // the hazard this guards
+    expect(isOversizedScene(12.67, 20.67)).toBe(false)
+    // Same hazard at other offsets — none of these are genuinely over the cap.
+    expect(isOversizedScene(4.67, 12.67)).toBe(false)
+    expect(isOversizedScene(0.1, 8.1)).toBe(false)
+  })
+
+  it("still flags a real overshoot far smaller than a boundary step", () => {
+    expect(isOversizedScene(0, 8.01)).toBe(true)
+  })
   it("aspectRatioFromDims snaps to nearest standard, else reduces", () => {
     expect(aspectRatioFromDims(1920, 1080)).toBe("16:9")
     expect(aspectRatioFromDims(1080, 1920)).toBe("9:16")
