@@ -971,6 +971,14 @@ export interface PluginHttpToolkit {
      *  `GenerateVideoProPricing.renderMethod`/`anchorReserve`). Omitted /
      *  "extend" → the classic chain, byte-identical. Additive-optional. */
     renderMethod?: "extend" | "keyframes"
+    /** ANCHORS ALREADY BOUGHT (interactive mode S2, 2026-08-04): the run is
+     *  rendering from stills the caller already generated and paid for, so it
+     *  holds NO anchor budget — without this a 14-scene run reserves ~1,260
+     *  credits it will never spend, which is how a run 402s at the finish line
+     *  on a balance that was always sufficient. `anchorReserve` is then absent
+     *  from the result, which is also how a plugin detects an older app that
+     *  ignored the field (it would come back non-zero). Additive-optional. */
+    anchorsSeeded?: boolean
   }): Promise<GenerateVideoProPricing>
   /**
    * Mirrors `computeEditVideoProPricing` (`ee/billing/edit-video-pro-credits.ts`)
