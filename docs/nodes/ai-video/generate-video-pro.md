@@ -117,6 +117,8 @@ Keyframes requires the current cloud engine version; on an older deployment the 
 
 **Pricing shape.** A keyframes run is reserved as the flat plan fee, plus **every** segment's seconds at the **no-reference** per-second rate, plus the anchor images. There is no continuation-context term at all — no segment rides another segment's tail, so the `(N − 1) × T` overlap the extend formula charges simply does not exist here (the Continuation context setting has no effect on a keyframes run). Anchors are reserved at the worst case of **two per scene** at the anchor image model's own price; the engine only generates an end frame where the scene warrants one (longer scenes, on models that support a strict closing frame), and the commit charges the actual count — so the anchor part of the reserve only ever refunds down, never up. Continuing a keyframes run re-renders the chosen scenes at the same no-reference rate and adds **no** anchor reserve: the parent run's anchors are reused.
 
+**Which model draws the anchors.** Anchors are generated at 2K with [GPT Image 2](../ai-image/generate-image.md). The one exception is **21:9** — GPT Image 2 does not render that ratio, so ultra-wide runs draw their anchors on Nano Banana Pro instead, which does. That is purely an anchor-model choice; the video itself is unaffected. Because the two models are priced differently, a 21:9 keyframes run reserves (and charges) more per anchor than the same run at 16:9 — read the current per-image numbers from the [Generate Image](../ai-image/generate-image.md) pricing table rather than assuming a ratio between them.
+
 For the extend-mode formula and worked examples see [Credit pricing](#credit-pricing).
 
 ## Stopping and continuing a run
