@@ -1910,11 +1910,11 @@ const VIDEO_MODELS: Record<string, ModelCatalogEntry> = {
     description: "Our most advanced analysis tier — multiple analysis engines combined into one result for maximum completeness and accuracy. Billed per duration bucket.",
     useCases: ["video-analysis", "shot-list", "premium", "most-complete"],
     pricing: [
-      { identifier: "video-analysis:mixed", credits: 1129, note: "10-min ceiling (no duration given)" },
-      { identifier: "video-analysis:mixed:60s", credits: 228 },
-      { identifier: "video-analysis:mixed:180s", credits: 249 },
-      { identifier: "video-analysis:mixed:360s", credits: 684 },
-      { identifier: "video-analysis:mixed:600s", credits: 1129, note: "10-min ceiling" },
+      { identifier: "video-analysis:mixed", credits: 1169, note: "10-min ceiling (no duration given)" },
+      { identifier: "video-analysis:mixed:60s", credits: 268 },
+      { identifier: "video-analysis:mixed:180s", credits: 289 },
+      { identifier: "video-analysis:mixed:360s", credits: 724 },
+      { identifier: "video-analysis:mixed:600s", credits: 1169, note: "10-min ceiling" },
     ],
   },
   // SMART — the accuracy tier. Since the 2026-08-03 hybrid re-plan it is a
