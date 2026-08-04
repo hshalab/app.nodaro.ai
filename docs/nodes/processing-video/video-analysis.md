@@ -332,12 +332,18 @@ charged) — generated and drift-guarded internally, never hand-written.
 |------|------|-------|-------|-------|
 | `fast` (economy) | 180 | 185 | 514 | 846 |
 | `pro` (default) | 215 | 231 | 636 | 1050 |
-| `mixed` / `mixed-fast` | 228 | 249 | 684 | 1129 |
+| `mixed` / `mixed-fast` | 268 | 289 | 724 | 1169 |
 | `smart` (highest accuracy) | 410 | 500 | 1259 | 2064 |
 
 The two mixed tiers are variants of the same advanced analysis and share one
 price: `mixed` is tuned for maximum result quality; `mixed-fast` for the most
-consistent output character run-to-run.
+consistent output character run-to-run. Since 2026-08-04 both mixed tiers also
+run the cross-scene **continuity review** (previously `smart`-only): a final
+reasoning pass over the finished shot list that corrects internally impossible
+claims and raises `continuity watch` warnings for suspected persistent-state
+omissions (for example, an object handcuffed to a character that silently
+disappears from later scenes). Every correction and watch flag is disclosed in
+the result's `warnings`.
 
 > These values are the internal pricing formula's current outputs.
 

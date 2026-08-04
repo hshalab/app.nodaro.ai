@@ -87,6 +87,7 @@ export const VIDEO_ANALYSIS_WINDOW = { LEN: WINDOW_LEN, STRIDE: WINDOW_STRIDE, O
 //   gemini-3.6-flash  60s   65->203   180s   92->218   360s  237-> 598   600s  395-> 986
 //   gemini-3.1-pro    60s   87->215   180s  116->231   360s  305-> 636   600s  509->1050
 //   mixed             60s  110->228   180s  149->249   360s  390-> 684   600s  651->1129
+//   mixed (2026-08-04) 60s 228->268   180s  249->289   360s  684-> 724   600s 1129->1169  (+40 flat: continuity pass joined the family)
 //   smart             60s  333->410   180s  470->500   360s 1135->1259   600s 1868->2064
 //
 // Values are pasted verbatim from the plugin generator's output — never hand
@@ -110,10 +111,10 @@ export const VIDEO_ANALYSIS_BUCKET_CREDITS: Record<string, number> = {
   // Mixed tiers (`mixed` + `mixed-fast`) share ONE credit family — they are
   // variants of the same engine plan (plan internals live in the private
   // analysis plugin). Admin-tunable via model_pricing like every other row.
-  "video-analysis:mixed:60s": 228,
-  "video-analysis:mixed:180s": 249,
-  "video-analysis:mixed:360s": 684,
-  "video-analysis:mixed:600s": 1129,
+  "video-analysis:mixed:60s": 268,
+  "video-analysis:mixed:180s": 289,
+  "video-analysis:mixed:360s": 724,
+  "video-analysis:mixed:600s": 1169,
   // SMART — the accuracy tier, and since the 2026-08-03 hybrid re-plan a
   // multi-roll plan like the others: one native 6fps skeleton pass plus 2
   // fast + 2 pro donor rolls, always refined (`selectionMode` does not apply
