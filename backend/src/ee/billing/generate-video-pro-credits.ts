@@ -58,13 +58,40 @@ export interface GenerateVideoProPricing {
   billSegments?: number[]
 }
 
-/** Image model the keyframes engine generates scene anchors with. Priced
- *  through the DB-aware `getModelCreditBaseCost` so an admin reprice of the
- *  row moves the anchor reserve automatically (hard-fails, never silently
- *  under-reserves). */
-const KEYFRAME_ANCHOR_MODEL = "nano-banana-pro"
+/** Image model the keyframes engine generates scene anchors with — GPT Image 2
+ *  at 2K since 2026-08-04 (was `nano-banana-pro`). The `:2K` COMPOSITE is the
+ *  billed identifier, not the bare id: bare `gpt-image-2` is the 1K price and
+ *  would under-reserve every anchor by half (nano-banana-pro's base covered
+ *  1K AND 2K, which is why the old constant was bare). */
+const KEYFRAME_ANCHOR_MODEL = "gpt-image-2:2K"
+/** Wide-aspect fallback — GPT Image 2 renders only `auto/1:1/16:9/9:16/4:3/
+ *  3:4`, so ratios it cannot do (21:9) generate on nano-banana-pro and must
+ *  price at nano-banana-pro. Its base already covers 2K (no composite). */
+const KEYFRAME_ANCHOR_FALLBACK_MODEL = "nano-banana-pro"
 /** Worst-case anchors per segment (start + end frame). */
 const ANCHORS_PER_SEGMENT = 2
+
+/**
+ * Billed identifier for ONE anchor at a given aspect — CATALOG-DRIVEN off the
+ * base model's documented `aspectRatios`, never a hand-kept ratio list, so
+ * widening GPT Image 2 moves price and generation together.
+ *
+ * TWIN: `resolveAnchorModel` in the plugin repo's
+ * `plugins/generate-video-pro/engine/keyframes.ts` — same predicate, same
+ * fallback, and the plugin resolves `"adaptive"`/absent to `"16:9"` before
+ * sending. A mismatch is a mispriced run, so keep them in lock-step.
+ *
+ * ABSENT aspect → the FALLBACK (pricier) id, deliberately. The only caller
+ * that omits it is a plugin predating the field, whose engine still generates
+ * every anchor on nano-banana-pro — so this reserves exactly what that plugin
+ * spends. Guessing the cheaper id there would under-reserve a real run.
+ */
+function anchorCreditIdFor(aspectRatio?: string): string {
+  if (!aspectRatio) return KEYFRAME_ANCHOR_FALLBACK_MODEL
+  const base = KEYFRAME_ANCHOR_MODEL.split(":")[0]!
+  const supported = MODEL_CATALOG[base]?.aspectRatios as readonly string[] | undefined
+  return supported?.includes(aspectRatio) ? KEYFRAME_ANCHOR_MODEL : KEYFRAME_ANCHOR_FALLBACK_MODEL
+}
 
 /**
  * Keyframes reserve for a set of segment durations: every segment at the
@@ -278,6 +305,16 @@ export async function computeGenerateVideoProPricing(args: {
    *  Additive-optional: an older plugin never sends it and prices exactly as
    *  it does today. */
   anchorsSeeded?: boolean
+  /** ANCHOR ASPECT (2026-08-04) — the ratio the engine's anchor wave will
+   *  actually render at, already resolved past `"adaptive"` by the plugin's
+   *  `anchorAspectFor`. Keyframes only, and it moves ONLY the anchor unit
+   *  price: ratios GPT Image 2 cannot render fall back to the pricier
+   *  nano-banana-pro (see `anchorCreditIdFor`).
+   *
+   *  Additive-optional, and absent means the FALLBACK price — a plugin
+   *  predating the field still generates every anchor on nano-banana-pro, so
+   *  that reserves exactly what it spends (today's number, byte-identical). */
+  aspectRatio?: string
 }): Promise<GenerateVideoProPricing> {
   const { provider, durationSec } = args
   const tailSec = clampContextTailSec(args.tailSec)
@@ -319,7 +356,7 @@ export async function computeGenerateVideoProPricing(args: {
     // with it — there is no unit to price.
     const anchorReserve = args.anchorsSeeded === true
       ? 0
-      : split.n * ANCHORS_PER_SEGMENT * (await getModelCreditBaseCost(KEYFRAME_ANCHOR_MODEL)).creditCost
+      : split.n * ANCHORS_PER_SEGMENT * (await getModelCreditBaseCost(anchorCreditIdFor(args.aspectRatio))).creditCost
     return {
       mode: split.mode,
       clampedDurationSec: split.clampedD,

@@ -65,8 +65,14 @@ describe("golden-table composite sanity (seedance-2 family, credits.ts)", () => 
   it("generate-video-pro fee row", () => {
     expect(STATIC_CREDIT_COSTS["generate-video-pro"]).toBe(100)
   })
-  it("nano-banana-pro anchor-image row (keyframes anchor reserve)", () => {
+  it("nano-banana-pro anchor-image row (keyframes WIDE-aspect anchor reserve)", () => {
     expect(STATIC_CREDIT_COSTS["nano-banana-pro"]).toBe(45)
+  })
+  it("gpt-image-2:2K anchor-image row (keyframes default anchor reserve)", () => {
+    // The COMPOSITE, not the bare id — bare gpt-image-2 is the 1K price (15)
+    // and would under-reserve every anchor by half.
+    expect(STATIC_CREDIT_COSTS["gpt-image-2:2K"]).toBe(30)
+    expect(STATIC_CREDIT_COSTS["gpt-image-2"]).toBe(15)
   })
 })
 
@@ -357,11 +363,64 @@ describe("computeGenerateVideoProContinuationPricing — golden table (seedance-
 describe("computeGenerateVideoProPricing — keyframes render method (seedance-2 @ 720p)", () => {
   const NO_REF_PER_SEC = STATIC_CREDIT_COSTS["seedance-2:8s:720p"]! / 8 // 102.5
   const FEE = STATIC_CREDIT_COSTS["generate-video-pro"]!
+  // No `aspectRatio` in these calls — that is the OLD-PLUGIN path, which still
+  // generates every anchor on nano-banana-pro, so the reserve stays the
+  // fallback unit and this whole golden block is byte-identical to pre-2026-08-04.
   const ANCHOR = STATIC_CREDIT_COSTS["nano-banana-pro"]!
+  /** The default unit, used once an aspect the engine can render on GPT Image 2 rides along. */
+  const ANCHOR_GPT2 = STATIC_CREDIT_COSTS["gpt-image-2:2K"]!
   const expected = (durations: number[]): number =>
     FEE +
     durations.reduce((sum, d) => sum + Math.ceil(d * NO_REF_PER_SEC), 0) +
     durations.length * 2 * ANCHOR
+
+  // ── anchor unit follows the aspect (2026-08-04: nano-banana-pro → GPT Image 2) ──
+
+  it("prices anchors at the GPT Image 2 2K unit for every ratio it can render", async () => {
+    for (const aspectRatio of ["16:9", "9:16", "1:1", "4:3", "3:4"]) {
+      const r = await computeGenerateVideoProPricing({
+        provider: "seedance-2", resolution: "720p", durationSec: 16,
+        renderMethod: "keyframes", aspectRatio,
+      })
+      expect(r.anchorReserve).toBe(2 * 2 * ANCHOR_GPT2)
+    }
+  })
+
+  it("prices a 21:9 run's anchors at the nano-banana-pro fallback — GPT Image 2 cannot render it", async () => {
+    // TWIN of the plugin's `resolveAnchorModel`: 21:9 generates on
+    // nano-banana-pro, so it must RESERVE nano-banana-pro. Pricing it at the
+    // cheaper unit would under-reserve every ultra-wide keyframes run.
+    const r = await computeGenerateVideoProPricing({
+      provider: "seedance-2", resolution: "720p", durationSec: 16,
+      renderMethod: "keyframes", aspectRatio: "21:9",
+    })
+    expect(r.anchorReserve).toBe(2 * 2 * ANCHOR)
+    expect(ANCHOR).toBeGreaterThan(ANCHOR_GPT2)
+  })
+
+  it("an absent aspect reserves the FALLBACK unit — an older plugin still spends nano-banana-pro", async () => {
+    const withAspect = await computeGenerateVideoProPricing({
+      provider: "seedance-2", resolution: "720p", durationSec: 16,
+      renderMethod: "keyframes", aspectRatio: "16:9",
+    })
+    const without = await computeGenerateVideoProPricing({
+      provider: "seedance-2", resolution: "720p", durationSec: 16, renderMethod: "keyframes",
+    })
+    expect(without.anchorReserve).toBe(2 * 2 * ANCHOR)
+    // Never cheaper than what the old plugin actually spends.
+    expect(without.anchorReserve!).toBeGreaterThan(withAspect.anchorReserve!)
+  })
+
+  it("the aspect lever is inert outside keyframes — extend reserves no anchors at all", async () => {
+    const wide = await computeGenerateVideoProPricing({
+      provider: "seedance-2", resolution: "720p", durationSec: 16, aspectRatio: "21:9",
+    })
+    const narrow = await computeGenerateVideoProPricing({
+      provider: "seedance-2", resolution: "720p", durationSec: 16, aspectRatio: "16:9",
+    })
+    expect(wide.anchorReserve).toBeUndefined()
+    expect(wide.reserveBase).toBe(narrow.reserveBase)
+  })
 
   it("D=16 multi: every segment at the no-ref rate, no continuation tail, + 2 anchors/segment", async () => {
     const r = await computeGenerateVideoProPricing({

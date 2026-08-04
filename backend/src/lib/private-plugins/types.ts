@@ -979,6 +979,13 @@ export interface PluginHttpToolkit {
      *  from the result, which is also how a plugin detects an older app that
      *  ignored the field (it would come back non-zero). Additive-optional. */
     anchorsSeeded?: boolean
+    /** ANCHOR ASPECT (2026-08-04) — the ratio the anchor wave will actually
+     *  render at (`"adaptive"`/absent resolved to `"16:9"` plugin-side by
+     *  `anchorAspectFor`). Keyframes only; moves ONLY the anchor unit price,
+     *  since ratios GPT Image 2 cannot render (21:9) fall back to the pricier
+     *  nano-banana-pro. Additive-optional — absent prices at that fallback,
+     *  which is exactly what a plugin predating the field spends. */
+    aspectRatio?: string
   }): Promise<GenerateVideoProPricing>
   /**
    * Mirrors `computeEditVideoProPricing` (`ee/billing/edit-video-pro-credits.ts`)
