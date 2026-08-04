@@ -6,7 +6,7 @@
 import type { SimpleNode, SimpleEdge, ResolvedInputs, NodeExecutionState } from "./types.js"
 
 // Shared logic from packages/shared — single source of truth
-import { collectAncestorRefs as sharedCollectAncestorRefs, applyDefaultVideoSelection, LOCATION_REFERENCE_PHOTO_KINDS, locationReferencePhotoKindLabel, type LocationReferencePhotoKind, characterMentionableAssetArrays, buildCreditModelIdentifier, resolveImageGenCreditIdentifier, buildVideoCreditModelIdentifier, buildMotionCreditModelIdentifier, applyVideoNegativePrompt, resolveVideoProviderForMode, videoProviderRequiresImage, isVeoProvider, buildLipSyncCreditId, isPerSecondLipSyncProvider, resolveAiAvatarCreditId, resolveSwitchXCreditId, resolveCinematicCreditId, referenceSheetCreditId, buildVideoAnalysisCreditId, resolveVideoAnalysisModel, extractReferencedLabels, combineSameLabelRefs, refHandleCategory, canonicalVarName, validateAiAvatarPayload, validateCinematicAvatarPayload, resolveNodeRefs, resolveEffectiveSourceType, PARAMETER_NODE_TYPES, characterMentionSlug, expandExtraRefsToConnectedReferences, PLATFORM_SPECS, isSeedance2Provider, isMinimaxH3Provider, MODEL_CATALOG, hasFeature, referenceModalityForHandle, countRefModalityEdges as countRefModalityEdgesCore, type ReferenceModality, COMPOSER_PLAN_MAP, ASPECT_RATIO_DIMENSIONS, buildLlmCreditIdentifier, motionGraphicsFeature, FLUX_LORA_CHARACTER_MODEL_ID, extractCharacterLoraFields, clampSmartCutWindow } from "@nodaro/shared"
+import { collectAncestorRefs as sharedCollectAncestorRefs, applyDefaultVideoSelection, LOCATION_REFERENCE_PHOTO_KINDS, locationReferencePhotoKindLabel, type LocationReferencePhotoKind, characterMentionableAssetArrays, buildCreditModelIdentifier, resolveImageGenCreditIdentifier, buildVideoCreditModelIdentifier, buildMotionCreditModelIdentifier, applyVideoNegativePrompt, resolveVideoProviderForMode, videoProviderRequiresImage, isVeoProvider, buildLipSyncCreditId, isPerSecondLipSyncProvider, resolveAiAvatarCreditId, resolveSwitchXCreditId, resolveCinematicCreditId, referenceSheetCreditId, buildVideoAnalysisCreditId, buildVideoAuditCreditId, resolveVideoAnalysisModel, extractReferencedLabels, combineSameLabelRefs, refHandleCategory, canonicalVarName, validateAiAvatarPayload, validateCinematicAvatarPayload, resolveNodeRefs, resolveEffectiveSourceType, PARAMETER_NODE_TYPES, characterMentionSlug, expandExtraRefsToConnectedReferences, PLATFORM_SPECS, isSeedance2Provider, isMinimaxH3Provider, MODEL_CATALOG, hasFeature, referenceModalityForHandle, countRefModalityEdges as countRefModalityEdgesCore, type ReferenceModality, COMPOSER_PLAN_MAP, ASPECT_RATIO_DIMENSIONS, buildLlmCreditIdentifier, motionGraphicsFeature, FLUX_LORA_CHARACTER_MODEL_ID, extractCharacterLoraFields, clampSmartCutWindow } from "@nodaro/shared"
 import { composeNegative, resolveTemplate, applyTemplate, computeNodePrompt, assembleImageInput, buildImagePrompt, buildScenePrompt, collectIdentityLockClause as sharedCollectIdentityLockClause, getParameterPromptHint, characterLockToRefLock, buildCharacterPrompt, buildObjectPrompt, buildCreaturePrompt, buildLocationPrompt, buildFaceTemplateInputs, appendMusicMeta, composeSoundHintFromConnections, truncateForField, appendField, assembleSunoInput, type SoundConsumerType, type SoundComposition, resolveVideoReferenceCore } from "@nodaro/prompts"
 import type { CharacterDef, ConnectedReference, SceneData, ExtraRefInput, ExtraRefCharacterContext } from "@nodaro/shared"
 import type { CharacterMeta } from "@nodaro/prompts"
@@ -274,6 +274,29 @@ export function resolveSheetEntity(
     }
   }
   return {}
+}
+
+/**
+ * WHICH VIDEO-AUDIT CREDIT FAMILY — the frontend rule verbatim
+ * (`videoAuditAnalysisWired` in workflow-editor/types.ts, which the node badge,
+ * the canvas total and the run-confirm dialog all quote from): an edge into the
+ * `analysis` target means the audit only re-audits, pricing under the cheaper
+ * `video-audit` family; nothing wired means the node runs its own fast analysis
+ * first, pricing under `video-audit:auto`.
+ *
+ * It is a GRAPH fact, not a node-data field, so it needs the edges. Callers
+ * WITHOUT graph context get `false` — the frontend's own never-under-quoting
+ * default. The orchestrator uses it only to detect the "wired but unresolved"
+ * contradiction (see `case "video-audit"`); the family itself is selected by
+ * whether the analysis actually RESOLVED, so the reserved id can never claim an
+ * analysis the payload doesn't carry.
+ */
+export function videoAuditAnalysisWired(
+  nodeId: string | undefined,
+  edges?: ReadonlyArray<{ target: string; targetHandle?: string | null }>,
+): boolean {
+  if (!nodeId || !edges) return false
+  return edges.some((e) => e.target === nodeId && e.targetHandle === "analysis")
 }
 
 /** Expand wired upstream Character nodes into canonical + per-variant refs. */
@@ -2978,6 +3001,69 @@ export function buildPayload(
         // nodeId echoes the route's payload key (node.id == the canvas node id the
         // route reads from req.body). workflowId is route-only — buildPayload has
         // no execution context and the worker consumes neither field.
+        nodeId: node.id,
+        usageLogId,
+      })
+    }
+
+    // AI Audit — re-watches a clip against an analysis and returns the CORRECTED
+    // analysis (`json`) plus its disclosure `report`. Sibling of video-analysis
+    // above and priced off the SAME duration-bucket ladder, but the family comes
+    // from whether an analysis was provided rather than from a model pick.
+    case "video-audit": {
+      // The clip is mandatory — the audit re-WATCHES the footage, and there is
+      // no YouTube alternative on this node (unlike video-analysis). Fail fast
+      // (mirrors reference-sheet's `entity_not_ready` and the frontend's
+      // "connect a video to audit" refusal) so the orchestrator deletes the
+      // pending job row and never reserves credits for a run that can't work.
+      const videoUrl = resolvedInputs.videoUrl ?? (data.videoUrl as string | undefined)
+      if (!videoUrl) {
+        throw new Error("video_required: connect a video to the AI Audit node")
+      }
+      // The upstream analysis, resolved by input-resolver's `analysis`-handle
+      // interceptor (a video-analysis OR video-audit source — an audited
+      // analysis is still an analysis). Passed through VERBATIM: the plugin
+      // parses it with the canonical schema. `undefined` is meaningful — it is
+      // what selects the auto family, so it is never coerced to null/{}.
+      const analysis = resolvedInputs.analysis
+      // Wired but unresolved (the upstream analysis has neither a live result
+      // nor a saved one): refusing beats running. Running would SILENTLY bill
+      // the auto family — strictly more than the price the canvas badge, the
+      // workflow total and the run-confirm dialog all quoted from that same
+      // wired edge. Same rule, same reason as the frontend executor's refusal.
+      if (analysis === undefined && videoAuditAnalysisWired(node.id, buildCtx?.edges)) {
+        throw new Error(
+          "analysis_not_ready: the connected analysis has no result yet — run it first, or disconnect it to let the AI Audit node analyse the clip itself",
+        )
+      }
+      // Duration → credit bucket. Same trust order as video-analysis minus its
+      // YouTube leg (this node has no youtubeUrl):
+      //   1. resolvedInputs.videoDuration     — trusted upstream video metadata
+      //   2. data.probedVideo.durationSec     — ONLY when URL-bound to the
+      //                                         effective videoUrl (exact match),
+      //                                         the node's own documented trust
+      //                                         rule and the value the canvas
+      //                                         badge quotes from
+      //   3. unknown → the 600s ceiling composite (buildVideoAuditCreditId's own
+      //      fallback — over-reserves, never under)
+      const probed = data.probedVideo as { url: string; durationSec: number } | undefined
+      const durationSec =
+        resolvedInputs.videoDuration ??
+        (probed && probed.url === videoUrl ? probed.durationSec : undefined)
+      // ONE rule for the family, shared with the frontend badge/estimate:
+      // analysis present → `video-audit:<bucket>s`, absent → `video-audit:auto:<bucket>s`.
+      const creditId = buildVideoAuditCreditId({ analysisProvided: analysis !== undefined, durationSec })
+      return simpleResult("video-audit", creditId, {
+        jobId,
+        videoUrl,
+        // Omitted (not `undefined`) when nothing resolved — the wire shape must
+        // mean exactly what the graph meant, since the plugin's family switch
+        // keys off presence.
+        ...(analysis !== undefined ? { analysis } : {}),
+        reservedCreditId: creditId,
+        // nodeId echoes the route's payload key (node.id == the canvas node id
+        // the route reads from req.body); the worker consumes neither it nor a
+        // workflowId, but keeping it matches the video-analysis payload shape.
         nodeId: node.id,
         usageLogId,
       })

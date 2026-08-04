@@ -467,9 +467,9 @@ export function WorkflowEditor({ projectId, workflowId }: WorkflowEditorProps) {
     // Use composite model identifiers (e.g. "gpt-image:high") for accurate per-model lookup
     const computeEstimate = () => {
       const total = executableNodes.reduce((sum, node) => {
-        const modelId = getModelIdentifier(node);
+        const modelId = getModelIdentifier(node, storeEdges);
         const cached = getCachedCredits(modelId);
-        const cost = cached !== undefined ? cached : estimateNodeCredits({ type: node.type, data: node.data as Record<string, unknown> });
+        const cost = cached !== undefined ? cached : estimateNodeCredits({ id: node.id, type: node.type, data: node.data as Record<string, unknown> }, storeEdges);
         const multiplier = getFanOutMultiplier(node, storeNodes, storeEdges);
         return sum + cost * multiplier;
       }, 0);
@@ -477,7 +477,7 @@ export function WorkflowEditor({ projectId, workflowId }: WorkflowEditorProps) {
     };
 
     // Collect model identifiers and check which need fetching
-    const modelIds = [...new Set(executableNodes.map((n) => getModelIdentifier(n)).filter(Boolean))];
+    const modelIds = [...new Set(executableNodes.map((n) => getModelIdentifier(n, storeEdges)).filter(Boolean))];
     const uncached = modelIds.filter((m) => getCachedCredits(m) === undefined);
 
     if (uncached.length > 0) {

@@ -18,4 +18,8 @@ export const CLOUD_ONLY_NODE_TYPES: ReadonlySet<string> = new Set([
   // on community/business self-hosts; this gating is the consequence of moving
   // its code private.
   "video-analysis",
+  // AI Audit ships in the SAME private plugin as video-analysis (POST
+  // /v1/video-audit), so it is Cloud-only for the same reason — born that way,
+  // never available on community/business.
+  "video-audit",
 ])

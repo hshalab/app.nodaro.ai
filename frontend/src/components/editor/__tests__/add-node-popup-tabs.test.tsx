@@ -37,6 +37,7 @@ vi.mock("lucide-react", () => {
     Activity: I, Piano: I, User: I, MessageCircle: I,
     ScanFace: I,
     ScanSearch: I,
+    SearchCheck: I,
     VenetianMask: I,
     TrendingUp: I, Star: I,
     ListTree: I,

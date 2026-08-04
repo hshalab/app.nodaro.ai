@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-07-19T01:25:20.113Z
-generated_from: c0d91988e
+generated_at: 2026-08-04T14:59:28.909Z
+generated_from: 210cb078c
 ---
 
 ---
@@ -233,6 +233,7 @@ Call `get_node_skill(<type>)` for the full schema of any node type:
 - `upscale-image` — Upscale Image
 - `vehicle` — Vehicle
 - `video-analysis` — Video Analysis
+- `video-audit` — AI Audit
 - `video-composer` — Compose Video
 - `video-retake` — Retake Video
 - `video-sfx` — Video SFX

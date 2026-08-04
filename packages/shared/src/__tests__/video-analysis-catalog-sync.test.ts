@@ -14,6 +14,7 @@ import {
   VIDEO_ANALYSIS_DURATION_BUCKETS,
   VIDEO_ANALYSIS_MAX_DURATION_SEC,
   buildVideoAnalysisCreditId,
+  VIDEO_AUDIT_BUCKET_CREDITS,
 } from "../video-analysis-pricing.js"
 import { DEFAULT_VIDEO_ANALYSIS_MODEL } from "../llm-models.js"
 
@@ -21,6 +22,18 @@ import { DEFAULT_VIDEO_ANALYSIS_MODEL } from "../llm-models.js"
 const catalogRows = Object.values(MODEL_CATALOG)
   .flatMap((m) => (m.pricing ?? []) as ReadonlyArray<{ identifier: string; credits: number }>)
   .filter((r) => r.identifier.startsWith("video-analysis:"))
+
+/**
+ * Every `video-audit*` pricing row declared anywhere in the catalog. NOTE:
+ * no trailing colon in the filter (unlike the `video-analysis:` filter
+ * above) — `video-audit`'s bare base-family id has no colon at all (there's
+ * no per-model segment to be bare "within", unlike video-analysis's bare
+ * per-model ids which still carry `video-analysis:<model>`), so a
+ * colon-anchored filter would silently miss it.
+ */
+const auditCatalogRows = Object.values(MODEL_CATALOG)
+  .flatMap((m) => (m.pricing ?? []) as ReadonlyArray<{ identifier: string; credits: number }>)
+  .filter((r) => r.identifier.startsWith("video-audit"))
 
 describe("model catalog video-analysis pricing", () => {
   it("declares at least one row (guard is actually wired to something)", () => {
@@ -59,6 +72,56 @@ describe("model catalog video-analysis pricing", () => {
     }
     for (const [model, buckets] of byModel) {
       expect([...buckets].sort((a, b) => a - b), `${model} bucket coverage`)
+        .toEqual([...VIDEO_ANALYSIS_DURATION_BUCKETS])
+    }
+  })
+})
+
+/**
+ * Same guard as above, for `video-audit` ("AI Audit") — a sibling node whose
+ * catalog rows hand-copy `VIDEO_AUDIT_BUCKET_CREDITS`. Mirrors the
+ * video-analysis describe block's structure exactly, adapted for
+ * video-audit's simpler id shape (two FAMILIES — `video-audit` /
+ * `video-audit:auto` — rather than an open set of per-model segments).
+ */
+describe("model catalog video-audit pricing", () => {
+  it("declares at least one row (guard is actually wired to something)", () => {
+    expect(auditCatalogRows.length).toBeGreaterThan(0)
+  })
+
+  it("every bucketed catalog row matches VIDEO_AUDIT_BUCKET_CREDITS exactly", () => {
+    const bucketed = auditCatalogRows.filter((r) => /:\d+s$/.test(r.identifier))
+    expect(bucketed.length).toBeGreaterThan(0)
+    for (const row of bucketed) {
+      expect(
+        row.credits,
+        `catalog "${row.identifier}" = ${row.credits} but the table says ${VIDEO_AUDIT_BUCKET_CREDITS[row.identifier]}`,
+      ).toBe(VIDEO_AUDIT_BUCKET_CREDITS[row.identifier])
+    }
+  })
+
+  it("every bare (no-duration) catalog row equals its 600s ceiling", () => {
+    // A bare id means "duration unknown", which prices at the ceiling.
+    const bare = auditCatalogRows.filter((r) => !/:\d+s$/.test(r.identifier))
+    expect(bare.length).toBe(2) // exactly `video-audit` + `video-audit:auto`
+    for (const row of bare) {
+      const ceiling = VIDEO_AUDIT_BUCKET_CREDITS[`${row.identifier}:${VIDEO_ANALYSIS_MAX_DURATION_SEC}s`]
+      expect(ceiling, `no ceiling row for ${row.identifier}`).toBeDefined()
+      expect(row.credits, `catalog "${row.identifier}" must equal its ${VIDEO_ANALYSIS_MAX_DURATION_SEC}s ceiling`).toBe(ceiling)
+    }
+  })
+
+  it("catalog covers every bucket for both families", () => {
+    const byFamily = new Map<string, Set<number>>()
+    for (const r of auditCatalogRows) {
+      const m = /^(video-audit(?::auto)?):(\d+)s$/.exec(r.identifier)
+      if (!m) continue
+      if (!byFamily.has(m[1]!)) byFamily.set(m[1]!, new Set())
+      byFamily.get(m[1]!)!.add(Number(m[2]))
+    }
+    expect([...byFamily.keys()].sort()).toEqual(["video-audit", "video-audit:auto"])
+    for (const [family, buckets] of byFamily) {
+      expect([...buckets].sort((a, b) => a - b), `${family} bucket coverage`)
         .toEqual([...VIDEO_ANALYSIS_DURATION_BUCKETS])
     }
   })

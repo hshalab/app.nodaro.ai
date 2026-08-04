@@ -298,6 +298,15 @@ export interface ResolvedInputs {
    *  are kept for parity / future routing rather than consumed by routeOutput. */
   entityKind?: "character" | "object" | "location"
   entityDbId?: string
+  /** The upstream analysis wired into video-audit's `analysis` target — the
+   *  canonical VideoAnalysisResult OBJECT (not the stringified form every other
+   *  consumer gets), because the audit forwards it verbatim to the plugin's
+   *  schema. Mirror of the frontend FrontendResolvedInputs.analysis.
+   *  Left `undefined` when nothing resolved: presence is what picks the credit
+   *  family (resolved → `video-audit`, absent → the pricier `video-audit:auto`,
+   *  where the node runs its own fast analysis first), so it must never be
+   *  coerced to null/{}. */
+  analysis?: unknown
   /** TTS voice auto-wired from an upstream Character node's stored voice
    *  (input-resolver). `voice` is the ElevenLabs voice id/name the TTS route's
    *  Zod reads as `voice`; `voiceType` mirrors the character's resolution mode;

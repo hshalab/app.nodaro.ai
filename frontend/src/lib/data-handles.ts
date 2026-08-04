@@ -38,6 +38,26 @@ export const LIST_PRODUCER_TYPES: ReadonlySet<string> = new Set<string>([
   "ai-writer", "llm-chat", "generate-script",
 ])
 
+/**
+ * Producers of a canonical `VideoAnalysisResult` payload — the only sources an
+ * analysis-shaped consumer (video-audit's `analysis` target) may be fed from.
+ *
+ * `video-audit` is in here alongside `video-analysis` on purpose: an AUDITED
+ * analysis is still an analysis (same schema, re-validated by the plugin before
+ * it is persisted), so audits chain. Deliberately NOT the loose
+ * `JSON_PRODUCER_TYPES` — the audit route hands the payload straight to
+ * `videoAnalysisResultSchema`, so wiring an arbitrary json producer here would
+ * buy a failed job at full price.
+ */
+export const ANALYSIS_PRODUCER_TYPES: ReadonlySet<string> = new Set<string>([
+  "video-analysis",
+  "video-audit",
+])
+
+/** Predicate form of {@link ANALYSIS_PRODUCER_TYPES} — the shape
+ *  `HandleWithPopover`'s `accepts` and the drop validator both take. */
+export const ACCEPTS_ANALYSIS = (sourceType: string): boolean => ANALYSIS_PRODUCER_TYPES.has(sourceType)
+
 /** Producers of JSON/dict-shaped data — web-scrape returns json arrays,
  *  extract-field has a `json` outputType, etc. */
 export const JSON_PRODUCER_TYPES: ReadonlySet<string> = new Set<string>([
@@ -46,7 +66,7 @@ export const JSON_PRODUCER_TYPES: ReadonlySet<string> = new Set<string>([
   "deduplicate", "merge-lists", "sort-list",
   "selector",
   "ai-writer", "llm-chat", "generate-script",
-  "video-analysis",
+  ...ANALYSIS_PRODUCER_TYPES,
 ])
 
 /** True when `sourceType` can flow into a generic data input (text, list,

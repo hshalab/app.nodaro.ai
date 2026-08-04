@@ -89,6 +89,7 @@ export const JOB_TYPE_LABELS: Record<string, string> = {
   "video-upscale": "Upscale Video",
   "image-to-text": "Image to Text",
   "video-analysis": "Video Analysis",
+  "video-audit": "AI Audit",
   "describe-to-picker": "Describe to Picker",
   "qa-check": "QA Check",
   "combine-videos": "Combine Videos",

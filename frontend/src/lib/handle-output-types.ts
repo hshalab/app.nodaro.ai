@@ -134,6 +134,8 @@ export const HANDLE_OUTPUT_TYPES: Record<string, Partial<Record<string, HandleCo
   "upload-video": { video: "video" },
   "upscale-image": { image: "image" },
   "video-analysis": { json: "look", text: "text" },
+  // Same output pair as video-analysis — the audited payload IS an analysis.
+  "video-audit": { json: "look", text: "text" },
   "video-composer": { composition: "control" },
   "video-retake": { video: "video" },
   "video-sfx": { video: "video" },

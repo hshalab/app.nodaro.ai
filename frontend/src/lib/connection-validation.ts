@@ -48,6 +48,7 @@ import {
   isValidSortListConnection,
   isValidSelectorConnection,
   isValidLoopCoarse,
+  ACCEPTS_ANALYSIS,
 } from "./data-handles"
 import {
   isValidEditImageConnection,
@@ -472,6 +473,15 @@ export function isValidWorkflowConnection(
   // and the source-direction popover agree.
   if (targetType === "video-analysis" && connection.targetHandle === "video") {
     return ACCEPTS_VIDEO(typeOf(connection.source) ?? "")
+  }
+  // AI Audit — `video` takes the clip (same predicate as video-analysis);
+  // `analysis` takes a finished analysis to re-verify (leave it unwired and the
+  // node runs its own fast analysis first, at the pricier auto family).
+  if (targetType === "video-audit" && connection.targetHandle) {
+    const auditSourceType = typeOf(connection.source) ?? ""
+    if (connection.targetHandle === "video") return ACCEPTS_VIDEO(auditSourceType)
+    if (connection.targetHandle === "analysis") return ACCEPTS_ANALYSIS(auditSourceType)
+    return false
   }
   if (targetType === "extract-field" && connection.targetHandle) {
     return isValidExtractFieldConnection(

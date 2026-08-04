@@ -16,13 +16,15 @@ import { resolve } from "node:path"
  * Pinned as source text rather than a render assertion because the bug is a missing
  * CLASS NAME — a rendering test would need a real React Flow provider and wheel
  * plumbing to catch what one grep proves.
+ *
+ * Covers EVERY node that renders an analysis tree inline, not just the first one
+ * that hit the bug: video-audit is a second copy of the same pane (it renders the
+ * corrected analysis through the same JsonTree), so it is the same trap.
  */
-const nodeSrc = readFileSync(
-  resolve(__dirname, "../video-analysis-node.tsx"),
-  "utf8",
-)
+const ANALYSIS_TREE_NODES = ["video-analysis-node.tsx", "video-audit-node.tsx"] as const
 
-describe("video-analysis result tree scrolling", () => {
+describe.each(ANALYSIS_TREE_NODES)("%s result tree scrolling", (file) => {
+  const nodeSrc = readFileSync(resolve(__dirname, "..", file), "utf8")
   const pane = nodeSrc.split("\n").find((l) => l.includes("overflow-auto") && l.includes("JsonTree") === false && l.includes("rounded-md"))
 
   it("has an overflow pane at all", () => {

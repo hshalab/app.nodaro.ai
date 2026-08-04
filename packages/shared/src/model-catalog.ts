@@ -58,6 +58,12 @@ export type ModelMode =
   | "forced-alignment"
   // video analysis
   | "video-analysis"
+  // video audit — deliberately its own mode, never "video-analysis": the
+  // video-audit node has no model picker (see model-tree.ts's MODE_TO_NODE,
+  // which has no entry for this mode on purpose), so its catalog rows exist
+  // for pricing/MCP-discovery only and must never leak into the
+  // video-analysis node's model picker.
+  | "video-audit"
 
 export interface PriceVariant {
   /** Composite identifier as it appears in `STATIC_CREDIT_COSTS`. */
@@ -1937,6 +1943,50 @@ const VIDEO_MODELS: Record<string, ModelCatalogEntry> = {
       { identifier: "video-analysis:smart:180s", credits: 500 },
       { identifier: "video-analysis:smart:360s", credits: 1259 },
       { identifier: "video-analysis:smart:600s", credits: 2064, note: "10-min ceiling" },
+    ],
+  },
+  // ── AI Audit (`video-audit`) ── a SEPARATE node from video-analysis (own
+  // node type, own route in the private plugin): it re-watches a clip
+  // against its analysis (auto-running a fast analysis first when none is
+  // wired), applies video-verified corrections under guards, and returns a
+  // disclosed report of what was checked, fixed, and left open. These two
+  // rows exist for pricing/MCP-discovery visibility only — the node has no
+  // model picker in V1, so (unlike every other row in this section) they
+  // deliberately carry no `series` and their `modes` has no Models-tab
+  // mapping (see model-tree.ts's MODE_TO_NODE) — they must never appear as
+  // selectable "video-analysis" models. Two credit families, chosen by
+  // whether an analysis is wired into the node; the structural formula lives
+  // in video-analysis-pricing.ts.
+  "video-audit": {
+    id: "video-audit",
+    kind: "video",
+    modes: ["video-audit"] as const,
+    family: "Nodaro",
+    label: "AI Audit",
+    description: "Re-watches a clip against a wired analysis, applies video-verified corrections under guards, and returns a disclosed report of what changed. Billed per duration bucket.",
+    useCases: ["video-audit", "qa", "shot-list", "verification"],
+    pricing: [
+      { identifier: "video-audit", credits: 1066, note: "10-min ceiling (no duration given)" },
+      { identifier: "video-audit:60s", credits: 213 },
+      { identifier: "video-audit:180s", credits: 289 },
+      { identifier: "video-audit:360s", credits: 659 },
+      { identifier: "video-audit:600s", credits: 1066, note: "10-min ceiling" },
+    ],
+  },
+  "video-audit-auto": {
+    id: "video-audit-auto",
+    kind: "video",
+    modes: ["video-audit"] as const,
+    family: "Nodaro",
+    label: "AI Audit (with analysis run)",
+    description: "Same video-verified audit as AI Audit, but auto-runs a fast analysis first when none is wired in, then applies corrections under guards and returns a disclosed report. Billed per duration bucket.",
+    useCases: ["video-audit", "qa", "shot-list", "verification", "auto-analysis"],
+    pricing: [
+      { identifier: "video-audit:auto", credits: 1912, note: "10-min ceiling (no duration given)" },
+      { identifier: "video-audit:auto:60s", credits: 393 },
+      { identifier: "video-audit:auto:180s", credits: 474 },
+      { identifier: "video-audit:auto:360s", credits: 1173 },
+      { identifier: "video-audit:auto:600s", credits: 1912, note: "10-min ceiling" },
     ],
   },
 }

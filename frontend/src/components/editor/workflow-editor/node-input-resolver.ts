@@ -17,6 +17,7 @@ import { loopColInputHandle } from "@/types/nodes";
 import { extractNodeOutput, IMAGE_URL_RE, VIDEO_URL_RE, AUDIO_URL_RE, computeGroupBuckets, computeCollectBuckets } from "./execution-graph";
 import { FAN_IN_NODE_TYPES } from "./types";
 import { TEXT_PRODUCER_TYPES, IDENTITY_TYPES } from "@/lib/generate-image-handles";
+import { ANALYSIS_PRODUCER_TYPES } from "@/lib/data-handles";
 import { isVisualPickerType } from "@/lib/parameter-picker-types";
 export { resolveSourceThroughConnectedList };
 
@@ -653,6 +654,14 @@ export interface FrontendResolvedInputs {
    *  ResolvedInputs.entityKind / entityDbId. */
   entityKind?: EntityKind;
   entityDbId?: string;
+  /** The upstream analysis wired into video-audit's `analysis` target — the
+   *  canonical VideoAnalysisResult OBJECT (not the stringified form every other
+   *  consumer gets), because the audit route forwards it verbatim to the
+   *  plugin's schema. Left `undefined` when nothing is wired: presence is what
+   *  picks the credit family (wired → `video-audit`, absent → the pricier
+   *  `video-audit:auto`, where the node runs its own fast analysis first), so
+   *  it must never be coerced to null/{}. */
+  analysis?: unknown;
   /** Fan-in input list — populated by the resolver for reduce-style targets.
    *  Carries the full upstream list (or `[singleOutput]` when upstream wasn't
    *  fanned out) so the reduce strategy can fold it into a single value.
@@ -1405,6 +1414,26 @@ export function resolveNodeInputs(
         inputs.refImageUrl = output;
         continue;
       }
+    }
+
+    // video-audit `analysis` handle: the upstream analysis OBJECT, not the
+    // stringified text every other consumer receives — the audit route hands it
+    // straight to the plugin's schema. Read from the producer's own
+    // `generatedJson` (the same field extractNodeOutput stringifies, so the two
+    // can't disagree) instead of re-parsing the string. MUST precede the
+    // source-type chain below, which would otherwise route a wired analysis
+    // into inputs.prompt — a field this knob-free node has no use for.
+    //
+    // Gated on node.type (the cinematic-avatar lesson: a handle-name-only
+    // interceptor hijacks same-named handles on other nodes) AND on the source
+    // being an analysis producer, so a stale/hand-edited edge from some other
+    // json producer can't buy a guaranteed schema failure at full price.
+    if (node.type === "video-audit" && srcEdge.targetHandle === "analysis") {
+      if (ANALYSIS_PRODUCER_TYPES.has(src.type ?? "")) {
+        const analysisJson = (src.data as { generatedJson?: unknown }).generatedJson;
+        if (analysisJson !== undefined && analysisJson !== null) inputs.analysis = analysisJson;
+      }
+      continue;
     }
 
     // --- Handle-specific routing takes priority (matches backend) ---
@@ -2395,12 +2424,18 @@ export function resolveNodeInputs(
     } else if (src.type === "web-scrape") {
       // json handle output arrives pre-stringified from extractNodeOutput
       inputs.prompt = output;
-    } else if (src.type === "video-analysis") {
+    } else if (src.type === "video-analysis" || src.type === "video-audit") {
       // Scene-breakdown JSON arrives pre-stringified from extractNodeOutput.
       // Route to prompt for generic text consumers; Extract Field / JSON Process
       // read src.data.generatedJson directly. Mirrors web-scrape's json branch —
       // without this, the src.type chain has no catch-all else and the output
       // would be silently dropped.
+      //
+      // video-audit is handled by the SAME branch on purpose: an audited
+      // analysis is the same payload in the same field on the same handles, so
+      // no consumer may be able to tell the two apart. (The audit's own
+      // `analysis` INPUT is intercepted by the handle-specific block above,
+      // before this source-type chain.)
       inputs.prompt = output;
     } else if (src.type === "sub-workflow" || src.type === "sub-workflow-input") {
       // Route sub-workflow output by the sourceHandle to the correct media type

@@ -900,6 +900,8 @@ export * from "./reference-roles.js"
 export * from "./video-analysis.js"
 
 // --- Video-analysis pricing (duration buckets + structural credit formula) ---
+// Also hosts video-audit's sibling pricing (VIDEO_AUDIT_BUCKET_CREDITS +
+// buildVideoAuditCreditId / videoAuditCreditsForBucket / bucketSecondsFromAuditCreditId).
 export * from "./video-analysis-pricing.js"
 
 // --- Smart-cut best-pair search windows (shared bound + clamp) ---

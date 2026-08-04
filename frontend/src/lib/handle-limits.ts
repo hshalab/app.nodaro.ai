@@ -308,5 +308,12 @@ export function getHandleConnectionLimit(
     return { limit: 1, providerLabel: "Video Analysis", isMultiProviderMin: false }
   }
 
+  // AI Audit — one clip on `video`, one finished analysis on `analysis`. Both
+  // are singular: the audit re-watches ONE video against ONE analysis, and a
+  // second edge on either would silently pick a winner.
+  if (node.type === "video-audit" && (handleId === "video" || handleId === "analysis")) {
+    return { limit: 1, providerLabel: "AI Audit", isMultiProviderMin: false }
+  }
+
   return null
 }

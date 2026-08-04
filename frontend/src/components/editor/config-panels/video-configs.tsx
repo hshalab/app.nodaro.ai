@@ -37,9 +37,10 @@ import type {
   CharacterNodeData,
   SwitchXData,
   VideoAnalysisNodeData,
+  VideoAuditNodeData,
 } from "@/types/nodes"
 import { GENERATE_VIDEO_PRO_MAX_DURATION_FALLBACK, VIDEO_I2V_MODELS, VIDEO_T2V_MODELS, VIDEO_V2V_MODELS, VIDEO_GEN_MODELS, GVP_PROVIDERS, EVP_PROVIDERS, MOTION_TRANSFER_MODELS, KIE_VIDEO_DURATIONS, KIE_T2V_DURATIONS, VIDEO_DURATION_OPTIONS, VIDEO_FPS_OPTIONS, PROVIDERS_WITH_END_FRAME, KLING3_DURATIONS, VIDEO_RATIOS, SEEDANCE_2_VIDEO_RATIOS, PROVIDERS_WITH_REFERENCES, V2V_DURATION_OPTIONS, V2V_RESOLUTION_OPTIONS, V2V_ALEPH_ASPECT_RATIOS, EXTEND_VIDEO_MODELS, getVideoResolutionOptions, getAspectRatiosForVideoModel, getVideoModelCapabilitiesTooltip } from "./model-options"
-import { isSeedance2Provider, isMinimaxH3Provider, defaultVideoAspectRatio, MODEL_CATALOG, SEEDANCE_2_REF_LIMITS, VIDEO_PROMPT_MAX, getMaxVideoPromptChars, getMaxNegativePromptChars, buildVideoCreditModelIdentifier, characterMentionSlug, characterMentionableAssetArrays, DEFAULT_LABEL_BY_SOURCE, locationMentionSlug, resolveEffectiveSourceType, FRAME_TARGET_HANDLES, VIDEO_ANALYSIS_TIER_ORDER, VIDEO_ANALYSIS_TIER_LABELS, VIDEO_ANALYSIS_TIERS, VIDEO_ANALYSIS_LEGACY_MODELS, DEFAULT_VIDEO_ANALYSIS_TIER, isVideoAnalysisTier, LLM_MODELS, clampSmartCutWindow, SMART_CUT_WINDOW_MIN, SMART_CUT_WINDOW_MAX, SMART_CUT_WINDOW_DEFAULT } from "@nodaro/shared"
+import { isSeedance2Provider, isMinimaxH3Provider, defaultVideoAspectRatio, MODEL_CATALOG, SEEDANCE_2_REF_LIMITS, VIDEO_PROMPT_MAX, getMaxVideoPromptChars, getMaxNegativePromptChars, buildVideoCreditModelIdentifier, characterMentionSlug, characterMentionableAssetArrays, DEFAULT_LABEL_BY_SOURCE, locationMentionSlug, resolveEffectiveSourceType, FRAME_TARGET_HANDLES, VIDEO_ANALYSIS_TIER_ORDER, VIDEO_ANALYSIS_TIER_LABELS, VIDEO_ANALYSIS_TIERS, VIDEO_ANALYSIS_LEGACY_MODELS, DEFAULT_VIDEO_ANALYSIS_TIER, isVideoAnalysisTier, VIDEO_AUDIT_BUCKET_CREDITS, LLM_MODELS, clampSmartCutWindow, SMART_CUT_WINDOW_MIN, SMART_CUT_WINDOW_MAX, SMART_CUT_WINDOW_DEFAULT } from "@nodaro/shared"
 import type { ReferenceSource, ConnectedReference } from "@nodaro/shared"
 import { resolveSeedance2Inputs } from "@nodaro/prompts"
 import { probeVideoAnalysis } from "@/lib/api"
@@ -5131,6 +5132,58 @@ export function VideoAnalysisConfig({ data, onUpdate }: ConfigProps<VideoAnalysi
 
       <p className="text-xs text-muted-foreground">
         Breaks a video (max 10 min) into a timestamped scene list. Cost scales with the video&apos;s duration and the chosen model.
+      </p>
+    </div>
+  )
+}
+
+// --- AI Audit (video-audit) -----------------------------------------------
+
+/** The credit span of one audit family, DERIVED from the shared bucket table
+ *  so a reprice can never leave stale numbers in this panel's copy. */
+function auditCreditRange(auto: boolean): string {
+  const values = Object.entries(VIDEO_AUDIT_BUCKET_CREDITS)
+    .filter(([id]) => id.startsWith("video-audit:auto:") === auto)
+    .map(([, credits]) => credits)
+  return `${Math.min(...values)}–${Math.max(...values)}`
+}
+
+/**
+ * AI Audit config — deliberately KNOB-FREE in v1. The audit has exactly one
+ * lever and it is not a setting: whether a finished analysis is wired into the
+ * `analysis` target. That single fact picks the credit family, so the panel's
+ * whole job is to state it honestly (and the node itself repeats it on canvas).
+ */
+export function VideoAuditConfig({ sources }: ConfigProps<VideoAuditNodeData>) {
+  const analysisSource = sources.find((s) => s.targetHandle === "analysis")
+  const videoSource = sources.find((s) => s.targetHandle === "video")
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div
+        className={`flex flex-col gap-1 rounded-md border p-2.5 ${
+          analysisSource ? "border-border bg-muted/30" : "border-amber-500/30 bg-amber-500/5"
+        }`}
+      >
+        <p className="text-xs font-medium">
+          {analysisSource ? `Auditing the analysis from “${analysisSource.label}”` : "No analysis wired"}
+        </p>
+        <p className="text-[11px] text-muted-foreground leading-snug">
+          {analysisSource
+            ? `The audit re-watches the clip against that analysis and applies only video-verified corrections, disclosing every change. ${auditCreditRange(false)} credits by video length.`
+            : `Wire a Video Analysis (or another AI Audit) into the Analysis handle to audit it. Left unwired, this node runs its own fast analysis first — the same audit, but ${auditCreditRange(true)} credits by video length instead of ${auditCreditRange(false)}.`}
+        </p>
+      </div>
+
+      {!videoSource && (
+        <p className="text-[11px] text-amber-600 dark:text-amber-500 leading-snug">
+          Connect a video to the Video handle — the audit re-watches the footage itself, so it can&apos;t run without it.
+        </p>
+      )}
+
+      <p className="text-xs text-muted-foreground">
+        Re-watches a clip (max 10 min) against its analysis and returns the corrected analysis plus a report of what was
+        fixed, what the guards refused, and what to watch. No settings — the audit follows the footage.
       </p>
     </div>
   )

@@ -11,6 +11,7 @@ import type {
   SelectorNodeData,
   WebScrapeNodeData,
   VideoAnalysisNodeData,
+  VideoAuditNodeData,
   DescribeToPickerData,
 } from "@/types/nodes";
 import { entityActiveImageUrl } from "@/lib/entity-output-url";
@@ -647,8 +648,12 @@ export function extractNodeOutput(node: WorkflowNode, sourceHandle?: string): st
     }
     return undefined;
   }
-  if (type === "video-analysis") {
-    const d = node.data as VideoAnalysisNodeData;
+  // video-audit shares this branch on purpose: its output IS an analysis (the
+  // CORRECTED one), in the same field on the same `json`/`text` handle pair.
+  // One branch, so a downstream consumer can never tell an audited analysis
+  // from a raw one — the whole point of the audit's output contract.
+  if (type === "video-analysis" || type === "video-audit") {
+    const d = node.data as VideoAnalysisNodeData | VideoAuditNodeData;
     // `json` + `text` handles carry the SAME stringified scene breakdown —
     // text is the prompt-typed alias so the analysis wires into text inputs;
     // Extract Field / JSON Process read d.generatedJson directly
@@ -992,7 +997,10 @@ export function detectPreviewItemType(
   if (VIDEO_SOURCE_TYPES_FOR_RENDER.has(nodeType)) return "video"
   if (AUDIO_SOURCE_TYPES.has(nodeType)) return "audio"
   if (nodeType === "forced-alignment") return "data"
-  if (nodeType === "video-analysis") return "data"
+  // Both analysis emitters: a JSON scene breakdown, never a media URL. Must
+  // stay paired — video-audit's type string contains "video", so dropping it
+  // here would classify an audited analysis as a video by the fallthrough.
+  if (nodeType === "video-analysis" || nodeType === "video-audit") return "data"
   if (value) {
     if (IMAGE_URL_RE.test(value)) return "image"
     if (VIDEO_URL_RE.test(value)) return "video"

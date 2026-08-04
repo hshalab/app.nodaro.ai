@@ -7,6 +7,7 @@ import { ACCEPTS_PARAMETER_PICKER, TARGET_HANDLE_ACCEPTS } from "./target-handle
 import { FFMPEG_NODE_TYPES, isValidFfmpegConnection } from "./ffmpeg-handles"
 import { AUDIO_PRODUCER_TYPES, VIDEO_PRODUCER_TYPES } from "@nodaro/shared"
 import { AUDIO_PICKER_TYPES, VOICE_PERSONA_TYPES } from "./audio-text-handles"
+import { ANALYSIS_PRODUCER_TYPES } from "./data-handles"
 
 // `voice` target accepts voice-persona producers (suno-voice, voice-design's
 // voiceId output) AND voice-character (a parameter picker — surfaced as
@@ -26,6 +27,9 @@ const TYPED_SOURCE_NODE_TYPES: ReadonlySet<string> = new Set([
   // its source-direction popover must consult TARGET_HANDLE_ACCEPTS (same as
   // web-scrape) so data consumers surface as candidates.
   "video-analysis",
+  // video-audit emits the SAME payload on the same handles — including into
+  // another audit's `analysis` target, which only TARGET_HANDLE_ACCEPTS knows.
+  "video-audit",
   // describe-to-picker emits picker JSON on its `picker-json` source handle;
   // its source-direction popover must consult TARGET_HANDLE_ACCEPTS (where the
   // analyzable pickers' `picker-json` targets are registered) so it surfaces them.
@@ -198,6 +202,9 @@ export const TYPED_HANDLE_IDS: ReadonlySet<string> = new Set([
   "negative",
   //   - mask-video: SwitchX (Relight & Switch) custom-mode matte-video input.
   "mask-video",
+  //   - analysis: AI Audit's optional finished-analysis input (accepts only
+  //     ANALYSIS_PRODUCER_TYPES, never the Parameter pickers).
+  "analysis",
   // suno-generate secondary text fields (field-<key> mappable handles).
   "field-style", "field-lyrics", "field-title", "field-negativeStyle",
 ])
@@ -346,6 +353,21 @@ export function getCompatibleNodes(
     const directTypes = new Set<SceneNodeType>()
     for (const option of nodeOptions) {
       if (!ELEMENTS_TYPES.has(option.type)) continue
+      direct.push(option)
+      directTypes.add(option.type)
+    }
+    return { direct, compatible: [], directTypes }
+  }
+
+  // AI Audit: the `analysis` target accepts only nodes that emit a canonical
+  // analysis payload. Same set the drop validator and the handle popover use
+  // (ANALYSIS_PRODUCER_TYPES), so popup candidates can't diverge from what a
+  // drop actually accepts.
+  if (handleId === "analysis" && direction === "target") {
+    const direct: NodeOption[] = []
+    const directTypes = new Set<SceneNodeType>()
+    for (const option of nodeOptions) {
+      if (!ANALYSIS_PRODUCER_TYPES.has(option.type)) continue
       direct.push(option)
       directTypes.add(option.type)
     }

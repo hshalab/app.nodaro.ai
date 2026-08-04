@@ -435,3 +435,12 @@ safety net.
   nodes.
 - Pull each scene's layered audio (speech quotes plus music/sfx descriptions —
   every concurrent layer) for a matching soundtrack pass.
+
+## See Also
+
+- [AI Audit](./video-audit.md) — to have a finished analysis re-verified
+  against the footage, wire it into AI Audit. It re-watches the clip, applies
+  only video-verified corrections, and discloses every change (and every
+  declined change) in a report. The corrected analysis comes back in this
+  same shape, so anything already wired to this node's output accepts an
+  audited one identically.

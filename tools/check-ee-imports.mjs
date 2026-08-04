@@ -216,6 +216,7 @@ const ALLOWLIST = new Set([
   "frontend/src/components/nodes/upload-video-node.tsx",
   "frontend/src/components/nodes/upscale-image-node.tsx",
   "frontend/src/components/nodes/video-analysis-node.tsx",
+  "frontend/src/components/nodes/video-audit-node.tsx",
   "frontend/src/components/nodes/video-composer-node.tsx",
   "frontend/src/components/nodes/video-retake-node.tsx",
   "frontend/src/components/nodes/video-sfx-node.tsx",

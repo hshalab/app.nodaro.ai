@@ -51,6 +51,7 @@ import {
   Waypoints,
   ArrowUpFromLine,
   ScanSearch,
+  SearchCheck,
   FileText,
   Disc3,
   FastForward,
@@ -1105,6 +1106,14 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     category: "Processing",
     group: "Video",
     keywords: ["analyze video", "scene breakdown", "shot list", "understand video", "describe video", "storyboard from video"],
+  },
+  {
+    type: "video-audit",
+    label: "AI Audit",
+    icon: <SearchCheck className="h-4 w-4" />,
+    category: "Processing",
+    group: "Video",
+    keywords: ["audit", "ai audit", "verify analysis", "check analysis", "fact check video", "qa analysis", "review scene breakdown", "correct analysis"],
   },
   // Processing — Video Production
   {

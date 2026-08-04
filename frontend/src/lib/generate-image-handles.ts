@@ -98,6 +98,12 @@ export const TEXT_PRODUCER_TYPES: ReadonlySet<string> = new Set([
   // string (extractNodeOutput stringifies) — lets the analysis wire straight
   // into prompt/text inputs (generate-video-pro etc.) without a paste.
   "video-analysis",
+  // video-audit ships the identical `text` handle emitting the identical
+  // stringified payload (the CORRECTED analysis). Its producer-set membership
+  // must mirror video-analysis everywhere or a downstream node could tell an
+  // audited analysis from a raw one — guarded by
+  // frontend/src/lib/__tests__/video-audit-source-parity.test.ts.
+  "video-audit",
   // telegram-trigger's `Message` handle emits the incoming message text — the
   // "pull from a channel → rewrite → publish" source. Without this, the
   // connection validator rejected it as a non-text-producer.

@@ -1262,3 +1262,42 @@ describe("video_analysis verb", () => {
     expect(tools.map((t) => t.name)).not.toContain("video_analysis")
   })
 })
+
+describe("video_audit verb", () => {
+  it("calls /v1/video-audit with snake_case → camelCase translation, forwarding analysis verbatim", async () => {
+    const { fastify, received } = stubRoute("POST", "/v1/video-audit", { jobId: "j-vaud" })
+    const server = buildServer()
+    registerVerbs({ server, session: executeSession(), fastify })
+    const analysis = { meta: { language: "en" }, slots: [], scenes: [{ visualResolved: "a knight" }] }
+    const result = await callTool(server, "video_audit", {
+      video_url: "https://a/clip.mp4",
+      analysis,
+    })
+    expect(result.isError).toBeUndefined()
+    expect((result.structuredContent as Record<string, unknown>)?.jobId).toBe("j-vaud")
+    expect(received.body?.videoUrl).toBe("https://a/clip.mp4")
+    // Passed through verbatim — no reshaping of the analysis blob.
+    expect(received.body?.analysis).toEqual(analysis)
+    expect(received.body?.mcp_client).toBe("Claude")
+    expect(received.body?.userId).toBe("u1")
+  })
+
+  it("omits analysis from the payload when not provided (auto family)", async () => {
+    const { fastify, received } = stubRoute("POST", "/v1/video-audit", { jobId: "j-vaud-auto" })
+    const server = buildServer()
+    registerVerbs({ server, session: executeSession(), fastify })
+    const result = await callTool(server, "video_audit", {
+      video_url: "https://a/clip.mp4",
+    })
+    expect(result.isError).toBeUndefined()
+    expect(received.body?.videoUrl).toBe("https://a/clip.mp4")
+    expect(received.body?.analysis).toBeUndefined()
+  })
+
+  it("is omitted without workflows:execute", async () => {
+    const server = buildServer()
+    registerVerbs({ server, session: readOnlySession(), fastify: Fastify() })
+    const tools = await listTools(server)
+    expect(tools.map((t) => t.name)).not.toContain("video_audit")
+  })
+})

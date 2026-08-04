@@ -17,7 +17,7 @@ import {
   uiMeta,
 } from "./_verb-helpers.js"
 import { WIDGET_URI } from "../widgets/registrar.js"
-import { modelIdsByKindMode, SEEDANCE_2_REF_LIMITS, isSeedance2Provider, isMinimaxH3Provider, ALL_CAPTION_STYLES, COMBINE_TRANSITION_IDS, AUDIO_CROSSFADE_CURVE_IDS, MOTION_TRANSFER_PROVIDERS, VIDEO_ANALYSIS_TIER_ORDER, resolveVideoAnalysisModel, DEFAULT_VIDEO_ANALYSIS_TIER, VIDEO_ANALYSIS_DURATION_BUCKETS, VIDEO_ANALYSIS_MAX_DURATION_SEC, VIDEO_ANALYSIS_MAX_SCENE_SEC, VIDEO_ANALYSIS_BUCKET_CREDITS, buildVideoAnalysisCreditId } from "@nodaro/shared"
+import { modelIdsByKindMode, SEEDANCE_2_REF_LIMITS, isSeedance2Provider, isMinimaxH3Provider, ALL_CAPTION_STYLES, COMBINE_TRANSITION_IDS, AUDIO_CROSSFADE_CURVE_IDS, MOTION_TRANSFER_PROVIDERS, VIDEO_ANALYSIS_TIER_ORDER, resolveVideoAnalysisModel, DEFAULT_VIDEO_ANALYSIS_TIER, VIDEO_ANALYSIS_DURATION_BUCKETS, VIDEO_ANALYSIS_MAX_DURATION_SEC, VIDEO_ANALYSIS_MAX_SCENE_SEC, VIDEO_ANALYSIS_BUCKET_CREDITS, buildVideoAnalysisCreditId, VIDEO_AUDIT_BUCKET_CREDITS, buildVideoAuditCreditId } from "@nodaro/shared"
 
 // Map list_models catalog/display ids → /v1/motion-transfer route providers.
 // The catalog advertises `motion-transfer` / `kling-3.0-motion` (the credit/
@@ -53,6 +53,18 @@ const I2V_MODEL_IDS = modelIdsByKindMode("video", ["i2v"], { includeHidden: true
 const VIDEO_ANALYSIS_PRICING_HINT = VIDEO_ANALYSIS_TIER_ORDER.map(
   (tier) => `${tier} ${VIDEO_ANALYSIS_DURATION_BUCKETS.map((b) => VIDEO_ANALYSIS_BUCKET_CREDITS[buildVideoAnalysisCreditId(resolveVideoAnalysisModel(tier), b)]).join("/")} credits`,
 ).join("; ")
+
+// Credit hint for the video_audit tool description — same derivation
+// discipline as VIDEO_ANALYSIS_PRICING_HINT above (never hand-write the
+// numbers). Two families instead of per-tier: `analysis wired` (an existing
+// analysis was passed — re-audits it) and `auto-run analysis` (none passed —
+// the tool runs a fast analysis first, hence the higher price).
+const VIDEO_AUDIT_PRICING_HINT = [true, false]
+  .map((analysisProvided) => {
+    const familyLabel = analysisProvided ? "analysis wired" : "auto-run analysis"
+    return `${familyLabel} ${VIDEO_ANALYSIS_DURATION_BUCKETS.map((b) => VIDEO_AUDIT_BUCKET_CREDITS[buildVideoAuditCreditId({ analysisProvided, durationSec: b })]).join("/")} credits`
+  })
+  .join("; ")
 
 const executeGate: ToolGate = { required: ["workflows:execute"] }
 
@@ -2378,6 +2390,62 @@ export function registerVideoVerbs({ server, session, fastify }: RegisterOpts): 
         widgetData: {
           prompt: args.analysis_focus ? args.analysis_focus.slice(0, 80) : "(video analysis)",
           model: args.llm_model ?? DEFAULT_VIDEO_ANALYSIS_TIER,
+        },
+      })
+    },
+  )
+
+  // ── video_audit ──
+  // Re-watch a clip against its analysis and fix what's wrong — "fix and
+  // disclose": corrections are applied under guards and every one of them is
+  // reported, nothing is silently rewritten. Same job-auto card / no-media-
+  // output shape as video_analysis (the job's output_data carries the report).
+  server.registerTool(
+    "video_audit",
+    {
+      title: "Video Audit",
+      description:
+        "Re-watch a video against its analysis (the AI Audit node's server-side twin) and " +
+        "fix what's wrong — a fix-and-disclose pass, not a silent rewrite. Corrections are " +
+        "applied under guards and every one is reported: the job's `output_data` carries a " +
+        "disclosed report of what was checked, what changed, and what was left open (flagged, " +
+        "not auto-fixed). Returns a job_id — poll `get_job` for the report.\n\n" +
+        "**Analysis** — pass `analysis` (the JSON result — `meta` + `slots` + `scenes[]` — " +
+        "from a prior `video_analysis` or `video_audit` call) to re-verify that analysis " +
+        "against the actual footage. Omit it and the tool auto-runs a fast analysis first, " +
+        "then audits that.\n\n" +
+        "**Pricing** — duration-bucketed credits per family (buckets " +
+        `${VIDEO_ANALYSIS_DURATION_BUCKETS.map((b) => `≤${b}s`).join(" / ")}), selected by ` +
+        `whether \`analysis\` was passed: ${VIDEO_AUDIT_PRICING_HINT}.`,
+      inputSchema: {
+        video_url: z.string().url().describe("Direct URL of the video to audit."),
+        analysis: z
+          .record(z.string(), z.unknown())
+          .optional()
+          .describe(
+            "The analysis JSON from a prior video_analysis or video_audit call, passed " +
+              "through verbatim. Wiring this prices the cheaper `video-audit` family; omit " +
+              "it and the tool auto-runs a fast analysis first (the pricier `video-audit:auto` family).",
+          ),
+      },
+      outputSchema: JOB_OUTPUT_SCHEMA,
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+      _meta: uiMeta(WIDGET_URI.jobAuto),
+    },
+    async (args) => {
+      const payload: Record<string, unknown> = {
+        videoUrl: args.video_url,
+        ...(args.analysis ? { analysis: args.analysis } : {}),
+        mcp_client: session.clientName,
+        userId: session.userId,
+      }
+      return dispatchJob(fastify, session, {
+        url: "/v1/video-audit",
+        payload,
+        label: "Video audit",
+        widgetKind: "generic",
+        widgetData: {
+          prompt: args.analysis ? "(re-audit wired analysis)" : "(auto-run analysis + audit)",
         },
       })
     },

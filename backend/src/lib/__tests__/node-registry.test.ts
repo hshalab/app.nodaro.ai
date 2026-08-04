@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { NODE_REGISTRY } from "../node-registry.js"
+import { VIDEO_AUDIT_BUCKET_CREDITS } from "@nodaro/shared"
 
 describe("NODE_REGISTRY: reduce", () => {
   it("has a 'reduce' entry with label, category=control, outputType=text", () => {
@@ -37,6 +38,41 @@ describe("NODE_REGISTRY: reduce", () => {
     // 3cr. The composite key `reduce:<strategyId>` does the real lookup at
     // runtime (see backend/src/ee/billing/credits.ts).
     expect(entry!.creditCost).toBe("0-3")
+  })
+})
+
+describe("NODE_REGISTRY: video-audit", () => {
+  it("has a 'video-audit' entry mirroring video-analysis's category/outputType shape", () => {
+    const entry = NODE_REGISTRY.find((n) => n.type === "video-audit")
+    expect(entry).toBeDefined()
+    expect(entry!.label).toBe("AI Audit")
+    // Mirrors video-analysis's own category/outputType — both are "processing"
+    // nodes whose output is a JSON report on the data channel, not an
+    // image/video/audio result.
+    const videoAnalysisEntry = NODE_REGISTRY.find((n) => n.type === "video-analysis")
+    expect(videoAnalysisEntry).toBeDefined()
+    expect(entry!.category).toBe(videoAnalysisEntry!.category)
+    expect(entry!.outputType).toBe("data")
+  })
+
+  it("requires videoUrl and exposes an optional analysis passthrough field", () => {
+    const entry = NODE_REGISTRY.find((n) => n.type === "video-audit")
+    const videoUrlField = entry!.inputSchema?.fields.find((f) => f.key === "videoUrl")
+    expect(videoUrlField).toBeDefined()
+    expect(videoUrlField!.required).toBe(true)
+    const analysisField = entry!.inputSchema?.fields.find((f) => f.key === "analysis")
+    expect(analysisField).toBeDefined()
+    expect(analysisField!.required).toBeFalsy()
+  })
+
+  it("declares a creditCost range spanning the full VIDEO_AUDIT_BUCKET_CREDITS table", () => {
+    const entry = NODE_REGISTRY.find((n) => n.type === "video-audit")
+    // Range bounds match the shared bucket table exactly: the cheapest bucket
+    // (analysis provided, 60s) to the priciest (auto family, 600s ceiling) —
+    // see packages/shared/src/video-analysis-pricing.ts. Derived from the
+    // table rather than hand-pasted so a reprice can't silently drift this test.
+    const values = Object.values(VIDEO_AUDIT_BUCKET_CREDITS)
+    expect(entry!.creditCost).toBe(`${Math.min(...values)}-${Math.max(...values)}`)
   })
 })
 

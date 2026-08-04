@@ -251,6 +251,14 @@ const KNOWN_FRONTEND_ARTIFACTS: ReadonlySet<string> = new Set<string>([
   // community/business get 404 (the node was already cloud-gated).
   "/v1/video-analysis",
   "/v1/video-analysis/probe",
+
+  // video-audit ("AI Audit") ships in the SAME private
+  // @nodaroai/cloud-plugins package as video-analysis above (it re-uses that
+  // plugin's watcher/reasoner internals), registering POST /v1/video-audit at
+  // runtime via loadPrivatePlugins({ app }) — not a static file under
+  // backend/src/routes/ this scanner walks. Cloud edition serves it;
+  // community/business get 404, same as the analysis node.
+  "/v1/video-audit",
 ])
 
 // ---------------------------------------------------------------------------

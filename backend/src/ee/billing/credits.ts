@@ -2,7 +2,7 @@ import { supabase } from "../../lib/supabase.js"
 import { hasCredits } from "../../lib/config.js"
 import { getAppSettings } from "../../lib/app-settings.js"
 import { FREE_TIER_RESTRICTIONS, TIER_STORAGE_LIMITS } from "./stripe-config.js"
-import { PIPELINE_PINNABLE_SCRIPT_LLMS, getLlmTier, buildCreditModelIdentifier, buildVideoCreditModelIdentifier, buildMotionCreditModelIdentifier, buildLlmCreditIdentifier, FLUX2_RES_MP, type Flux2Model, AI_AVATAR_DURATION_BUCKETS, resolveAiAvatarCreditId, type AiAvatarEngine, type AiAvatarResolution, CINEMATIC_MIN_DURATION_SEC, CINEMATIC_MAX_DURATION_SEC, cinematicCreditId, resolveCinematicCreditId, type CinematicResolution, resolveSwitchXCreditId, VIDEO_ANALYSIS_DURATION_BUCKETS, VIDEO_ANALYSIS_MAX_DURATION_SEC, VIDEO_ANALYSIS_BUCKET_CREDITS, buildVideoAnalysisCreditId, resolveVideoAnalysisModel, DEFAULT_VIDEO_ANALYSIS_MODEL } from "@nodaro/shared"
+import { PIPELINE_PINNABLE_SCRIPT_LLMS, getLlmTier, buildCreditModelIdentifier, buildVideoCreditModelIdentifier, buildMotionCreditModelIdentifier, buildLlmCreditIdentifier, FLUX2_RES_MP, type Flux2Model, AI_AVATAR_DURATION_BUCKETS, resolveAiAvatarCreditId, type AiAvatarEngine, type AiAvatarResolution, CINEMATIC_MIN_DURATION_SEC, CINEMATIC_MAX_DURATION_SEC, cinematicCreditId, resolveCinematicCreditId, type CinematicResolution, resolveSwitchXCreditId, VIDEO_ANALYSIS_DURATION_BUCKETS, VIDEO_ANALYSIS_MAX_DURATION_SEC, VIDEO_ANALYSIS_BUCKET_CREDITS, buildVideoAnalysisCreditId, resolveVideoAnalysisModel, DEFAULT_VIDEO_ANALYSIS_MODEL, VIDEO_AUDIT_BUCKET_CREDITS, buildVideoAuditCreditId } from "@nodaro/shared"
 // Provider-$ cost formulas — CORE lib (not @nodaro/shared, an irrevocably
 // published Apache package). See the 2026-07-06 public-flip IP audit, S5.
 import { flux2BaseCredits } from "../../lib/pricing/flux2-cost.js"
@@ -113,6 +113,34 @@ for (const model of ["gemini-3-flash", "gemini-3.6-flash", "gemini-3.1-pro", "mi
   for (const bucketSec of VIDEO_ANALYSIS_DURATION_BUCKETS) {
     VIDEO_ANALYSIS_STATIC[`video-analysis:${model}:${bucketSec}s`] =
       VIDEO_ANALYSIS_BUCKET_CREDITS[buildVideoAnalysisCreditId(model, bucketSec)]!
+  }
+}
+
+// ── Video Audit ("AI Audit", video-audit node) duration-bucketed reserve
+// holds — sibling of VIDEO_ANALYSIS_STATIC above, same generator-authoritative
+// table (VIDEO_AUDIT_BUCKET_CREDITS in @nodaro/shared), same bucket ladder.
+// Two FAMILIES instead of per-model: `video-audit` (an analysis was already
+// wired in — re-audits it) and `video-audit:auto` (no analysis wired — the
+// node auto-runs a fast analysis first). Unlike video-analysis's per-model
+// bare ids (always `video-analysis:<model>`, never colliding with the bare
+// node-type string), the base family's bare form IS the literal node type
+// (`video-audit`, no suffix) — by design (see video-analysis-pricing.ts):
+// `estimateWorkflowCredits`'s STATIC_CREDIT_COSTS[node.type] fallback for a
+// video-audit node with no more specific composite therefore resolves to
+// this same value, matching the DB row migration 302 seeds for the bare
+// `video-audit` identifier (no separate cross-family max is minted here).
+const VIDEO_AUDIT_STATIC: Record<string, number> = {}
+for (const analysisProvided of [true, false]) {
+  const family = analysisProvided ? "video-audit" : "video-audit:auto"
+  // Bare per-family id = the unknown-duration ceiling (600s). buildVideoAuditCreditId
+  // NEVER produces this id on its own — it always appends a `:<bucket>s` suffix; the
+  // bare id exists in STATIC only because MODEL_CATALOG lists it as the family's base
+  // pricing row (mirrors VIDEO_ANALYSIS_STATIC's per-model bare-id rationale above).
+  VIDEO_AUDIT_STATIC[family] =
+    VIDEO_AUDIT_BUCKET_CREDITS[buildVideoAuditCreditId({ analysisProvided, durationSec: VIDEO_ANALYSIS_MAX_DURATION_SEC })]!
+  for (const bucketSec of VIDEO_ANALYSIS_DURATION_BUCKETS) {
+    VIDEO_AUDIT_STATIC[`${family}:${bucketSec}s`] =
+      VIDEO_AUDIT_BUCKET_CREDITS[buildVideoAuditCreditId({ analysisProvided, durationSec: bucketSec })]!
   }
 }
 
@@ -283,6 +311,11 @@ export const STATIC_CREDIT_COSTS: Record<string, number> = {
   // `video-analysis-catalog-sync.test.ts` and written by migration 277.
   "video-analysis": Math.max(...Object.values(VIDEO_ANALYSIS_BUCKET_CREDITS)),
   ...VIDEO_ANALYSIS_STATIC,
+  // ── Video Audit ("AI Audit") — duration-bucketed, two families (analysis
+  // wired vs auto-run). See VIDEO_AUDIT_STATIC above; values are the
+  // precomputed VIDEO_AUDIT_BUCKET_CREDITS table in @nodaro/shared, written to
+  // model_pricing by migration 302.
+  ...VIDEO_AUDIT_STATIC,
   "flux-lora-character": 20,      // flux-dev-lora inference via Replicate. Internal-only id selected by payload-builder when a single trained @character is mentioned.
   "character-lora-training": 1500, // Replicate ostris/flux-dev-lora-trainer (1000 steps, one-shot). Refunded by webhook on failure/cancel.
   // ── Image Editing ──
@@ -2289,6 +2322,15 @@ function getNodeModelIdentifier(node: { type: string; data?: Record<string, unkn
   if (nodeType === "audio-separation") {
     return (data.quality as string) === "best" ? "audio-separation:best" : "audio-separation"
   }
+
+  // AI Audit: the credit FAMILY is a GRAPH fact (is an analysis wired into the
+  // `analysis` target?), which this node-only resolver cannot see. Quote the
+  // pricier `auto` family, mirroring the frontend's no-edge-context default —
+  // an estimate may over-quote, it must NEVER under-quote (this feeds published
+  // apps' advertised price and the monetization base). The bare `video-audit`
+  // key stays at the re-audit ceiling for catalog/DB parity; it is simply never
+  // what an estimate quotes.
+  if (nodeType === "video-audit") return "video-audit:auto"
 
   // Video Analysis: duration-bucketed pricing. Mirror payload-builder's
   // `case "video-analysis"` (single source of truth = buildVideoAnalysisCreditId),

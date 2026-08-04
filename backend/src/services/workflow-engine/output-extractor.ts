@@ -123,6 +123,25 @@ function processedResultToText(r: unknown): string | undefined {
 // Node types that output a plan (not a media URL) — derived from COMPOSER_PLAN_MAP
 const PLAN_NODE_TYPES = new Set(Object.keys(COMPOSER_PLAN_MAP))
 
+/**
+ * Producers of a canonical `VideoAnalysisResult` payload — backend mirror of
+ * the frontend `ANALYSIS_PRODUCER_TYPES` (frontend/src/lib/data-handles.ts).
+ *
+ * `video-audit` sits alongside `video-analysis` on purpose: an AUDITED analysis
+ * IS an analysis (same schema, same `json` field, same `json`/`text` handle
+ * pair), so audits chain and no downstream consumer may be able to tell the two
+ * apart. Every extractor branch below that names one MUST name both, or the
+ * two emitters diverge on the orchestrated path.
+ *
+ * Deliberately narrow (not "any json producer"): the audit hands whatever is
+ * wired into its `analysis` input straight to the plugin's schema, so a loose
+ * json source would buy a failed job at full price.
+ */
+export const ANALYSIS_PRODUCER_TYPES: ReadonlySet<string> = new Set<string>([
+  "video-analysis",
+  "video-audit",
+])
+
 // All NodeOutput keys that map 1:1 from job output_data
 const DIRECT_OUTPUT_KEYS: Array<keyof NodeOutput> = [
   "imageUrl",
@@ -622,11 +641,16 @@ export function getPrimaryOutput(
     return output.json === undefined ? undefined : JSON.stringify(output.json)
   }
 
-  // Video-analysis: `json` + `text` output handles carry the SAME stringified
-  // scene-segmented analysis (text is the prompt-typed alias). Mirrors the
-  // web-scrape json branch — stringify for generic text consumers; Extract
-  // Field reads state.output.json directly.
-  if (sourceType === "video-analysis" && (sourceHandle === "json" || sourceHandle === "text")) {
+  // Video-analysis / video-audit: `json` + `text` output handles carry the SAME
+  // stringified scene-segmented analysis (text is the prompt-typed alias).
+  // Mirrors the web-scrape json branch — stringify for generic text consumers;
+  // Extract Field reads state.output.json directly.
+  //
+  // ONE branch for both emitters (ANALYSIS_PRODUCER_TYPES): the audit's output
+  // is the CORRECTED analysis in the same field on the same handles, so a
+  // downstream consumer must not be able to tell an audited analysis from a raw
+  // one. Mirrors the frontend extractNodeOutput branch.
+  if (ANALYSIS_PRODUCER_TYPES.has(sourceType) && (sourceHandle === "json" || sourceHandle === "text")) {
     return output.json === undefined ? undefined : JSON.stringify(output.json)
   }
 
@@ -1160,11 +1184,15 @@ export function extractSavedNodeOutput(node: SimpleNode): NodeOutput | undefined
     return json === undefined ? undefined : { json }
   }
 
-  // Video-analysis: single `json` output (the scene-segmented analysis object,
-  // persisted on data.generatedJson). Mirrors web-scrape's json branch so a
-  // skipped / "Run from here" video-analysis hydrates the json handle from saved
-  // node data without re-running.
-  if (type === "video-analysis") {
+  // Video-analysis / video-audit: single `json` output (the scene-segmented
+  // analysis object — for the audit, the CORRECTED one — persisted on
+  // data.generatedJson). Mirrors web-scrape's json branch so a skipped / "Run
+  // from here" node hydrates the json handle from saved node data without
+  // re-running. Both emitters share ONE branch (ANALYSIS_PRODUCER_TYPES) —
+  // same field, same shape, so the saved-data path can't diverge from the live
+  // one. The audit's `lastAuditReport` is deliberately NOT read here: the
+  // disclosure strip is node-local UI, never a graph output.
+  if (ANALYSIS_PRODUCER_TYPES.has(type)) {
     const json = data.generatedJson
     return json === undefined ? undefined : { json }
   }
@@ -1313,6 +1341,14 @@ export function extractSavedNodeOutput(node: SimpleNode): NodeOutput | undefined
 
 /**
  * Build a NodeOutput from a completed job's output_data from the jobs table.
+ *
+ * Note on `video-audit`: its job writes `{ json, report }`. `json` (the
+ * CORRECTED analysis) is a DIRECT_OUTPUT_KEY and lands on the node output
+ * exactly like video-analysis's — that is the whole graph contract, so an
+ * audited analysis is indistinguishable from a raw one downstream. `report`
+ * (the fix-and-disclose strip) is deliberately NOT promoted: it is node-local
+ * UI the frontend reads straight off `job.output_data`, never a graph output,
+ * and an unknown key is simply ignored by the copy loop below.
  */
 export function buildNodeOutputFromJobData(
   outputData: Record<string, unknown>,
