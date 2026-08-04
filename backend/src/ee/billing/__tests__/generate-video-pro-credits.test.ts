@@ -386,6 +386,34 @@ describe("computeGenerateVideoProPricing — keyframes render method (seedance-2
     expect(r.reserveBase).toBe(6905)
   })
 
+  // ── ANCHORS ALREADY BOUGHT (interactive mode S2) ────────────────────────
+  it("a run rendering from stills it was GIVEN reserves no anchor budget", async () => {
+    const seeded = await computeGenerateVideoProPricing({
+      provider: "seedance-2", resolution: "720p", durationSec: 60, renderMethod: "keyframes", anchorsSeeded: true,
+    })
+    // The field is ABSENT, not zero: `commitBase` derives the per-anchor unit
+    // from it, and a 0 would make it divide an empty budget rather than bill
+    // nothing.
+    expect(seeded.anchorReserve).toBeUndefined()
+    const normal = await computeGenerateVideoProPricing({
+      provider: "seedance-2", resolution: "720p", durationSec: 60, renderMethod: "keyframes",
+    })
+    // …and the whole difference is exactly the budget it did not hold — on a
+    // 5-scene run that is 10 stills; on a 14-scene one it is what makes the
+    // difference between finishing and a 402 at the finish line.
+    expect(normal.reserveBase - seeded.reserveBase).toBe(5 * 2 * ANCHOR)
+  })
+
+  it("is inert on an EXTEND run, which has no anchors to seed", async () => {
+    const withFlag = await computeGenerateVideoProPricing({
+      provider: "seedance-2", resolution: "720p", durationSec: 60, anchorsSeeded: true,
+    })
+    const without = await computeGenerateVideoProPricing({
+      provider: "seedance-2", resolution: "720p", durationSec: 60,
+    })
+    expect(withFlag.reserveBase).toBe(without.reserveBase)
+  })
+
   it("the tail lever is inert under keyframes (no continuation-tail term to move)", async () => {
     const t2 = await computeGenerateVideoProPricing({
       provider: "seedance-2", resolution: "720p", durationSec: 60, renderMethod: "keyframes",
