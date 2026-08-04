@@ -156,6 +156,30 @@ export const NODE_REGISTRY: NodeDescriptor[] = [
       ],
     },
   },
+  {
+    type: "video-audit",
+    label: "AI Audit",
+    category: "processing",
+    // outputType: data — emits a disclosed audit report JSON via the `json` handle, mirroring video-analysis.
+    // Re-watches a clip against a wired analysis (fix-and-disclose: applies video-verified corrections under
+    // guards, reports what was checked/fixed/left open). Two credit families selected by whether an upstream
+    // analysis is wired: video-audit:<bucket>s (analysis provided) vs video-audit:auto:<bucket>s (no analysis
+    // wired — auto-runs a fast analysis first). Same duration-bucket ladder as video-analysis (60s → 600s
+    // ceiling). See @nodaro/shared video-analysis-pricing.ts (VIDEO_AUDIT_BUCKET_CREDITS / buildVideoAuditCreditId).
+    description:
+      "Re-watches a clip against a wired analysis (or auto-runs a fast analysis first when none is wired), applies video-verified corrections under guards, and returns a disclosed report of what was checked, fixed, and left open.",
+    outputType: "data",
+    creditCost: "213-1912",
+    inputSchema: {
+      fields: [
+        { key: "videoUrl", type: "video-url", required: true },
+        // Optional upstream analysis JSON — wire a video-analysis or video-audit node's
+        // output here to price under the cheaper `video-audit` family; leave it unwired
+        // and the node auto-runs a fast analysis first (prices under `video-audit:auto`).
+        { key: "analysis", type: "object" },
+      ],
+    },
+  },
 
   {
     type: "generate-image",

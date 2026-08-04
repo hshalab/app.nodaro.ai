@@ -1,6 +1,7 @@
 import type { WorkflowNode, WorkflowEdge, FieldMappings } from "@/types/nodes"
 import type { SourceNodeInfo } from "./types"
-import { buildCreditModelIdentifier as sharedBuildCreditModelIdentifier, buildVideoCreditModelIdentifier, buildMotionCreditModelIdentifier, buildLlmCreditIdentifier, LLM_FEATURE_DEFAULTS, motionGraphicsFeature, buildScraperCreditId, isScraperActor, isKineticCaptionStyle, resolveAiAvatarCreditId, resolveCinematicCreditId, referenceSheetCreditId, buildVideoAnalysisCreditId, resolveVideoAnalysisModel } from "@nodaro/shared"
+import { buildCreditModelIdentifier as sharedBuildCreditModelIdentifier, buildVideoCreditModelIdentifier, buildMotionCreditModelIdentifier, buildLlmCreditIdentifier, LLM_FEATURE_DEFAULTS, motionGraphicsFeature, buildScraperCreditId, isScraperActor, isKineticCaptionStyle, resolveAiAvatarCreditId, resolveCinematicCreditId, referenceSheetCreditId, buildVideoAnalysisCreditId, resolveVideoAnalysisModel, buildVideoAuditCreditId } from "@nodaro/shared"
+import { videoAuditAnalysisWired } from "@/components/editor/workflow-editor/types"
 import type { LlmFeature } from "@nodaro/shared"
 /** Every node type whose output is prose/text. Used to build the compatible
  *  source list for any text-shaped field so the MappableField dropdown is
@@ -277,7 +278,16 @@ const LLM_NODE_FEATURE_MAP: Record<string, LlmFeature> = {
   "describe-to-picker": "describe-to-picker",
 }
 
-export function getModelIdentifier(node: WorkflowNode): string {
+/**
+ * The credit-cost row a node should be priced against.
+ *
+ * `edges` is optional graph context, read ONLY by node types whose price
+ * depends on the graph rather than on their own data (today: video-audit,
+ * whose credit FAMILY is chosen by whether an analysis is wired). Every caller
+ * that has the edge list should pass it — without it those types fall back to
+ * their never-under-quoting default family.
+ */
+export function getModelIdentifier(node: WorkflowNode, edges?: ReadonlyArray<WorkflowEdge>): string {
   const data = node.data as Record<string, unknown>
 
   // Component nodes: return empty string so the fallback estimateNodeCredits is used
@@ -350,6 +360,22 @@ export function getModelIdentifier(node: WorkflowNode): string {
       (probedYoutube && probedYoutube.url === data.youtubeUrl ? probedYoutube.durationSec : undefined) ??
       probedVideo?.durationSec
     return buildVideoAnalysisCreditId(resolveVideoAnalysisModel(data.llmModel as string | undefined), durationSec)
+  }
+
+  // Video-audit: family × duration composite — the SAME id the node badge
+  // requests (video-audit-node.tsx), so every run-level estimate (Execute
+  // badge, run-confirm dialog, precheck) hits the same model-cost row the pill
+  // shows. Falling through to the bare "video-audit" key would price EVERY run
+  // at the re-audit family's 600s ceiling — under-quoting every auto-family run
+  // (no analysis wired) and over-quoting every short clip. The family comes
+  // from the EDGES (videoAuditAnalysisWired); the duration from the node's
+  // url-bound probe, exactly as estimateNodeCredits reads them.
+  if (nodeType === "video-audit") {
+    const probedVideo = data.probedVideo as { url: string; durationSec: number } | undefined
+    return buildVideoAuditCreditId({
+      analysisProvided: videoAuditAnalysisWired(node.id, edges),
+      durationSec: probedVideo?.durationSec,
+    })
   }
 
   // HeyGen avatar nodes + reference sheet are COMPOSITE-only priced (duration/

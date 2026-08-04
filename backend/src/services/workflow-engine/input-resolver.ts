@@ -10,7 +10,7 @@ import type {
   NodeExecutionState,
   ResolvedInputs,
 } from "./types.js"
-import { extractSourceNodeOutput, extractSourceNodeOutputAsList, extractSavedNodeOutput, extractAllGeneratedResults, extractVideoDurationFromNode, getPrimaryOutput } from "./output-extractor.js"
+import { extractSourceNodeOutput, extractSourceNodeOutputAsList, extractSavedNodeOutput, extractAllGeneratedResults, extractVideoDurationFromNode, getPrimaryOutput, ANALYSIS_PRODUCER_TYPES } from "./output-extractor.js"
 import { extractGeneratedJsonAsList, splitGeneratedItems, resolveNodeRefs, resolveIndex, selectListItems, type SelectorFields, splitByLoopDelimiter, SOCIAL_POST_NODE_TYPES, PARAMETER_NODE_TYPES, FAN_OUT_EACH_TYPES, VIDEO_PRODUCER_TYPES, AUDIO_PRODUCER_TYPES, extractReferencedLabels, canonicalVarName, REFERENCE_HANDLE_MAP } from "@nodaro/shared"
 import { isSourceNode } from "./execution-graph.js"
 import { buildNodeRefMap } from "./payload-builder.js"
@@ -985,7 +985,12 @@ const TEXT_SOURCE_NODE_TYPES = new Set([
   "image-critic",
   // Scene-breakdown JSON pre-stringified by getHandleOutput — routes into
   // inputs.prompt for text consumers (mirrors frontend TEXT_PRODUCER_TYPES).
+  // video-audit is listed alongside on purpose: its output IS an analysis (the
+  // corrected one) in the same field on the same handles, so it must reach a
+  // text consumer exactly the way a raw analysis does. (The audit's own
+  // `analysis` INPUT is intercepted in routeOutput before this set is consulted.)
   "video-analysis",
+  "video-audit",
   // Incoming Telegram message — text is the primary output.
   "telegram-trigger",
   // Telegram Channel Feed — the recent posts' text.
@@ -1183,6 +1188,32 @@ function routeOutput(
       inputs.referenceImageUrls = [...(inputs.referenceImageUrls ?? []), output]
     } else {
       inputs.imageUrl = output
+    }
+    return
+  }
+
+  // --- video-audit `analysis` handle: pass the analysis OBJECT through ---
+  // The audit forwards whatever is wired here verbatim to the plugin's schema,
+  // so it needs the canonical VideoAnalysisResult OBJECT — not the stringified
+  // text every other consumer receives. Read the raw value from the producer's
+  // live job output; a skipped / "run from here" upstream reaches the same place
+  // because the orchestrator pre-completes it from `extractSavedNodeOutput`
+  // (whose analysis branch reads `data.generatedJson`). The direct read of that
+  // same saved field is the fallback for callers that don't pre-populate state.
+  //
+  // MUST precede the source-type chain below, which would otherwise route the
+  // stringified analysis into inputs.prompt — a field this knob-free node has
+  // no use for — and leave `inputs.analysis` unset, silently buying the pricier
+  // `video-audit:auto` family.
+  //
+  // Gated on targetType (a handle-name-only interceptor would hijack same-named
+  // handles on other nodes) AND on the source being an analysis producer, so a
+  // stale/hand-edited edge from some other json producer can't buy a guaranteed
+  // schema failure at full price. Mirrors the frontend node-input-resolver.
+  if (targetType === "video-audit" && edge.targetHandle === "analysis") {
+    if (ANALYSIS_PRODUCER_TYPES.has(srcType)) {
+      const analysis = nodeStates[src.id]?.output?.json ?? extractSavedNodeOutput(src)?.json
+      if (analysis !== undefined && analysis !== null) inputs.analysis = analysis
     }
     return
   }

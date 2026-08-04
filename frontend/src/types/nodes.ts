@@ -4632,6 +4632,56 @@ export type VideoAnalysisNodeData = {
   generatedJson?: VideoAnalysisResult
 }
 
+// --- Video Audit ("AI Audit") Node Data ---
+
+/** One disclosed outcome of the audit's fix-and-disclose contract. The audit is
+ *  never allowed to change the analysis silently: every re-watch verdict lands
+ *  here as `corrected` (applied under the guards), `refused` (a proposed change
+ *  the guards rejected) or `watch` (flagged, deliberately not changed). */
+export type VideoAuditFinding = {
+  kind: "corrected" | "refused" | "watch"
+  sceneNumber: number
+  /** The analysis field the finding is about — absent on whole-scene items. */
+  field?: string
+  reason: string
+}
+
+/** The audit's disclosure report — the `report` half of the job's output
+ *  (`{ json, report, meta }`); `json` is the corrected analysis and lands on
+ *  `generatedJson`. */
+export type VideoAuditReport = {
+  /** true ⇔ no analysis was wired in, so the node ran a fast analysis itself
+   *  first — the pricier `video-audit:auto` credit family. */
+  autoAnalysis: boolean
+  /** The reasoner's short verdict — what the user reads first. */
+  summary: string
+  findings: VideoAuditFinding[]
+}
+
+export type VideoAuditNodeData = {
+  [key: string]: unknown
+  label: string
+  // Source: a wired/uploaded video URL. No YouTube alternative (unlike
+  // video-analysis) — the route takes `videoUrl` only.
+  videoUrl?: string
+  // url-bound duration cache for the credit-bucket estimate, same shape and
+  // same trust rule as video-analysis's `probedVideo`: only honoured while
+  // `probedVideo.url` still matches the resolved upstream url.
+  probedVideo?: { url: string; durationSec: number }
+  // The disclosure report from the last run — rendered as the node's summary
+  // strip. Kept beside `generatedJson` (the corrected analysis) rather than
+  // inside it so downstream consumers see a plain analysis payload.
+  lastAuditReport?: VideoAuditReport
+  // execution state
+  executionStatus?: "idle" | "running" | "completed" | "failed"
+  errorMessage?: string
+  currentJobId?: string
+  currentJobProgress?: number
+  // execution result — the CORRECTED analysis, same canonical shared contract
+  // as video-analysis's output (an audited analysis is an analysis downstream).
+  generatedJson?: VideoAnalysisResult
+}
+
 // --- Combine Text Node Data ---
 
 export type CombineTextNodeData = {
@@ -5388,6 +5438,7 @@ export type SceneNodeData =
   | LLMChatData
   | WebScrapeNodeData
   | VideoAnalysisNodeData
+  | VideoAuditNodeData
   | ListNodeData
   | LoopNodeData
   | CombineTextNodeData
@@ -5521,6 +5572,7 @@ export type SceneNodeType =
   | "voice-design"
   | "forced-alignment"
   | "video-analysis"
+  | "video-audit"
   | "combine-videos"
   | "image-collage"
   | "assemble-narrated-video"
@@ -7024,6 +7076,23 @@ export const NODE_DEFINITIONS: ReadonlyArray<NodeTypeDefinition> = [
       analysisFocus: "",
       executionStatus: "idle",
     } as VideoAnalysisNodeData,
+  },
+  {
+    type: "video-audit",
+    label: "AI Audit",
+    category: "processing",
+    // Representative estimate only. The live per-run cost is dynamic AND
+    // family-dependent (buildVideoAuditCreditId → useModelCredits): an analysis
+    // wired into the `analysis` handle prices under `video-audit:<bucket>s`,
+    // an unwired one under the pricier `video-audit:auto:<bucket>s` (the node
+    // runs a fast analysis itself first).
+    creditCost: 3,
+    inputs: ["video", "analysis"],
+    outputs: ["json", "text"],
+    defaultData: {
+      label: "AI Audit",
+      executionStatus: "idle",
+    } as VideoAuditNodeData,
   },
   // Processing
   {

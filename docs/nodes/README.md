@@ -280,6 +280,7 @@ FFmpeg-based video manipulation.
 | [Manual Edit](./processing-video/manual-edit.md) | Open video in web editor | Make manual adjustments in browser-based editor |
 | [Remove Audio](./processing-video/remove-audio.md) | Strip the audio track, output a silent video | Mute a clip losslessly before adding new sound |
 | [Video Analysis](./processing-video/video-analysis.md) | Scene-by-scene breakdown for AI re-creation | Reverse-engineer a video (or YouTube URL) into castable ≤8s scenes with prompt-ready descriptions, layered audio (concurrent speech/music/sfx), and reusable entity slots |
+| [AI Audit](./processing-video/video-audit.md) | Re-watch a video against its analysis and disclose every fix | Sanity-check a Video Analysis result before spending downstream generation credits; wire a finished analysis to re-verify it directly, or leave it unwired to auto-run one first |
 
 ---
 

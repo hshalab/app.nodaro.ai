@@ -687,7 +687,11 @@ function detectPreviewItemType(
   if (VIDEO_SOURCE_TYPES.has(nodeType)) return "video"
   if (AUDIO_SOURCE_TYPES.has(nodeType)) return "audio"
   if (nodeType === "forced-alignment") return "data"
-  if (nodeType === "video-analysis") return "data"
+  // Both analysis emitters: a JSON scene breakdown, never a media URL. Must
+  // stay paired — video-audit's type string contains "video", so dropping it
+  // here would classify an audited analysis as a video by the URL fallthrough.
+  // Mirrors the frontend detectPreviewItemType.
+  if (nodeType === "video-analysis" || nodeType === "video-audit") return "data"
   if (value) {
     if (IMAGE_URL_RE.test(value)) return "image"
     if (VIDEO_URL_RE.test(value)) return "video"

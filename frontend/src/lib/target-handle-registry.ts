@@ -16,6 +16,7 @@ import {
   isValidSortListConnection,
   isValidSelectorConnection,
   isDataProducer,
+  ACCEPTS_ANALYSIS,
 } from "./data-handles"
 import { VISUAL_PARAMETER_PICKER_NODE_TYPES, isVisualPickerType } from "./parameter-picker-types"
 import {
@@ -334,6 +335,13 @@ const BASE_TARGET_HANDLE_ACCEPTS: Record<string, ReadonlyArray<TargetHandleEntry
   // Video Analysis takes ONE video on its `video` target and emits a scene-
   // breakdown JSON on its `json` source. Video producers light up here.
   "video-analysis":     [{ handleId: "video", label: "Video", accepts: ACCEPTS_VIDEO }],
+  // AI Audit re-watches ONE clip against an OPTIONAL finished analysis. Both
+  // targets are enumerated so a video producer AND an analysis producer each
+  // light up the right pip (an unwired `analysis` is a valid, pricier run).
+  "video-audit":        [
+    { handleId: "video", label: "Video", accepts: ACCEPTS_VIDEO },
+    { handleId: "analysis", label: "Analysis", accepts: ACCEPTS_ANALYSIS },
+  ],
   "combine-videos":     [{ handleId: "in", label: "Video", accepts: ACCEPTS_VIDEO }],
   "extract-frame":      [{ handleId: "in", label: "Video", accepts: ACCEPTS_VIDEO }],
   "loop-video":         [{ handleId: "in", label: "Video", accepts: ACCEPTS_VIDEO }],

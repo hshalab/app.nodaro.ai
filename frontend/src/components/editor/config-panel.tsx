@@ -174,6 +174,7 @@ import {
   LLMChatConfig,
   WebScrapeConfig,
   VideoAnalysisConfig,
+  VideoAuditConfig,
   CombineTextConfig,
   SaveToStorageConfig,
   WebhookOutputConfig,
@@ -234,6 +235,7 @@ const NODE_TYPE_DISPLAY_NAMES: Record<string, string> = {
   "youtube-video": "Video URL",
   "web-scrape": "Web Scrape",
   "video-analysis": "Video Analysis",
+  "video-audit": "AI Audit",
   "reference-audio": "Reference Audio",
   "tone": "Tone",
   "style-guide": "Style Guide",
@@ -410,7 +412,7 @@ export const GENERATE_BUTTON_TYPES = new Set([
   "video-upscale", "extend-video", "video-retake", "face-swap", "video-sfx", "ai-avatar", "cinematic-avatar", "suno-generate", "suno-cover", "suno-extend",
   "suno-lyrics", "suno-separate", "suno-music-video",
   "suno-mashup", "suno-replace-section", "suno-style-boost", "suno-add-instrumental", "suno-add-vocals", "suno-convert-wav", "suno-upload-extend",
-  "llm-chat", "web-scrape", "video-analysis",
+  "llm-chat", "web-scrape", "video-analysis", "video-audit",
   "video-composer", "after-effects", "lottie-overlay", "3d-title", "motion-graphics",
   "image-to-text", "qa-check", "transcribe", "describe-to-picker",
   "render-video",
@@ -484,6 +486,7 @@ function NodeTypeConfig({ nodeType, nodeData, configProps, updateNodeData, onExp
     case "youtube-video": return <YouTubeVideoConfig {...configProps} />
     case "web-scrape": return <WebScrapeConfig {...configProps} />
     case "video-analysis": return <VideoAnalysisConfig {...configProps} />
+    case "video-audit": return <VideoAuditConfig {...configProps} />
     case "reference-audio": return <ReferenceAudioConfig {...configProps} />
     case "webhook-trigger": return <WebhookTriggerConfig {...configProps} />
     case "schedule-trigger": return <ScheduleTriggerConfig {...configProps} />
@@ -1236,7 +1239,7 @@ export function ConfigPanel() {
                 {!isReadOnly && GENERATE_BUTTON_TYPES.has(nodeType) && (
                   <GenerateButton
                     onClick={() => runSingleNode?.(selectedNode.id)}
-                    modelIdentifier={getModelIdentifier(selectedNode)}
+                    modelIdentifier={getModelIdentifier(selectedNode, edges)}
                     userId={userId ?? ""}
                     label="Run This Node"
                     isRunning={nodeData.executionStatus === "running"}

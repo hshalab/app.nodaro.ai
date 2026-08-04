@@ -84,6 +84,7 @@ import {
   saveToStorageApi,
   webScrape,
   startVideoAnalysis,
+  runVideoAudit,
   executeReduce,
 } from "@/lib/api";
 import { resolveTemplate, applyTemplate } from "@/lib/prompt-templates";
@@ -186,6 +187,7 @@ import type {
   VoiceDesignData,
   ForcedAlignmentData,
   VideoAnalysisNodeData,
+  VideoAuditNodeData,
   SubWorkflowData,
   SocialMediaFormatData,
   SocialPostData,
@@ -216,6 +218,7 @@ import {
   MAX_CONSECUTIVE_POLL_FAILURES,
   checkStorageError,
   updateProgressIfChanged,
+  videoAuditAnalysisWired,
   type ExecutionContext,
 } from "./types";
 import { iterationIdempotencyKey } from "@/lib/idempotency-key";
@@ -3482,6 +3485,144 @@ export function executeNode(
           });
           if (!checkStorageError(err, ctx)) {
             guardedToast.error("Failed to start video analysis", {
+              description: err instanceof Error ? err.message : "Unknown error",
+            });
+          }
+          reject(err);
+        });
+    });
+  }
+
+  if (node.type === "video-audit") {
+    const d = node.data as VideoAuditNodeData;
+    // The clip is mandatory — the audit re-WATCHES the footage; there is no
+    // YouTube alternative on this node (unlike video-analysis).
+    const videoUrl = inputs.videoUrl ?? (d.videoUrl?.trim() || undefined);
+    if (!videoUrl) {
+      toast.error(`Node "${d.label}": connect a video to audit`);
+      return Promise.reject(new Error("No video source"));
+    }
+    // The upstream analysis, when one is wired into the `analysis` handle
+    // (video-analysis OR another video-audit — an audited analysis is still an
+    // analysis). `undefined` is meaningful: the route's family switch keys off
+    // presence, so an unwired handle buys the pricier auto family in which the
+    // node runs its own fast analysis first. Never coerce it to null/{}.
+    const analysis = inputs.analysis;
+    // Wired but empty (the upstream analysis hasn't run yet): refusing beats
+    // running, because running would SILENTLY bill the auto family — strictly
+    // more than the price the node badge, the canvas total and the run-confirm
+    // dialog all quoted from that same wired edge.
+    if (analysis === undefined && videoAuditAnalysisWired(node.id, edges)) {
+      toast.error(
+        `Node "${d.label}": the connected analysis has no result yet — run it first, or disconnect it to let this node analyse the clip itself`,
+      );
+      return Promise.reject(new Error("Wired analysis has no result"));
+    }
+    const { updateNodeData } = useWorkflowStore.getState();
+    // Clear BOTH result surfaces on run start (mirrors video-analysis): a prior
+    // corrected payload or disclosure strip must not co-render with a fresh
+    // running/failed state.
+    updateNodeData(node.id, {
+      executionStatus: "running",
+      generatedJson: undefined,
+      lastAuditReport: undefined,
+      errorMessage: undefined,
+      currentJobId: undefined,
+      currentJobProgress: undefined,
+    });
+
+    setUserPromptTemplate(undefined);
+    return new Promise<string>((resolve, reject) => {
+      runVideoAudit({ videoUrl, analysis, userId: ctx.userId })
+        .then(({ jobId }) => {
+          guardedToast.info("AI audit started", { description: `Job ID: ${jobId}` });
+          updateNodeData(node.id, { currentJobId: jobId });
+
+          let pollFailures = 0;
+          const poll = ctx.trackInterval(
+            setInterval(async () => {
+              if (ctx.isWorkflowStale()) {
+                ctx.untrackInterval(poll);
+                reject(new WorkflowStaleError());
+                return;
+              }
+              try {
+                const job = await getJobStatusLean(jobId);
+                pollFailures = 0;
+                if (job.status === "processing" && job.progress != null) {
+                  updateProgressIfChanged(node.id, job.progress, updateNodeData);
+                }
+
+                if (job.status === "completed" || job.status === "failed") {
+                  if (shouldAbandonNode(node.id, jobId)) {
+                    // Run discarded/replaced — the job still lands in My
+                    // Library, but we must not write its result/error to canvas.
+                    ctx.untrackInterval(poll);
+                    resolve("");
+                    return;
+                  }
+                }
+
+                if (job.status === "completed") {
+                  ctx.untrackInterval(poll);
+                  const output = job.output_data as Record<string, unknown> | undefined;
+                  const json = output?.json;
+                  // The fix-and-disclose report travels beside the corrected
+                  // analysis. Written together so the node can never render a
+                  // payload whose disclosure strip belongs to an earlier run.
+                  const report = output?.report;
+                  updateNodeData(node.id, {
+                    executionStatus: "completed",
+                    generatedJson: json,
+                    ...(report && typeof report === "object" ? { lastAuditReport: report } : {}),
+                    currentJobId: undefined,
+                    currentJobProgress: undefined,
+                  });
+                  guardedToast.success("AI audit complete");
+                  // Same stringified shape video-analysis resolves with — every
+                  // downstream consumer reads an audited analysis identically.
+                  resolve(json === undefined ? "" : JSON.stringify(json));
+                } else if (job.status === "failed") {
+                  ctx.untrackInterval(poll);
+                  const errMsg = job.error_message ?? "AI audit failed";
+                  updateNodeData(node.id, {
+                    executionStatus: "failed",
+                    errorMessage: errMsg,
+                    currentJobId: undefined,
+                    currentJobProgress: undefined,
+                  });
+                  guardedToast.error("AI audit failed", { description: errMsg });
+                  reject(new Error(errMsg));
+                }
+              } catch (err) {
+                pollFailures++;
+                if (pollFailures >= MAX_CONSECUTIVE_POLL_FAILURES) {
+                  ctx.untrackInterval(poll);
+                  if (shouldAbandonNode(node.id, jobId)) {
+                    // Run discarded/replaced — don't write a failure to canvas.
+                    resolve("");
+                    return;
+                  }
+                  updateNodeData(node.id, {
+                    executionStatus: "failed",
+                    currentJobId: undefined,
+                    currentJobProgress: undefined,
+                  });
+                  guardedToast.error("Failed to check AI audit status");
+                  reject(err);
+                }
+              }
+            }, 2000),
+          );
+        })
+        .catch((err) => {
+          updateNodeData(node.id, {
+            executionStatus: "failed",
+            currentJobId: undefined,
+            currentJobProgress: undefined,
+          });
+          if (!checkStorageError(err, ctx)) {
+            guardedToast.error("Failed to start AI audit", {
               description: err instanceof Error ? err.message : "Unknown error",
             });
           }

@@ -895,4 +895,63 @@ describe("restorePollingForRunningJobs", () => {
     )
     expect((completionCall![1] as Record<string, unknown>).generatedResults).toBeUndefined()
   })
+
+  // 24. Video-audit: same JSON-result restoration as video-analysis PLUS the
+  // fix-and-disclose report (`output_data.report` → `lastAuditReport`). Without
+  // the report the recovered node renders its corrected JSON under a blank
+  // disclosure strip — the audit's primary reading surface.
+  it("writes generatedJson AND lastAuditReport for a restored video-audit completion", async () => {
+    const analysis = { meta: { durationSec: 72 }, scenes: [{ sceneNumber: 1, startSec: 0, endSec: 2.1 }] }
+    const report = {
+      autoAnalysis: true,
+      summary: "One label corrected; one scene flagged.",
+      findings: [{ kind: "corrected", sceneNumber: 1, field: "label", reason: "not in frame" }],
+    }
+    mockNodes = [makeNode("n1", "video-audit")]
+    mockGetJobStatus.mockResolvedValue({
+      status: "completed",
+      output_data: { json: analysis, report },
+    })
+
+    const ctx = makeCtx()
+    restorePollingForRunningJobs([{ nodeId: "n1", jobId: "j1", nodeType: "video-audit" }], ctx, vi.fn())
+
+    await vi.advanceTimersByTimeAsync(3000)
+
+    expect(mockUpdateNodeData).toHaveBeenCalledWith("n1", {
+      executionStatus: "completed",
+      generatedJson: analysis,
+      lastAuditReport: report,
+      currentJobId: undefined,
+      currentJobProgress: undefined,
+    })
+    const completionCall = mockUpdateNodeData.mock.calls.find(
+      (call: unknown[]) =>
+        call[0] === "n1" &&
+        (call[1] as Record<string, unknown>).executionStatus === "completed",
+    )
+    expect((completionCall![1] as Record<string, unknown>).generatedResults).toBeUndefined()
+  })
+
+  // A restored analysis job must never grow an audit-only key, even if some
+  // future job row carries a stray `report` field.
+  it("does not write lastAuditReport onto a restored video-analysis completion", async () => {
+    mockNodes = [makeNode("n1", "video-analysis")]
+    mockGetJobStatus.mockResolvedValue({
+      status: "completed",
+      output_data: { json: { scenes: [] }, report: { autoAnalysis: false, summary: "x", findings: [] } },
+    })
+
+    const ctx = makeCtx()
+    restorePollingForRunningJobs([{ nodeId: "n1", jobId: "j1", nodeType: "video-analysis" }], ctx, vi.fn())
+
+    await vi.advanceTimersByTimeAsync(3000)
+
+    const completionCall = mockUpdateNodeData.mock.calls.find(
+      (call: unknown[]) =>
+        call[0] === "n1" &&
+        (call[1] as Record<string, unknown>).executionStatus === "completed",
+    )
+    expect((completionCall![1] as Record<string, unknown>).lastAuditReport).toBeUndefined()
+  })
 })

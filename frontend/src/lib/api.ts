@@ -3753,6 +3753,37 @@ export async function startVideoAnalysis(params: {
   })
 }
 
+/**
+ * AI Audit (`video-audit`) — re-watches a clip against a finished analysis and
+ * returns the corrected analysis plus a disclosure report.
+ *
+ * `analysis` is the CREDIT-FAMILY lever, not a convenience: sending it prices
+ * the run under `video-audit:<bucket>s`; OMITTING it (never `null` — the route
+ * rejects a literal null so a client can't buy the pricier family by accident)
+ * makes the node run its own fast analysis first, under `video-audit:auto:*`.
+ * The payload is passed through verbatim; the plugin validates it against the
+ * canonical analysis schema before spending anything.
+ */
+export async function runVideoAudit(params: {
+  videoUrl: string
+  analysis?: unknown
+  /** Container hint for the watcher's video block; defaults to video/mp4. */
+  mimeType?: string
+  userId?: string
+}): Promise<{ jobId: string }> {
+  const body: Record<string, unknown> = { videoUrl: params.videoUrl }
+  // Strict `!== undefined`: the route's own family switch keys off presence, so
+  // the wire shape must mean exactly what the caller meant.
+  if (params.analysis !== undefined) body.analysis = params.analysis
+  if (params.mimeType) body.mimeType = params.mimeType
+  if (params.userId) body.userId = params.userId
+  return apiJson("/v1/video-audit", {
+    body,
+    workflowId: true,
+    label: "Failed to start AI audit",
+  })
+}
+
 /** Pre-flight duration/title probe for a YouTube URL — no credits, no job row.
  *  The editor uses the returned duration to bucket the pre-run credit estimate
  *  and to surface an early "video too long / unavailable" error. */

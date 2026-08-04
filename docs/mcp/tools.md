@@ -12,7 +12,7 @@ authorizing the connector; missing scopes cause tools to be omitted entirely
 |-------|----------|
 | `workflows:read` | `list_projects`, `get_project`, `list_workflows`, `get_workflow`, `get_workflow_json`, `export_workflow`, `list_components`, `get_component_inputs` |
 | `workflows:write` | `create_workflow`, `delete_workflow`, `update_workflow_json`, `import_workflow` |
-| `workflows:execute` | `run_workflow`, all generation verbs (image/video/audio/Suno/character/location/object), `run_component`, `run_app`, `delete_app_run`, `analyze_prompt`, `generate_prompt`, `enhance_prompt`, `reduce`, `forced_alignment`, `video_analysis`, `resolve_shot_sequence`, `render_shot_sequence`, `create_explainer`, `create_launch_video` |
+| `workflows:execute` | `run_workflow`, all generation verbs (image/video/audio/Suno/character/location/object), `run_component`, `run_app`, `delete_app_run`, `analyze_prompt`, `generate_prompt`, `enhance_prompt`, `reduce`, `forced_alignment`, `video_analysis`, `video_audit`, `resolve_shot_sequence`, `render_shot_sequence`, `create_explainer`, `create_launch_video` |
 | `jobs:read` | `list_jobs`, `get_job`, `diagnose_run` |
 | `assets:read` | `browse_gallery`, `browse_uploads`, `list_favorites`, `get_asset`, `display_asset`, `get_app_run`, `list_characters`, `get_character`, `list_locations`, `get_location` |
 | `assets:write` | `favorite_asset`, `create_character`, `update_character`, `approve_portrait`, `recaption_character`, `create_location`, `update_location`, `approve_main_image`, `recaption_location`, `approve_object_main_image`, `recaption_object`, `upload_image_widget`, `upload_audio_widget`, `upload_video_widget`, `request_image_upload`, `request_audio_upload`, `request_video_upload`, `prepare_image_upload`, `prepare_audio_upload`, `prepare_video_upload` |
@@ -35,7 +35,7 @@ generate_video, generate_music, …) have media-specific cards. All remaining
 job tools — entity motion clips (`generate_*_motion`), `render_shot_sequence`,
 `create_explainer`, `create_launch_video`, `run_component`, and the
 text-output tools (`image_to_text`, `generate_script`, `transcribe`,
-`suno_lyrics`, `suno_style_boost`, `forced_alignment`, `video_analysis`) — share the universal
+`suno_lyrics`, `suno_style_boost`, `forced_alignment`, `video_analysis`, `video_audit`) — share the universal
 job card, which auto-detects the output: video/image/audio players, inline
 text with a Copy button (scripts, lyrics, transcripts, alignment JSON), or a
 component's stacked outputs.
@@ -457,6 +457,7 @@ prompt with no questions round-trip.
 | `stop_video_pro` | Gracefully stop a RUNNING `generate-video-pro` job (the segmented long-video engine): the in-flight segment is abandoned (still billed), the rest are skipped, everything completed is stitched into the job's final video, and the untouched reserve refunds. A not-yet-started job is cancelled with a full refund. Accepts `job_id`. |
 | `continue_video_pro` | Continue a stopped / failed / completed `generate-video-pro` run as a NEW job — delivered segments below `from_segment` (1-based; default = first missing) are reused, the rest regenerate; billed only for the regenerated part. Accepts `job_id`, `from_segment?`. Returns the new job id. |
 | `video_analysis` | Scene-by-scene analysis of a video for AI re-creation — ≤8s scenes with prompt-ready `visualResolved` descriptions, layered audio, and castable entity slots. Exactly one source: `video_asset_id` / `video_url` / `youtube_url` (max 10 minutes, no live streams). See [`video_analysis`](#video_analysis) below. |
+| `video_audit` | Re-watch a video against its analysis and fix what's wrong — a fix-and-disclose pass: corrections are applied under guards and every one is reported, nothing is silently rewritten. Pass `analysis` from a prior `video_analysis`/`video_audit` call to re-verify it, or omit it to auto-run a fast analysis first. See [`video_audit`](#video_audit) below. |
 
 **Seedance 2 (`model: "seedance-2"`)** accepts `resolution: "4k"` and `aspect_ratio: "adaptive"` (plus `"21:9"`) on `generate_video` / `animate_image` — both fields are free strings, forwarded to the route unaltered. The cheaper variants are resolution-capped: `seedance-2-fast` and `seedance-2-mini` are **480p / 720p only** (no 1080p, no 4K). Frame inputs and references coexist — when any reference (image / video / audio) is wired alongside `image_url` / `end_frame_url`, the frames become **prompt-directed `Image N` references** rather than pinned endpoints; the resolver decides the mode, so there is no toggle. Reference **videos** are billed `unit × (input + output)` duration — the per-second `-ref` rate (see the [Generate Video node pricing](../nodes/ai-video/generate-video.md)) is scaled by the probed input-video duration plus the output duration, so longer source clips reserve more.
 
@@ -500,9 +501,41 @@ below are the shared pricing formula's current outputs:
 
 | Tier | ≤60s | ≤180s | ≤360s | ≤600s |
 |------|------|-------|-------|-------|
-| `fast` (economy) | 14 | 19 | 49 | 81 |
-| `pro` (default) | 21 | 27 | 72 | 120 |
-| `mixed` / `mixed-fast` | 34 | 46 | 120 | 200 |
+| `fast` (economy) | 180 | 185 | 514 | 846 |
+| `pro` (default) | 215 | 231 | 636 | 1050 |
+| `mixed` / `mixed-fast` | 268 | 289 | 724 | 1169 |
+| `smart` (highest accuracy) | 410 | 500 | 1259 | 2064 |
+
+The live tool description carries these same numbers — it is generated from the
+shared pricing table at server start, so it is always current. This table is
+hand-maintained; if the two ever disagree, the tool description is right.
+
+### `video_audit`
+
+**Scope:** `workflows:execute`
+
+Re-watch a video against its analysis and fix what's wrong — a fix-and-disclose
+pass, not a silent rewrite. Corrections are applied under guards and every one
+is reported: the job's `output_data` carries a disclosed report of what was
+checked, what changed, and what was left open (flagged, not auto-fixed).
+Returns a `job_id` — poll `get_job` for the report.
+
+**Input:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `video_url` | string, required | Direct URL of the video to audit. |
+| `analysis` | object, optional | The analysis JSON (`meta` + `slots` + `scenes[]`) from a prior `video_analysis` or `video_audit` call, passed through verbatim. Wiring this prices the cheaper `video-audit` family; omit it and the tool auto-runs a fast analysis first (the pricier `video-audit:auto` family). |
+
+**Pricing** — duration-bucketed credits, selected by whether `analysis` was
+passed. The bucket is the smallest of 60s / 180s / 360s / 600s that fits the
+video's probed duration. The values below are the shared pricing formula's
+current outputs:
+
+| Family | ≤60s | ≤180s | ≤360s | ≤600s |
+|--------|------|-------|-------|-------|
+| `video-audit` (analysis wired) | 213 | 289 | 659 | 1066 |
+| `video-audit:auto` (no analysis — auto-runs one first) | 393 | 474 | 1173 | 1912 |
 
 The live tool description carries these same numbers — it is generated from the
 shared pricing table at server start, so it is always current. This table is

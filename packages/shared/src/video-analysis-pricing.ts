@@ -29,6 +29,10 @@
  * against it and fails on drift. There is deliberately NO app-side formula to
  * check against — it was moved private in 2026-07 and the old backend test
  * went with it.
+ *
+ * `VIDEO_AUDIT_BUCKET_CREDITS` further down is the sibling table for the
+ * `video-audit` node ("AI Audit") — same module, same bucket ladder, same
+ * generator-authoritative pattern, its own two credit families.
  */
 
 export const VIDEO_ANALYSIS_DURATION_BUCKETS = [60, 180, 360, 600] as const
@@ -158,4 +162,93 @@ export function bucketSecondsFromCreditId(creditId: string): number | null {
 
 export function videoAnalysisNumWindows(bucketSec: number): number {
   return bucketSec <= VIDEO_ANALYSIS_WINDOW.SINGLE_MAX ? 1 : 1 + Math.ceil((bucketSec - WINDOW_LEN) / WINDOW_STRIDE)
+}
+
+/**
+ * Precomputed credit cost for the `video-audit` node ("AI Audit") — the same
+ * pattern as `VIDEO_ANALYSIS_BUCKET_CREDITS` above: the OUTPUT of the private
+ * `videoAuditBucketCredits` formula in `@nodaroai/cloud-plugins`
+ * (`src/plugins/video-analysis/cost.ts`), a plain lookup table never a
+ * formula, cross-checked against that package's own cost test. Shares the
+ * SAME duration-bucket ladder as video-analysis (`VIDEO_ANALYSIS_DURATION_BUCKETS`
+ * / `pickVideoAnalysisBucket`) — the audit re-watches the same clip, so it
+ * buckets identically.
+ *
+ * Two credit families, selected by whether an analysis was wired into the
+ * node (see `buildVideoAuditCreditId`):
+ * - `video-audit:<bucket>s` — an analysis was provided; the audit re-watches
+ *   the clip against it directly (native watcher roll + reasoner pass, at a
+ *   safety margin — internals stay private in the plugin).
+ * - `video-audit:auto:<bucket>s` — no analysis wired; the node auto-runs a
+ *   fast-tier analysis first. Exactly the base family's price PLUS the
+ *   `gemini-3-flash` (legacy fast tier) row from `VIDEO_ANALYSIS_BUCKET_CREDITS`
+ *   at the SAME bucket — summed in the plugin's generator/formula, never
+ *   hand-added here (see the single-source assertion in
+ *   video-analysis-pricing.test.ts).
+ *
+ * Bare ids (`video-audit`, `video-audit:auto` — they live in
+ * `model-catalog.ts`'s pricing rows, not as keys in this table) equal their
+ * family's 600s ceiling, the same "unknown duration → ceiling" convention
+ * `VIDEO_ANALYSIS_BUCKET_CREDITS`'s bare per-model catalog rows use.
+ * `buildVideoAuditCreditId` never returns a bare id itself — an
+ * unknown/invalid duration resolves to the bucketed 600s id, matching
+ * `buildVideoAnalysisCreditId`.
+ *
+ * Values pasted verbatim from the plugin generator's output
+ * (`scripts/gen-va-buckets.mjs`) at `@nodaroai/cloud-plugins` v0.102.0 —
+ * never hand computed. The plugin's cost test cross-checks every row.
+ */
+export const VIDEO_AUDIT_BUCKET_CREDITS: Record<string, number> = {
+  "video-audit:60s": 213,
+  "video-audit:180s": 289,
+  "video-audit:360s": 659,
+  "video-audit:600s": 1066,
+  "video-audit:auto:60s": 393,
+  "video-audit:auto:180s": 474,
+  "video-audit:auto:360s": 1173,
+  "video-audit:auto:600s": 1912,
+}
+
+/**
+ * Composite credit-id builder for `video-audit`. Mirrors
+ * `buildVideoAnalysisCreditId`'s bucket selection and unknown/invalid-duration
+ * ceiling fallback exactly (same ladder, same rounding — `durationSec <=
+ * bucket`, clamped to the 600s max), but selects the FAMILY by whether an
+ * analysis was already provided instead of by model: `analysisProvided:
+ * true` prices under the cheaper `video-audit` family (re-audits an existing
+ * analysis); `false` prices under `video-audit:auto` (the node auto-runs a
+ * fast analysis first, hence that family's built-in fast-tier addition).
+ */
+export function buildVideoAuditCreditId(args: { analysisProvided: boolean; durationSec?: number }): string {
+  const { analysisProvided, durationSec } = args
+  const bucket = durationSec !== undefined && durationSec > 0
+    ? pickVideoAnalysisBucket(Math.min(durationSec, VIDEO_ANALYSIS_MAX_DURATION_SEC))
+    : VIDEO_ANALYSIS_MAX_DURATION_SEC // no/invalid duration → ceiling composite, same convention as buildVideoAnalysisCreditId
+  const family = analysisProvided ? "video-audit" : "video-audit:auto"
+  return `${family}:${bucket}s`
+}
+
+/**
+ * Table lookup for a resolved bucket + family. Snaps `bucketSec` onto the
+ * ladder via `pickVideoAnalysisBucket` first, so a raw duration (not just an
+ * exact 60/180/360/600) is safe to pass — mirrors `buildVideoAuditCreditId`'s
+ * own rounding rather than requiring the caller to pre-round.
+ */
+export function videoAuditCreditsForBucket(bucketSec: number, auto: boolean): number {
+  const bucket = pickVideoAnalysisBucket(bucketSec)
+  return VIDEO_AUDIT_BUCKET_CREDITS[`video-audit${auto ? ":auto" : ""}:${bucket}s`]!
+}
+
+/**
+ * Parses a `video-audit:*` credit id back to its bucket seconds — both
+ * families (`video-audit:<n>s` and `video-audit:auto:<n>s`); null on
+ * anything else (a bare id with no bucket, a `video-analysis:*` id, or
+ * garbage). Deliberately a SEPARATE parser from `bucketSecondsFromCreditId`
+ * (anchored to the `video-analysis:` prefix and a mandatory model segment) —
+ * mirrors the plugin-local audit parser so app code can never mis-parse an
+ * audit id with the VA-anchored parser, or vice versa.
+ */
+export function bucketSecondsFromAuditCreditId(id: string): number | null {
+  const m = /^video-audit(?::auto)?:(\d+)s$/.exec(id)
+  return m ? Number(m[1]) : null
 }

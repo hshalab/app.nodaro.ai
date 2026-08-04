@@ -212,6 +212,58 @@ describe("video-analysis result recovery", () => {
     expect(patches).toEqual([])
     expect(fetch).not.toHaveBeenCalled()
   })
+
+  /** video-audit is the second analysis emitter and carries a SECOND result
+   *  surface: the fix-and-disclose report. Recovering only the JSON leaves the
+   *  node's primary reading surface (the report strip) blank — same billed-
+   *  but-invisible class as the analysis bug above. */
+  const REPORT = {
+    autoAnalysis: false,
+    summary: "Two scene labels corrected against the footage.",
+    findings: [
+      { kind: "corrected", sceneNumber: 1, field: "label", reason: "no such action in frame" },
+      { kind: "watch", sceneNumber: 4, reason: "speaker identity uncertain" },
+    ],
+  }
+
+  it("recovers a video-audit's corrected analysis AND its report", () => {
+    expect(buildCompletedResultPatch("video-audit", { json: ANALYSIS, report: REPORT }, "j", NOW)).toEqual({
+      executionStatus: "completed",
+      generatedJson: ANALYSIS,
+      lastAuditReport: REPORT,
+    })
+  })
+
+  it("recovers a video-audit with no report payload (json only, no blank strip key)", () => {
+    expect(buildCompletedResultPatch("video-audit", { json: ANALYSIS }, "j", NOW)).toEqual({
+      executionStatus: "completed",
+      generatedJson: ANALYSIS,
+    })
+  })
+
+  it("still returns null for a video-audit job with no json payload", () => {
+    expect(buildCompletedResultPatch("video-audit", { report: REPORT }, "j", NOW)).toBeNull()
+    expect(buildCompletedResultPatch("video-audit", null, "j", NOW)).toBeNull()
+  })
+
+  it("never writes lastAuditReport onto a plain video-analysis node", () => {
+    expect(buildCompletedResultPatch("video-analysis", { json: ANALYSIS, report: REPORT }, "j", NOW)).toEqual({
+      executionStatus: "completed",
+      generatedJson: ANALYSIS,
+    })
+  })
+
+  it("computeCompletedJobPatches recovers an audit onto an empty node", async () => {
+    const patches = await computeCompletedJobPatches(
+      [{ nodeId: "aud", jobId: "j1" }],
+      [node("aud", "video-audit")],
+      vi.fn(async () => ({ status: "completed", output_data: { json: ANALYSIS, report: REPORT } })),
+      NOW,
+    )
+    expect(patches).toEqual([
+      { nodeId: "aud", updates: { executionStatus: "completed", generatedJson: ANALYSIS, lastAuditReport: REPORT } },
+    ])
+  })
 })
 
 describe("content-policy rewrite disclosure recovery (Task A4 follow-up)", () => {

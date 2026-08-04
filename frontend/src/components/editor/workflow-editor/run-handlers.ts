@@ -820,17 +820,23 @@ function applyRestoredJobCompletion(
 ): void {
   const { updateNodeData } = useWorkflowStore.getState();
 
-  // Video-analysis: the result is a JSON scene breakdown (`output_data.json`
+  // Analysis emitters: the result is a JSON scene breakdown (`output_data.json`
   // → `data.generatedJson`), not a media URL — the generic path below would
-  // complete the node EMPTY plus a blank-url generatedResults entry (the
-  // analysis node renders generatedJson only). Same gap as
-  // reconcile-completed-jobs (reported 2026-08-03: run billed + completed
-  // while the poll was dead; node showed nothing).
-  if (nodeType === "video-analysis") {
+  // complete the node EMPTY plus a blank-url generatedResults entry (these
+  // nodes render generatedJson only). Same gap as reconcile-completed-jobs
+  // (reported 2026-08-03: run billed + completed while the poll was dead; node
+  // showed nothing).
+  //
+  // video-audit additionally restores its fix-and-disclose report
+  // (`output_data.report` → `data.lastAuditReport`); without it a recovered
+  // audit renders its corrected JSON with a blank disclosure strip.
+  if (nodeType === "video-analysis" || nodeType === "video-audit") {
     const json = job.output_data?.json;
+    const report = nodeType === "video-audit" ? job.output_data?.report : undefined;
     updateNodeData(nodeId, {
       executionStatus: "completed",
       ...(json && typeof json === "object" ? { generatedJson: json } : {}),
+      ...(report && typeof report === "object" ? { lastAuditReport: report } : {}),
       currentJobId: undefined,
       currentJobProgress: undefined,
     });

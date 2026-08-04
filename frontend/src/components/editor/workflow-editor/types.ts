@@ -1,7 +1,7 @@
 import type { WorkflowNode, WorkflowEdge, GenerateVideoProNodeData, EditVideoProNodeData } from "@/types/nodes";
 import { StorageExceededError } from "@/lib/api";
 import { useWorkflowStore } from "@/hooks/use-workflow-store";
-import { buildMotionCreditModelIdentifier, isDefaultSelectorConfig, selectListItems, type SelectorFields, getEffectiveRepeatCount, buildScraperCreditId, isScraperActor, SCRAPER_CREDIT_COSTS, buildVideoAnalysisCreditId, resolveVideoAnalysisModel, bucketSecondsFromCreditId, VIDEO_ANALYSIS_BUCKET_CREDITS, FAN_OUT_EACH_TYPES, buildVideoCreditModelIdentifier, SEEDANCE_2_CONTINUATION_REF_SEC, isMinimaxH3Provider, normalizeMinimaxH3Resolution } from "@nodaro/shared"
+import { buildMotionCreditModelIdentifier, isDefaultSelectorConfig, selectListItems, type SelectorFields, getEffectiveRepeatCount, buildScraperCreditId, isScraperActor, SCRAPER_CREDIT_COSTS, buildVideoAnalysisCreditId, resolveVideoAnalysisModel, bucketSecondsFromCreditId, VIDEO_ANALYSIS_BUCKET_CREDITS, buildVideoAuditCreditId, VIDEO_AUDIT_BUCKET_CREDITS, FAN_OUT_EACH_TYPES, buildVideoCreditModelIdentifier, SEEDANCE_2_CONTINUATION_REF_SEC, isMinimaxH3Provider, normalizeMinimaxH3Resolution } from "@nodaro/shared"
 // getCachedCredits reads the live React-Query model-cost cache (an `ee/`
 // concern — credits are enterprise-only). Allowlisted in
 // tools/check-ee-imports.mjs (same coupling as ./run-handlers.ts).
@@ -115,6 +115,15 @@ export const NODE_CREDIT_COSTS: Record<string, number> = {
   // (smart:600s) so this rare-path fallback never under-quotes; re-sync by
   // hand whenever that table reprices (last: 2026-08-03, task A3).
   "video-analysis": 2064,
+  // Like video-analysis above, the real per-run cost is bucketed — here by
+  // FAMILY × duration (see estimateNodeCredits + the node's live badge). This
+  // key is the bare `video-audit` model id, so it carries that id's catalog
+  // price: the re-audit family's 600s ceiling (credit-estimate-tables.test.ts
+  // pins the two together). It is NOT the table-wide max — the auto family is
+  // a SEPARATE catalog id (`video-audit:auto`, 1912) — so treat this purely as
+  // a last-resort floor: every real quoting path (node badge, canvas total,
+  // run-confirm, precheck) resolves a bucketed composite first.
+  "video-audit": 1066,
 };
 
 /** Motion-transfer composite credit costs (mirrors STATIC_CREDIT_COSTS in backend) */
@@ -331,9 +340,37 @@ function estimateEditVideoProCredits(data: EditVideoProNodeData): number {
 }
 
 /**
- * Estimate credit cost for a single node, reading node data for variable-cost nodes.
+ * WHICH VIDEO-AUDIT CREDIT FAMILY — the node badge's rule verbatim
+ * (video-audit-node.tsx): an edge into the `analysis` target prices under the
+ * cheaper `video-audit` family (re-audit only); nothing wired prices under
+ * `video-audit:auto`, because the node runs its own fast analysis first.
+ *
+ * It is a GRAPH fact, not a node-data field, so it needs the edges. Callers
+ * WITHOUT graph context (no edges / no node id) get `false` → the pricier auto
+ * family: an estimate may over-quote, it must never under-quote. The ONE rule
+ * lives here so `getModelIdentifier` (the live-cost path) and
+ * `estimateNodeCredits` (the cold-cache fallback) can't disagree with the badge.
  */
-export function estimateNodeCredits(node: { type?: string; data?: Record<string, unknown> }): number {
+export function videoAuditAnalysisWired(
+  nodeId: string | undefined,
+  edges?: ReadonlyArray<{ target: string; targetHandle?: string | null }>,
+): boolean {
+  if (!nodeId || !edges) return false
+  return edges.some((e) => e.target === nodeId && e.targetHandle === "analysis")
+}
+
+/**
+ * Estimate credit cost for a single node, reading node data for variable-cost nodes.
+ *
+ * `edges` is optional graph context — only edge-priced node types read it
+ * (today: video-audit, whose credit FAMILY depends on whether an analysis is
+ * wired). Omitting it never throws; it just falls back to that type's
+ * never-under-quoting default.
+ */
+export function estimateNodeCredits(
+  node: { id?: string; type?: string; data?: Record<string, unknown> },
+  edges?: ReadonlyArray<{ target: string; targetHandle?: string | null }>,
+): number {
   const nodeType = node.type ?? ""
   // Component nodes: use the published estimatedCredits stored on the node data
   if (nodeType === "component" && node.data) {
@@ -386,6 +423,20 @@ export function estimateNodeCredits(node: { type?: string; data?: Record<string,
     return bucketSec !== null
       ? VIDEO_ANALYSIS_BUCKET_CREDITS[buildVideoAnalysisCreditId(model, bucketSec)] ?? NODE_CREDIT_COSTS["video-analysis"] ?? 0
       : NODE_CREDIT_COSTS["video-analysis"] ?? 0
+  }
+  if (nodeType === "video-audit" && node.data) {
+    // Family from the edges (see videoAuditAnalysisWired), duration from the
+    // node's url-bound `probedVideo` cache — the SAME two inputs the node badge
+    // feeds buildVideoAuditCreditId, so the canvas total and the per-node pill
+    // can only ever quote the same row. No YouTube alternative on this node, so
+    // there is no probedYoutube fallback to consider. Unknown duration →
+    // buildVideoAuditCreditId's own 600s ceiling composite (never a bare id).
+    const probedWired = node.data.probedVideo as { url: string; durationSec: number } | undefined
+    const creditId = buildVideoAuditCreditId({
+      analysisProvided: videoAuditAnalysisWired(node.id, edges),
+      durationSec: probedWired?.durationSec,
+    })
+    return VIDEO_AUDIT_BUCKET_CREDITS[creditId] ?? NODE_CREDIT_COSTS["video-audit"] ?? 0
   }
   return NODE_CREDIT_COSTS[nodeType] ?? 0
 }
@@ -513,6 +564,10 @@ export const EXECUTABLE_TYPES = new Set([
   "image-critic",
   "web-scrape",
   "video-analysis",
+  // AI Audit — re-watches a clip against an analysis and emits the CORRECTED
+  // analysis (same payload shape as video-analysis, so it chains anywhere an
+  // analysis does). Priced per family × duration bucket (estimateNodeCredits).
+  "video-audit",
   "router",
   "teleport-send",
   "teleport-receive",

@@ -78,7 +78,7 @@ export function pickLatestCompletedJobPerNode(items: readonly ExecItemLike[]): C
 function nodeHasResult(data: Record<string, unknown>): boolean {
   if (data.executionStatus === "completed") return true
   if (data.generatedVideoUrl || data.generatedImageUrl || data.generatedAudioUrl || data.sourceImageUrl) return true
-  if (data.generatedJson) return true // video-analysis: the scene breakdown IS the result
+  if (data.generatedJson) return true // video-analysis / video-audit: the scene breakdown IS the result
   const gr = data.generatedResults as readonly GeneratedResult[] | undefined
   return Array.isArray(gr) && gr.length > 0
 }
@@ -97,16 +97,24 @@ export function buildCompletedResultPatch(
   timestamp: string,
 ): Record<string, unknown> | null {
   if (!output) return null
-  // Video-analysis is the one node whose result is a JSON payload
+  // The analysis emitters are the nodes whose result is a JSON payload
   // (`output_data.json` → `data.generatedJson`), not a media URL — without this
   // branch a completed analysis fell through every recovery layer and the node
   // stayed empty after any reload whose live poll died (billed, result in My
   // Library, nothing on canvas — reported 2026-08-03). Type-gated so a stray
   // `json` field on a media job can never shadow its real URL result.
-  if (nodeType === "video-analysis") {
-    return output.json && typeof output.json === "object"
-      ? { executionStatus: "completed", generatedJson: output.json }
-      : null
+  //
+  // video-audit rides the same branch AND restores its fix-and-disclose report
+  // (`output_data.report` → `data.lastAuditReport`) beside the corrected
+  // analysis: the report strip is the node's primary reading surface, so
+  // recovering only the JSON would render a completed audit half-blank.
+  if (nodeType === "video-analysis" || nodeType === "video-audit") {
+    if (!output.json || typeof output.json !== "object") return null
+    const patch: Record<string, unknown> = { executionStatus: "completed", generatedJson: output.json }
+    if (nodeType === "video-audit" && output.report && typeof output.report === "object") {
+      patch.lastAuditReport = output.report
+    }
+    return patch
   }
   const videoUrl = typeof output.videoUrl === "string" ? output.videoUrl : undefined
   const imageUrl = typeof output.imageUrl === "string" ? output.imageUrl : undefined
