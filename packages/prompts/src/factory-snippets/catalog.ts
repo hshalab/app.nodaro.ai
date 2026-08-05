@@ -30,7 +30,7 @@ export const FACTORY_SNIPPETS: readonly FactorySnippet[] = [
   // exactly why it costs nothing. The same idea written as a standalone claim
   // ("This image is a scene start frame of a video.") lost the lead's identity
   // in 3 of 3 draws. Goes at the very TOP, above the scene.
-  { id: "film-still-of", name: "Film Still Of", description: "Put at the very top, before the scene — lead with the shot size, e.g. \"Extreme wide…\"", text: `Extreme wide ${FILM_STILL_PREFIX.charAt(0).toLowerCase()}${FILM_STILL_PREFIX.slice(1)}`, target: "prompt", media: I, category: "Reference locks" },
+  { id: "film-still-of", name: "Film Still Of", description: "Put at the very top, before the scene — lead with the shot size, e.g. \"Medium wide…\"", text: `Medium wide ${FILM_STILL_PREFIX.charAt(0).toLowerCase()}${FILM_STILL_PREFIX.slice(1)}`, target: "prompt", media: I, category: "Reference locks" },
   // Goes at the very END. An example to edit — a different film wants a
   // different stock; what generalises is that the look comes LAST.
   { id: "cinematic-look", name: "Cinematic Look (16mm)", description: "Append at the END — film stock, lens, light and palette", text: CINEMATIC_LOOK_TAIL, target: "prompt", media: I, category: "Reference locks" },

@@ -175,7 +175,7 @@ describe("the framing prefix and the look tail keep their shapes", () => {
   it("the framing snippet is a PREFIX, not a sentence", () => {
     // A fragment, so it swallows the scene that follows. A full stop here would
     // make it a standalone claim — the shape that lost the references.
-    expect(FILM_STILL_PREFIX).toBe("Cinematic film still of")
+    expect(FILM_STILL_PREFIX).toBe("Film still of")
     expect(FILM_STILL_PREFIX.endsWith(".")).toBe(false)
   })
 
@@ -212,14 +212,23 @@ describe("multiPerson swaps in the face clauses without touching anything else",
 describe("filmStillPrefix leads with the shot size", () => {
   it("puts the framing first, then the fixed tail", async () => {
     const { filmStillPrefix } = await import("../reference-rules.js")
-    expect(filmStillPrefix("Extreme wide")).toBe("Extreme wide cinematic film still of")
-    expect(filmStillPrefix("Medium close-up")).toBe("Medium close-up cinematic film still of")
+    expect(filmStillPrefix("Medium wide")).toBe("Medium wide film still of")
+    expect(filmStillPrefix("Extreme wide")).toBe("Extreme wide film still of")
   })
 
   it("falls back to the bare prefix when no shot is given", async () => {
     const { filmStillPrefix } = await import("../reference-rules.js")
     expect(filmStillPrefix()).toBe(FILM_STILL_PREFIX)
     expect(filmStillPrefix("   ")).toBe(FILM_STILL_PREFIX)
+  })
+
+  it("claims no genre — a UGC clip and a documentary are film stills too", async () => {
+    const { filmStillPrefix } = await import("../reference-rules.js")
+    // "Cinematic" imposes a register. It is also the exact category of word
+    // every measured arm punished, so it does not belong in a default.
+    for (const shot of [undefined, "Medium wide"]) {
+      expect(filmStillPrefix(shot).toLowerCase()).not.toContain("cinematic")
+    }
   })
 
   it("never ends in a full stop — it must swallow the scene, not stand alone", async () => {

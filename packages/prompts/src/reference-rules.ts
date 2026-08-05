@@ -105,9 +105,15 @@ export const REFERENCE_RULES_MULTI_PERSON =
 /**
  * THE FRAMING PREFIX — a sentence fragment that swallows the scene after it.
  *
- * "Extreme wide cinematic film still of" + "The person from reference image A
- * wears…" reads as one phrase, and that is the whole trick. Lead with the SHOT
- * SIZE (see {@link filmStillPrefix}). The same idea as a standalone SENTENCE
+ * "Medium wide film still of" + "The person from reference image A wears…"
+ * reads as one phrase, and that is the whole trick. Lead with the SHOT SIZE
+ * (see {@link filmStillPrefix}).
+ *
+ * NO "CINEMATIC", and that word was in here for about ten minutes. "Film still"
+ * describes the KIND of picture — a frame lifted out of moving footage, which
+ * is what a UGC clip, a product video and a documentary all are too. "Cinematic"
+ * describes a REGISTER, and imposing one is wrong for most briefs. It is also
+ * the exact category of word every measured arm punished: a genre claim. The same idea as a standalone SENTENCE
  * ("Film still from a feature film." / "This image is a scene start frame of a
  * video.") measured badly-to-catastrophically: the sentence competes with the
  * reference bindings and the references lose — the "scene start frame" arm put
@@ -120,23 +126,22 @@ export const REFERENCE_RULES_MULTI_PERSON =
  * prefix also moves staging, depth and the quality of light — things an
  * eyeline rule cannot reach.
  */
-export const FILM_STILL_PREFIX = "Cinematic film still of"
+export const FILM_STILL_PREFIX = "Film still of"
 
 /**
  * The prefix with a SHOT SIZE in front — "Extreme wide cinematic film still of
  * …", "Medium close-up cinematic film still of …".
  *
- * Leading with the framing is standard cinematography prompt practice and Tal
- * reports it better again. HONEST STATUS: the POSITION is measured (a prefix
- * costs nothing where a standalone claim cost the lead's identity 3 of 3); the
- * added shot-size and "cinematic" words are his experience, not a controlled
- * arm. Every previous case of adding words to a MIDDLE claim was paid for, so
- * if this ever regresses, suspect the words — and note the prefix position is
- * the safe one, which is why they were put here rather than in a sentence.
+ * Leading with the framing is standard practice and Tal reports it better
+ * again. HONEST STATUS: the POSITION is measured (a prefix costs nothing where
+ * a standalone claim cost the lead's identity 3 of 3); the shot-size word is
+ * his experience, not a controlled arm. The shot size is safe in a way a genre
+ * label is not — it says how the picture is FRAMED, which the scene needs
+ * anyway, rather than what kind of production it belongs to.
  */
 export function filmStillPrefix(shotSize?: string): string {
   const shot = shotSize?.trim()
-  return shot ? `${shot} cinematic film still of` : FILM_STILL_PREFIX
+  return shot ? `${shot} film still of` : FILM_STILL_PREFIX
 }
 
 /**
@@ -155,6 +160,12 @@ export const SCENE_FRAME_RULE = "Nobody looks at the camera."
  *
  * An example to edit, not a universal: a different film wants a different
  * stock. What generalises is the POSITION.
+ *
+ * THIS one is allowed to say "cinematic" — imposing a register is its entire
+ * job, and a user opts in by name. {@link filmStillPrefix} may not, because it
+ * is a DEFAULT: "film still" describes the kind of picture (a frame out of
+ * moving footage — true of a UGC clip and a documentary too), while
+ * "cinematic" describes a register most briefs did not ask for.
  *
  * ─── THE ONE RULE ALL OF THIS TURNED OUT TO BE ─────────────────────────────
  *
