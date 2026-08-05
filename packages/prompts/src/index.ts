@@ -9,6 +9,7 @@
  * only what the public API contract requires.
  */
 export * from "./identity-lock.js"
+export * from "./reference-rules.js"
 export * from "./parameter-prompt-hint.js"
 export * from "./entity-prompts.js"
 export * from "./brand-tokens.js"

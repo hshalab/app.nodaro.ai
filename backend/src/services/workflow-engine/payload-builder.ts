@@ -7,7 +7,7 @@ import type { SimpleNode, SimpleEdge, ResolvedInputs, NodeExecutionState } from 
 
 // Shared logic from packages/shared — single source of truth
 import { collectAncestorRefs as sharedCollectAncestorRefs, applyDefaultVideoSelection, LOCATION_REFERENCE_PHOTO_KINDS, locationReferencePhotoKindLabel, type LocationReferencePhotoKind, characterMentionableAssetArrays, buildCreditModelIdentifier, resolveImageGenCreditIdentifier, buildVideoCreditModelIdentifier, buildMotionCreditModelIdentifier, applyVideoNegativePrompt, resolveVideoProviderForMode, videoProviderRequiresImage, isVeoProvider, buildLipSyncCreditId, isPerSecondLipSyncProvider, resolveAiAvatarCreditId, resolveSwitchXCreditId, resolveCinematicCreditId, referenceSheetCreditId, buildVideoAnalysisCreditId, buildVideoAuditCreditId, resolveVideoAnalysisModel, extractReferencedLabels, combineSameLabelRefs, refHandleCategory, canonicalVarName, validateAiAvatarPayload, validateCinematicAvatarPayload, resolveNodeRefs, resolveEffectiveSourceType, PARAMETER_NODE_TYPES, characterMentionSlug, expandExtraRefsToConnectedReferences, PLATFORM_SPECS, isSeedance2Provider, isMinimaxH3Provider, supportsExtendRender, MODEL_CATALOG, hasFeature, referenceModalityForHandle, countRefModalityEdges as countRefModalityEdgesCore, type ReferenceModality, COMPOSER_PLAN_MAP, ASPECT_RATIO_DIMENSIONS, buildLlmCreditIdentifier, motionGraphicsFeature, FLUX_LORA_CHARACTER_MODEL_ID, extractCharacterLoraFields, clampSmartCutWindow } from "@nodaro/shared"
-import { composeNegative, resolveTemplate, applyTemplate, computeNodePrompt, assembleImageInput, buildImagePrompt, buildScenePrompt, collectIdentityLockClause as sharedCollectIdentityLockClause, getParameterPromptHint, characterLockToRefLock, buildCharacterPrompt, buildObjectPrompt, buildCreaturePrompt, buildLocationPrompt, buildFaceTemplateInputs, appendMusicMeta, composeSoundHintFromConnections, truncateForField, appendField, assembleSunoInput, type SoundConsumerType, type SoundComposition, resolveVideoReferenceCore } from "@nodaro/prompts"
+import { composeNegative, resolveTemplate, applyTemplate, computeNodePrompt, assembleImageInput, buildImagePrompt, buildScenePrompt, collectIdentityLockClause as sharedCollectIdentityLockClause, getParameterPromptHint, characterLockToRefLock, buildCharacterPrompt, buildObjectPrompt, buildCreaturePrompt, buildLocationPrompt, buildFaceTemplateInputs, appendMusicMeta, composeSoundHintFromConnections, truncateForField, appendField, assembleSunoInput, referenceRulesBlock, type SoundConsumerType, type SoundComposition, resolveVideoReferenceCore } from "@nodaro/prompts"
 import type { CharacterDef, ConnectedReference, SceneData, ExtraRefInput, ExtraRefCharacterContext } from "@nodaro/shared"
 import type { CharacterMeta } from "@nodaro/prompts"
 import { resolveEntityImageCreditIdentifier } from "../../lib/entity-credit-identifier.js"
@@ -1787,6 +1787,18 @@ export function buildPayload(
         ? selectLoraRoutingForMentions(wiredCharRefs)
         : null
       const effectiveProvider = lora ? "replicate" : provider
+      /**
+       * The node's reference-rule toggles → the measured block.
+       *
+       * ABSENT MEANS ON for the rules (every node predates the field, and the
+       * rules are what makes a multi-reference prompt obey its references) and
+       * OFF for the eyeline (a portrait or a piece to camera wants it). The
+       * resolver owns that asymmetry so the route and this path cannot drift.
+       */
+      const nodeReferenceRules = referenceRulesBlock({
+        ...(typeof data.referenceRules === "boolean" ? { referenceRules: data.referenceRules } : {}),
+        ...(typeof data.sceneFrame === "boolean" ? { sceneFrame: data.sceneFrame } : {}),
+      })
       const loraExtras = lora
         ? {
             lora_version: lora.loraVersion,
@@ -1822,6 +1834,11 @@ export function buildPayload(
             // NODE_ENV=test/production → legacy block (dark in prod). Placed
             // before any explicit `referenceFormat` so it never overrides one.
             ...(backendHybridRoles() ? { referenceFormat: "hybrid" as const } : {}),
+            // The measured reference block, from the node's own toggles. Rides
+            // the SAME hybrid gate as the lettered bindings it talks about —
+            // "reference image A" is a hybrid phrase, so a legacy assembly must
+            // not be told to obey bindings it never lettered.
+            ...(backendHybridRoles() && nodeReferenceRules ? { referenceLockSnippet: nodeReferenceRules } : {}),
             connectedReferences: [
               ...buildConnectedRefsForGenerate(
                 wiredCharRefs,
@@ -1851,6 +1868,7 @@ export function buildPayload(
             flowTemplates: settings?.flowPromptTemplates,
             // BE gate: same env signal as the connected-refs branch above.
             ...(backendHybridRoles() ? { referenceFormat: "hybrid" as const } : {}),
+            ...(backendHybridRoles() && nodeReferenceRules ? { referenceLockSnippet: nodeReferenceRules } : {}),
             extraReferenceImageUrls: directRefs,
             ancestorRefs,
             referenceOrder: generateRefOrder,

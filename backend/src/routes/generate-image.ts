@@ -12,7 +12,7 @@ import { buildJobInputData } from "../lib/job-input-data.js"
 import { insertWithIdempotencyKey } from "../lib/idempotent-insert.js"
 import { sendInternalError } from "../lib/http-errors.js"
 import { IMAGE_GEN_PROVIDERS, T2I_TO_I2I_VARIANT, FLUX_LORA_CHARACTER_MODEL_ID, IMAGE_PROMPT_MAX, PROMPT_HARD_CEILING, resolveImageGenCreditIdentifier } from "@nodaro/shared"
-import { assembleImageInput, type AssembleImageInput, type BuildImagePromptResult } from "@nodaro/prompts"
+import { assembleImageInput, referenceRulesBlock, type AssembleImageInput, type BuildImagePromptResult } from "@nodaro/prompts"
 import { connectedReferenceSchema } from "../lib/connected-reference-schema.js"
 import { formatZodError } from "../lib/zod-error.js"
 
@@ -170,6 +170,21 @@ export const generateImageBody = z.object({
   // canonical_description (with an identity-preserve suffix) to the prompt
   // before reservation and worker enqueue. Default off — must be explicit.
   injectCharacterContext: z.boolean().optional().default(false),
+  /**
+   * The two measured reference blocks (see `@nodaro/prompts/reference-rules`).
+   *
+   * ON BY DEFAULT, unlike `injectCharacterContext` above — and the difference
+   * is deliberate. Injecting a character's stored description can CONTRADICT
+   * the reference image it rides with, so it has to be asked for. These are
+   * rules ABOUT the references the caller already sent: measured 4/4 vs 0/4 on
+   * obeying them, at no cost to anything else. A caller who wants the old bare
+   * prompt sends `false`.
+   *
+   * `sceneFrame` defaults OFF: suppressing the eyeline is a creative choice — a
+   * portrait or a piece to camera wants it — so the platform does not decide.
+   */
+  referenceRules: z.boolean().optional().default(true),
+  sceneFrame: z.boolean().optional().default(false),
   attachToCharacterId: z.string().uuid().optional(),
   userId: z.string().uuid().optional(),
   /** Inpaint base image (the image being edited). With maskUrl, the worker
@@ -234,9 +249,12 @@ function buildAssembleInput(
     structured?: AssembleImageInput["structured"]
     referenceImageUrls?: string[]
     negativePrompt?: string
+    referenceRules?: boolean
+    sceneFrame?: boolean
   },
   throwOnEmpty: boolean,
 ): AssembleImageInput {
+  const rules = referenceRulesBlock({ referenceRules: body.referenceRules, sceneFrame: body.sceneFrame })
   return {
     userPrompt: body.prompt ?? "",
     // Default provider mirrors the rest of the route (`nano-banana`) so the
@@ -249,6 +267,12 @@ function buildAssembleInput(
     ...(process.env.NODE_ENV === "test" || process.env.IMAGE_REFERENCE_FORMAT === "legacy"
       ? {}
       : { referenceFormat: "hybrid" as const }),
+    // The rules ride the SAME hybrid gate as the lettered bindings they talk
+    // about — "reference image A" is a hybrid phrase, so a legacy assembly
+    // would be told to obey references it never lettered.
+    ...(process.env.NODE_ENV === "test" || process.env.IMAGE_REFERENCE_FORMAT === "legacy" || !rules
+      ? {}
+      : { referenceLockSnippet: rules }),
     ...(body.connectedReferences !== undefined ? { connectedReferences: body.connectedReferences } : {}),
     ...(body.referenceOrder !== undefined ? { referenceOrder: body.referenceOrder } : {}),
     ...(body.direction !== undefined ? { direction: body.direction } : {}),
