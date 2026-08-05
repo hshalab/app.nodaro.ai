@@ -6,7 +6,7 @@
 import type { SimpleNode, SimpleEdge, ResolvedInputs, NodeExecutionState } from "./types.js"
 
 // Shared logic from packages/shared — single source of truth
-import { collectAncestorRefs as sharedCollectAncestorRefs, applyDefaultVideoSelection, LOCATION_REFERENCE_PHOTO_KINDS, locationReferencePhotoKindLabel, type LocationReferencePhotoKind, characterMentionableAssetArrays, buildCreditModelIdentifier, resolveImageGenCreditIdentifier, buildVideoCreditModelIdentifier, buildMotionCreditModelIdentifier, applyVideoNegativePrompt, resolveVideoProviderForMode, videoProviderRequiresImage, isVeoProvider, buildLipSyncCreditId, isPerSecondLipSyncProvider, resolveAiAvatarCreditId, resolveSwitchXCreditId, resolveCinematicCreditId, referenceSheetCreditId, buildVideoAnalysisCreditId, buildVideoAuditCreditId, resolveVideoAnalysisModel, extractReferencedLabels, combineSameLabelRefs, refHandleCategory, canonicalVarName, validateAiAvatarPayload, validateCinematicAvatarPayload, resolveNodeRefs, resolveEffectiveSourceType, PARAMETER_NODE_TYPES, characterMentionSlug, expandExtraRefsToConnectedReferences, PLATFORM_SPECS, isSeedance2Provider, isMinimaxH3Provider, MODEL_CATALOG, hasFeature, referenceModalityForHandle, countRefModalityEdges as countRefModalityEdgesCore, type ReferenceModality, COMPOSER_PLAN_MAP, ASPECT_RATIO_DIMENSIONS, buildLlmCreditIdentifier, motionGraphicsFeature, FLUX_LORA_CHARACTER_MODEL_ID, extractCharacterLoraFields, clampSmartCutWindow } from "@nodaro/shared"
+import { collectAncestorRefs as sharedCollectAncestorRefs, applyDefaultVideoSelection, LOCATION_REFERENCE_PHOTO_KINDS, locationReferencePhotoKindLabel, type LocationReferencePhotoKind, characterMentionableAssetArrays, buildCreditModelIdentifier, resolveImageGenCreditIdentifier, buildVideoCreditModelIdentifier, buildMotionCreditModelIdentifier, applyVideoNegativePrompt, resolveVideoProviderForMode, videoProviderRequiresImage, isVeoProvider, buildLipSyncCreditId, isPerSecondLipSyncProvider, resolveAiAvatarCreditId, resolveSwitchXCreditId, resolveCinematicCreditId, referenceSheetCreditId, buildVideoAnalysisCreditId, buildVideoAuditCreditId, resolveVideoAnalysisModel, extractReferencedLabels, combineSameLabelRefs, refHandleCategory, canonicalVarName, validateAiAvatarPayload, validateCinematicAvatarPayload, resolveNodeRefs, resolveEffectiveSourceType, PARAMETER_NODE_TYPES, characterMentionSlug, expandExtraRefsToConnectedReferences, PLATFORM_SPECS, isSeedance2Provider, isMinimaxH3Provider, supportsExtendRender, MODEL_CATALOG, hasFeature, referenceModalityForHandle, countRefModalityEdges as countRefModalityEdgesCore, type ReferenceModality, COMPOSER_PLAN_MAP, ASPECT_RATIO_DIMENSIONS, buildLlmCreditIdentifier, motionGraphicsFeature, FLUX_LORA_CHARACTER_MODEL_ID, extractCharacterLoraFields, clampSmartCutWindow } from "@nodaro/shared"
 import { composeNegative, resolveTemplate, applyTemplate, computeNodePrompt, assembleImageInput, buildImagePrompt, buildScenePrompt, collectIdentityLockClause as sharedCollectIdentityLockClause, getParameterPromptHint, characterLockToRefLock, buildCharacterPrompt, buildObjectPrompt, buildCreaturePrompt, buildLocationPrompt, buildFaceTemplateInputs, appendMusicMeta, composeSoundHintFromConnections, truncateForField, appendField, assembleSunoInput, type SoundConsumerType, type SoundComposition, resolveVideoReferenceCore } from "@nodaro/prompts"
 import type { CharacterDef, ConnectedReference, SceneData, ExtraRefInput, ExtraRefCharacterContext } from "@nodaro/shared"
 import type { CharacterMeta } from "@nodaro/prompts"
@@ -3944,7 +3944,24 @@ export function buildPayload(
         // Render method (2026-08-03): only the "keyframes" opt-in rides the
         // wire — absent/"extend" emits undefined (dropped by JSON
         // serialization), keeping pre-renderMethod payloads byte-identical.
-        renderMethod: data.renderMethod === "keyframes" ? "keyframes" : undefined,
+        // COERCE, don't fail (2026-08-05): `renderMethod` defaults to "extend",
+        // but extend sends the previous segment's tail as a reference VIDEO,
+        // which only the r2v family accepts — pricing refuses the combination
+        // rather than reserve credits for a run that cannot render. A provider
+        // that cannot extend has exactly ONE method available, so an ABSENT
+        // choice resolves to it here, at the single point where node data
+        // becomes the wire payload. Without this, every workflow using a
+        // provider blessed on 2026-08-05 fails on first run unless its panel
+        // happened to be opened (the editor's fail-safe snap) — imported
+        // workflows and API callers had no such chance.
+        //
+        // An EXPLICIT "extend" is still rejected downstream: that is a stated
+        // user choice the provider cannot honour, and silently changing it
+        // would bill a different run from the one requested.
+        renderMethod:
+          data.renderMethod === "keyframes" || !supportsExtendRender(gvpProvider)
+            ? "keyframes"
+            : undefined,
         audioTail: data.audioTail === true ? true : undefined,
         overlapAnchor: data.overlapAnchor === true ? true : undefined,
         overlapAnchorMode: data.overlapAnchor === true && data.overlapAnchorMode === "last-frame" ? "last-frame" : undefined,

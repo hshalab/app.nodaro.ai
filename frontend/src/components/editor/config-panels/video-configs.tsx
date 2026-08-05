@@ -40,7 +40,7 @@ import type {
   VideoAuditNodeData,
 } from "@/types/nodes"
 import { GENERATE_VIDEO_PRO_MAX_DURATION_FALLBACK, VIDEO_I2V_MODELS, VIDEO_T2V_MODELS, VIDEO_V2V_MODELS, VIDEO_GEN_MODELS, GVP_PROVIDERS, EVP_PROVIDERS, MOTION_TRANSFER_MODELS, KIE_VIDEO_DURATIONS, KIE_T2V_DURATIONS, VIDEO_DURATION_OPTIONS, VIDEO_FPS_OPTIONS, PROVIDERS_WITH_END_FRAME, KLING3_DURATIONS, VIDEO_RATIOS, SEEDANCE_2_VIDEO_RATIOS, PROVIDERS_WITH_REFERENCES, V2V_DURATION_OPTIONS, V2V_RESOLUTION_OPTIONS, V2V_ALEPH_ASPECT_RATIOS, EXTEND_VIDEO_MODELS, getVideoResolutionOptions, getAspectRatiosForVideoModel, getVideoModelCapabilitiesTooltip } from "./model-options"
-import { isSeedance2Provider, isMinimaxH3Provider, defaultVideoAspectRatio, maxSegmentSecFor, MODEL_CATALOG, SEEDANCE_2_REF_LIMITS, VIDEO_PROMPT_MAX, getMaxVideoPromptChars, getMaxNegativePromptChars, buildVideoCreditModelIdentifier, characterMentionSlug, characterMentionableAssetArrays, DEFAULT_LABEL_BY_SOURCE, locationMentionSlug, resolveEffectiveSourceType, FRAME_TARGET_HANDLES, VIDEO_ANALYSIS_TIER_ORDER, VIDEO_ANALYSIS_TIER_LABELS, VIDEO_ANALYSIS_TIERS, VIDEO_ANALYSIS_LEGACY_MODELS, DEFAULT_VIDEO_ANALYSIS_TIER, isVideoAnalysisTier, VIDEO_AUDIT_BUCKET_CREDITS, LLM_MODELS, clampSmartCutWindow, SMART_CUT_WINDOW_MIN, SMART_CUT_WINDOW_MAX, SMART_CUT_WINDOW_DEFAULT } from "@nodaro/shared"
+import { isSeedance2Provider, isMinimaxH3Provider, defaultVideoAspectRatio, maxSegmentSecFor, supportsExtendRender, MODEL_CATALOG, SEEDANCE_2_REF_LIMITS, VIDEO_PROMPT_MAX, getMaxVideoPromptChars, getMaxNegativePromptChars, buildVideoCreditModelIdentifier, characterMentionSlug, characterMentionableAssetArrays, DEFAULT_LABEL_BY_SOURCE, locationMentionSlug, resolveEffectiveSourceType, FRAME_TARGET_HANDLES, VIDEO_ANALYSIS_TIER_ORDER, VIDEO_ANALYSIS_TIER_LABELS, VIDEO_ANALYSIS_TIERS, VIDEO_ANALYSIS_LEGACY_MODELS, DEFAULT_VIDEO_ANALYSIS_TIER, isVideoAnalysisTier, VIDEO_AUDIT_BUCKET_CREDITS, LLM_MODELS, clampSmartCutWindow, SMART_CUT_WINDOW_MIN, SMART_CUT_WINDOW_MAX, SMART_CUT_WINDOW_DEFAULT } from "@nodaro/shared"
 import type { ReferenceSource, ConnectedReference } from "@nodaro/shared"
 import { resolveSeedance2Inputs } from "@nodaro/prompts"
 import { probeVideoAnalysis } from "@/lib/api"
@@ -3591,6 +3591,21 @@ function GenerateVideoProConfigImpl({ data, onUpdate, sources, fieldMappings, on
 
   const resolutionOptions = getVideoResolutionOptions(currentProvider)
   const aspectOptions = getAspectRatiosForVideoModel(currentProvider)
+  const canExtend = supportsExtendRender(currentProvider)
+
+  // Fail-safe (Provider Enum Sync step 12b / CLAUDE.md pitfall 5): `extend`
+  // sends the previous segment's tail as a reference VIDEO, which only the
+  // r2v family accepts — the backend refuses to price the combination rather
+  // than reserve credits for a run that cannot render. `renderMethod` defaults
+  // to "extend", so WITHOUT this snap every provider blessed on 2026-08-05
+  // (veo3 family, Gemini Omni, Grok, HappyHorse) fails on its first run with
+  // "has no reference-video transport" — the whole expansion unusable from the
+  // panel. Pin those providers to the method they can actually render.
+  useEffect(() => {
+    if (!canExtend && data.renderMethod !== "keyframes") {
+      onUpdate({ renderMethod: "keyframes" })
+    }
+  }, [currentProvider]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fail-safe (Provider Enum Sync step 12b / CLAUDE.md pitfall 5): the aspect
   // list is PROVIDER-AWARE since the pro node opened past the Seedance-2 family
@@ -3757,7 +3772,8 @@ function GenerateVideoProConfigImpl({ data, onUpdate, sources, fieldMappings, on
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="gvp-render-method">Render method</Label>
         <Select
-          value={data.renderMethod ?? "extend"}
+          value={canExtend ? (data.renderMethod ?? "extend") : "keyframes"}
+          disabled={!canExtend}
           onValueChange={(v) => onUpdate({ renderMethod: v === "keyframes" ? "keyframes" : "extend" })}
         >
           <SelectTrigger id="gvp-render-method" className="h-9 text-sm">
@@ -3769,7 +3785,9 @@ function GenerateVideoProConfigImpl({ data, onUpdate, sources, fieldMappings, on
           </SelectContent>
         </Select>
         <p className="text-[11px] text-muted-foreground">
-          Keyframes renders each scene from generated start/end frames — scenes re-render independently. Music is added after render, not by the video model.
+          {canExtend
+            ? "Keyframes renders each scene from generated start/end frames — scenes re-render independently. Music is added after render, not by the video model."
+            : `${MODEL_CATALOG[currentProvider]?.label ?? currentProvider} has no reference-video transport, so it always renders with keyframes: each scene from its own generated start/end frames, every seam a hard cut.`}
         </p>
       </div>
 
