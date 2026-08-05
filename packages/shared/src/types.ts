@@ -224,7 +224,17 @@ export const DEFAULT_LABEL_BY_SOURCE: Record<ReferenceSource, string> = {
   // subject ("match anatomy, markings…"), not a prop. See CREATURE_LABELS in
   // prompt-builder.ts.
   "wired-creature": "creature",
-  "wired-location": "background",
+  // A PLACE, NOT A BACKDROP (2026-08-05). This defaulted to "background", which
+  // `roleToPhrase` renders as "the background from reference image B" — and the
+  // image models read that as "paste this behind the subject". Measured on
+  // gpt-image-2 (character + location, 4 draws per arm): with "background" every
+  // draw was a cut-out composite — an indoor-lit subject over a stock beach, no
+  // cast shadow, ignoring the asked-for action. Changing ONLY this word put the
+  // subject inside the scene with ground contact and a matching sun. "background"
+  // remains a curated pick in REFERENCE_ROLE_PRESETS for the genuine backdrop
+  // case; it is no longer what every location silently gets. Nodes that stored a
+  // role explicitly are untouched — `resolveDefaultRole` prefers the explicit value.
+  "wired-location": "location",
 }
 
 // ---------------------------------------------------------------------------

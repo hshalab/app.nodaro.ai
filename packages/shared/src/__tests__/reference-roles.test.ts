@@ -23,9 +23,30 @@ describe("reference-roles registry", () => {
 
   it("defaultRoleForSource mirrors DEFAULT_LABEL_BY_SOURCE", () => {
     expect(defaultRoleForSource("wired-character")).toBe("person")
-    expect(defaultRoleForSource("wired-location")).toBe("background")
+    expect(defaultRoleForSource("wired-location")).toBe("location")
     expect(defaultRoleForSource("wired-object")).toBe("object")
     expect(defaultRoleForSource("wired-creature")).toBe("creature")
+  })
+
+  // A LOCATION IS A PLACE, NOT A BACKDROP (2026-08-05). The default was
+  // "background", which rendered "the background from reference image B" —
+  // read by the image models as an instruction to PASTE a backdrop. Measured on
+  // gpt-image-2 with a character + location pair: the old default produced a
+  // cut-out composite in 4/4 draws (an indoor-lit subject over a stock beach,
+  // no cast shadow, not performing the asked-for action), and renaming the
+  // default ALONE — nothing else in the prompt touched — put the subject inside
+  // the scene, walking, with ground contact and a cast shadow, in 2/4.
+  // "background" stays a curated pick for the cases that genuinely want only a
+  // backdrop; it is just no longer what every location silently gets.
+  it("defaults a wired location to a PLACE phrase, never a backdrop paste", () => {
+    const phrase = roleToPhrase(defaultRoleForSource("wired-location"), "reference image B")
+    expect(phrase).toBe("the location from reference image B")
+    expect(phrase).not.toContain("background")
+  })
+
+  it("keeps 'background' available as an explicit location pick", () => {
+    expect(REFERENCE_ROLE_PRESETS["wired-location"]).toContain("background")
+    expect(roleToPhrase("background", "reference image B")).toBe("the background from reference image B")
   })
 
   it("renders noun roles as 'the {role} from {binding}'", () => {
