@@ -77,8 +77,12 @@ function tokenFor(
 
 describe("locationSwapMenuRoles — hybrid/legacy gate", () => {
   it("returns the curated wired-location role presets in hybrid", () => {
+    // "location" joined the curated list (2026-08-05) and is now this source's
+    // DEFAULT — a place, not a backdrop to paste. "background" keeps its slot
+    // for the genuine backdrop case; it is just no longer the default.
     expect(locationSwapMenuRoles("hybrid")).toEqual([
       "ref-only",
+      "location",
       "background",
       "atmosphere",
       "as-is",
