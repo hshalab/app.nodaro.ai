@@ -16,7 +16,7 @@ export const FACTORY_SNIPPETS: readonly FactorySnippet[] = [
   { id: "no-beautify", name: "No Beautify", description: "Stop the model 'improving' a face", text: "preserve natural skin texture, age lines, and asymmetries; do not beautify, smooth, slim, or rejuvenate the face", target: "prompt", media: I, category: "Identity & Consistency" },
 
   // ── Reference locks (prompt) — insert at the START of a reference prompt ──
-  // TEXT FROM THE MEASURED CONSTANT, not a hand-written twin. This entry used
+  // Text comes from the shared constant, not a hand-written twin. This entry used
   // to carry its own wording — no face rules, likeness phrased as a passive —
   // which scored 0/4 on moving a garment between references where the merged
   // block scored 4/4 (see reference-rules.ts). A snippet is copied into the

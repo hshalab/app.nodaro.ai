@@ -3,7 +3,7 @@
  * image obeys its references, and whether it looks like a film frame or a
  * posed photograph.
  *
- * Both are MEASURED, on gpt-image-2 at 2K, against one deliberately hard brief:
+ * Both were measured on gpt-image-2 at 2K, against one deliberately hard brief:
  * four references (two people, a street-fashion shot, and a composite holding a
  * wine glass, a smartphone, a hotel suite AND two other women's faces), with
  * wardrobe swapped BETWEEN the two people. 36 draws, 2026-08-06. Scored on five
