@@ -966,6 +966,51 @@ describe("computeGenerateVideoProPricing — flat-priced providers", () => {
     }
   })
 
+  it("shortens rather than throwing when the segment ceiling binds before the duration cap", async () => {
+    // veo3 tops out at 8s/segment, so the 24-segment ceiling delivers ~185s
+    // while GENERATE_VIDEO_PRO_MAX_DURATION is already 300 in both deployed
+    // environments. Before this clamp, nMin (ceil(300/8) = 38) exceeded nMax
+    // (24), the candidate loop never ran, and a reachable request threw
+    // "cannot pack 300s" at reserve time.
+    // Both deployed environments run GENERATE_VIDEO_PRO_MAX_DURATION=300; the
+    // suite's default is the code default of 120, under which the cap binds
+    // first and the ceiling is never reached. Pin the deployed value so this
+    // exercises the case that actually exists in production.
+    const prevCap = process.env.GENERATE_VIDEO_PRO_MAX_DURATION
+    process.env.GENERATE_VIDEO_PRO_MAX_DURATION = "300"
+    try {
+      const p = await computeGenerateVideoProPricing({
+        provider: "veo3",
+        resolution: "720p",
+        durationSec: 300,
+        renderMethod: "keyframes",
+        aspectRatio: "16:9",
+      })
+      expect(p.segmentCount).toBeLessThanOrEqual(24)
+      for (const d of p.segmentDurations) expect([4, 6, 8]).toContain(d)
+      // Delivered is what actually fits, and it is REPORTED, not silently padded.
+      expect(p.clampedDurationSec).toBeLessThan(300)
+      expect(p.clampedDurationSec).toBeGreaterThan(180)
+      expect(p.segmentCosts?.length).toBe(p.segmentCount)
+    } finally {
+      if (prevCap === undefined) delete process.env.GENERATE_VIDEO_PRO_MAX_DURATION
+      else process.env.GENERATE_VIDEO_PRO_MAX_DURATION = prevCap
+    }
+  })
+
+  it("never throws for any blessed sparse provider across the whole cap range", async () => {
+    for (const provider of ["veo3", "veo3.1", "veo3_lite", "gemini-omni-video", "grok-i2v"]) {
+      for (const durationSec of [4, 10, 60, 120, 185, 240, 300]) {
+        const p = await computeGenerateVideoProPricing({
+          provider, resolution: "720p", durationSec, renderMethod: "keyframes", aspectRatio: "16:9",
+        })
+        expect(p.segmentCount, `${provider} @${durationSec}s`).toBeGreaterThan(0)
+        expect(p.segmentCount, `${provider} @${durationSec}s`).toBeLessThanOrEqual(24)
+        expect(p.reserveBase, `${provider} @${durationSec}s`).toBeGreaterThan(0)
+      }
+    }
+  })
+
   it("the preferred-segment lever snaps to a length the sparse provider offers", async () => {
     const p = await computeGenerateVideoProPricing({
       provider: "veo3",

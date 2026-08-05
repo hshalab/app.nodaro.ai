@@ -160,6 +160,13 @@ const MOTION_CREDIT_COSTS: Record<string, number> = {
 
 const GVP_SPLIT = { minSeg: 4, maxSeg: 15, lossSec: 0.3, capSec: 120 } as const
 
+/** Segment-count ceiling — mirrors EXPLICIT_MAX_SEGMENTS in the backend's
+ *  `ee/billing/generate-video-pro-credits.ts` and the plugin plan schema's
+ *  own 24. On a short-segment provider this binds BEFORE the duration cap
+ *  (veo3 at 8s/segment delivers ~185s of a 300s request), and the run is
+ *  shortened to fit — so the estimate must bound its count the same way. */
+const GVP_MAX_SEGMENTS = 24
+
 interface GvpSplitResult {
   mode: "single" | "multi"
   clampedD: number
@@ -331,7 +338,13 @@ export function estimateGenerateVideoProCredits(data: GenerateVideoProNodeData):
   // and the duration-tiered one is close enough for a badge).
   if (!gvpIsPerSecPriced(provider)) {
     const maxSeg = maxSegmentSecFor(provider) || GVP_SPLIT.maxSeg
-    const n = Math.max(1, Math.ceil(split.clampedD / maxSeg))
+    // Bounded by the same 24-segment ceiling the backend packer honours: on a
+    // short-segment provider the ceiling binds before the duration cap (veo3
+    // at 8s/segment delivers ~185s), and the run is SHORTENED to fit. An
+    // unbounded count here would quote segments the run will never generate —
+    // reachable via an imported workflow carrying a duration above the
+    // slider's own limit.
+    const n = Math.min(GVP_MAX_SEGMENTS, Math.max(1, Math.ceil(split.clampedD / maxSeg)))
     const per = Math.max(1, Math.round(split.clampedD / n))
     return fee + n * gvpSegmentCost(provider, resolution, per)
   }

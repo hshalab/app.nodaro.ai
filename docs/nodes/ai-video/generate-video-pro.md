@@ -92,6 +92,11 @@ Note that Gemini Omni does accept a video input, but as a video-to-video **sourc
 
 **Segment lengths are per-model.** A request longer than the model's single-segment maximum is split into several segments; models with a sparse set of allowed lengths (VEO's 4/6/8s, Grok's 6/10s) can only land on those values, so the delivered duration snaps to the nearest total the model can actually produce and the node reports what you will get.
 
+Two consequences worth knowing on the sparse-length models:
+
+- **A run is capped at 24 segments**, which on a short-segment model binds before the duration limit does. VEO renders at most 8 seconds per segment, so a VEO run tops out around 185 seconds however long you ask for; Gemini Omni and Grok top out around 233. The run is shortened to fit and the delivered duration is reported — it is never padded or silently failed.
+- **Scene-aligned splitting is not available on these models.** That mode supplies an explicit per-segment length list, which currently assumes every whole-second length is available. Asking for it on a sparse-length model returns a validation error rather than a mis-timed cut. Use the automatic split, or a Seedance / Hailuo 3 model, for scene-aligned work.
+
 Hailuo 3 shares Seedance 2's multimodal reference surface (the same 9-image / 3-video / 3-audio reference semantics), so the whole continuation transport carries over unchanged. Its per-second price has no with-reference axis; both segment rates derive from the one 8s composite of the selected resolution tier (`minimax-h3:8s` @2K, `minimax-h3:8s:768p` @768P — see [Credit cost](#credit-cost)).
 
 Models that take only a bare start frame with no reference-image forwarding (Wan, Hailuo 2.3, Bytedance Pro, Grok Imagine 1.5) stay out — the anchor wave's identity references would be silently dropped. Workflows saved with a since-withdrawn provider keep running, and the editor snaps their selection to `seedance-2` the next time the panel is opened.

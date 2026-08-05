@@ -233,8 +233,15 @@ interface SplitResult {
  * reports the delivered duration (`clampedD`) rather than pretending.
  */
 function packSparseSegments(d: number, b: SegmentBounds): SplitResult {
-  const nMin = Math.max(1, Math.ceil(d / b.maxSeg))
-  const nMax = Math.min(EXPLICIT_MAX_SEGMENTS, Math.max(nMin, Math.ceil(d / b.minSeg)))
+  // The segment CEILING binds before the duration cap does on a short-segment
+  // provider: veo3 tops out at 8s, so 24 segments deliver ~185s while the cap
+  // is already 300s. Clamp the candidate range to the ceiling and deliver what
+  // fits — `clampedD` reports it, exactly as the duration clamp does. Without
+  // this floor-vs-ceiling clamp the loop below never runs (nMin > nMax) and a
+  // 300s veo3 request throws instead of shortening.
+  const nCeil = EXPLICIT_MAX_SEGMENTS
+  const nMin = Math.min(nCeil, Math.max(1, Math.ceil(d / b.maxSeg)))
+  const nMax = Math.min(nCeil, Math.max(nMin, Math.ceil(d / b.minSeg)))
   let best: { n: number; durations: number[]; s: number; delivered: number } | undefined
 
   for (let n = nMin; n <= nMax; n++) {
