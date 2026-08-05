@@ -207,6 +207,29 @@ describe("payload-builder: generate-video-pro dispatch", () => {
     expect(result.payload.renderMethod).toBe("keyframes")
   })
 
+  it("coerces renderMethod to keyframes on a provider that cannot extend", () => {
+    // `extend` sends the previous segment's tail as a reference VIDEO, which
+    // only the r2v family accepts — pricing REFUSES to quote the combination.
+    // `renderMethod` defaults to "extend", so without this coercion every
+    // provider blessed on 2026-08-05 (veo3 family, Gemini Omni, Grok,
+    // HappyHorse) failed on its first run: "no reference-video transport".
+    // The editor's fail-safe snap only covers nodes whose panel was opened —
+    // imported workflows and API callers had no such chance.
+    for (const provider of ["veo3", "veo3.1", "veo3_lite", "gemini-omni-video", "grok-i2v", "happyhorse-ref2v"]) {
+      const n = gvpNode({ prompt: "a cat", provider })
+      const result = buildPayload(n, JOB_ID, {}, undefined, { nodes: [n], edges: [], nodeStates: {} })
+      expect(result.payload.renderMethod, provider).toBe("keyframes")
+    }
+  })
+
+  it("leaves an r2v provider's absent renderMethod alone (extend stays the default)", () => {
+    for (const provider of ["seedance-2", "seedance-2-fast", "seedance-2-mini", "minimax-h3"]) {
+      const n = gvpNode({ prompt: "a cat", provider })
+      const result = buildPayload(n, JOB_ID, {}, undefined, { nodes: [n], edges: [], nodeStates: {} })
+      expect(result.payload.renderMethod, provider).toBeUndefined()
+    }
+  })
+
   it("emits no renderMethod key on the wire when absent or extend (additive default)", () => {
     for (const data of [{ prompt: "a cat" }, { prompt: "a cat", renderMethod: "extend" }]) {
       const n = gvpNode(data)

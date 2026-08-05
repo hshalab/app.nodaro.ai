@@ -2735,6 +2735,10 @@ export async function generateVideoPro(body: {
    *  to ceil(duration + 0.3×(n−1)), ≤24; mutually exclusive with
    *  preferredSegmentSec. */
   segmentDurations?: number[]
+  /** Scene-anchored rendering instead of the extend chain. Required on any
+   *  provider without a reference-video transport (the pricing helper refuses
+   *  to quote `extend` for those) — callers coerce it rather than omitting it. */
+  renderMethod?: "keyframes"
   idempotencyKey?: string
 }): Promise<{ jobId: string }> {
   const { idempotencyKey, ...rest } = body

@@ -465,8 +465,25 @@ describe("generate-video-pro quick configs", () => {
   it("aspect defaults to adaptive (the runtime default sits LAST in the shared list)", () => {
     const aspect = gvp.find((c) => c.field === "aspectRatio")!
     expect(aspect.defaultValue).toBe("adaptive")
-    const values = (aspect.options as ReadonlyArray<{ value: string }>).map((o) => o.value)
-    expect(values).toContain("adaptive")
+    // PROVIDER-AWARE since 2026-08-05 (the pro node opened past Seedance-2):
+    // a static list here would be a superset of what VEO/Grok render and let
+    // the strip write an aspect the model rejects at generate time.
+    expect(typeof aspect.options).toBe("function")
+    const optionsFor = aspect.options as (d: Record<string, unknown>) => ReadonlyArray<{ value: string }>
+    expect(optionsFor({ provider: "seedance-2" }).map((o) => o.value)).toContain("adaptive")
+  })
+
+  it("aspect options track the selected provider (no cross-model superset)", () => {
+    const aspect = gvp.find((c) => c.field === "aspectRatio")!
+    const optionsFor = aspect.options as (d: Record<string, unknown>) => ReadonlyArray<{ value: string }>
+    const seedance = optionsFor({ provider: "seedance-2" }).map((o) => o.value)
+    const veo = optionsFor({ provider: "veo3" }).map((o) => o.value)
+    // Seedance's set is a strict superset — the exact reason a static list was
+    // a Zod-reject trap once veo3 became selectable.
+    expect(seedance).toContain("21:9")
+    expect(veo).not.toContain("21:9")
+    // Unset provider still falls back to the node's own default SKU.
+    expect(optionsFor({}).map((o) => o.value)).toEqual(seedance)
   })
 
   it("duration carries the 4–120s custom range on top of the long-form presets", () => {

@@ -1173,30 +1173,192 @@ export function normalizeMinimaxH3Resolution(resolution: string | undefined): "7
 }
 
 /**
- * Generate/Edit Video Pro SUPPORT subset — the only SKUs the pro multi-segment
- * engine currently offers (mini withdrawn from selection, 2026-07-21).
- * Deliberately distinct from SEEDANCE_2_PROVIDERS: the family set gates
- * CAPABILITIES (ref limits, i2v params, adaptive aspect) and must keep every
- * variant; this list gates which SKUs the pro nodes offer in selection. The
- * pro plugin routes stay tolerant of the full family so previously-saved
- * workflows keep running — the editor fail-safe snaps stale selections to a
- * supported SKU instead.
+ * Video models that are CATALOGUED and priced but have NO working dispatch
+ * path today — selecting one fails at the router, not at validation.
  *
- * `minimax-h3` (2026-08-02): the first non-Seedance SKU. Blessed because it is
- * a full transport analog — its KIE surface reuses the SAME shared input
- * resolver as Seedance 2 (identical 9-image/3-video/3-audio reference caps,
- * frames-fold-into-references), takes per-second durations across the engine's
- * whole 4–15s segment window, and generates native audio — so the pro engine's
- * hybrid transport (context-tail video ref + last-frame anchor + identity
- * refs) rides unchanged. Two-rate resolution lever (2K default / 768P,
- * 2026-08-03): the node's catalog-driven resolution select applies, and
- * perSecRate prices the matching composite (bare :8s = 2K, :8s:768p — see
- * ee/billing/generate-video-pro-credits.ts).
+ * `kling-3-omni` has a Replicate implementation but the i2v routing chain is
+ * KIE-only and it has no worker short-circuit (the way LTX does), so every run
+ * failed at the router. It was pulled from the frontend picker for that
+ * reason; the backend enum and cost rows stay so legacy saved workflows still
+ * validate.
+ *
+ * This lives in shared rather than as a comment in the frontend picker list
+ * because it is a REAL capability fact that more than one consumer must
+ * respect: `deriveGvpSupportedProviders` below would otherwise offer
+ * `kling-3-omni` (it is i2v, takes reference images, declares durations, and
+ * carries ref limits — it passes every capability check) and every selection
+ * would fail at run time.
+ *
+ * Remove an entry only after wiring its dispatch AND verifying a live
+ * generation.
  */
-export const GVP_SUPPORTED_PROVIDERS = ["seedance-2", "seedance-2-fast", "minimax-h3"] as const
+export const VIDEO_PROVIDERS_WITHOUT_DISPATCH = new Set<string>([
+  "kling-3-omni",
+])
+
+/** The SKU a stale/unsupported generate-video-pro selection snaps back to, and
+ *  the one that lists first in every pro provider dropdown. */
+export const GVP_DEFAULT_PROVIDER = "seedance-2"
+
+/**
+ * Generate Video Pro SUPPORT set — DERIVED FROM CAPABILITY, never hand-kept
+ * (2026-08-05; was a literal `["seedance-2","seedance-2-fast","minimax-h3"]`).
+ *
+ * The bar is exactly what the pro engine's KEYFRAMES render method needs: the
+ * model must accept a generated start still, and it must be able to carry the
+ * identity/continuity reference images the anchor wave and the extend chain
+ * attach. So:
+ *
+ *   kind "video" ∧ modes ∋ "i2v" ∧ features ∋ "reference-image" ∧ has durations
+ *
+ * `durations` is part of the bar because the engine SPLITS a request into
+ * segments — a model that declares no duration set cannot be segmented, and a
+ * silent 4–15s fallback would send lengths the provider rejects.
+ *
+ * Membership is cross-checked against `VIDEO_REF_LIMITS_BY_PROVIDER` below by
+ * `__tests__/gvp-supported-providers.test.ts`: that map was built by the
+ * 2026-06-28 audit of actual backend reference-FORWARDING paths, so a model
+ * carrying the catalog flag without a forwarding path (or vice versa) fails
+ * the build instead of silently advertising a capability the backend drops.
+ *
+ * Deliberately distinct from SEEDANCE_2_PROVIDERS, which gates CAPABILITIES
+ * (ref limits, i2v params, adaptive aspect) for the whole family. The pro
+ * plugin route stays tolerant of previously-saved values so in-flight
+ * workflows keep running; the editor fail-safe snaps stale selections to
+ * GVP_DEFAULT_PROVIDER instead.
+ *
+ * `seedance-2-mini` re-enters selection here (it was withdrawn by hand on
+ * 2026-07-21). It qualifies on capability and is the cheapest Seedance-2 SKU,
+ * which makes it the natural pick for cheap iteration on long runs.
+ */
+function deriveGvpSupportedProviders(): VideoGenProvider[] {
+  const dispatchable = new Set<string>(VIDEO_GEN_PROVIDERS as readonly string[])
+  const eligible = Object.values(MODEL_CATALOG)
+    .filter(
+      (m) =>
+        m.kind === "video" &&
+        (m.modes as readonly string[]).includes("i2v") &&
+        m.features?.includes("reference-image") === true &&
+        (m.durations?.length ?? 0) > 0 &&
+        // Must also be dispatchable by the unified video node — the pro route
+        // hands the provider id straight to the app's imageToVideo.
+        dispatchable.has(m.id) &&
+        // ...and must actually REACH a provider. Capability alone is not
+        // enough: kling-3-omni passes every check above and still fails at the
+        // router (see VIDEO_PROVIDERS_WITHOUT_DISPATCH).
+        !VIDEO_PROVIDERS_WITHOUT_DISPATCH.has(m.id),
+    )
+    .map((m) => m.id as VideoGenProvider)
+
+  // Dropdown order: SKUs of one model family stay adjacent (raw catalog order
+  // interleaves them — minimax-h3 is authored ~340 lines above seedance-2, so
+  // a flat sort would split the Seedance trio around it). Group by `series`,
+  // order groups by first catalog appearance, then hoist the default's group —
+  // and the default within it — to the front.
+  const seriesOf = (id: string): string => MODEL_CATALOG[id]?.series ?? MODEL_CATALOG[id]?.family ?? id
+  const defaultSeries = seriesOf(GVP_DEFAULT_PROVIDER)
+  const order: string[] = []
+  for (const id of eligible) {
+    const s = seriesOf(id)
+    if (!order.includes(s)) order.push(s)
+  }
+  const rank = (id: string): number => {
+    const s = seriesOf(id)
+    return s === defaultSeries ? -1 : order.indexOf(s)
+  }
+  return [...eligible].sort((a, b) => {
+    const d = rank(a) - rank(b)
+    if (d !== 0) return d
+    if (a === GVP_DEFAULT_PROVIDER) return -1
+    if (b === GVP_DEFAULT_PROVIDER) return 1
+    return eligible.indexOf(a) - eligible.indexOf(b)
+  })
+}
+
+export const GVP_SUPPORTED_PROVIDERS: readonly VideoGenProvider[] = deriveGvpSupportedProviders()
 
 export function isGvpSupportedProvider(provider: string | undefined): boolean {
   return !!provider && (GVP_SUPPORTED_PROVIDERS as readonly string[]).includes(provider)
+}
+
+/**
+ * The generate-video-pro SKUs whose transport supports the `extend` render
+ * method — a continuation TAIL of the previous segment sent as a conditioning
+ * reference video (KIE `reference_video_urls`, built by
+ * `resolveSeedance2Inputs`).
+ *
+ * Derived from the catalog's `"video-reference"` feature, so a future r2v SKU
+ * flows in on its own instead of needing a family predicate edited. Today this
+ * resolves to exactly the Seedance-2 family + minimax-h3 — identical to the
+ * hardcoded gate it replaces, so the change is behaviour-neutral.
+ *
+ * Every other blessed SKU renders `keyframes` only: each segment is generated
+ * from its own anchor stills, nothing conditions on another segment's video.
+ */
+export const GVP_EXTEND_PROVIDERS: readonly VideoGenProvider[] = GVP_SUPPORTED_PROVIDERS.filter(
+  (id) => MODEL_CATALOG[id]?.features?.includes("video-reference") === true,
+)
+
+export function supportsExtendRender(provider: string | undefined): boolean {
+  return !!provider && (GVP_EXTEND_PROVIDERS as readonly string[]).includes(provider)
+}
+
+/**
+ * The generate-video-pro SKUs that honour a strict CLOSING frame, so the
+ * keyframes anchor wave generates an end still for them as well as a start
+ * still. Derived from the catalog's `"end-frame"` feature — the plugin's
+ * `wantEndAnchor` reads this instead of a provider-family name check.
+ */
+export const GVP_END_FRAME_PROVIDERS: readonly VideoGenProvider[] = GVP_SUPPORTED_PROVIDERS.filter(
+  (id) => MODEL_CATALOG[id]?.features?.includes("end-frame") === true,
+)
+
+export function supportsEndAnchor(provider: string | undefined): boolean {
+  return !!provider && (GVP_END_FRAME_PROVIDERS as readonly string[]).includes(provider)
+}
+
+// ---------------------------------------------------------------------------
+// SEGMENT BOUNDS — pure catalog readers. The generate-video-pro splitter (in
+// three places: the plugin engine, the money closed-form, the UI estimate)
+// used to hardcode `{minSeg: 4, maxSeg: 15}`, which is only correct for the
+// Seedance-2 family. These are the single source every one of them reads.
+// ---------------------------------------------------------------------------
+
+/** Allowed single-segment durations (seconds, ascending) for a pro provider.
+ *  Empty for anything not in the catalog — callers treat that as ineligible
+ *  rather than falling back to a window the provider may reject. */
+export function segmentDurationsFor(provider: string | undefined): readonly number[] {
+  if (!provider) return []
+  return [...(MODEL_CATALOG[provider]?.durations ?? [])].sort((a, b) => a - b)
+}
+
+/** Shortest single segment the provider can render. 0 when unknown. */
+export function minSegmentSecFor(provider: string | undefined): number {
+  return segmentDurationsFor(provider)[0] ?? 0
+}
+
+/** Longest single segment the provider can render — the value above which a
+ *  request must split. 0 when unknown. */
+export function maxSegmentSecFor(provider: string | undefined): number {
+  const d = segmentDurationsFor(provider)
+  return d[d.length - 1] ?? 0
+}
+
+/** True when the provider's durations are every integer between its min and
+ *  max (Seedance-2 family, minimax-h3, kling-3-omni, happyhorse-ref2v). Those
+ *  can use the classic arithmetic splitter; sparse providers (veo3's 4/6/8,
+ *  grok-i2v's 6/10) need the discrete packer. */
+export function hasContiguousSegmentDurations(provider: string | undefined): boolean {
+  const d = segmentDurationsFor(provider)
+  if (d.length === 0) return false
+  return d.length === d[d.length - 1]! - d[0]! + 1
+}
+
+/** Most segments a run can hold for this provider at a given total cap — the
+ *  dynamic replacement for the old fixed 24. 0 when the provider is unknown. */
+export function maxSegmentsFor(provider: string | undefined, capSec: number): number {
+  const max = maxSegmentSecFor(provider)
+  return max > 0 ? Math.ceil(capSec / max) : 0
 }
 
 /**

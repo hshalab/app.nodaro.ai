@@ -23,12 +23,28 @@ describe("generate-video-pro node registry", () => {
     expect(d?.maxDurationSec).toBe(120)
   })
 
-  it("providers are the BLESSED shared GVP list (incl. minimax-h3; mini withdrawn from discovery)", () => {
+  it("providers are the DERIVED shared GVP list (every reference-image i2v SKU)", () => {
     const d = NODE_REGISTRY.find((n) => n.type === "generate-video-pro")
-    // Single source of truth: packages/shared GVP_SUPPORTED_PROVIDERS —
-    // pinned literally here so an accidental shared-list edit surfaces in
-    // the discovery API's own test too.
-    expect(d?.providers).toEqual(["seedance-2", "seedance-2-fast", "minimax-h3"])
+    // Single source of truth: packages/shared GVP_SUPPORTED_PROVIDERS, which is
+    // derived from catalog capability (i2v + reference-image + durations) since
+    // 2026-08-05 rather than hand-kept. Pinned literally here so a catalog edit
+    // that changes the offered SKUs surfaces in the discovery API's own test
+    // too. Ordering groups each family together with the default first.
+    expect(d?.providers).toEqual([
+      "seedance-2",
+      "seedance-2-fast",
+      "seedance-2-mini",
+      "minimax-h3",
+      "veo3",
+      "veo3.1",
+      "veo3_lite",
+      "gemini-omni-video",
+      "grok-i2v",
+      "happyhorse-ref2v",
+    ])
+    // kling-3-omni is deliberately absent: it passes every capability check
+    // but has no working dispatch path (VIDEO_PROVIDERS_WITHOUT_DISPATCH).
+    expect(d?.providers).not.toContain("kling-3-omni")
   })
 
   it("edit-video-pro stays Seedance-only (no minimax-h3 — no v2v mode / -ref axis)", () => {

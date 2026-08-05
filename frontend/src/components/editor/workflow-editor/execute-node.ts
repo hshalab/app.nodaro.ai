@@ -88,7 +88,7 @@ import {
   executeReduce,
 } from "@/lib/api";
 import { resolveTemplate, applyTemplate } from "@/lib/prompt-templates";
-import { ASPECT_RATIO_DIMENSIONS, COMPOSER_PLAN_MAP, VIDEO_INPUT_LIP_SYNC_PROVIDERS, FLEXIBLE_INPUT_LIP_SYNC_PROVIDERS, isSeedance2Provider, isMinimaxH3Provider, isVeoProvider, MODEL_CATALOG, splitGeneratedItems, LLM_FEATURE_DEFAULTS, resolveVideoProviderForMode, resolveEffectiveSourceType, sourceRefKey, hasFeature, countRefModalityEdges, type ReferenceModality, LOCATION_REFERENCE_PHOTO_KINDS, locationReferencePhotoKindLabel, type LocationReferencePhotoKind, characterMentionSlug, characterMentionableAssetArrays, selectLoraRoutingForMentions, expandExtraRefsToConnectedReferences, resolveSeparator, evaluateJsonPath, stringifyPathResults, spreadJsonArrayIfSingleton, zipMergeLists, evaluateJsonExpression, buildExpressionFromVisual, jsonResultToList, tryParseJson, evaluateCondition, evaluateConditionGroup, resolveConditionValue, sortListItems, runSelector, resolveSelectorRefs, buildConditionVariables, VARIABLES_HANDLE_ID, clampSmartCutWindow } from "@nodaro/shared"
+import { ASPECT_RATIO_DIMENSIONS, COMPOSER_PLAN_MAP, VIDEO_INPUT_LIP_SYNC_PROVIDERS, FLEXIBLE_INPUT_LIP_SYNC_PROVIDERS, isSeedance2Provider, supportsExtendRender, isMinimaxH3Provider, isVeoProvider, MODEL_CATALOG, splitGeneratedItems, LLM_FEATURE_DEFAULTS, resolveVideoProviderForMode, resolveEffectiveSourceType, sourceRefKey, hasFeature, countRefModalityEdges, type ReferenceModality, LOCATION_REFERENCE_PHOTO_KINDS, locationReferencePhotoKindLabel, type LocationReferencePhotoKind, characterMentionSlug, characterMentionableAssetArrays, selectLoraRoutingForMentions, expandExtraRefsToConnectedReferences, resolveSeparator, evaluateJsonPath, stringifyPathResults, spreadJsonArrayIfSingleton, zipMergeLists, evaluateJsonExpression, buildExpressionFromVisual, jsonResultToList, tryParseJson, evaluateCondition, evaluateConditionGroup, resolveConditionValue, sortListItems, runSelector, resolveSelectorRefs, buildConditionVariables, VARIABLES_HANDLE_ID, clampSmartCutWindow } from "@nodaro/shared"
 import { composeNegative, computeNodePrompt, computeLlmChatFields, pickerFanoutTargets, buildImagePrompt, assembleImageInput, collectIdentityLockClause, characterLockToRefLock, assembleSunoInput, type AssembleSunoResult } from "@nodaro/prompts"
 import type { CharacterDef, ConnectedReference, ReferenceSource, ExtraRefCharacterContext } from "@nodaro/shared"
 import { ANALYZABLE_PICKER_HINT } from "@/lib/picker-labels";
@@ -2018,6 +2018,17 @@ export function executeNode(
       segmentDurations:
         Array.isArray(gvpData.segmentDurations) && gvpData.segmentDurations.length > 0
           ? gvpData.segmentDurations
+          : undefined,
+      // RENDER METHOD — mirrors payload-builder's coercion so the Run button
+      // and a workflow run dispatch identically. `extend` sends the previous
+      // segment's tail as a reference VIDEO, which only the r2v family accepts;
+      // a provider that cannot extend has exactly one method available, so an
+      // absent choice resolves to it rather than 400ing at reserve. (This path
+      // never sent the field at all before 2026-08-05, which is why keyframes
+      // was only reachable through the orchestrator.)
+      renderMethod:
+        gvpData.renderMethod === "keyframes" || !supportsExtendRender(gvpData.provider)
+          ? ("keyframes" as const)
           : undefined,
       audioTail: gvpData.audioTail === true ? true : undefined,
       overlapAnchor: gvpData.overlapAnchor === true ? true : undefined,

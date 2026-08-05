@@ -9,7 +9,7 @@ import {
 } from "../generate-video-pro-handles"
 import { NODE_DEFINITIONS } from "@/types/nodes"
 import { GVP_PROVIDERS } from "@/components/editor/config-panels/model-options"
-import { isSeedance2Provider, isMinimaxH3Provider, GVP_SUPPORTED_PROVIDERS } from "@nodaro/shared"
+import { isSeedance2Provider, isMinimaxH3Provider, isGvpSupportedProvider, GVP_SUPPORTED_PROVIDERS, GVP_EXTEND_PROVIDERS } from "@nodaro/shared"
 
 /**
  * FULL-PARITY GUARD (2026-07-14 directive, after two rounds of missed
@@ -60,16 +60,35 @@ describe("generate-video-pro ⇄ generate-video FULL parity", () => {
   })
 
   it("sanctioned delta #2: the pro provider set is EXACTLY the supported SKUs", () => {
-    // Pinned to the shared support list (2026-07-21 directive: Seedance 2 +
-    // Seedance 2 Fast; mini stays in the capability family but out of pro
-    // selection; minimax-h3 blessed 2026-08-02 as the first non-Seedance
-    // transport analog). GVP_PROVIDERS derives from this list — membership AND
-    // order — so the two can only diverge if the catalog is missing a blessed
-    // SKU entirely. Every blessed SKU must belong to a transport-capable
-    // family (Seedance 2 or MiniMax H3 — both ride the shared input resolver).
+    // GVP_PROVIDERS is VIDEO_GEN_MODELS filtered by the shared predicate, so
+    // this pins membership AND order against the shared derivation. It is the
+    // guard that catches a SKU the backend advertises but the picker cannot
+    // render: kling-3-omni passes every capability check yet was pulled from
+    // VIDEO_GEN_MODELS (no working dispatch path), and this assertion is what
+    // surfaced it — it is now excluded at the source via
+    // VIDEO_PROVIDERS_WITHOUT_DISPATCH, keeping both sides equal.
     expect(GVP_PROVIDERS.map((p) => p.value)).toEqual([...GVP_SUPPORTED_PROVIDERS])
-    for (const p of GVP_PROVIDERS) {
-      expect(isSeedance2Provider(String(p.value)) || isMinimaxH3Provider(String(p.value))).toBe(true)
+  })
+
+  it("sanctioned delta #2b: transport tiers are derived, not assumed", () => {
+    // REPLACES the old "every blessed SKU is Seedance-2 or MiniMax-H3" pin
+    // (2026-08-05). That encoded the real invariant *blessed ⇒ rides the shared
+    // r2v input resolver*, which stopped holding when the pro node opened to
+    // every reference-image i2v model. The invariant splits in two:
+    //
+    //   blessed         ⇒ takes a start still + reference images (keyframes)
+    //   extend-eligible ⇒ ALSO takes an r2v continuation tail  (⊂ blessed)
+    //
+    // The extend tier is still exactly the shared-input-resolver family, which
+    // is what the old assertion was really protecting — so assert it there.
+    for (const p of GVP_EXTEND_PROVIDERS) {
+      expect(isSeedance2Provider(String(p)) || isMinimaxH3Provider(String(p))).toBe(true)
     }
+    for (const p of GVP_PROVIDERS) {
+      expect(isGvpSupportedProvider(String(p.value))).toBe(true)
+    }
+    // And the tiers are genuinely different — a blessed SKU outside the r2v
+    // family exists, which is the whole point of the change.
+    expect(GVP_EXTEND_PROVIDERS.length).toBeLessThan(GVP_PROVIDERS.length)
   })
 })

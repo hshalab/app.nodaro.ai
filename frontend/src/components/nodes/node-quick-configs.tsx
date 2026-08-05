@@ -469,11 +469,18 @@ export const NODE_QUICK_CONFIGS: Readonly<Record<string, ReadonlyArray<QuickConf
       field: "aspectRatio",
       ariaLabel: "Aspect",
       icon: Ratio,
-      // The whole seedance-2 family shares one aspect set — the SAME list the
-      // config panel's AspectRatioSelector renders (it also pins "seedance-2").
-      options: getAspectRatiosForVideoModel("seedance-2"),
+      // PROVIDER-AWARE (2026-08-05): the pro node now offers models well past
+      // the Seedance-2 family, and Seedance's set (21:9/4:3/3:4/adaptive) is a
+      // strict superset of what VEO or Grok render. A static list here is the
+      // Zod-reject trap CLAUDE.md calls out — it would let the strip write an
+      // aspect the selected model rejects at generate time. Same source as the
+      // config panel's selector + its fail-safe snap, so the two cannot drift.
+      options: (data) =>
+        getAspectRatiosForVideoModel(
+          typeof data.provider === "string" ? data.provider : "seedance-2",
+        ),
       // The runtime default (payload-builder/route both fall back to
-      // "adaptive") sits LAST in the shared list — without this the unset
+      // "adaptive") sits LAST in the seedance list — without this the unset
       // trigger displayed the list's first entry ("16:9") instead.
       defaultValue: "adaptive",
     },
