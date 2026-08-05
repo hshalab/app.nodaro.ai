@@ -50,9 +50,10 @@ export interface NodeDescriptor {
   maxSpanSec?: number
 }
 
-// Canonical provider list for generate-video-pro — the BLESSED shared list
-// (single source of truth; was stale-derived from SEEDANCE_2_PROVIDERS, which
-// advertised seedance-2-mini and omitted minimax-h3).
+// Canonical provider list for generate-video-pro — the shared DERIVATION
+// (single source of truth): every catalogued video model that does i2v, accepts
+// reference images, and declares segment durations. Was a hand-kept literal
+// until 2026-08-05.
 const GVP_PROVIDERS = [...GVP_SUPPORTED_PROVIDERS]
 // edit-video-pro stays Seedance-only (no minimax-h3: it has no v2v mode /
 // -ref pricing axis — same reasoning as the frontend's EVP_PROVIDERS subset).
@@ -263,7 +264,7 @@ export const NODE_REGISTRY: NodeDescriptor[] = [
     label: "Generate Video Pro",
     category: "ai-video",
     description:
-      "Long-form video generation — seedance-2 / seedance-2-fast / minimax-h3 (Hailuo 3, 2K default or 768P output). Requests above a single segment's cap (15s) are auto-split into multiple segments and seamlessly stitched into one clip. Cloud edition only.",
+      "Long-form video generation on any model that accepts reference images (Seedance 2 family, Hailuo 3, VEO 3.1 family, Gemini Omni, Kling 3 Omni, Grok, HappyHorse). Requests above the model's single-segment cap are auto-split into multiple segments and stitched into one clip. Cloud edition only.",
     outputType: "video",
     // Multi-mode fee-base (STATIC_CREDIT_COSTS["generate-video-pro"] = 100), reserved
     // on top of the per-second segment cost once the request splits into multiple

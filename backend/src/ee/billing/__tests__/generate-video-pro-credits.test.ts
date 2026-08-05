@@ -790,9 +790,218 @@ describe("computeGenerateVideoProPricing — explicit segmentDurations (seedance
     const at = (durationSec: number, segmentDurations: number[]) =>
       computeGenerateVideoProPricing({ provider: "seedance-2", resolution: "720p", durationSec, segmentDurations })
     await expect(at(16, [9, 9])).rejects.toThrow(/sum 18 != /) // expected 17
-    await expect(at(16, [3, 14])).rejects.toThrow(/integers in \[4,15\]/)
-    await expect(at(16, [8.5, 9])).rejects.toThrow(/integers in \[4,15\]/)
-    await expect(at(16, [16, 4])).rejects.toThrow(/integers in \[4,15\]/)
-    await expect(at(100, new Array<number>(25).fill(4))).rejects.toThrow(/1\.\.24 integers/)
+    // Entries are checked for MEMBERSHIP in the provider's own duration set,
+    // not against a [4,15] range (2026-08-05) — veo3 accepts 4/6/8 and nothing
+    // between, so a range check would pass a 5 that the provider then rejects
+    // mid-run, after the reserve was taken. Same rejections, provider-derived
+    // message; the accepted values for seedance-2 are unchanged.
+    const notAllowed = /each one of \[4,5,6,7,8,9,10,11,12,13,14,15\]/
+    await expect(at(16, [3, 14])).rejects.toThrow(notAllowed)
+    await expect(at(16, [8.5, 9])).rejects.toThrow(notAllowed)
+    await expect(at(16, [16, 4])).rejects.toThrow(notAllowed)
+    await expect(at(100, new Array<number>(25).fill(4))).rejects.toThrow(/1\.\.24 entries/)
+  })
+
+  it("rejects a duration the provider does not offer, even inside its own range", async () => {
+    // The regression the membership check exists for: veo3 renders 4/6/8s.
+    // A 5s segment sits inside [4,8] and would have passed the old range check.
+    await expect(
+      computeGenerateVideoProPricing({
+        provider: "veo3",
+        resolution: "720p",
+        durationSec: 12,
+        segmentDurations: [5, 8],
+        renderMethod: "keyframes",
+      }),
+    ).rejects.toThrow(/each one of \[4,6,8\]/)
+  })
+})
+
+/**
+ * FLAT-PRICED PROVIDERS (2026-08-05, the pro node opening past the Seedance-2
+ * family). These SKUs have no linear `${id}:8s:${res}` composite to divide, so
+ * the per-second closed-form cannot price them. A keyframes segment IS one
+ * plain image-to-video generation, so each one prices through the canonical
+ * identifier builder and the costs ride back as `segmentCosts`.
+ *
+ * The load-bearing property of this whole change is in the FIRST test: the
+ * per-second providers must be untouched.
+ */
+describe("computeGenerateVideoProPricing — flat-priced providers", () => {
+  it("per-second providers are UNCHANGED — no segmentCosts, rates still populated", async () => {
+    const p = await computeGenerateVideoProPricing({
+      provider: "seedance-2",
+      resolution: "720p",
+      durationSec: 40,
+      renderMethod: "keyframes",
+    })
+    expect(p.segmentCosts).toBeUndefined()
+    expect(p.noRefPerSec).toBe(STATIC_CREDIT_COSTS["seedance-2:8s:720p"]! / 8)
+    expect(p.refPerSec).toBe(STATIC_CREDIT_COSTS["seedance-2:8s:720p-ref"]! / 8)
+  })
+
+  it("veo3 keyframes prices each segment at its own flat per-generation cost", async () => {
+    const p = await computeGenerateVideoProPricing({
+      provider: "veo3",
+      resolution: "720p",
+      durationSec: 24,
+      segmentDurations: [8, 8, 8],
+      renderMethod: "keyframes",
+      aspectRatio: "16:9",
+    })
+    // Delivered duration is DERIVED from the pack (24 raw − 0.3×2 seam loss),
+    // not forced to equal the request: veo3's 4/6/8 are all even, so the
+    // classic ceil(d + 0.3(n−1)) target is unreachable for odd sums.
+    expect(p.clampedDurationSec).toBe(23)
+    // VEO is flat per generation regardless of duration, so all three segments
+    // cost the same seeded row and the rates carry no meaning.
+    const unit = STATIC_CREDIT_COSTS["veo3"]!
+    expect(p.segmentCosts).toEqual([unit, unit, unit])
+    expect(p.noRefPerSec).toBe(0)
+    expect(p.refPerSec).toBe(0)
+    // reserve = fee + Σ segment costs + worst-case anchors (2 per segment).
+    const anchorUnit = STATIC_CREDIT_COSTS["gpt-image-2:2K"]!
+    expect(p.reserveBase).toBe(
+      STATIC_CREDIT_COSTS["generate-video-pro"]! + unit * 3 + 3 * 2 * anchorUnit,
+    )
+  })
+
+  it("gemini-omni-video prices per DURATION TIER, not flat", async () => {
+    const p = await computeGenerateVideoProPricing({
+      provider: "gemini-omni-video",
+      resolution: "720p",
+      durationSec: 24,
+      segmentDurations: [10, 8, 6],
+      renderMethod: "keyframes",
+      aspectRatio: "16:9",
+    })
+    expect(p.segmentCosts).toEqual([
+      STATIC_CREDIT_COSTS["gemini-omni-video:10"]!,
+      STATIC_CREDIT_COSTS["gemini-omni-video:8"]!,
+      STATIC_CREDIT_COSTS["gemini-omni-video:6"]!,
+    ])
+  })
+
+  it("a single-segment flat-priced keyframes run still reserves anchors", async () => {
+    const p = await computeGenerateVideoProPricing({
+      provider: "grok-i2v",
+      resolution: "720p",
+      durationSec: 6,
+      renderMethod: "keyframes",
+      aspectRatio: "16:9",
+    })
+    expect(p.mode).toBe("single")
+    expect(p.segmentDurations).toEqual([6])
+    expect(p.segmentCosts).toEqual([STATIC_CREDIT_COSTS["grok-i2v:6s"]!])
+  })
+
+  it("snaps a single-segment duration the provider cannot render", async () => {
+    // veo3 offers 4/6/8 — a requested 5s delivers 4s (nearest, ties down), and
+    // clampedDurationSec reports what the user actually gets.
+    const p = await computeGenerateVideoProPricing({
+      provider: "veo3",
+      resolution: "720p",
+      durationSec: 5,
+      renderMethod: "keyframes",
+      aspectRatio: "16:9",
+    })
+    expect(p.clampedDurationSec).toBe(4)
+    expect(p.segmentDurations).toEqual([4])
+  })
+
+  it("refuses to price EXTEND on a provider with no reference-video transport", async () => {
+    // The money-side backstop for the render-method gate: reserving credits for
+    // a run whose transport does not exist is worse than a 400.
+    for (const provider of ["veo3", "gemini-omni-video", "kling-3-omni", "grok-i2v", "happyhorse-ref2v"]) {
+      await expect(
+        computeGenerateVideoProPricing({ provider, resolution: "720p", durationSec: 30 }),
+      ).rejects.toThrow(/renderMethod "keyframes" only/)
+    }
+  })
+
+  it("still prices EXTEND for the r2v family (gate is not over-broad)", async () => {
+    for (const provider of ["seedance-2", "seedance-2-fast", "seedance-2-mini", "minimax-h3"]) {
+      const p = await computeGenerateVideoProPricing({ provider, resolution: "720p", durationSec: 30 })
+      expect(p.mode).toBe("multi")
+      expect(p.reserveBase).toBeGreaterThan(0)
+    }
+  })
+
+  it("packs a sparse provider's own lengths without explicit segmentDurations", async () => {
+    // The app owns the sparse packer: the plugin's pinned @nodaro/shared lags
+    // (the deployed copy has no minimax-h3 in MODEL_CATALOG at all), so it
+    // cannot read a trustworthy duration set. It plans against
+    // pricing.segmentDurations, which is produced here.
+    const p = await computeGenerateVideoProPricing({
+      provider: "veo3",
+      resolution: "720p",
+      durationSec: 30,
+      renderMethod: "keyframes",
+      aspectRatio: "16:9",
+    })
+    expect(p.mode).toBe("multi")
+    // Every entry must be a length veo3 actually renders.
+    for (const d of p.segmentDurations) expect([4, 6, 8]).toContain(d)
+    // ...and the delivered duration lands as close to 30s as that menu allows.
+    expect(Math.abs(p.clampedDurationSec - 30)).toBeLessThanOrEqual(1)
+  })
+
+  it("packs every blessed sparse provider to lengths it can render", async () => {
+    for (const [provider, allowed] of [
+      ["veo3", [4, 6, 8]],
+      ["veo3.1", [4, 6, 8]],
+      ["veo3_lite", [4, 6, 8]],
+      ["gemini-omni-video", [4, 6, 8, 10]],
+      ["grok-i2v", [6, 10]],
+    ] as const) {
+      for (const durationSec of [20, 30, 45, 60]) {
+        const p = await computeGenerateVideoProPricing({
+          provider, resolution: "720p", durationSec, renderMethod: "keyframes", aspectRatio: "16:9",
+        })
+        for (const d of p.segmentDurations) {
+          expect(allowed as readonly number[], `${provider} @${durationSec}s`).toContain(d)
+        }
+        expect(p.segmentCosts?.length).toBe(p.segmentDurations.length)
+      }
+    }
+  })
+
+  it("the preferred-segment lever snaps to a length the sparse provider offers", async () => {
+    const p = await computeGenerateVideoProPricing({
+      provider: "veo3",
+      resolution: "720p",
+      durationSec: 40,
+      preferredSegmentSec: 5, // not on veo3's menu — snaps to 4 (nearest, ties down)
+      renderMethod: "keyframes",
+      aspectRatio: "16:9",
+    })
+    expect(new Set(p.segmentDurations)).toEqual(new Set([4]))
+  })
+
+  it("reports end-anchor capability so the plugin need not read a stale catalog", async () => {
+    const withEnd = await computeGenerateVideoProPricing({
+      provider: "minimax-h3", resolution: "2K", durationSec: 30, renderMethod: "keyframes", aspectRatio: "16:9",
+    })
+    // The bug this fixes: minimax-h3 carries "end-frame" but the plugin's
+    // wantEndAnchor was gated on the Seedance family by name.
+    expect(withEnd.endAnchors).toBe(true)
+    const without = await computeGenerateVideoProPricing({
+      provider: "grok-i2v", resolution: "720p", durationSec: 30, renderMethod: "keyframes", aspectRatio: "16:9",
+    })
+    expect(without.endAnchors).toBe(false)
+  })
+
+  it("a flat-priced continuation bills only its own segments, from segmentCosts", async () => {
+    const p = await computeGenerateVideoProContinuationPricing({
+      provider: "veo3",
+      resolution: "720p",
+      segmentDurations: [8, 8, 8],
+      fromSegment: 3,
+      renderMethod: "keyframes",
+    })
+    const unit = STATIC_CREDIT_COSTS["veo3"]!
+    expect(p.segmentCosts).toEqual([unit, unit, unit]) // parent-aligned, full array
+    expect(p.billFromSegment).toBe(3)
+    expect(p.reserveBase).toBe(STATIC_CREDIT_COSTS["generate-video-pro"]! + unit)
   })
 })

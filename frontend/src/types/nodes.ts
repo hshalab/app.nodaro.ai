@@ -1843,7 +1843,13 @@ export type ContentPolicyRewriteEntry = { segment: number; original: string; rew
 export interface GenerateVideoProNodeData {
   [key: string]: unknown
   label: string
-  provider: "seedance-2" | "seedance-2-fast"
+  /** One of `GVP_SUPPORTED_PROVIDERS` (@nodaro/shared) — DERIVED from catalog
+   *  capability, so it cannot be a literal union here. Typed to the unified
+   *  video-provider union; runtime membership is enforced by the config
+   *  panel's fail-safe snap and the plugin route's validation. (Was pinned to
+   *  `"seedance-2" | "seedance-2-fast"`, already stale — it never gained
+   *  `minimax-h3` after that SKU shipped on 2026-08-02.) */
+  provider: VideoGenProvider
   prompt?: string
   /** Total seconds, 4..cap (cap comes from the node-registry descriptor). */
   duration: number

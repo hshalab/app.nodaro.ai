@@ -4,9 +4,11 @@
 
 ## Overview
 
-Generate Video Pro is a specialized sibling of [Generate Video](./generate-video.md) scoped to a small set of continuation-capable providers (the Seedance 2 family and Hailuo 3), built for one thing: clips longer than a single provider call can produce. Ask for a duration beyond the single-segment limit (15 seconds) and the node transparently generates multiple segments in sequence — each one continuing from where the last left off — and stitches them into a single output video.
+Generate Video Pro is a specialized sibling of [Generate Video](./generate-video.md), built for one thing: clips longer than a single provider call can produce. Ask for a duration beyond the model's single-segment limit and the node transparently generates multiple segments and stitches them into a single output video.
 
-Below that limit, Generate Video Pro behaves exactly like a normal single-shot Seedance 2 run and is priced the same way. Use it when you need one continuous clip longer than 15 seconds; use [Generate Video](./generate-video.md) for everything else (shorter clips, other providers, first+last frame, video-to-video, or the full multimodal reference/prompt-token surface).
+You choose the model. Every video model that accepts a start still plus reference images is available — the Seedance 2 family, Hailuo 3, the VEO 3.1 family, Gemini Omni, Grok and HappyHorse — and each one contributes its own segment lengths and resolutions. See [Providers](#providers) for the full list and for which models additionally support the continuation-based **Extend** render method.
+
+Below the model's single-segment limit, Generate Video Pro behaves like a normal single-shot run on that model and is priced the same way. Use it when you need one long clip; use [Generate Video](./generate-video.md) for everything else (single shots, video-to-video, first+last frame, or the full multimodal reference/prompt-token surface).
 
 **Cloud edition only.** Generate Video Pro requires a Cloud subscription.
 
@@ -33,7 +35,7 @@ Generate Video Pro exposes **exactly Generate Video's input handles** — same n
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| Provider | Select | `seedance-2` | `seedance-2` (full), `seedance-2-fast`, or `minimax-h3` (Hailuo 3, 2K default / 768P) — the only providers the pro engine currently supports |
+| Provider | Select | `seedance-2` | Any model that accepts a start still plus reference images — see [Providers](#providers) |
 | Prompt | Text | — | Describes the video; also settable via the `prompt` handle |
 | Duration | Number (4–cap) | 8s | Minimum 4s. Maximum is the configured cap (120s by default) — see [Duration cap](#duration-cap) |
 | Aspect Ratio | Select | `adaptive` | 16:9 / 9:16 / 1:1 / 4:3 / 3:4 / 21:9 / Adaptive (matches the wired input) |
@@ -66,17 +68,33 @@ automatically; scripts without look bindings behave exactly as before.
 
 ## Providers
 
-Generate Video Pro is scoped to providers whose reference surface supports the pro engine's continuation transport (context-tail video reference + frame anchor + identity image references, at per-second durations across the full 4–15s segment window):
+Generate Video Pro offers every video model that can drive the engine's **keyframes** render method — that is, any model which accepts a generated start still plus reference images, and declares its own segment durations:
 
-| Provider | Label | Resolutions |
-|---|---|---|
-| `seedance-2` | Seedance 2.0 | 480p / 720p / 1080p / 4K |
-| `seedance-2-fast` | Seedance 2.0 Fast | 480p / 720p only |
-| `minimax-h3` | Hailuo 3 (H3) | 2K (default) or 768P — the Resolution selector offers H3's own two tiers; 768P bills the cheaper per-second rate |
+| Provider | Label | Segment lengths | Resolutions | Render methods |
+|---|---|---|---|---|
+| `seedance-2` | Seedance 2.0 | 4–15s | 480p / 720p / 1080p / 4K | Keyframes + Extend |
+| `seedance-2-fast` | Seedance 2.0 Fast | 4–15s | 480p / 720p | Keyframes + Extend |
+| `seedance-2-mini` | Seedance 2.0 Mini | 4–15s | 480p / 720p | Keyframes + Extend |
+| `minimax-h3` | Hailuo 3 (H3) | 4–15s | 2K (default) / 768P | Keyframes + Extend |
+| `veo3` | VEO 3.1 Quality | 4 / 6 / 8s | 720p / 1080p / 4K | Keyframes |
+| `veo3.1` | VEO 3.1 Fast | 4 / 6 / 8s | 720p / 1080p / 4K | Keyframes |
+| `veo3_lite` | VEO 3.1 Lite | 4 / 6 / 8s | 720p / 1080p / 4K | Keyframes |
+| `gemini-omni-video` | Gemini Omni | 4 / 6 / 8 / 10s | 720p / 1080p / 4K | Keyframes |
+| `grok-i2v` | Grok I2V | 6 / 10s | 480p / 720p | Keyframes |
+| `happyhorse-ref2v` | HappyHorse 1.1 Ref2V | 3–15s | 720p / 1080p | Keyframes |
+
+### Render methods and why the list differs
+
+- **Keyframes** — every segment is generated from its own anchor still (plus a closing still on models that honour an end frame), and every seam is a hard cut. Nothing conditions on another segment's video, which is why single-scene retakes don't cascade. The only thing a model needs for this is start-frame conditioning plus reference images, so it is available on **every** provider above.
+- **Extend** — each segment continues from the previous one via a short context tail sent as a *reference video*. That transport exists only on models with a reference-to-video mode (the Seedance 2 family and Hailuo 3), so the Render method control is disabled with a reason on the others. Selecting a keyframes-only provider never silently downgrades an extend run — the request is rejected.
+
+Note that Gemini Omni does accept a video input, but as a video-to-video **source** clip (with its own trim window and flat pricing), not as a continuation reference — so it is keyframes-only here.
+
+**Segment lengths are per-model.** A request longer than the model's single-segment maximum is split into several segments; models with a sparse set of allowed lengths (VEO's 4/6/8s, Grok's 6/10s) can only land on those values, so the delivered duration snaps to the nearest total the model can actually produce and the node reports what you will get.
 
 Hailuo 3 shares Seedance 2's multimodal reference surface (the same 9-image / 3-video / 3-audio reference semantics), so the whole continuation transport carries over unchanged. Its per-second price has no with-reference axis; both segment rates derive from the one 8s composite of the selected resolution tier (`minimax-h3:8s` @2K, `minimax-h3:8s:768p` @768P — see [Credit cost](#credit-cost)).
 
-Other models (including Seedance 2.0 Mini) are not currently supported by the pro engine and are not offered in selection. Workflows saved with a since-withdrawn provider keep running, and the editor snaps their selection to `seedance-2` the next time the panel is opened.
+Models that take only a bare start frame with no reference-image forwarding (Wan, Hailuo 2.3, Bytedance Pro, Grok Imagine 1.5) stay out — the anchor wave's identity references would be silently dropped. Workflows saved with a since-withdrawn provider keep running, and the editor snaps their selection to `seedance-2` the next time the panel is opened.
 
 For the full Seedance 2 capability write-up (multimodal image/video/audio references, `{image:N}`-style prompt tokens, unified frames+references wiring) see [Generate Video → Providers](./generate-video.md#providers). Generate Video Pro forwards the full reference surface — `startFrame`, `endFrame`, `imageReferences`, `audioReferences`, `assets` (with `@mention` / `{image:N}` token resolution), and the Extend Source (`videoReferences`) — into generation.
 
@@ -201,6 +219,21 @@ reserve = 100 (fee) + ceil(noRefPerSec × 15) + ceil(refPerSec × ((N − 1) × 
 **Levered splits (Preferred segment length or explicit `segmentDurations`).** The same formula applies over the levered split's own durations, with one refinement: the first segment reserves at its **actual** planned length (`durations[0]`) instead of the worst-case 15s cap (which could over-pad — or even go negative in the reference term — when segments are short). Example: a 79.3s request with the scene-aligned array `[8, 10, 6, 6, 5, 6, 4, 4, 4, 5, 5, 5, 7, 8]` (N = 14, S = 83) reserves `100 + ceil(102.5 × 8) + ceil(62.5 × (13 × 2 + 75)) = 100 + 820 + 6313 = 7233` credits at 720p.
 
 **Hailuo 3 (`minimax-h3`) rates.** The same formula applies, but Hailuo 3 has no with-reference rate axis: **noRefPerSec = refPerSec**, both derived from the one 8s composite of the selected resolution tier — **91.25** credits/sec @2K (`minimax-h3:8s` = 730 ÷ 8; the default, and what any non-768P resolution value collapses to) or **56.25** credits/sec @768P (`minimax-h3:8s:768p` = 450 ÷ 8). Its reference-to-video rate equals its base rate; each continuation's T-second context tail is billed as input seconds at that same rate, which is exactly the formula's `refPerSec × (N − 1) × T` term. A 60s request (5 segments, S = 62) reserves `100 + ceil(91.25 × 15) + ceil(91.25 × (4 × 2 + 47)) = 100 + 1369 + 5019 = 6488` credits @2K, or `100 + ceil(56.25 × 15) + ceil(56.25 × 55) = 100 + 844 + 3094 = 4038` @768P.
+
+#### Flat-priced providers (VEO 3.1 family, Gemini Omni, Grok, HappyHorse)
+
+The per-second formula above applies only to models that publish a per-second rate — the Seedance 2 family and Hailuo 3. The remaining providers are priced **per generation**, so there is no rate to multiply. They render keyframes-only, where each segment is exactly one ordinary image-to-video generation, so each segment is billed at that model's own published price for its length and resolution:
+
+```
+reserve = feeBase + Σ segmentPrice(provider, resolution, dᵢ) + anchorBudget
+```
+
+- `segmentPrice` is the same credit identifier a single-shot [Generate Video](./generate-video.md) run on that model would use — so an admin reprice moves the pro node with it.
+- `anchorBudget` is the worst case of two anchor stills per segment, exactly as for keyframes runs on any provider. The metered commit settles the real count, so it only ever refunds down.
+
+**Worked example (`veo3` @ 720p, three 8-second segments).** VEO is flat per generation regardless of clip length, so all three segments cost the same: `feeBase + 3 × veo3 + 3 × 2 × anchor`. The delivered duration is 23 seconds, not 24 — the 0.3s seam allowance per join is deducted from the raw 24s of footage. VEO offers 4/6/8s only, all even, so a total that needs an odd number of seconds simply isn't reachable; the node reports the length you will actually get.
+
+**Worked example (`gemini-omni-video` @ 720p, segments of 10 + 8 + 6s).** Gemini Omni is priced by duration tier rather than flat, so each segment bills at its own tier (`gemini-omni-video:10`, `:8`, `:6`) and the reserve is their sum plus the fee and anchor budget.
 
 #### Worked examples (720p, `seedance-2`)
 

@@ -40,7 +40,7 @@ import type {
   VideoAuditNodeData,
 } from "@/types/nodes"
 import { GENERATE_VIDEO_PRO_MAX_DURATION_FALLBACK, VIDEO_I2V_MODELS, VIDEO_T2V_MODELS, VIDEO_V2V_MODELS, VIDEO_GEN_MODELS, GVP_PROVIDERS, EVP_PROVIDERS, MOTION_TRANSFER_MODELS, KIE_VIDEO_DURATIONS, KIE_T2V_DURATIONS, VIDEO_DURATION_OPTIONS, VIDEO_FPS_OPTIONS, PROVIDERS_WITH_END_FRAME, KLING3_DURATIONS, VIDEO_RATIOS, SEEDANCE_2_VIDEO_RATIOS, PROVIDERS_WITH_REFERENCES, V2V_DURATION_OPTIONS, V2V_RESOLUTION_OPTIONS, V2V_ALEPH_ASPECT_RATIOS, EXTEND_VIDEO_MODELS, getVideoResolutionOptions, getAspectRatiosForVideoModel, getVideoModelCapabilitiesTooltip } from "./model-options"
-import { isSeedance2Provider, isMinimaxH3Provider, defaultVideoAspectRatio, MODEL_CATALOG, SEEDANCE_2_REF_LIMITS, VIDEO_PROMPT_MAX, getMaxVideoPromptChars, getMaxNegativePromptChars, buildVideoCreditModelIdentifier, characterMentionSlug, characterMentionableAssetArrays, DEFAULT_LABEL_BY_SOURCE, locationMentionSlug, resolveEffectiveSourceType, FRAME_TARGET_HANDLES, VIDEO_ANALYSIS_TIER_ORDER, VIDEO_ANALYSIS_TIER_LABELS, VIDEO_ANALYSIS_TIERS, VIDEO_ANALYSIS_LEGACY_MODELS, DEFAULT_VIDEO_ANALYSIS_TIER, isVideoAnalysisTier, VIDEO_AUDIT_BUCKET_CREDITS, LLM_MODELS, clampSmartCutWindow, SMART_CUT_WINDOW_MIN, SMART_CUT_WINDOW_MAX, SMART_CUT_WINDOW_DEFAULT } from "@nodaro/shared"
+import { isSeedance2Provider, isMinimaxH3Provider, defaultVideoAspectRatio, maxSegmentSecFor, MODEL_CATALOG, SEEDANCE_2_REF_LIMITS, VIDEO_PROMPT_MAX, getMaxVideoPromptChars, getMaxNegativePromptChars, buildVideoCreditModelIdentifier, characterMentionSlug, characterMentionableAssetArrays, DEFAULT_LABEL_BY_SOURCE, locationMentionSlug, resolveEffectiveSourceType, FRAME_TARGET_HANDLES, VIDEO_ANALYSIS_TIER_ORDER, VIDEO_ANALYSIS_TIER_LABELS, VIDEO_ANALYSIS_TIERS, VIDEO_ANALYSIS_LEGACY_MODELS, DEFAULT_VIDEO_ANALYSIS_TIER, isVideoAnalysisTier, VIDEO_AUDIT_BUCKET_CREDITS, LLM_MODELS, clampSmartCutWindow, SMART_CUT_WINDOW_MIN, SMART_CUT_WINDOW_MAX, SMART_CUT_WINDOW_DEFAULT } from "@nodaro/shared"
 import type { ReferenceSource, ConnectedReference } from "@nodaro/shared"
 import { resolveSeedance2Inputs } from "@nodaro/prompts"
 import { probeVideoAnalysis } from "@/lib/api"
@@ -3590,6 +3590,25 @@ function GenerateVideoProConfigImpl({ data, onUpdate, sources, fieldMappings, on
   }, [currentProvider]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const resolutionOptions = getVideoResolutionOptions(currentProvider)
+  const aspectOptions = getAspectRatiosForVideoModel(currentProvider)
+
+  // Fail-safe (Provider Enum Sync step 12b / CLAUDE.md pitfall 5): the aspect
+  // list is PROVIDER-AWARE since the pro node opened past the Seedance-2 family
+  // (2026-08-05) — it used to be pinned to `getAspectRatiosForVideoModel(
+  // "seedance-2")`, a static superset. Seedance-2 offers 21:9/4:3/3:4/adaptive
+  // that VEO and Grok do not, so a node configured 21:9 and then switched to
+  // veo3 kept a value the dropdown no longer shows and the backend Zod rejects
+  // at run time. Snap to the new provider's own default.
+  useEffect(() => {
+    const opts = getAspectRatiosForVideoModel(currentProvider)
+    if (data.aspectRatio && !opts.some((o) => o.value === data.aspectRatio)) {
+      // Prefer the provider's documented default; fall back to its first
+      // offered ratio so the snap can never write another unsupported value.
+      const preferred = defaultVideoAspectRatio(currentProvider)
+      const next = opts.some((o) => o.value === preferred) ? preferred : opts[0]?.value
+      if (next) onUpdate({ aspectRatio: next })
+    }
+  }, [currentProvider]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fail-safe (CLAUDE.md pitfall 5 pattern): the preroll smart-cut modes model
   // the LAST-FRAME transport's pixel replay diagonal — under a KEYFRAME overlap
@@ -3672,13 +3691,15 @@ function GenerateVideoProConfigImpl({ data, onUpdate, sources, fieldMappings, on
           />
         </div>
         <p className="text-[10px] text-muted-foreground px-1">
-          Above 15s the request is automatically split into multiple stitched Seedance 2 segments.
+          {maxSegmentSecFor(currentProvider) > 0
+            ? `Above ${maxSegmentSecFor(currentProvider)}s the request is automatically split into multiple stitched segments.`
+            : "Longer requests are automatically split into multiple stitched segments."}
         </p>
       </MappableField>
 
       <MappableField field="aspectRatio" label="Aspect Ratio" sources={sources} fieldMappings={fieldMappings} onMapField={onMapField}>
         <AspectRatioSelector
-          options={getAspectRatiosForVideoModel("seedance-2")}
+          options={aspectOptions}
           value={data.aspectRatio || defaultVideoAspectRatio(currentProvider)}
           onValueChange={(v) => onUpdate({ aspectRatio: v })}
         />

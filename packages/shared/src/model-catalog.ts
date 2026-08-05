@@ -108,7 +108,22 @@ export interface ModelCatalogEntry {
   description: string
   /** Short tags Claude matches against user intent. */
   useCases: readonly string[]
-  /** Capabilities flags: "reference-image", "end-frame", "audio", etc. */
+  /**
+   * Capabilities flags: "reference-image", "end-frame", "audio", etc.
+   *
+   * `"video-reference"` (video models only) means the model accepts a
+   * reference VIDEO as a CONDITIONING clip — the r2v transport that
+   * `resolveSeedance2Inputs` builds and that KIE receives as
+   * `reference_video_urls`. It is what generate-video-pro's `extend` render
+   * method needs (a continuation tail off the previous segment), and
+   * `GVP_EXTEND_PROVIDERS` derives from it.
+   *
+   * It is deliberately NOT set on `gemini-omni-video`: that model's
+   * `video_list` input is a V2V SOURCE clip with a trim window, an
+   * auto-determined duration and flat per-generation pricing (see
+   * `runGeminiOmni` in `backend/src/providers/kie/video.ts`) — a different
+   * transport, not a continuation reference.
+   */
   features?: readonly string[]
   aspectRatios?: readonly string[]
   resolutions?: readonly string[]
@@ -937,7 +952,7 @@ const VIDEO_MODELS: Record<string, ModelCatalogEntry> = {
     series: "Hailuo",
     description: "MiniMax Hailuo 3 — premium multimodal tier: first/last frame + image/video/audio references, native audio, 2K (default) or 768P output, 4-15s per-second pricing.",
     useCases: ["premium", "narrative"],
-    features: ["end-frame", "audio", "reference-image"],
+    features: ["end-frame", "audio", "reference-image", "video-reference"],
     aspectRatios: VIDEO_RATIOS_SEEDANCE_2,
     durations: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
     // First entry = default (the UI dropdown + fail-safe snap use opts[0], and
@@ -1277,7 +1292,7 @@ const VIDEO_MODELS: Record<string, ModelCatalogEntry> = {
     series: "Seedance",
     description: "Seedance 2 — premium tier with native audio. Per-second pricing by resolution.",
     useCases: ["premium", "narrative"],
-    features: ["end-frame", "audio", "reference-image"],
+    features: ["end-frame", "audio", "reference-image", "video-reference"],
     aspectRatios: VIDEO_RATIOS_SEEDANCE_2,
     durations: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
     resolutions: ["480p", "720p", "1080p", "4k"],
@@ -1302,7 +1317,7 @@ const VIDEO_MODELS: Record<string, ModelCatalogEntry> = {
     series: "Seedance",
     description: "Cheaper / quicker Seedance 2 tier.",
     useCases: ["fast", "motion"],
-    features: ["end-frame", "audio", "reference-image"],
+    features: ["end-frame", "audio", "reference-image", "video-reference"],
     aspectRatios: VIDEO_RATIOS_SEEDANCE_2,
     durations: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
     resolutions: ["480p", "720p"],
@@ -1323,7 +1338,7 @@ const VIDEO_MODELS: Record<string, ModelCatalogEntry> = {
     series: "Seedance",
     description: "Budget Seedance 2 tier — 480p/720p only, per-second pricing by resolution.",
     useCases: ["fast", "motion"],
-    features: ["end-frame", "audio", "reference-image"],
+    features: ["end-frame", "audio", "reference-image", "video-reference"],
     aspectRatios: VIDEO_RATIOS_SEEDANCE_2,
     durations: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
     resolutions: ["480p", "720p"],

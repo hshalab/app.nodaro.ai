@@ -1,7 +1,7 @@
 import type { WorkflowNode, WorkflowEdge, GenerateVideoProNodeData, EditVideoProNodeData } from "@/types/nodes";
 import { StorageExceededError } from "@/lib/api";
 import { useWorkflowStore } from "@/hooks/use-workflow-store";
-import { buildMotionCreditModelIdentifier, isDefaultSelectorConfig, selectListItems, type SelectorFields, getEffectiveRepeatCount, buildScraperCreditId, isScraperActor, SCRAPER_CREDIT_COSTS, buildVideoAnalysisCreditId, resolveVideoAnalysisModel, bucketSecondsFromCreditId, VIDEO_ANALYSIS_BUCKET_CREDITS, buildVideoAuditCreditId, VIDEO_AUDIT_BUCKET_CREDITS, FAN_OUT_EACH_TYPES, buildVideoCreditModelIdentifier, SEEDANCE_2_CONTINUATION_REF_SEC, isMinimaxH3Provider, normalizeMinimaxH3Resolution } from "@nodaro/shared"
+import { buildMotionCreditModelIdentifier, isDefaultSelectorConfig, selectListItems, type SelectorFields, getEffectiveRepeatCount, buildScraperCreditId, isScraperActor, SCRAPER_CREDIT_COSTS, buildVideoAnalysisCreditId, resolveVideoAnalysisModel, bucketSecondsFromCreditId, VIDEO_ANALYSIS_BUCKET_CREDITS, buildVideoAuditCreditId, VIDEO_AUDIT_BUCKET_CREDITS, FAN_OUT_EACH_TYPES, buildVideoCreditModelIdentifier, SEEDANCE_2_CONTINUATION_REF_SEC, isSeedance2Provider, isMinimaxH3Provider, maxSegmentSecFor, normalizeMinimaxH3Resolution } from "@nodaro/shared"
 // getCachedCredits reads the live React-Query model-cost cache (an `ee/`
 // concern — credits are enterprise-only). Allowlisted in
 // tools/check-ee-imports.mjs (same coupling as ./run-handlers.ts).
@@ -215,8 +215,34 @@ function gvpPerSecRate(provider: string, resolution: string, ref: boolean): numb
     return composite / 8
   }
   const identifier = `${provider}:8s:${resolution}${ref ? "-ref" : ""}`
-  const composite = getCachedCredits(identifier) ?? (ref ? GVP_REF_FALLBACK : GVP_NOREF_FALLBACK)
-  return composite / 8
+  const cached = getCachedCredits(identifier)
+  if (cached !== undefined) return cached / 8
+  // COLD-CACHE fallback — Seedance-2 family ONLY. GVP_NOREF/REF_FALLBACK are
+  // literally the seedance-2 @720p 8s composites, so applying them to any
+  // other provider quotes one model's price for another (2026-08-05: the pro
+  // node stopped being Seedance-only, which made that a live mis-quote rather
+  // than a theoretical one). Everything else prices per-segment — see
+  // `gvpSegmentCost`.
+  if (!isSeedance2Provider(provider)) return 0
+  return (ref ? GVP_REF_FALLBACK : GVP_NOREF_FALLBACK) / 8
+}
+
+/** True when this provider prices on the LINEAR per-second axis (the
+ *  Seedance-2 family + minimax-h3). UI twin of the backend's `hasPerSecRate`. */
+function gvpIsPerSecPriced(provider: string): boolean {
+  return isSeedance2Provider(provider) || isMinimaxH3Provider(provider)
+}
+
+/** Display-side cost of ONE keyframes segment on a flat-priced provider —
+ *  exactly one plain image-to-video generation, through the same canonical
+ *  identifier the backend's `segmentCost` builds. 0 while the cache is cold
+ *  (the badge fills in once `useModelCredits` resolves) rather than a
+ *  borrowed number from another model. */
+function gvpSegmentCost(provider: string, resolution: string, durationSec: number): number {
+  const identifier = buildVideoCreditModelIdentifier(
+    provider, durationSec, false, "image-to-video", undefined, resolution, false,
+  )
+  return getCachedCredits(identifier) ?? getCachedCredits(provider) ?? 0
 }
 
 /** UI twin of the backend's `computePreferredSplit` (preferred-point lever,
@@ -289,6 +315,27 @@ export function estimateGenerateVideoProCredits(data: GenerateVideoProNodeData):
   }
 
   const fee = getCachedCredits("generate-video-pro") ?? GVP_FEE_FALLBACK
+
+  // FLAT-PRICED providers (veo3 family, gemini-omni-video, grok-i2v,
+  // happyhorse-ref2v) have no per-second axis, and they render keyframes-only:
+  // every segment is an independent image-to-video generation, so the estimate
+  // is the fee plus each segment's own composite. Mirrors the backend's
+  // `segmentCosts` reserve; the per-second formula below would multiply a
+  // meaningless 0 rate.
+  //
+  // Segment COUNT comes from the provider's own longest segment, not the
+  // Seedance-shaped 15s in GVP_SPLIT — veo3 caps at 8s, so a 30s request is 4
+  // segments there and 2 here if the constant were used. The backend's packer
+  // picks the exact lengths; this display estimate only needs the count and a
+  // representative length (flat-priced models charge the same for any length,
+  // and the duration-tiered one is close enough for a badge).
+  if (!gvpIsPerSecPriced(provider)) {
+    const maxSeg = maxSegmentSecFor(provider) || GVP_SPLIT.maxSeg
+    const n = Math.max(1, Math.ceil(split.clampedD / maxSeg))
+    const per = Math.max(1, Math.round(split.clampedD / n))
+    return fee + n * gvpSegmentCost(provider, resolution, per)
+  }
+
   const noRefPerSec = gvpPerSecRate(provider, resolution, false)
   const refPerSec = gvpPerSecRate(provider, resolution, true)
   // Context-tail override — same [2,15] clamp as the backend helper so the
