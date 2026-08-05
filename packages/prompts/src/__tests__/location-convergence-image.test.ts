@@ -10,12 +10,16 @@ const library: ConnectedReference = {
 }
 
 describe("location reference converges onto the image hybrid form", () => {
-  it("wired location (canonical) → 'the background from reference image A', no legacy block", () => {
+  // The DEFAULT role for a wired location became "location" (2026-08-05) — a
+  // place, not a backdrop to paste. This assertion previously pinned "the
+  // background from …", the wording measured to produce cut-out composites.
+  // The explicit `:background` token below is unaffected and still renders it.
+  it("wired location (canonical) → 'the location from reference image A', no legacy block", () => {
     const out = buildImagePrompt({
       prompt: "a detective at her desk", connectedReferences: [library],
       provider: "nano-banana-pro", referenceFormat: "hybrid",
     })
-    expect(out.prompt).toContain("the background from reference image A")
+    expect(out.prompt).toContain("the location from reference image A")
     expect(out.prompt).not.toContain("Use these locations:")
     expect(out.referenceImageUrls).toContain("https://cdn/library.png")
   })

@@ -11,7 +11,10 @@ import { DEFAULT_LABEL_BY_SOURCE, type ReferenceSource } from "./types.js"
 export const REFERENCE_ROLE_PRESETS: Record<ReferenceSource, readonly string[]> = {
   "wired-character": ["ref-only", "person", "face", "clothes", "hair", "pose", "expression", "style"],
   "wired-face": ["face", "person", "expression", "style"],
-  "wired-location": ["ref-only", "background", "atmosphere", "as-is", "empty background", "layout", "lighting", "style"],
+  // "location" sits second, mirroring wired-character's ref-only/person order —
+  // it is this source's default. "background" keeps its place for the genuine
+  // backdrop case (see DEFAULT_LABEL_BY_SOURCE for why it stopped being default).
+  "wired-location": ["ref-only", "location", "background", "atmosphere", "as-is", "empty background", "layout", "lighting", "style"],
   "wired-object": ["object", "shape", "material", "color", "texture", "style"],
   "wired-creature": ["creature", "anatomy", "markings", "pose", "color", "style"],
   "wired-image": ["object", "person", "face", "clothes", "background", "style", "pose", "texture"],
