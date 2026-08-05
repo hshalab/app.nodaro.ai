@@ -59,13 +59,18 @@
  */
 
 /**
- * Default-deny + likeness + compose. Prepended ahead of the scene when the
- * caller's reference-rules toggle is on.
+ * Default-deny + likeness + compose. Goes ahead of the scene it governs.
  *
- * ONE STRING, THREE CONSUMERS — the injected default, the `reference-lock`
- * factory snippet, and gvp/recast's own grounding. They drifted apart once
- * already (the snippet and gvp each carried a different version, and neither
- * knew the other existed), which is the whole reason this is a constant.
+ * OPT-IN, NOT INJECTED. An earlier cut of this work defaulted it on for every
+ * image node; Tal's call was that the snippets are enough, and he is right for
+ * a wording still being learned — a platform-wide default would apply the
+ * current best guess to every job at once, and the evidence for WHICH block is
+ * best is still split (see REFERENCE_RULES_MULTI_PERSON).
+ *
+ * ONE STRING, TWO CONSUMERS — the `reference-lock` factory snippet and
+ * gvp/recast's own grounding. They drifted apart once already (the snippet and
+ * gvp each carried a different version, and neither knew the other existed),
+ * which is the whole reason this is a constant rather than two literals.
  */
 export const REFERENCE_RULES =
   "Do not use anything from reference images unless specified explicitly. " +
@@ -196,9 +201,13 @@ export const CINEMATIC_LOOK_TAIL =
   "warm skin tones and gentle shadow fall-off"
 
 /**
- * The rules a caller's toggles resolve to, joined in a stable order and ready
- * to prepend. Returns `""` when everything is off, so the caller can prepend
- * unconditionally.
+ * Compose the blocks a caller wants, in a stable order, ready to prepend.
+ * Returns `""` when everything is off, so a caller can prepend blind.
+ *
+ * No route calls this today — the platform ships these as SNIPPETS a user
+ * inserts. It exists for gvp/recast (which builds its grounding block in code)
+ * and for whatever calls this next, so the ordering rule lives in one place:
+ * rules first, eyeline rule after them, scene after both.
  */
 export function referenceRulesBlock(opts?: {
   /** Default-deny + likeness + compose. Absent = ON. */
