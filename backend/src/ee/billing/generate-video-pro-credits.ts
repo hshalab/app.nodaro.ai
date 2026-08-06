@@ -52,6 +52,20 @@ export interface GenerateVideoProPricing {
   refPerSec: number
   tailSec: number
   reserveBase: number // pre-markup
+  /**
+   * The resolution this run was actually PRICED at — the request clamped onto
+   * the provider's catalog tiers (see `clampResolution`), or its own vocabulary
+   * for Hailuo 3.
+   *
+   * ECHOED so the render can use it. The clamp snaps to the NEAREST tier, which
+   * can be DOWNWARD; a provider handed the raw request while billing quoted the
+   * clamp would deliver something the reserve never covered. Rendering this
+   * value is what makes price and delivery the same by construction.
+   *
+   * Additive-optional: absent means a caller predating the field, which renders
+   * the raw request exactly as it always has.
+   */
+  resolution?: string
   creditIdentifier?: string // single mode only
   /** CONTINUATION billing floor (2026-07-21): 1-based segment the CHILD job
    *  starts paying from — segments below it were delivered and billed by the
@@ -483,10 +497,26 @@ export function clampContextTailSec(v: unknown): number {
 /**
  * Clamp a requested resolution to the provider's catalog resolutions (single
  * source of truth) — an unsupported tier (e.g. a stale 1080p on
- * seedance-2-mini, which only exposes 480p/720p) snaps to the model's top
- * priced tier so every downstream composite lookup is always seeded.
+ * seedance-2-mini, which only exposes 480p/720p) snaps to a real one so every
+ * downstream composite lookup is always seeded.
  * Mirrors `seedance2-ref-video-credits.ts` / `packages/shared/src/credit-identifiers.ts`.
+ *
+ * SNAPS TO THE NEAREST TIER, not the highest (2026-08-06). It used to take the
+ * model's top tier, so asking for the CHEAPEST resolution a model lacks quoted
+ * the priciest one it has: 480p on veo3 (720p/1080p/4k) priced and reserved
+ * **4k**. Nobody asking for 480p wants to be billed for 4k, and the old rule
+ * made the error worst exactly where the caller was trying to spend least.
+ *
+ * TIES GO TO THE CHEAPER TIER, for the same reason — charging above what was
+ * asked for is the worse of the two mistakes.
+ *
+ * Nearest is only SAFE because the clamped value is echoed back
+ * ({@link GenerateVideoProPricing.resolution}) and the render uses it. Snapping
+ * DOWN while the provider still rendered the raw request would reserve less
+ * than the run delivers, which is precisely why the old rule reached upward.
  */
+const RESOLUTION_LADDER = ["480p", "720p", "1080p", "4k"] as const
+
 function clampResolution(provider: string, resolution: string): string {
   // MiniMax Hailuo 3: its own two-value space ("2K" default / "768P") with its
   // own collapse rule — anything not exactly 768P (incl. a stale Seedance
@@ -494,7 +524,22 @@ function clampResolution(provider: string, resolution: string): string {
   if (isMinimaxH3Provider(provider)) return normalizeMinimaxH3Resolution(resolution)
   const supported = MODEL_CATALOG[provider]?.resolutions ?? ["480p", "720p", "1080p"]
   const want = resolution === "4k" ? "4k" : resolution === "1080p" ? "1080p" : resolution === "720p" ? "720p" : "480p"
-  return supported.includes(want) ? want : (supported[supported.length - 1] ?? "480p")
+  if (supported.includes(want)) return want
+  const wantAt = RESOLUTION_LADDER.indexOf(want)
+  let best: string | undefined
+  let bestDistance = Number.POSITIVE_INFINITY
+  // Walked low → high, so an equidistant pair settles on the cheaper tier.
+  for (const tier of RESOLUTION_LADDER) {
+    if (!supported.includes(tier)) continue
+    const distance = Math.abs(RESOLUTION_LADDER.indexOf(tier) - wantAt)
+    if (distance < bestDistance) {
+      best = tier
+      bestDistance = distance
+    }
+  }
+  // A catalog listing nothing this ladder knows keeps the old top-tier rule as
+  // the backstop: still seeded, still never under-reserving.
+  return best ?? supported[supported.length - 1] ?? "480p"
 }
 
 /**
@@ -706,6 +751,7 @@ export async function computeGenerateVideoProPricing(args: {
       segmentCount: split.n,
       totalRawSec: split.s,
       segmentDurations: split.durations,
+      resolution,
       ...(split.snapped ? { segmentDurationsSnapped: true as const } : {}),
       feeBase,
       noRefPerSec,
@@ -743,6 +789,7 @@ export async function computeGenerateVideoProPricing(args: {
       segmentCount: split.n,
       totalRawSec: split.s,
       segmentDurations: split.durations,
+      resolution,
       ...(split.snapped ? { segmentDurationsSnapped: true as const } : {}),
       feeBase: 0,
       noRefPerSec,
@@ -779,6 +826,7 @@ export async function computeGenerateVideoProPricing(args: {
     segmentCount: split.n,
     totalRawSec: split.s,
     segmentDurations: split.durations,
+    resolution,
     ...(split.snapped ? { segmentDurationsSnapped: true as const } : {}),
     feeBase,
     noRefPerSec,
