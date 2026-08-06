@@ -119,6 +119,23 @@ function streamResponse(chunks: string[], headers: Record<string, string> = {}):
   })
 }
 
+/**
+ * A Claude `messages` SSE response. Non-streamed Claude calls are served over
+ * KIE's STREAMING wire and collapsed back to one response
+ * (KIE_CLAUDE_NONSTREAM_VERIFIED = false — its `stream: false` endpoint 500s),
+ * so KIE-lane tests must answer with SSE rather than a JSON body.
+ */
+function claudeSse(
+  text: string,
+  usage: { input_tokens: number; output_tokens: number },
+  creditsConsumed?: number,
+): Response {
+  return streamResponse([
+    `data: ${JSON.stringify({ type: "content_block_delta", delta: { type: "text_delta", text } })}\n`,
+    `data: ${JSON.stringify({ type: "message_delta", usage, ...(creditsConsumed !== undefined ? { credits_consumed: creditsConsumed } : {}) })}\n`,
+  ])
+}
+
 describe("KIE error envelope handling (regression: empty output for Gemini/GPT)", () => {
   let fetchMock: ReturnType<typeof vi.fn>
 
@@ -207,7 +224,9 @@ describe("KIE error envelope handling (regression: empty output for Gemini/GPT)"
     const { llmComplete } = await import("../llm-client.js")
     // claude-haiku-4.5 has directFallbackModel set but ANTHROPIC_API_KEY is mocked undefined,
     // so it falls through to KIE messages path.
-    fetchMock.mockResolvedValue(jsonResponse({ code: 500, msg: "maintenance" }))
+    // Fresh Response per call: this path is served over the collapsed stream and
+    // retries once, and a single Response's body can only be read one time.
+    fetchMock.mockImplementation(() => Promise.resolve(jsonResponse({ code: 500, msg: "maintenance" })))
     await expect(
       llmComplete({
         modelId: "claude-haiku-4.5",
@@ -294,7 +313,7 @@ describe("reasoningEffort wire mapping + temperature strip", () => {
 
   it("messages format (KIE Claude): adaptive thinking + output_config.effort, temperature stripped", async () => {
     const { llmComplete } = await import("../llm-client.js")
-    fetchMock.mockResolvedValue(jsonResponse({ content: [{ type: "text", text: "ok" }], usage: { input_tokens: 1, output_tokens: 1 } }))
+    fetchMock.mockResolvedValue(claudeSse("ok", { input_tokens: 1, output_tokens: 1 }))
     await llmComplete({ modelId: "claude-sonnet-5", system: "s", messages: [{ role: "user", content: "hi" }], temperature: 0.7, reasoningEffort: "high" })
     const body = JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body)
     expect(body.thinking).toEqual({ type: "adaptive" })
@@ -305,7 +324,7 @@ describe("reasoningEffort wire mapping + temperature strip", () => {
 
   it("messages format: floors an explicit small maxTokens at max effort (legacy 2048 node data must not truncate)", async () => {
     const { llmComplete } = await import("../llm-client.js")
-    fetchMock.mockResolvedValue(jsonResponse({ content: [{ type: "text", text: "ok" }], usage: { input_tokens: 1, output_tokens: 1 } }))
+    fetchMock.mockResolvedValue(claudeSse("ok", { input_tokens: 1, output_tokens: 1 }))
     await llmComplete({ modelId: "claude-sonnet-5", system: "s", messages: [{ role: "user", content: "hi" }], maxTokens: 2048, reasoningEffort: "max" })
     const body = JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body)
     expect(body.max_tokens).toBe(32768)
@@ -313,7 +332,7 @@ describe("reasoningEffort wire mapping + temperature strip", () => {
 
   it("messages format: an explicit maxTokens is respected at high effort (floor is xhigh/max only)", async () => {
     const { llmComplete } = await import("../llm-client.js")
-    fetchMock.mockResolvedValue(jsonResponse({ content: [{ type: "text", text: "ok" }], usage: { input_tokens: 1, output_tokens: 1 } }))
+    fetchMock.mockResolvedValue(claudeSse("ok", { input_tokens: 1, output_tokens: 1 }))
     await llmComplete({ modelId: "claude-sonnet-5", system: "s", messages: [{ role: "user", content: "hi" }], maxTokens: 2048, reasoningEffort: "high" })
     const body = JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body)
     expect(body.max_tokens).toBe(2048)
@@ -321,7 +340,7 @@ describe("reasoningEffort wire mapping + temperature strip", () => {
 
   it("messages format without effort: no thinking/output_config, temperature still stripped for sonnet-5", async () => {
     const { llmComplete } = await import("../llm-client.js")
-    fetchMock.mockResolvedValue(jsonResponse({ content: [{ type: "text", text: "ok" }], usage: { input_tokens: 1, output_tokens: 1 } }))
+    fetchMock.mockResolvedValue(claudeSse("ok", { input_tokens: 1, output_tokens: 1 }))
     await llmComplete({ modelId: "claude-sonnet-5", system: "s", messages: [{ role: "user", content: "hi" }], temperature: 0.7 })
     const body = JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body)
     expect(body.thinking).toBeUndefined()
@@ -364,12 +383,7 @@ describe("actual-cost capture from KIE credits_consumed", () => {
 
   it("messages: no credits_consumed field falls back to the table estimate", async () => {
     const { llmComplete } = await import("../llm-client.js")
-    fetchMock.mockResolvedValue(
-      jsonResponse({
-        content: [{ type: "text", text: "ok" }],
-        usage: { input_tokens: 1000, output_tokens: 500 },
-      }),
-    )
+    fetchMock.mockResolvedValue(claudeSse("ok", { input_tokens: 1000, output_tokens: 500 }))
     const res = await llmComplete({
       modelId: "claude-opus-4.7",
       system: "",
@@ -378,6 +392,25 @@ describe("actual-cost capture from KIE credits_consumed", () => {
     expect(res.providerCost).toBeCloseTo(
       calculateLlmCost("claude-opus-4.7", { inputTokens: 1000, outputTokens: 500 }),
       10,
+    )
+  })
+
+  // KIE's Claude SSE carries credits_consumed (verified live 2026-08-06), so
+  // collapsing the stream must NOT quietly downgrade actual-cost capture to the
+  // rate-table estimate — real billing still wins, same as the non-stream path.
+  it("messages: credits_consumed on the collapsed stream beats the table estimate", async () => {
+    const { llmComplete } = await import("../llm-client.js")
+    fetchMock.mockResolvedValue(claudeSse("ok", { input_tokens: 1000, output_tokens: 500 }, 2))
+    const res = await llmComplete({
+      modelId: "claude-opus-4.7",
+      system: "",
+      messages: [{ role: "user", content: "hi" }],
+    })
+    // 2 KIE credits * $0.005 = $0.01, distinct from the table estimate.
+    expect(res.providerCost).toBeCloseTo(0.01, 10)
+    expect(res.providerCost).not.toBeCloseTo(
+      calculateLlmCost("claude-opus-4.7", { inputTokens: 1000, outputTokens: 500 }),
+      6,
     )
   })
 
