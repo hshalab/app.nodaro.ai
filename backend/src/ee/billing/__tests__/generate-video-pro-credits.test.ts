@@ -1162,3 +1162,65 @@ describe("explicit segmentDurations — off-grid entries snap onto the provider'
     ).rejects.toThrow(/integer/)
   })
 })
+
+/**
+ * UNSUPPORTED RESOLUTIONS SNAP TO THE NEAREST TIER (2026-08-06).
+ *
+ * The clamp used to snap to the model's HIGHEST supported tier, so a request
+ * for the CHEAPEST resolution on a model that lacks it quoted the priciest one
+ * — 480p on veo3 (720p/1080p/4k) priced and reserved 4k. Nobody asking for
+ * 480p wants to be charged for 4k.
+ *
+ * Nearest is only safe because the clamped value is now ECHOED and the render
+ * uses it: a run priced at 720p renders at 720p, so the reserve cannot come in
+ * under what is delivered.
+ */
+describe("clampResolution — an unsupported tier snaps to the NEAREST, not the priciest", () => {
+  it("prices 480p on veo3 as its lowest real tier, not 4k", async () => {
+    const p = await computeGenerateVideoProPricing({
+      provider: "veo3", resolution: "480p", durationSec: 8,
+      renderMethod: "keyframes", segmentDurations: [8],
+    })
+    expect(p.resolution).toBe("720p")
+  })
+
+  it("snaps DOWN as readily as up — 4k on a 480p/720p model is 720p", async () => {
+    const p = await computeGenerateVideoProPricing({
+      provider: "seedance-2-fast", resolution: "4k", durationSec: 8,
+    })
+    expect(p.resolution).toBe("720p")
+  })
+
+  it("echoes a supported resolution untouched", async () => {
+    const p = await computeGenerateVideoProPricing({
+      provider: "seedance-2", resolution: "1080p", durationSec: 8,
+    })
+    expect(p.resolution).toBe("1080p")
+  })
+
+  it("breaks a tie toward the CHEAPER tier", async () => {
+    // 720p is equidistant from 480p and 1080p. Charging someone more than they
+    // asked for is the worse error.
+    const p = await computeGenerateVideoProPricing({
+      provider: "happyhorse-ref2v", resolution: "480p", durationSec: 8,
+      renderMethod: "keyframes", segmentDurations: [8],
+    })
+    expect(p.resolution).toBe("720p")
+  })
+
+  it("keeps Hailuo's own two-value space", async () => {
+    // 768P/2K is not this vocabulary; its own normalizer still decides.
+    const p = await computeGenerateVideoProPricing({
+      provider: "minimax-h3", resolution: "768p", durationSec: 8,
+    })
+    expect(p.resolution).toBe("768P")
+  })
+
+  it("REGRESSION BAR: a supported request prices exactly as before", async () => {
+    const p = await computeGenerateVideoProPricing({
+      provider: "seedance-2", resolution: "720p", durationSec: 8,
+    })
+    expect(p.reserveBase).toBe(820)
+    expect(p.creditIdentifier).toBe("seedance-2:8s:720p")
+  })
+})
