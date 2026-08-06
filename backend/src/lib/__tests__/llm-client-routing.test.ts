@@ -68,14 +68,113 @@ describe("preferKie routing (claude-sonnet-5 / claude-opus-4.8)", () => {
   beforeEach(() => { fetchMock = vi.fn(); vi.stubGlobal("fetch", fetchMock); createSpy.mockReset().mockResolvedValue(anthropicOk) })
   afterEach(() => { vi.unstubAllGlobals() })
 
-  it("plain call goes to KIE first", async () => {
+  // KIE's Claude proxy 500s on EVERY non-streaming request, model-independently
+  // (measured 2026-08-06 — see KIE_CLAUDE_NONSTREAM_VERIFIED). llmComplete is
+  // the non-streaming entry point, so `preferKie` cannot apply here until that
+  // flag flips back; the KIE leg would be a guaranteed 500 before the fallback.
+  it("plain non-streaming call goes direct — KIE's non-stream Claude lane is down", async () => {
     const { llmComplete } = await import("../llm-client.js")
     fetchMock.mockResolvedValue(kieOk())
     const res = await llmComplete({ modelId: "claude-sonnet-5", system: "", messages: [{ role: "user", content: "hi" }] })
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(createSpy).toHaveBeenCalledOnce()
+    expect(res.text).toBe("direct")
+  })
+
+  // The reported symptom was "all Opus 5 calls fail on KIE". The outage is the
+  // LANE, not the model — so every Claude model must leave the non-stream KIE
+  // path, and swapping opus-5 for opus-4.8 would have fixed nothing.
+  it.each(["claude-opus-5", "claude-opus-4.8", "claude-fable-5", "claude-sonnet-5", "claude-opus-4.7"])(
+    "%s never touches the non-streaming KIE lane",
+    async (modelId) => {
+      const { llmComplete } = await import("../llm-client.js")
+      fetchMock.mockResolvedValue(kieOk())
+      const res = await llmComplete({ modelId, system: "", messages: [{ role: "user", content: "hi" }] })
+      expect(fetchMock).not.toHaveBeenCalled()
+      expect(createSpy).toHaveBeenCalledOnce()
+      expect(res.text).toBe("direct")
+    },
+  )
+
+  // The direct lane is primary but not incident-free (Anthropic logged four
+  // elevated-error incidents across 2026-08-04/05, two naming Opus 5). KIE's
+  // STREAMING wire still works while its non-streaming one 500s, so collapsing
+  // a stream gives llmComplete a real second lane rather than none.
+  it("falls back to KIE's collapsed stream when the direct lane fails", async () => {
+    const { llmComplete } = await import("../llm-client.js")
+    createSpy.mockReset().mockRejectedValue(new Error("anthropic 529 overloaded"))
+    fetchMock.mockResolvedValue(
+      streamResponse([
+        'data: {"type":"content_block_delta","delta":{"text":"from-"}}\n',
+        'data: {"type":"content_block_delta","delta":{"text":"kie-stream"}}\n',
+        'data: {"type":"message_delta","usage":{"input_tokens":3,"output_tokens":4}}\n',
+      ]),
+    )
+    const res = await llmComplete({ modelId: "claude-opus-5", system: "", messages: [{ role: "user", content: "hi" }] })
+    expect(createSpy).toHaveBeenCalledOnce()
     expect(fetchMock).toHaveBeenCalledOnce()
-    expect((fetchMock.mock.calls[0][0] as string)).toContain("/claude/v1/messages")
-    expect(createSpy).not.toHaveBeenCalled()
-    expect(res.text).toBe("kie")
+    expect(res.text).toBe("from-kie-stream")
+    // It must use the wire that WORKS — a stream:false body would 500 on KIE.
+    const body = JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body)
+    expect(body.stream).toBe(true)
+  })
+
+  // Over SSE a forced tool arrives as real input_json_delta fragments, not the
+  // malformed <tool_calls> pseudo-tag the non-streaming path has to decode.
+  it("reassembles forced-tool JSON from the collapsed stream", async () => {
+    const { llmComplete } = await import("../llm-client.js")
+    createSpy.mockReset().mockRejectedValue(new Error("anthropic down"))
+    fetchMock.mockResolvedValue(
+      streamResponse([
+        'data: {"type":"content_block_start","content_block":{"type":"tool_use","name":"r"}}\n',
+        'data: {"type":"content_block_delta","delta":{"type":"input_json_delta","partial_json":"{\\"ok\\":"}}\n',
+        'data: {"type":"content_block_delta","delta":{"type":"input_json_delta","partial_json":"true}"}}\n',
+        'data: {"type":"message_delta","usage":{"input_tokens":1,"output_tokens":1}}\n',
+      ]),
+    )
+    const res = await llmComplete({
+      modelId: "claude-opus-5",
+      system: "",
+      messages: [{ role: "user", content: "hi" }],
+      jsonSchema: { name: "r", schema: { type: "object" } },
+    })
+    expect(res.text).toBe('{"ok":true}')
+    expect(JSON.parse(res.text)).toEqual({ ok: true })
+  })
+
+  // KIE's Claude stream fails transiently ~1 call in 5, almost always as one
+  // `event: error` frame that a retry clears. The backstop only runs because
+  // direct already failed, so it gets exactly one more attempt.
+  it("retries the collapsed stream once past a transient KIE error frame", async () => {
+    const { llmComplete } = await import("../llm-client.js")
+    createSpy.mockReset().mockRejectedValue(new Error("anthropic down"))
+    vi.spyOn(console, "warn").mockImplementation(() => {})
+    fetchMock
+      .mockResolvedValueOnce(
+        streamResponse(['event: error\ndata: {"type":"error","error":{"type":"api_error","message":"Server exception"}}\n']),
+      )
+      .mockResolvedValueOnce(
+        streamResponse([
+          'data: {"type":"content_block_delta","delta":{"text":"recovered"}}\n',
+          'data: {"type":"message_delta","usage":{"input_tokens":1,"output_tokens":1}}\n',
+        ]),
+      )
+    const res = await llmComplete({ modelId: "claude-opus-5", system: "", messages: [{ role: "user", content: "hi" }] })
+    expect(res.text).toBe("recovered")
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it("surfaces the error when BOTH lanes fail — no empty-success, and the retry is bounded", async () => {
+    const { llmComplete } = await import("../llm-client.js")
+    createSpy.mockReset().mockRejectedValue(new Error("anthropic down"))
+    vi.spyOn(console, "warn").mockImplementation(() => {})
+    fetchMock.mockResolvedValue(streamResponse(['{"code":500,"msg":"maintenance"}']))
+    await expect(
+      llmComplete({ modelId: "claude-opus-5", system: "", messages: [{ role: "user", content: "hi" }] }),
+    ).rejects.toThrow()
+    // One initial attempt + exactly one retry — a genuinely down proxy must
+    // still fail fast rather than loop.
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
   it("falls back to direct Anthropic when KIE errors", async () => {
@@ -86,47 +185,32 @@ describe("preferKie routing (claude-sonnet-5 / claude-opus-4.8)", () => {
     expect(res.text).toBe("direct")
   })
 
-  // Forced tool_choice passthrough through the KIE proxy is verified — so
-  // structured requests are no longer forced direct on that basis. This
-  // replaces the original
-  // "structured requests go direct while KIE tools passthrough is unverified"
-  // test with its inverse, matching KIE_CLAUDE_TOOLS_VERIFIED = true.
-  it("structured requests go KIE-first — tools passthrough verified", async () => {
+  // KIE_CLAUDE_TOOLS_VERIFIED = true, so forced tools are no longer what pushes
+  // structured calls direct — the non-stream outage is. Same destination,
+  // different reason; this pins that structured calls carry the forced tool on
+  // the DIRECT wire.
+  it("structured requests go direct and still force the tool", async () => {
     const { llmComplete } = await import("../llm-client.js")
-    fetchMock.mockResolvedValue(
-      jsonResponse({
-        content: [{ type: "tool_use", input: { ok: true } }],
-        usage: { input_tokens: 1, output_tokens: 1 },
-      }),
-    )
+    createSpy.mockResolvedValue({
+      content: [{ type: "tool_use", name: "r", input: { ok: true } }],
+      usage: { input_tokens: 1, output_tokens: 1 },
+    })
     const res = await llmComplete({
       modelId: "claude-sonnet-5",
       system: "",
       messages: [{ role: "user", content: "hi" }],
       jsonSchema: { name: "r", schema: { type: "object" } },
     })
-    expect(fetchMock).toHaveBeenCalledOnce()
-    expect((fetchMock.mock.calls[0][0] as string)).toContain("/claude/v1/messages")
-    expect(createSpy).not.toHaveBeenCalled()
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(createSpy).toHaveBeenCalledOnce()
 
-    // The forced-tool schema must actually be carried on the wire — not just routed to KIE.
-    const body = JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body)
-    expect(body.tools[0].name).toBe("r")
-    expect(body.tools[0].input_schema).toEqual({ type: "object" })
+    // The forced-tool schema must actually be carried on the wire.
+    const body = createSpy.mock.calls[0][0] as Record<string, unknown>
+    const tools = body.tools as Array<Record<string, unknown>>
+    expect(tools[0].name).toBe("r")
     expect(body.tool_choice).toEqual({ type: "tool", name: "r" })
 
-    // A forced-tool response carries a tool_use block, not text — the parser must prefer it.
     expect(res.text).toBe(JSON.stringify({ ok: true }))
-  })
-
-  it("plain call goes to KIE first (claude-opus-4.8)", async () => {
-    const { llmComplete } = await import("../llm-client.js")
-    fetchMock.mockResolvedValue(kieOk())
-    const res = await llmComplete({ modelId: "claude-opus-4.8", system: "", messages: [{ role: "user", content: "hi" }] })
-    expect(fetchMock).toHaveBeenCalledOnce()
-    expect((fetchMock.mock.calls[0][0] as string)).toContain("/claude/v1/messages")
-    expect(createSpy).not.toHaveBeenCalled()
-    expect(res.text).toBe("kie")
   })
 
   it("existing Claude models still go direct-first", async () => {
@@ -198,6 +282,48 @@ describe("llmStream preferKie routing (claude-sonnet-5)", () => {
     expect(streamSpy).toHaveBeenCalledOnce()
     expect(tokens).toEqual(["direct-stream-text"])
     expect(res.text).toBe("direct-stream-text")
+  })
+
+  // KIE's Claude stream can emit an `event: error` frame instead of content
+  // (observed in 1 of 6 plain requests, 2026-08-06). That frame matches no
+  // format branch, so before the fix the stream ended with fullText === "" and
+  // was returned as a SUCCESSFUL empty completion — no throw, so the fallback
+  // never ran and the user got a blank answer.
+  it("KIE stream error event before any token → throws, so the direct fallback runs", async () => {
+    const { llmStream } = await import("../llm-client.js")
+    fetchMock.mockResolvedValue(
+      streamResponse([
+        'event: error\ndata: {"type":"error","error":{"type":"api_error","message":"Server exception, please try again later"}}\n',
+      ]),
+    )
+    streamSpy.mockReturnValue(anthropicStreamStub("direct-stream-text"))
+    const tokens: string[] = []
+    const res = await llmStream(
+      { modelId: "claude-sonnet-5", system: "", messages: [{ role: "user", content: "hi" }] },
+      (t) => tokens.push(t),
+    )
+    expect(streamSpy).toHaveBeenCalledOnce()
+    expect(res.text).toBe("direct-stream-text")
+    expect(tokens).toEqual(["direct-stream-text"])
+  })
+
+  it("KIE stream error event AFTER a token → surfaces, never returns a truncated success", async () => {
+    const { llmStream } = await import("../llm-client.js")
+    fetchMock.mockResolvedValue(
+      streamResponse([
+        'data: {"type":"content_block_delta","delta":{"text":"He"}}\n',
+        'event: error\ndata: {"type":"error","error":{"type":"api_error","message":"Server exception, please try again later"}}\n',
+      ]),
+    )
+    const tokens: string[] = []
+    await expect(
+      llmStream(
+        { modelId: "claude-sonnet-5", system: "", messages: [{ role: "user", content: "hi" }] },
+        (t) => tokens.push(t),
+      ),
+    ).rejects.toThrow(/error event/)
+    expect(streamSpy).not.toHaveBeenCalled()
+    expect(tokens).toEqual(["He"])
   })
 
   it("KIE stream fails AFTER >=1 token → error rethrown, no direct fallback, first token delivered exactly once", async () => {
