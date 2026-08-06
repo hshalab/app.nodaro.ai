@@ -1,4 +1,4 @@
-import { IMAGE_GEN_PROVIDERS, IMAGE_TO_VIDEO_PROVIDERS, TEXT_TO_VIDEO_PROVIDERS, VIDEO_GEN_PROVIDERS, LIP_SYNC_PROVIDERS, VOICE_CHANGER_MODEL_IDS, GVP_SUPPORTED_PROVIDERS, SEEDANCE_2_PROVIDERS, VIDEO_ANALYSIS_TIER_ORDER } from "@nodaro/shared"
+import { IMAGE_GEN_PROVIDERS, IMAGE_TO_VIDEO_PROVIDERS, TEXT_TO_VIDEO_PROVIDERS, VIDEO_GEN_PROVIDERS, LIP_SYNC_PROVIDERS, VOICE_CHANGER_MODEL_IDS, GVP_SUPPORTED_PROVIDERS, SEEDANCE_2_PROVIDERS, VIDEO_ANALYSIS_TIER_ORDER, hasContiguousSegmentDurations } from "@nodaro/shared"
 import type { OutputType } from "@nodaro/shared"
 import { STATIC_CREDIT_COSTS } from "../ee/billing/credits.js"
 
@@ -29,6 +29,16 @@ export interface NodeDescriptor {
   inputSchema?: { fields: Array<{ key: string; type: string; required?: boolean; options?: string[] }> }
   /** For AI nodes: list of provider IDs supported. */
   providers?: string[]
+  /**
+   * The subset of `providers` whose duration menu is NOT every integer between
+   * its min and max — veo3's 4/6/8, grok-i2v's 6/10.
+   *
+   * Such a model renders in FIXED clip lengths, so a scene-aligned request is
+   * snapped onto its menu at pricing time and the delivered parts cannot land
+   * exactly on the scene cuts. Clients surface that; nobody should have to
+   * derive it, and a client cannot — its own catalog copy lags this one.
+   */
+  sparseProviders?: string[]
   /** Capabilities flags (e.g. "supports-reference-image", "supports-end-frame"). */
   capabilities?: string[]
   /**
@@ -55,6 +65,12 @@ export interface NodeDescriptor {
 // reference images, and declares segment durations. Was a hand-kept literal
 // until 2026-08-05.
 const GVP_PROVIDERS = [...GVP_SUPPORTED_PROVIDERS]
+// Offered models whose duration menu is SPARSE (veo3's 4/6/8,
+// gemini-omni-video's 4/6/8/10, grok-i2v's 6/10). Derived from the catalog for
+// the same reason GVP_PROVIDERS is — a hand-kept list goes stale the day a
+// model's durations change. Serving it lets a client say that such a model
+// renders in fixed clip lengths without owning a catalog copy of its own.
+const GVP_SPARSE_PROVIDERS = GVP_PROVIDERS.filter((p) => !hasContiguousSegmentDurations(p))
 // edit-video-pro stays Seedance-only (no minimax-h3: it has no v2v mode /
 // -ref pricing axis — same reasoning as the frontend's EVP_PROVIDERS subset).
 const EVP_REGISTRY_PROVIDERS = [...SEEDANCE_2_PROVIDERS]
@@ -273,6 +289,7 @@ export const NODE_REGISTRY: NodeDescriptor[] = [
     // ee/billing/generate-video-pro-credits.ts for the full closed-form.
     creditCost: 100,
     providers: GVP_PROVIDERS,
+    sparseProviders: GVP_SPARSE_PROVIDERS,
     capabilities: ["long-form", "auto-segmentation", "seamless-stitch"],
     inputSchema: {
       fields: [

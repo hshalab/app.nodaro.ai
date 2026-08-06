@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest"
+import { hasContiguousSegmentDurations } from "@nodaro/shared"
 import { NODE_REGISTRY } from "../node-registry.js"
 
 describe("generate-video-pro node registry", () => {
@@ -45,6 +46,23 @@ describe("generate-video-pro node registry", () => {
     // kling-3-omni is deliberately absent: it passes every capability check
     // but has no working dispatch path (VIDEO_PROVIDERS_WITHOUT_DISPATCH).
     expect(d?.providers).not.toContain("kling-3-omni")
+  })
+
+  it("names the offered models whose duration menu is SPARSE", () => {
+    // Consumers use this to say that such a model renders in fixed clip
+    // lengths, so its parts cannot land exactly on the scene cuts. Derived
+    // from the catalog, never hand-kept — same rule as `providers` above.
+    const d = NODE_REGISTRY.find((n) => n.type === "generate-video-pro")
+    expect(d?.sparseProviders).toEqual(["veo3", "veo3.1", "veo3_lite", "gemini-omni-video", "grok-i2v"])
+    // Every entry is actually offered, and actually sparse...
+    for (const id of d!.sparseProviders!) {
+      expect(d!.providers).toContain(id)
+      expect(hasContiguousSegmentDurations(id)).toBe(false)
+    }
+    // ...and nothing contiguous leaked in.
+    for (const id of d!.providers!) {
+      if (!d!.sparseProviders!.includes(id)) expect(hasContiguousSegmentDurations(id)).toBe(true)
+    }
   })
 
   it("edit-video-pro stays Seedance-only (no minimax-h3 — no v2v mode / -ref axis)", () => {
