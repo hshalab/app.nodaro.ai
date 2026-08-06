@@ -65,6 +65,40 @@ describe("generate-video-pro node registry", () => {
     }
   })
 
+  it("serves each model's supported resolutions, in the CLIENT's vocabulary", () => {
+    // A client cannot derive this: its own catalog copy lags this repo's, which
+    // is the same reason `providers` and `sparseProviders` are served rather
+    // than computed. Consumers disable the tiers a model cannot render, so
+    // nobody can pick one that the pricing would then clamp UP to the priciest
+    // supported tier.
+    const d = NODE_REGISTRY.find((n) => n.type === "generate-video-pro")
+    const res = d?.providerResolutions
+    expect(res).toBeDefined()
+    // Every offered model has an entry, and every entry is a non-empty subset
+    // of the vocabulary in low → high order.
+    for (const id of d!.providers!) {
+      const list = res![id]
+      expect(list, id).toBeDefined()
+      expect(list!.length, id).toBeGreaterThan(0)
+      expect(list, id).toEqual(["480p", "720p", "1080p", "4k"].filter((r) => list!.includes(r)))
+    }
+    expect(res!["seedance-2"]).toEqual(["480p", "720p", "1080p", "4k"])
+    expect(res!["seedance-2-fast"]).toEqual(["480p", "720p"])
+    expect(res!["veo3"]).toEqual(["720p", "1080p", "4k"])
+    expect(res!["grok-i2v"]).toEqual(["480p", "720p"])
+    expect(res!["happyhorse-ref2v"]).toEqual(["720p", "1080p"])
+  })
+
+  it("gives Hailuo 3 the one tier a run can actually reach", () => {
+    // minimax-h3 speaks 768P/2K, not this vocabulary, and ONLY a literal "768p"
+    // selects the cheaper tier — which this vocabulary cannot express. So every
+    // run reaches 2K, and 1080p (its nearest equivalent) is the only honest
+    // option to offer. Offering four would be offering a choice that does
+    // nothing.
+    const d = NODE_REGISTRY.find((n) => n.type === "generate-video-pro")
+    expect(d?.providerResolutions?.["minimax-h3"]).toEqual(["1080p"])
+  })
+
   it("edit-video-pro stays Seedance-only (no minimax-h3 — no v2v mode / -ref axis)", () => {
     const d = NODE_REGISTRY.find((n) => n.type === "edit-video-pro")
     expect(d?.providers).toEqual(["seedance-2", "seedance-2-fast", "seedance-2-mini"])

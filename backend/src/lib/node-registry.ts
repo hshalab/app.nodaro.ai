@@ -1,4 +1,4 @@
-import { IMAGE_GEN_PROVIDERS, IMAGE_TO_VIDEO_PROVIDERS, TEXT_TO_VIDEO_PROVIDERS, VIDEO_GEN_PROVIDERS, LIP_SYNC_PROVIDERS, VOICE_CHANGER_MODEL_IDS, GVP_SUPPORTED_PROVIDERS, SEEDANCE_2_PROVIDERS, VIDEO_ANALYSIS_TIER_ORDER, hasContiguousSegmentDurations } from "@nodaro/shared"
+import { IMAGE_GEN_PROVIDERS, IMAGE_TO_VIDEO_PROVIDERS, TEXT_TO_VIDEO_PROVIDERS, VIDEO_GEN_PROVIDERS, LIP_SYNC_PROVIDERS, VOICE_CHANGER_MODEL_IDS, GVP_SUPPORTED_PROVIDERS, SEEDANCE_2_PROVIDERS, VIDEO_ANALYSIS_TIER_ORDER, hasContiguousSegmentDurations, isMinimaxH3Provider, MODEL_CATALOG } from "@nodaro/shared"
 import type { OutputType } from "@nodaro/shared"
 import { STATIC_CREDIT_COSTS } from "../ee/billing/credits.js"
 
@@ -39,6 +39,17 @@ export interface NodeDescriptor {
    * derive it, and a client cannot — its own catalog copy lags this one.
    */
   sparseProviders?: string[]
+  /**
+   * Per provider, the output resolutions it can render — expressed in the
+   * CLIENT's vocabulary (`480p` / `720p` / `1080p` / `4k`), low to high.
+   *
+   * Served rather than derived for the same reason `providers` is: a client's
+   * own catalog copy lags this one, so it would be wrong for exactly the newest
+   * models. A consumer disables the tiers a model lacks, which is what stops
+   * anyone picking one that pricing would then clamp UPWARD to the model's
+   * priciest supported tier.
+   */
+  providerResolutions?: Record<string, string[]>
   /** Capabilities flags (e.g. "supports-reference-image", "supports-end-frame"). */
   capabilities?: string[]
   /**
@@ -71,6 +82,34 @@ const GVP_PROVIDERS = [...GVP_SUPPORTED_PROVIDERS]
 // model's durations change. Serving it lets a client say that such a model
 // renders in fixed clip lengths without owning a catalog copy of its own.
 const GVP_SPARSE_PROVIDERS = GVP_PROVIDERS.filter((p) => !hasContiguousSegmentDurations(p))
+
+/** The resolution vocabulary clients speak, low → high. */
+const GVP_RESOLUTION_VOCABULARY = ["480p", "720p", "1080p", "4k"] as const
+
+/**
+ * The subset of that vocabulary a provider can actually render.
+ *
+ * `minimax-h3` is the one model that does not speak it at all: its space is
+ * `768P` / `2K`, and `normalizeMinimaxH3Resolution` selects the cheaper tier
+ * ONLY for a literal `"768p"` — a value this vocabulary cannot express. So
+ * every run through it reaches 2K whatever was asked for, and `1080p` (2K's
+ * nearest equivalent here) is the only honest thing to offer. Listing four
+ * would be offering a choice that does nothing.
+ *
+ * A provider the catalog has no resolutions for keeps the whole vocabulary:
+ * refusing to offer tiers we cannot confirm are unsupported would be a
+ * regression for a model we simply know nothing about.
+ */
+function gvpResolutionsFor(provider: string): string[] {
+  if (isMinimaxH3Provider(provider)) return ["1080p"]
+  const supported = MODEL_CATALOG[provider]?.resolutions as readonly string[] | undefined
+  if (!supported || supported.length === 0) return [...GVP_RESOLUTION_VOCABULARY]
+  return GVP_RESOLUTION_VOCABULARY.filter((r) => supported.includes(r))
+}
+
+const GVP_PROVIDER_RESOLUTIONS: Record<string, string[]> = Object.fromEntries(
+  GVP_PROVIDERS.map((p) => [p, gvpResolutionsFor(p)]),
+)
 // edit-video-pro stays Seedance-only (no minimax-h3: it has no v2v mode /
 // -ref pricing axis — same reasoning as the frontend's EVP_PROVIDERS subset).
 const EVP_REGISTRY_PROVIDERS = [...SEEDANCE_2_PROVIDERS]
@@ -290,6 +329,7 @@ export const NODE_REGISTRY: NodeDescriptor[] = [
     creditCost: 100,
     providers: GVP_PROVIDERS,
     sparseProviders: GVP_SPARSE_PROVIDERS,
+    providerResolutions: GVP_PROVIDER_RESOLUTIONS,
     capabilities: ["long-form", "auto-segmentation", "seamless-stitch"],
     inputSchema: {
       fields: [
