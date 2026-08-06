@@ -1,6 +1,7 @@
 /** Factory snippet catalog (v1: image + video; audio/text follow later).
  *  Order within a category = menu order = pill quick-cycle order. */
 import type { FactorySnippet } from "./types.js"
+import { REFERENCE_RULES, SCENE_FRAME_RULE, FILM_STILL_PREFIX, CINEMATIC_LOOK_TAIL } from "../reference-rules.js"
 
 const B = ["image", "video"] as const
 const I = ["image"] as const
@@ -15,7 +16,24 @@ export const FACTORY_SNIPPETS: readonly FactorySnippet[] = [
   { id: "no-beautify", name: "No Beautify", description: "Stop the model 'improving' a face", text: "preserve natural skin texture, age lines, and asymmetries; do not beautify, smooth, slim, or rejuvenate the face", target: "prompt", media: I, category: "Identity & Consistency" },
 
   // ── Reference locks (prompt) — insert at the START of a reference prompt ──
-  { id: "reference-lock", name: "Reference Lock", description: "Default-deny + preserve likeness + compose into one image (full scenes)", text: "Do not use anything from reference images unless specified explicitly. All elements taken from reference images must preserve likeness. Compose them naturally into a single image.", target: "prompt", media: I, category: "Reference locks" },
+  // Text comes from the shared constant, not a hand-written twin. This entry used
+  // to carry its own wording — no face rules, likeness phrased as a passive —
+  // which scored 0/4 on moving a garment between references where the merged
+  // block scored 4/4 (see reference-rules.ts). A snippet is copied into the
+  // prompt at INSERT time, so changing it here only affects future insertions.
+  { id: "reference-lock", name: "Reference Lock", description: "Default-deny + preserve likeness + compose into one image (full scenes)", text: REFERENCE_RULES, target: "prompt", media: I, category: "Reference locks" },
+  // The eyeline suppressor, kept OUT of Reference Lock on purpose: a portrait
+  // or a piece to camera wants the eyeline. 4/4 on a brief where the lock alone
+  // was 0/4, at no measured cost to identity or wardrobe.
+  { id: "scene-frame", name: "Scene Frame", description: "Reads as a frame from a film, not a posed photo — nobody faces the lens", text: SCENE_FRAME_RULE, target: "prompt", media: I, category: "Reference locks" },
+  // A PREFIX, not a sentence — it swallows the scene that follows it, which is
+  // exactly why it costs nothing. The same idea written as a standalone claim
+  // ("This image is a scene start frame of a video.") lost the lead's identity
+  // in 3 of 3 draws. Goes at the very TOP, above the scene.
+  { id: "film-still-of", name: "Film Still Of", description: "Put at the very top, before the scene — lead with the shot size, e.g. \"Medium wide…\"", text: `Medium wide ${FILM_STILL_PREFIX.charAt(0).toLowerCase()}${FILM_STILL_PREFIX.slice(1)}`, target: "prompt", media: I, category: "Reference locks" },
+  // Goes at the very END. An example to edit — a different film wants a
+  // different stock; what generalises is that the look comes LAST.
+  { id: "cinematic-look", name: "Cinematic Look (16mm)", description: "Append at the END — film stock, lens, light and palette", text: CINEMATIC_LOOK_TAIL, target: "prompt", media: I, category: "Reference locks" },
   { id: "reference-extract", name: "Reference Extract", description: "Isolate only the specified elements — no scene, no figure", text: "Take only what is specified from the reference images. Do not take anything else.", target: "prompt", media: I, category: "Reference locks" },
   { id: "ghost-mannequin", name: "Ghost Mannequin", description: "Show worn garments without a wearer (product shot)", text: "Ghost-mannequin product shot: the garment in its natural worn shape, with no person, body, face, or mannequin visible.", target: "prompt", media: I, category: "Reference locks" },
 
