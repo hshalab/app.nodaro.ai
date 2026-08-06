@@ -195,7 +195,12 @@ export async function llmComplete(req: LlmRequest): Promise<LlmResponse> {
       (req.jsonSchema !== undefined && model.structuredOutputMode === "anthropic-tool" && !KIE_CLAUDE_TOOLS_VERIFIED) ||
       (eff !== undefined && !KIE_CLAUDE_EFFORT_VERIFIED)
     if (!model.preferKie || mustDirect || !config.KIE_API_KEY) {
-      return callAnthropicDirect(model, req)
+      // Direct is the primary lane here, but it is not incident-free — Anthropic
+      // logged four elevated-error incidents across 2026-08-04/05, two of them
+      // naming Opus 5. `callKieMessagesCollapsed` is a genuine second lane
+      // (KIE's streaming wire works even while its non-streaming one 500s), so
+      // an Anthropic wobble degrades instead of hard-failing.
+      return withFallback(() => callAnthropicDirect(model, req), kieFallback(model, req))
     }
     try {
       return await callKie(model, req)
@@ -780,7 +785,14 @@ async function callKie(model: LlmModelDef, req: LlmRequest): Promise<LlmResponse
     case "chat-completions":
       return callKieChatCompletions(model, req)
     case "messages":
-      return callKieMessages(model, req)
+      // One switch for every path that reaches KIE for a non-streamed Claude
+      // call — the fallback leg in llmComplete, a KIE-only deployment with no
+      // ANTHROPIC_API_KEY, and any future caller. While KIE's non-streaming
+      // Claude endpoint 500s unconditionally, the streaming wire collapsed back
+      // to a single response is the only shape that can actually be served.
+      return KIE_CLAUDE_NONSTREAM_VERIFIED
+        ? callKieMessages(model, req)
+        : callKieMessagesCollapsed(model, req)
     case "responses":
       return callKieResponses(model, req)
   }
@@ -953,6 +965,43 @@ async function streamKieMessages(
   }
 
   return parseSseStream(response, model.id, onToken, "messages")
+}
+
+/**
+ * Serve a NON-streaming Claude request over KIE's STREAMING wire, collapsing
+ * the SSE into one response.
+ *
+ * This exists because KIE's Claude lane is only half-broken: `stream: false`
+ * 500s every time, while `stream: true` answers normally (measured 2026-08-06 —
+ * 0/6 vs 5/6 plain, 6/6 with a forced tool). Collapsing the working half back
+ * into the non-streaming shape gives `llmComplete` a real second lane instead
+ * of none.
+ *
+ * That matters because the direct Anthropic lane is not incident-free either:
+ * status.claude.com logged "Degraded performance for Claude Opus 5" and
+ * "Degraded performance of multiple models" on 2026-08-05, plus two more
+ * elevated-error incidents on 2026-08-04. Direct-only would turn each of those
+ * into a hard outage for every non-streamed Claude call.
+ *
+ * A bonus: over SSE, a forced tool arrives as a REAL `tool_use` block with
+ * clean `input_json_delta` fragments — not the malformed `<tool_calls>`
+ * pseudo-tag the non-streaming path has to reverse-engineer.
+ */
+async function callKieMessagesCollapsed(model: LlmModelDef, req: LlmRequest): Promise<LlmResponse> {
+  // No caller wants the tokens — this is the non-streaming entry point.
+  const once = () => streamKieMessages(model, req, () => {})
+  try {
+    return await once()
+  } catch (err) {
+    // KIE's Claude stream fails transiently roughly 1 call in 5 (measured
+    // 2026-08-06: 3/4, 5/6, 6/6 across samples), almost always as a single
+    // `event: error` frame that a retry clears. This is the LAST lane — it only
+    // runs because the direct one already failed — so one extra attempt is the
+    // difference between ~80% and ~96% availability during an Anthropic
+    // incident. Bounded at one: a genuinely down proxy must still surface fast.
+    console.warn(`[llm-kie-stream-retry] ${model.id}: ${String(err).slice(0, 160)}`)
+    return once()
+  }
 }
 
 // -- Responses format (GPT-5.4) --
@@ -1136,7 +1185,18 @@ async function parseSseStream(
 
   const decoder = new TextDecoder()
   let fullText = ""
+  // Forced-tool output arrives as `input_json_delta` fragments rather than text.
+  // Accumulated separately and NEVER pushed through `onToken` — it is a JSON
+  // payload, not display text — then used as the response body when no text
+  // block came back. This is what lets a structured call be served off the
+  // streaming wire (see callKieMessagesCollapsed).
+  let toolJson = ""
   let usage: { inputTokens: number; outputTokens: number } | undefined
+  // KIE's Claude SSE DOES carry `credits_consumed` (verified 2026-08-06 —
+  // 0.09 and 0.13 on live streams), so the collapsed non-streaming path keeps
+  // real actual-cost capture instead of silently dropping to the rate-table
+  // estimate. Which event carries it varies, so any event that has it wins.
+  let actualUsd: number | undefined
   let buffer = ""
   let firstChunk = true
 
@@ -1198,6 +1258,8 @@ async function parseSseStream(
           )
         }
 
+        actualUsd = extractActualUsd(parsed) ?? actualUsd
+
         if (format === "chat-completions") {
           const choices = parsed.choices as Array<Record<string, unknown>> | undefined
           const delta = choices?.[0]?.delta as Record<string, unknown> | undefined
@@ -1219,6 +1281,8 @@ async function parseSseStream(
               fullText += text
               onToken(text)
             }
+            const partial = delta?.partial_json as string | undefined
+            if (partial) toolJson += partial
           }
           if (eventType === "message_delta") {
             const u = parsed.usage as Record<string, number> | undefined
@@ -1250,9 +1314,12 @@ async function parseSseStream(
   }
 
   return {
-    text: fullText,
+    // Text wins when present; the accumulated tool payload is the body only for
+    // a forced-tool call, which emits no text block at all.
+    text: fullText || toolJson,
     usage,
     model: modelId,
-    providerCost: usage ? calculateLlmCost(modelId, usage) : undefined,
+    // Real billing beats the estimate, same precedence as the non-streaming path.
+    providerCost: actualUsd ?? (usage ? calculateLlmCost(modelId, usage) : undefined),
   }
 }

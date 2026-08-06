@@ -16,6 +16,18 @@ function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } })
 }
 
+/** A Response whose body is an SSE stream yielding the given chunks, then closing. */
+function streamResponse(chunks: string[]): Response {
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      const encoder = new TextEncoder()
+      for (const c of chunks) controller.enqueue(encoder.encode(c))
+      controller.close()
+    },
+  })
+  return new Response(stream, { status: 200, headers: { "Content-Type": "text/event-stream" } })
+}
+
 /** A normal OpenAI-shape (Gemini via KIE) completion carrying `content`. */
 function geminiContent(content: string): Response {
   return jsonResponse({ choices: [{ message: { role: "assistant", content } }], usage: { prompt_tokens: 10, completion_tokens: 5 } })
@@ -149,11 +161,15 @@ describe("llmCompleteStructured", () => {
   })
 
   /**
-   * A deployment with no ANTHROPIC_API_KEY has no direct lane, so Claude still
-   * reaches `callKieMessages` and its tool-decoding logic stays live. These
-   * cases keep that decoder covered while the direct lane is preferred
-   * everywhere else — and they are what has to keep working when
-   * KIE_CLAUDE_NONSTREAM_VERIFIED flips back to true.
+   * A deployment with no ANTHROPIC_API_KEY has no direct lane, so Claude is
+   * served entirely by KIE — over the COLLAPSED STREAM, since KIE's
+   * non-streaming Claude endpoint 500s unconditionally
+   * (KIE_CLAUDE_NONSTREAM_VERIFIED = false). Before that switch this
+   * configuration could not complete a single Claude call.
+   *
+   * The `<tool_calls>` pseudo-tag decoder that the non-streaming path needs is
+   * covered directly in `json-utils.test.ts` (extractKieToolCallInput); it stays
+   * in the code for when the flag flips back.
    */
   describe("KIE-only deployment (no ANTHROPIC_API_KEY)", () => {
     let restore: string | undefined
@@ -168,44 +184,38 @@ describe("llmCompleteStructured", () => {
       ;(config as unknown as Record<string, unknown>).ANTHROPIC_API_KEY = restore
     })
 
-    it("decodes KIE's <tool_calls> pseudo-tag", async () => {
+    /** SSE carrying a forced-tool call as real input_json_delta fragments. */
+    function toolUseSse(inputJson: string): Response {
+      const mid = Math.ceil(inputJson.length / 2)
+      return streamResponse([
+        `data: ${JSON.stringify({ type: "content_block_start", content_block: { type: "tool_use", name: "out" } })}\n`,
+        `data: ${JSON.stringify({ type: "content_block_delta", delta: { type: "input_json_delta", partial_json: inputJson.slice(0, mid) } })}\n`,
+        `data: ${JSON.stringify({ type: "content_block_delta", delta: { type: "input_json_delta", partial_json: inputJson.slice(mid) } })}\n`,
+        `data: ${JSON.stringify({ type: "message_delta", usage: { input_tokens: 12, output_tokens: 9 } })}\n`,
+      ])
+    }
+
+    it("serves a structured Claude call over the collapsed stream", async () => {
       const { llmCompleteStructured } = await import("../llm-client.js")
-      fetchMock.mockResolvedValue(kieClaudeToolTag('{"prompt":"from-kie-tag"}'))
+      fetchMock.mockResolvedValue(toolUseSse('{"prompt":"from-kie-stream"}'))
       const r = await llmCompleteStructured(
         { modelId: "claude-opus-4.7", system: "sys", messages: [{ role: "user", content: "x" }] },
         schema,
         { schemaName: "out" },
       )
-      expect(r.output).toEqual({ prompt: "from-kie-tag" })
+      expect(r.output).toEqual({ prompt: "from-kie-stream" })
       expect(anthropicCreate).not.toHaveBeenCalled()
-      // The KIE body must carry the forced tool or the model never sees the schema.
       const body = JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body)
+      // The forced tool must be on the wire, and it must use the wire that works.
       expect(body.tool_choice).toEqual({ type: "tool", name: "out" })
+      expect(body.stream).toBe(true)
     })
 
-    it("returns a real tool_use block's string input without double-encoding", async () => {
+    it("throws rather than inventing a result when KIE fails outright", async () => {
       const { llmCompleteStructured } = await import("../llm-client.js")
-      fetchMock.mockResolvedValue(jsonResponse({
-        content: [{ type: "tool_use", name: "out", input: '{"prompt":"stringified"}' }],
-        usage: { input_tokens: 2, output_tokens: 2 },
-      }))
-      const r = await llmCompleteStructured(
-        { modelId: "claude-opus-4.7", system: "sys", messages: [{ role: "user", content: "x" }] },
-        schema,
-        { schemaName: "out" },
-      )
-      expect(r.output).toEqual({ prompt: "stringified" })
-    })
-
-    it("throws rather than inventing a result when KIE's structured response is undecodable", async () => {
-      const { llmCompleteStructured } = await import("../llm-client.js")
-      // Truncated input (max_tokens mid-object) → callKieMessages throws. With
-      // no direct lane configured there is no backstop, so the error must reach
-      // the caller instead of degrading into a parse+retry loop on garbage.
-      fetchMock.mockResolvedValue(jsonResponse({
-        content: [{ type: "text", text: '<tool_calls>[{"type":"tool_use","name":"out","input":{"prompt":"trunc' }],
-        usage: { input_tokens: 1, output_tokens: 1 },
-      }))
+      // With no direct lane configured there is no backstop, so the error must
+      // reach the caller instead of degrading into a retry loop on garbage.
+      fetchMock.mockResolvedValue(streamResponse(['{"code":500,"msg":"maintenance"}']))
       await expect(
         llmCompleteStructured(
           { modelId: "claude-opus-4.7", system: "sys", messages: [{ role: "user", content: "x" }] },
