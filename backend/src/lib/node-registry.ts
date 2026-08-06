@@ -50,6 +50,20 @@ export interface NodeDescriptor {
    * priciest supported tier.
    */
   providerResolutions?: Record<string, string[]>
+  /**
+   * For a model whose OWN resolution names differ from the client vocabulary,
+   * the string to actually send per tier.
+   *
+   * Only `minimax-h3` needs one today (`720p`→`768P`, `1080p`→`2K`): sending
+   * the vocabulary name gets its 2K default silently, at 2K's price, because
+   * its normalizer selects the cheaper tier only for a literal `"768p"`.
+   * Sending the model's own value makes both tiers reachable, and billing
+   * collapses through that same normalizer so render and price cannot disagree.
+   *
+   * A model absent from this map sends the tier verbatim — true for every other
+   * provider, and what an older client does regardless.
+   */
+  providerResolutionWire?: Record<string, Record<string, string>>
   /** Capabilities flags (e.g. "supports-reference-image", "supports-end-frame"). */
   capabilities?: string[]
   /**
@@ -87,21 +101,42 @@ const GVP_SPARSE_PROVIDERS = GVP_PROVIDERS.filter((p) => !hasContiguousSegmentDu
 const GVP_RESOLUTION_VOCABULARY = ["480p", "720p", "1080p", "4k"] as const
 
 /**
+ * MODELS WHOSE OWN RESOLUTION NAMES ARE NOT THIS VOCABULARY.
+ *
+ * `minimax-h3` renders in `768P` / `2K`, and `normalizeMinimaxH3Resolution`
+ * selects the cheaper tier ONLY for a literal `"768p"`. A caller sending
+ * `"720p"` therefore gets 2K — quietly, at 2K's price — because "anything not
+ * 768p" collapses to the default.
+ *
+ * So the tier alone is not enough to act on: a caller also needs the string to
+ * SEND. Serving that mapping is what makes 768P reachable at all, and it is
+ * contained — the caller sends the model's own value, `applyMinimaxH3Params`
+ * passes it through, and billing collapses through the same normalizer, so
+ * render and price agree by construction. Nothing changes for a caller that
+ * keeps sending `"720p"`.
+ *
+ * 768P ↔ 720p and 2K ↔ 1080p are the honest pairings by pixel height; they are
+ * a judgement about naming, which is exactly why they are written here once
+ * rather than guessed by each client.
+ */
+const GVP_RESOLUTION_WIRE: Record<string, Record<string, string>> = Object.fromEntries(
+  GVP_PROVIDERS.filter(isMinimaxH3Provider).map((p) => [p, { "720p": "768P", "1080p": "2K" }]),
+)
+
+/**
  * The subset of that vocabulary a provider can actually render.
  *
- * `minimax-h3` is the one model that does not speak it at all: its space is
- * `768P` / `2K`, and `normalizeMinimaxH3Resolution` selects the cheaper tier
- * ONLY for a literal `"768p"` — a value this vocabulary cannot express. So
- * every run through it reaches 2K whatever was asked for, and `1080p` (2K's
- * nearest equivalent here) is the only honest thing to offer. Listing four
- * would be offering a choice that does nothing.
+ * A model with a wire mapping above offers exactly the tiers that mapping
+ * names — its catalog `resolutions` are in its own vocabulary, so filtering
+ * them against ours would (correctly) yield nothing.
  *
  * A provider the catalog has no resolutions for keeps the whole vocabulary:
  * refusing to offer tiers we cannot confirm are unsupported would be a
  * regression for a model we simply know nothing about.
  */
 function gvpResolutionsFor(provider: string): string[] {
-  if (isMinimaxH3Provider(provider)) return ["1080p"]
+  const wire = GVP_RESOLUTION_WIRE[provider]
+  if (wire) return GVP_RESOLUTION_VOCABULARY.filter((r) => r in wire)
   const supported = MODEL_CATALOG[provider]?.resolutions as readonly string[] | undefined
   if (!supported || supported.length === 0) return [...GVP_RESOLUTION_VOCABULARY]
   return GVP_RESOLUTION_VOCABULARY.filter((r) => supported.includes(r))
@@ -330,6 +365,7 @@ export const NODE_REGISTRY: NodeDescriptor[] = [
     providers: GVP_PROVIDERS,
     sparseProviders: GVP_SPARSE_PROVIDERS,
     providerResolutions: GVP_PROVIDER_RESOLUTIONS,
+    providerResolutionWire: GVP_RESOLUTION_WIRE,
     capabilities: ["long-form", "auto-segmentation", "seamless-stitch"],
     inputSchema: {
       fields: [

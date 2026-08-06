@@ -89,14 +89,28 @@ describe("generate-video-pro node registry", () => {
     expect(res!["happyhorse-ref2v"]).toEqual(["720p", "1080p"])
   })
 
-  it("gives Hailuo 3 the one tier a run can actually reach", () => {
-    // minimax-h3 speaks 768P/2K, not this vocabulary, and ONLY a literal "768p"
-    // selects the cheaper tier — which this vocabulary cannot express. So every
-    // run reaches 2K, and 1080p (its nearest equivalent) is the only honest
-    // option to offer. Offering four would be offering a choice that does
-    // nothing.
+  it("gives Hailuo 3 both of its real tiers, and the strings that reach them", () => {
+    // minimax-h3 speaks 768P/2K, not this vocabulary, and its normalizer picks
+    // the cheaper tier ONLY for a literal "768p". Sending "720p" therefore gets
+    // 2K silently, at 2K's price — so the tier list alone is not actionable and
+    // the wire value has to be served with it.
     const d = NODE_REGISTRY.find((n) => n.type === "generate-video-pro")
-    expect(d?.providerResolutions?.["minimax-h3"]).toEqual(["1080p"])
+    expect(d?.providerResolutions?.["minimax-h3"]).toEqual(["720p", "1080p"])
+    expect(d?.providerResolutionWire?.["minimax-h3"]).toEqual({ "720p": "768P", "1080p": "2K" })
+  })
+
+  it("maps a wire value only where the model needs one", () => {
+    // Every other model's own names ARE the vocabulary, so an entry would be
+    // noise a client has to reason about for nothing.
+    const d = NODE_REGISTRY.find((n) => n.type === "generate-video-pro")
+    expect(Object.keys(d!.providerResolutionWire!)).toEqual(["minimax-h3"])
+  })
+
+  it("the wire mapping and the offered tiers cannot drift apart", () => {
+    const d = NODE_REGISTRY.find((n) => n.type === "generate-video-pro")
+    for (const [id, wire] of Object.entries(d!.providerResolutionWire!)) {
+      expect(Object.keys(wire).sort(), id).toEqual([...d!.providerResolutions![id]!].sort())
+    }
   })
 
   it("edit-video-pro stays Seedance-only (no minimax-h3 — no v2v mode / -ref axis)", () => {
