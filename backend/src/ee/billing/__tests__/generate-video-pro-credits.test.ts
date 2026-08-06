@@ -786,34 +786,49 @@ describe("computeGenerateVideoProPricing — explicit segmentDurations (seedance
     expect(explicit).toEqual(classic)
   })
 
-  it("rejects sum mismatch, out-of-range entries, non-integers, and >24 segments (never a silent misprice)", async () => {
+  it("rejects sum mismatch, non-integers, and >24 segments (never a silent misprice)", async () => {
     const at = (durationSec: number, segmentDurations: number[]) =>
       computeGenerateVideoProPricing({ provider: "seedance-2", resolution: "720p", durationSec, segmentDurations })
+    // A pack that needs NO snap is still priced verbatim, so the sum equality
+    // remains the drift guard between quote, reserve and plan.
     await expect(at(16, [9, 9])).rejects.toThrow(/sum 18 != /) // expected 17
-    // Entries are checked for MEMBERSHIP in the provider's own duration set,
-    // not against a [4,15] range (2026-08-05) — veo3 accepts 4/6/8 and nothing
-    // between, so a range check would pass a 5 that the provider then rejects
-    // mid-run, after the reserve was taken. Same rejections, provider-derived
-    // message; the accepted values for seedance-2 are unchanged.
-    const notAllowed = /each one of \[4,5,6,7,8,9,10,11,12,13,14,15\]/
-    await expect(at(16, [3, 14])).rejects.toThrow(notAllowed)
-    await expect(at(16, [8.5, 9])).rejects.toThrow(notAllowed)
-    await expect(at(16, [16, 4])).rejects.toThrow(notAllowed)
-    await expect(at(100, new Array<number>(25).fill(4))).rejects.toThrow(/1\.\.24 entries/)
+    // Count and integrality stay hard failures: the snap below corrects a
+    // duration the provider does not offer, never a caller bug.
+    await expect(at(16, [8.5, 9])).rejects.toThrow(/integer/)
+    await expect(at(100, new Array<number>(25).fill(4))).rejects.toThrow(/1\.\.24 integer entries/)
   })
 
-  it("rejects a duration the provider does not offer, even inside its own range", async () => {
-    // The regression the membership check exists for: veo3 renders 4/6/8s.
-    // A 5s segment sits inside [4,8] and would have passed the old range check.
-    await expect(
-      computeGenerateVideoProPricing({
-        provider: "veo3",
-        resolution: "720p",
-        durationSec: 12,
-        segmentDurations: [5, 8],
-        renderMethod: "keyframes",
-      }),
-    ).rejects.toThrow(/each one of \[4,6,8\]/)
+  it("snaps an off-menu entry rather than rejecting it, and says that it snapped", async () => {
+    // WAS a rejection until 2026-08-06. The invariant that mattered — the
+    // provider is never handed a duration it does not offer — now holds by
+    // CORRECTING the entry instead of refusing the run, because the caller
+    // producing this array cannot read the menu (its @nodaro/shared pin lags
+    // this repo's catalog by whole releases).
+    const at = (durationSec: number, segmentDurations: number[]) =>
+      computeGenerateVideoProPricing({ provider: "seedance-2", resolution: "720p", durationSec, segmentDurations })
+    const low = await at(16, [3, 14])
+    expect(low.segmentDurations).toEqual([4, 14]) // 3 is below seedance-2's floor of 4
+    expect(low.segmentDurationsSnapped).toBe(true)
+    const high = await at(16, [16, 4])
+    expect(high.segmentDurations).toEqual([15, 4]) // 16 is above its ceiling of 15
+    expect(high.segmentDurationsSnapped).toBe(true)
+  })
+
+  it("never prices a duration the provider does not offer, even inside its own range", async () => {
+    // The regression the membership rule exists for: veo3 renders 4/6/8s, so a
+    // 5s segment sits inside [4,8] and would pass a range check — then be
+    // rejected by the provider mid-run, after the reserve was taken. It is now
+    // corrected onto a real tier instead of failing the quote outright.
+    const p = await computeGenerateVideoProPricing({
+      provider: "veo3",
+      resolution: "720p",
+      durationSec: 12,
+      segmentDurations: [5, 8],
+      renderMethod: "keyframes",
+    })
+    expect(p.segmentDurations).toEqual([4, 8])
+    for (const d of p.segmentDurations) expect([4, 6, 8]).toContain(d)
+    expect(p.segmentDurationsSnapped).toBe(true)
   })
 })
 
@@ -1048,5 +1063,102 @@ describe("computeGenerateVideoProPricing — flat-priced providers", () => {
     expect(p.segmentCosts).toEqual([unit, unit, unit]) // parent-aligned, full array
     expect(p.billFromSegment).toBe(3)
     expect(p.reserveBase).toBe(STATIC_CREDIT_COSTS["generate-video-pro"]! + unit)
+  })
+})
+
+/**
+ * OFF-GRID SEGMENT DURATIONS SNAP (2026-08-06).
+ *
+ * The caller that produces an explicit `segmentDurations` array cannot know the
+ * provider's duration menu: `nodaro-cloud-plugins` builds against a PUBLISHED
+ * `@nodaro/shared` whose MODEL_CATALOG lags this repo's by whole releases (the
+ * installed 2.1.0 has no `minimax-h3` entry at all, for a model that has been a
+ * shipping GVP SKU since 2026-08-02). So the side WITH the fresh catalog does
+ * the grid-aware step — and declares that it did, because the plugin's echo
+ * guard exists to catch an app that silently IGNORED the field and only an
+ * explicit declaration tells that apart from a deliberate snap.
+ *
+ * Before this, recast's scene-aligned pack (arbitrary ints 4..15, packed
+ * provider-blind) could never satisfy a sparse menu, so every model outside the
+ * seedance/minimax-h3 families failed to price and the run could not start.
+ */
+describe("explicit segmentDurations — off-grid entries snap onto the provider's menu", () => {
+  it("snaps a scene-aligned pack onto veo3's 4/6/8 menu instead of throwing", async () => {
+    const p = await computeGenerateVideoProPricing({
+      provider: "veo3",
+      resolution: "720p",
+      durationSec: 26,
+      renderMethod: "keyframes",
+      segmentDurations: [10, 9, 8],
+    })
+    expect(p.segmentDurations).toEqual([8, 8, 8])
+    for (const d of p.segmentDurations) expect([4, 6, 8]).toContain(d)
+    expect(p.segmentDurationsSnapped).toBe(true)
+  })
+
+  it("preserves entry COUNT and order — the scene count never moves", async () => {
+    const p = await computeGenerateVideoProPricing({
+      provider: "gemini-omni-video",
+      resolution: "720p",
+      durationSec: 30,
+      renderMethod: "keyframes",
+      segmentDurations: [5, 11, 15],
+    })
+    expect(p.segmentDurations).toHaveLength(3)
+    // 5 -> 4 (tie 4/6 rounds down), 11 -> 10, 15 -> 10
+    expect(p.segmentDurations).toEqual([4, 10, 10])
+    expect(p.segmentCount).toBe(3)
+    expect(p.segmentDurationsSnapped).toBe(true)
+  })
+
+  it("leaves a grid-VALID sparse pack alone and does not flag a snap", async () => {
+    const p = await computeGenerateVideoProPricing({
+      provider: "veo3",
+      resolution: "720p",
+      durationSec: 18,
+      renderMethod: "keyframes",
+      segmentDurations: [8, 6, 4],
+    })
+    expect(p.segmentDurations).toEqual([8, 6, 4])
+    expect(p.segmentDurationsSnapped).toBeUndefined()
+  })
+
+  it("a snapped CONTIGUOUS pack skips the sum-equality guard rather than throwing", async () => {
+    // happyhorse-i2v is contiguous 3..15, so 16 is off-grid and snaps to 15.
+    // The sum-equality drift guard is the check for an array priced VERBATIM;
+    // a snapped array was not, so its delivered duration derives from the pack.
+    const p = await computeGenerateVideoProPricing({
+      provider: "happyhorse-i2v",
+      resolution: "720p",
+      durationSec: 30,
+      renderMethod: "keyframes",
+      segmentDurations: [16, 15],
+    })
+    expect(p.segmentDurations).toEqual([15, 15])
+    expect(p.segmentDurationsSnapped).toBe(true)
+  })
+
+  it("REGRESSION BAR: an in-grid seedance-2 pack is byte-identical and unflagged", async () => {
+    const p = await computeGenerateVideoProPricing({
+      provider: "seedance-2",
+      resolution: "720p",
+      durationSec: 30,
+      renderMethod: "keyframes",
+      segmentDurations: [11, 10, 10],
+    })
+    expect(p.segmentDurations).toEqual([11, 10, 10])
+    expect(p.segmentDurationsSnapped).toBeUndefined()
+  })
+
+  it("a non-integer entry is still a hard failure — snapping is for the MENU, not for garbage", async () => {
+    await expect(
+      computeGenerateVideoProPricing({
+        provider: "veo3",
+        resolution: "720p",
+        durationSec: 20,
+        renderMethod: "keyframes",
+        segmentDurations: [7.5, 8],
+      }),
+    ).rejects.toThrow(/integer/)
   })
 })
