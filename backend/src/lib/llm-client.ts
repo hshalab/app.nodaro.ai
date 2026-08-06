@@ -24,6 +24,25 @@ const LLM_TIMEOUT_MS = 120_000
 // KIE Claude-proxy passthrough facts. When false, the affected request class
 // routes direct-Anthropic instead of through KIE.
 const KIE_CLAUDE_EFFORT_VERIFIED = false // thinking/output_config passthrough NOT verified — effort-carrying calls route direct
+// KIE's Claude proxy answers HTTP 500 `{"type":"api_error","message":"Server
+// exception, please try again later"}` to EVERY `stream: false` request, for
+// EVERY Claude slug — measured 2026-08-06: 0/6 non-stream succeeded against
+// claude-opus-5 while the identical body with `stream: true` passed 5/6, and a
+// sweep of haiku-4-5 / sonnet-4-6 / opus-4-7 / sonnet-5 / opus-4-8 / opus-5 /
+// fable-5 failed 14/14 non-stream. Auth is fine (a bad key returns a distinct
+// 401 envelope) and the Gemini + GPT KIE lanes were healthy in the same run, so
+// this is specific to the Claude proxy's non-streaming path.
+//
+// It is a MODEL-INDEPENDENT lane outage, which is why the fix is a lane flag
+// and not a model swap: substituting opus-4.8 for opus-5 changes which model
+// users get while failing at exactly the same rate.
+//
+// `llmComplete` is the non-streaming entry point, so this forces every
+// non-streamed Claude call onto the direct SDK. `llmStream` is deliberately
+// NOT gated — streaming is the shape that still works on KIE.
+// Flip to `true` only after re-measuring non-stream success against KIE; it
+// gates real spend (the direct lane bills ~2.5× the KIE row), not just a path.
+const KIE_CLAUDE_NONSTREAM_VERIFIED = false
 // Forced tool_choice DOES reach the model, but the response is NOT a tool_use
 // block: KIE re-serializes the call into a `<tool_calls>` text pseudo-tag with
 // malformed JSON (live-captured 2026-07-14 — the 2026-07-13 "verified" only
@@ -168,6 +187,11 @@ export async function llmComplete(req: LlmRequest): Promise<LlmResponse> {
   if (model.directFallbackModel && config.ANTHROPIC_API_KEY) {
     const eff = effectiveReasoningEffort(model.id, req.reasoningEffort)
     const mustDirect =
+      // KIE's Claude proxy 500s on every non-streaming request, and this is the
+      // non-streaming entry point — so while that outage stands, NO Claude call
+      // routed here can be served by KIE. Trying anyway just spends 6–12s on a
+      // guaranteed 500 before the catch below reaches the same place.
+      !KIE_CLAUDE_NONSTREAM_VERIFIED ||
       (req.jsonSchema !== undefined && model.structuredOutputMode === "anthropic-tool" && !KIE_CLAUDE_TOOLS_VERIFIED) ||
       (eff !== undefined && !KIE_CLAUDE_EFFORT_VERIFIED)
     if (!model.preferKie || mustDirect || !config.KIE_API_KEY) {
@@ -1154,6 +1178,24 @@ async function parseSseStream(
           parsed = JSON.parse(payload)
         } catch {
           continue
+        }
+
+        // An SSE `event: error` frame carries `{"type":"error","error":{...}}`.
+        // No normal event uses that type, so the match is unambiguous. Without
+        // this the frame falls through every format branch and the stream ends
+        // with whatever text arrived before it — an EMPTY string when the error
+        // came first, returned as a successful response. That is the silent
+        // failure mode: no throw means llmStream's catch never runs, so the
+        // direct-Anthropic fallback is skipped and the caller is handed an
+        // empty completion. Observed on KIE's Claude stream in 1 of 6 plain
+        // requests (2026-08-06). Throwing puts a pre-token failure back on the
+        // fallback path and surfaces a mid-stream one, per streamWithFallback's
+        // tainted-stream rule.
+        if (parsed.type === "error") {
+          const e = parsed.error as { message?: string; type?: string } | undefined
+          throw new Error(
+            `KIE.ai ${format} stream ${modelId} returned an error event: ${e?.type ?? "unknown"}: ${e?.message ?? JSON.stringify(parsed).slice(0, 200)}`,
+          )
         }
 
         if (format === "chat-completions") {

@@ -128,29 +128,12 @@ describe("llmCompleteStructured", () => {
     })
   }
 
-  it("decodes KIE's <tool_calls> pseudo-tag on the preferKie Claude path", async () => {
+  it("structured Claude goes straight to the direct SDK — KIE's non-stream lane is 500ing", async () => {
     const { llmCompleteStructured } = await import("../llm-client.js")
+    // KIE would decode fine here; the point is that it is never asked. While
+    // KIE_CLAUDE_NONSTREAM_VERIFIED is false, spending a round-trip on a
+    // guaranteed 500 before falling back is pure latency.
     fetchMock.mockResolvedValue(kieClaudeToolTag('{"prompt":"from-kie-tag"}'))
-    const r = await llmCompleteStructured(
-      { modelId: "claude-opus-4.7", system: "sys", messages: [{ role: "user", content: "x" }] },
-      schema,
-      { schemaName: "out" },
-    )
-    expect(r.output).toEqual({ prompt: "from-kie-tag" })
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-    expect(anthropicCreate).not.toHaveBeenCalled()
-    // The KIE body must carry the forced tool or the model never sees the schema.
-    const body = JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body)
-    expect(body.tool_choice).toEqual({ type: "tool", name: "out" })
-  })
-
-  it("falls back to the direct SDK when KIE's structured response is undecodable", async () => {
-    const { llmCompleteStructured } = await import("../llm-client.js")
-    // Truncated input (max_tokens mid-object) → callKieMessages throws → direct SDK.
-    fetchMock.mockResolvedValue(jsonResponse({
-      content: [{ type: "text", text: '<tool_calls>[{"type":"tool_use","name":"out","input":{"prompt":"trunc' }],
-      usage: { input_tokens: 1, output_tokens: 1 },
-    }))
     anthropicCreate.mockResolvedValue({
       content: [{ type: "tool_use", name: "out", input: { prompt: "from-direct" } }],
       usage: { input_tokens: 7, output_tokens: 3 },
@@ -161,22 +144,77 @@ describe("llmCompleteStructured", () => {
       { schemaName: "out" },
     )
     expect(r.output).toEqual({ prompt: "from-direct" })
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).not.toHaveBeenCalled()
     expect(anthropicCreate).toHaveBeenCalledTimes(1)
   })
 
-  it("returns a real tool_use block's string input without double-encoding", async () => {
-    const { llmCompleteStructured } = await import("../llm-client.js")
-    fetchMock.mockResolvedValue(jsonResponse({
-      content: [{ type: "tool_use", name: "out", input: '{"prompt":"stringified"}' }],
-      usage: { input_tokens: 2, output_tokens: 2 },
-    }))
-    const r = await llmCompleteStructured(
-      { modelId: "claude-opus-4.7", system: "sys", messages: [{ role: "user", content: "x" }] },
-      schema,
-      { schemaName: "out" },
-    )
-    expect(r.output).toEqual({ prompt: "stringified" })
+  /**
+   * A deployment with no ANTHROPIC_API_KEY has no direct lane, so Claude still
+   * reaches `callKieMessages` and its tool-decoding logic stays live. These
+   * cases keep that decoder covered while the direct lane is preferred
+   * everywhere else — and they are what has to keep working when
+   * KIE_CLAUDE_NONSTREAM_VERIFIED flips back to true.
+   */
+  describe("KIE-only deployment (no ANTHROPIC_API_KEY)", () => {
+    let restore: string | undefined
+    beforeEach(async () => {
+      const { config } = await import("../config.js")
+      const c = config as unknown as Record<string, unknown>
+      restore = c.ANTHROPIC_API_KEY as string | undefined
+      c.ANTHROPIC_API_KEY = undefined
+    })
+    afterEach(async () => {
+      const { config } = await import("../config.js")
+      ;(config as unknown as Record<string, unknown>).ANTHROPIC_API_KEY = restore
+    })
+
+    it("decodes KIE's <tool_calls> pseudo-tag", async () => {
+      const { llmCompleteStructured } = await import("../llm-client.js")
+      fetchMock.mockResolvedValue(kieClaudeToolTag('{"prompt":"from-kie-tag"}'))
+      const r = await llmCompleteStructured(
+        { modelId: "claude-opus-4.7", system: "sys", messages: [{ role: "user", content: "x" }] },
+        schema,
+        { schemaName: "out" },
+      )
+      expect(r.output).toEqual({ prompt: "from-kie-tag" })
+      expect(anthropicCreate).not.toHaveBeenCalled()
+      // The KIE body must carry the forced tool or the model never sees the schema.
+      const body = JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body)
+      expect(body.tool_choice).toEqual({ type: "tool", name: "out" })
+    })
+
+    it("returns a real tool_use block's string input without double-encoding", async () => {
+      const { llmCompleteStructured } = await import("../llm-client.js")
+      fetchMock.mockResolvedValue(jsonResponse({
+        content: [{ type: "tool_use", name: "out", input: '{"prompt":"stringified"}' }],
+        usage: { input_tokens: 2, output_tokens: 2 },
+      }))
+      const r = await llmCompleteStructured(
+        { modelId: "claude-opus-4.7", system: "sys", messages: [{ role: "user", content: "x" }] },
+        schema,
+        { schemaName: "out" },
+      )
+      expect(r.output).toEqual({ prompt: "stringified" })
+    })
+
+    it("throws rather than inventing a result when KIE's structured response is undecodable", async () => {
+      const { llmCompleteStructured } = await import("../llm-client.js")
+      // Truncated input (max_tokens mid-object) → callKieMessages throws. With
+      // no direct lane configured there is no backstop, so the error must reach
+      // the caller instead of degrading into a parse+retry loop on garbage.
+      fetchMock.mockResolvedValue(jsonResponse({
+        content: [{ type: "text", text: '<tool_calls>[{"type":"tool_use","name":"out","input":{"prompt":"trunc' }],
+        usage: { input_tokens: 1, output_tokens: 1 },
+      }))
+      await expect(
+        llmCompleteStructured(
+          { modelId: "claude-opus-4.7", system: "sys", messages: [{ role: "user", content: "x" }] },
+          schema,
+          { schemaName: "out", maxRetries: 0 },
+        ),
+      ).rejects.toThrow()
+      expect(anthropicCreate).not.toHaveBeenCalled()
+    })
   })
 
   it("adds text.format json_schema to the KIE responses body (GPT-5.6)", async () => {
