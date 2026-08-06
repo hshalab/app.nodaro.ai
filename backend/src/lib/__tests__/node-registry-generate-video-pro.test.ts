@@ -65,6 +65,54 @@ describe("generate-video-pro node registry", () => {
     }
   })
 
+  it("serves each model's supported resolutions, in the CLIENT's vocabulary", () => {
+    // A client cannot derive this: its own catalog copy lags this repo's, which
+    // is the same reason `providers` and `sparseProviders` are served rather
+    // than computed. Consumers disable the tiers a model cannot render, so
+    // nobody can pick one that the pricing would then clamp UP to the priciest
+    // supported tier.
+    const d = NODE_REGISTRY.find((n) => n.type === "generate-video-pro")
+    const res = d?.providerResolutions
+    expect(res).toBeDefined()
+    // Every offered model has an entry, and every entry is a non-empty subset
+    // of the vocabulary in low → high order.
+    for (const id of d!.providers!) {
+      const list = res![id]
+      expect(list, id).toBeDefined()
+      expect(list!.length, id).toBeGreaterThan(0)
+      expect(list, id).toEqual(["480p", "720p", "1080p", "4k"].filter((r) => list!.includes(r)))
+    }
+    expect(res!["seedance-2"]).toEqual(["480p", "720p", "1080p", "4k"])
+    expect(res!["seedance-2-fast"]).toEqual(["480p", "720p"])
+    expect(res!["veo3"]).toEqual(["720p", "1080p", "4k"])
+    expect(res!["grok-i2v"]).toEqual(["480p", "720p"])
+    expect(res!["happyhorse-ref2v"]).toEqual(["720p", "1080p"])
+  })
+
+  it("gives Hailuo 3 both of its real tiers, and the strings that reach them", () => {
+    // minimax-h3 speaks 768P/2K, not this vocabulary, and its normalizer picks
+    // the cheaper tier ONLY for a literal "768p". Sending "720p" therefore gets
+    // 2K silently, at 2K's price — so the tier list alone is not actionable and
+    // the wire value has to be served with it.
+    const d = NODE_REGISTRY.find((n) => n.type === "generate-video-pro")
+    expect(d?.providerResolutions?.["minimax-h3"]).toEqual(["720p", "1080p"])
+    expect(d?.providerResolutionWire?.["minimax-h3"]).toEqual({ "720p": "768P", "1080p": "2K" })
+  })
+
+  it("maps a wire value only where the model needs one", () => {
+    // Every other model's own names ARE the vocabulary, so an entry would be
+    // noise a client has to reason about for nothing.
+    const d = NODE_REGISTRY.find((n) => n.type === "generate-video-pro")
+    expect(Object.keys(d!.providerResolutionWire!)).toEqual(["minimax-h3"])
+  })
+
+  it("the wire mapping and the offered tiers cannot drift apart", () => {
+    const d = NODE_REGISTRY.find((n) => n.type === "generate-video-pro")
+    for (const [id, wire] of Object.entries(d!.providerResolutionWire!)) {
+      expect(Object.keys(wire).sort(), id).toEqual([...d!.providerResolutions![id]!].sort())
+    }
+  })
+
   it("edit-video-pro stays Seedance-only (no minimax-h3 — no v2v mode / -ref axis)", () => {
     const d = NODE_REGISTRY.find((n) => n.type === "edit-video-pro")
     expect(d?.providers).toEqual(["seedance-2", "seedance-2-fast", "seedance-2-mini"])
