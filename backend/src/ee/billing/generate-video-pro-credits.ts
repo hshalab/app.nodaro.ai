@@ -31,6 +31,22 @@ export interface GenerateVideoProPricing {
   segmentCount: number
   totalRawSec: number
   segmentDurations: number[]
+  /**
+   * The explicit `segmentDurations` were SNAPPED onto the provider's duration
+   * menu, so `segmentDurations` above deliberately differs from what was asked
+   * for (2026-08-06).
+   *
+   * A DECLARATION, and load-bearing as one: the plugin route's echo guard
+   * refuses a differing array because that is how an app predating the
+   * `segmentDurations` field is detected (it prices the classic split and
+   * silently ignores the request). Only an explicit signal tells that apart
+   * from a deliberate snap, which is why this cannot be inferred from the
+   * arrays differing.
+   *
+   * Additive-optional: absent means priced verbatim, which is what every
+   * pre-2026-08-06 caller already assumes.
+   */
+  segmentDurationsSnapped?: true
   feeBase: number // 0 when single
   noRefPerSec: number
   refPerSec: number
@@ -204,6 +220,11 @@ interface SplitResult {
   n: number
   s: number
   durations: number[]
+  /** An explicit entry was off the provider's duration menu and was snapped
+   *  onto it (2026-08-06). Only `explicitSplit` ever sets this — the derived
+   *  splits pick from the menu by construction. Travels out as
+   *  {@link GenerateVideoProPricing.segmentDurationsSnapped}. */
+  snapped?: true
 }
 
 /**
@@ -345,20 +366,39 @@ function explicitSplit(
 ): SplitResult {
   const d = Math.min(Math.max(Math.round(requestedSec), b.minSeg), capSec)
   const n = segmentDurations.length
-  // Membership, not a range: veo3 accepts 4/6/8 and nothing between, so a 5s
-  // entry inside [minSeg,maxSeg] would pass a range check and then be rejected
-  // by the provider mid-run, after the reserve was taken.
-  if (
-    n < 1 ||
-    n > EXPLICIT_MAX_SEGMENTS ||
-    segmentDurations.some((x) => !Number.isInteger(x) || !b.allowed.includes(x))
-  ) {
+  // Count and integrality are hard failures — snapping is for the MENU, not
+  // for garbage. A fractional or absurdly long array is a caller bug, and
+  // rounding one into range would hide it behind a plausible quote.
+  if (n < 1 || n > EXPLICIT_MAX_SEGMENTS || segmentDurations.some((x) => !Number.isInteger(x))) {
     throw new Error(
-      `explicit segment durations: expected 1..${EXPLICIT_MAX_SEGMENTS} entries, each one of [${b.allowed.join(",")}]`,
+      `explicit segment durations: expected 1..${EXPLICIT_MAX_SEGMENTS} integer entries`,
     )
   }
-  const s = segmentDurations.reduce((a, b) => a + b, 0)
-  if (b.contiguous) {
+  // OFF-GRID ENTRIES SNAP ONTO THE MENU (2026-08-06). Membership still decides
+  // what may be PRICED — veo3 accepts 4/6/8 and nothing between, so a 5s entry
+  // would be rejected by the provider mid-run, after the reserve was taken —
+  // but a non-member is now corrected rather than refused.
+  //
+  // Because the caller cannot know the menu. `nodaro-cloud-plugins` builds
+  // against a PUBLISHED `@nodaro/shared` whose MODEL_CATALOG lags this repo's
+  // by whole releases (the installed 2.1.0 has no `minimax-h3` entry at all,
+  // for a model that has been a shipping GVP SKU since 2026-08-02). So the side
+  // with the fresh catalog does the grid-aware step. Before this, recast's
+  // scene-aligned pack — arbitrary ints, packed provider-blind — could never
+  // satisfy a sparse menu, and every model outside the seedance/minimax-h3
+  // families failed to price at all.
+  //
+  // COUNT AND ORDER ARE PRESERVED, so the scene count never moves; only
+  // lengths do. A grid-valid array snaps to itself, which is what keeps every
+  // existing golden byte-identical.
+  const durations = segmentDurations.map((x) => (b.allowed.includes(x) ? x : snapToAllowed(x, b.allowed)))
+  const snapped = durations.some((x, i) => x !== segmentDurations[i])
+  const s = durations.reduce((a, b) => a + b, 0)
+  // The sum equality is the drift guard for an array priced VERBATIM. A snapped
+  // array was not priced verbatim — its delivered duration derives FROM the
+  // pack, exactly as on a sparse menu below — so the equality cannot apply to
+  // it and would reject every honest snap.
+  if (b.contiguous && !snapped) {
     // Money-pinned path, unchanged: with every integer length available the
     // requested duration is always exactly reachable, so the sum equality is
     // the drift guard between quote, reserve and plan.
@@ -369,7 +409,7 @@ function explicitSplit(
       )
     }
     if (n === 1) return { mode: "single" as const, clampedD: d, n: 1, s: d, durations: [d] }
-    return { mode: "multi" as const, clampedD: d, n, s, durations: [...segmentDurations] }
+    return { mode: "multi" as const, clampedD: d, n, s, durations: [...durations] }
   }
   // SPARSE providers: the target sum ceil(d + 0.3(n−1)) is frequently
   // UNREACHABLE — veo3 offers 4/6/8, all even, so no combination sums to an
@@ -386,8 +426,9 @@ function explicitSplit(
       `explicit segment durations: deliver ${delivered}s, above the ${capSec}s cap`,
     )
   }
-  if (n === 1) return { mode: "single" as const, clampedD: s, n: 1, s, durations: [...segmentDurations] }
-  return { mode: "multi" as const, clampedD: delivered, n, s, durations: [...segmentDurations] }
+  const snapFlag = snapped ? ({ snapped: true } as const) : {}
+  if (n === 1) return { mode: "single" as const, clampedD: s, n: 1, s, durations: [...durations], ...snapFlag }
+  return { mode: "multi" as const, clampedD: delivered, n, s, durations: [...durations], ...snapFlag }
 }
 
 function computePreferredSplit(
@@ -665,6 +706,7 @@ export async function computeGenerateVideoProPricing(args: {
       segmentCount: split.n,
       totalRawSec: split.s,
       segmentDurations: split.durations,
+      ...(split.snapped ? { segmentDurationsSnapped: true as const } : {}),
       feeBase,
       noRefPerSec,
       refPerSec,
@@ -701,6 +743,7 @@ export async function computeGenerateVideoProPricing(args: {
       segmentCount: split.n,
       totalRawSec: split.s,
       segmentDurations: split.durations,
+      ...(split.snapped ? { segmentDurationsSnapped: true as const } : {}),
       feeBase: 0,
       noRefPerSec,
       refPerSec,
@@ -736,6 +779,7 @@ export async function computeGenerateVideoProPricing(args: {
     segmentCount: split.n,
     totalRawSec: split.s,
     segmentDurations: split.durations,
+    ...(split.snapped ? { segmentDurationsSnapped: true as const } : {}),
     feeBase,
     noRefPerSec,
     refPerSec,
