@@ -53,6 +53,8 @@ beforeAll(async () => {
 
   // Protected routes
   app.get("/v1/jobs/123", async () => ({ data: {} }))
+  // Echoes the auth outcome for the internal-header tests below.
+  app.get("/v1/echo-user", async (req) => ({ userId: req.userId ?? null, internal: req.isInternalCall ?? false }))
   app.post("/v1/generate-image", async () => ({ jobId: "test" }))
 
   await app.ready()
@@ -130,6 +132,50 @@ describe("auth middleware", () => {
       })
       expect(res.statusCode).toBe(401)
       expect(res.json().error.code).toBe("unauthorized")
+    })
+  })
+
+  describe("internal x-internal-user-id header (bodyless methods)", () => {
+    const secret = process.env.INTERNAL_ORCHESTRATOR_SECRET as string
+
+    it("sets req.userId from the header on an internal GET", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/v1/echo-user",
+        headers: {
+          "x-internal-orchestrator-secret": secret,
+          "x-internal-user-id": "user-from-header",
+        },
+      })
+      expect(res.statusCode).toBe(200)
+      expect(res.json()).toEqual({ userId: "user-from-header", internal: true })
+    })
+
+    it("the header alone grants NOTHING — without the secret it is not even read", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/v1/echo-user",
+        headers: { "x-internal-user-id": "user-from-header" },
+      })
+      expect(res.statusCode).toBe(401)
+    })
+
+    it("body.userId wins over the header when both are present", async () => {
+      const app2 = Fastify({ logger: false })
+      registerAuthHook(app2)
+      app2.post("/v1/echo-user", async (req) => ({ userId: req.userId ?? null }))
+      const res = await app2.inject({
+        method: "POST",
+        url: "/v1/echo-user",
+        headers: {
+          "x-internal-orchestrator-secret": secret,
+          "x-internal-user-id": "header-user",
+        },
+        payload: { userId: "body-user" },
+      })
+      expect(res.statusCode).toBe(200)
+      expect(res.json()).toEqual({ userId: "body-user" })
+      await app2.close()
     })
   })
 })

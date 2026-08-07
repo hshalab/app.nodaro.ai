@@ -746,6 +746,36 @@ Both enforce ownership (404 on a foreign job) and 400 on non-pro jobs. Pricing d
 
 `POST /v1/recast` (regenerate an analyzed source video with your own cast — the engine behind [recast.nodaro.ai](https://recast.nodaro.ai)) **requires `workflowId`**: the uuid of an existing workflow you own, which the recast run attaches to. Omitting it is a `400 workflow_id_required`; an unknown or foreign id is a `404 workflow_not_found`.
 
+## 13d. Authored script import (Cloud edition)
+
+Turn an LLM-authored screenplay JSON into a recast — **no source video**. All three endpoints are **free**.
+
+- `POST /v1/video-analysis/import/validate` — body `{ "script": { … } }`. Returns
+  `{ valid, errors: [{ path, message, hint? }], warnings: [] }`. The errors are written for an
+  LLM repair loop: fix each `path` using its `hint` and repeat until `valid: true`.
+- `POST /v1/video-analysis/import` — body `{ "script": { … }, "rightsAttested": true }`.
+  Stores the validated document as a **completed analysis job**; returns
+  `{ jobId, created, warnings, json }`, where `json` is the document **with the server-derived
+  fields** (`sceneNumber`, `slotRefs`, `visualResolved`) — always use it, never your input, as
+  the document of record. Re-importing an identical script returns the same `jobId`
+  (`created: false`). `rightsAttested: true` is required (403 `rights_attestation_required`
+  otherwise): authored recasts render **Faithful — exactly as written**, so the assertion that
+  the script is your own work is the gate.
+- `GET /v1/video-analysis/authoring-skill` — the generated authoring guide (markdown): the
+  field contract, enum vocabularies, bounds, audio rules, and a validated worked example.
+  Hand it to the LLM that writes your script.
+
+**The document.** `meta` (`durationSec`, `width`, `height`, `aspectRatio` of `"16:9"` or
+`"9:16"` — width/height must agree — and a required `title`, which names the project),
+optional `look`, `slots[]` (`role`: `person` | `object` | `background`), and `scenes[]`
+(contiguous from 0, each ≤ 8s, total from 4s up to the platform run cap; over-cap documents
+are rejected, never truncated). Do **not** write `sceneNumber`/`slotRefs`/`visualResolved` —
+the server derives them and ignores supplied values, which is also why pasting a full
+exported analysis (the editor's "Copy JSON") works as-is.
+
+The returned `jobId` is a standard analysis job: create a recast from it per §13c with
+`analysisJobId` + `fidelity: "faithful"` + `rightsAttested: true`.
+
 ## 14. Pipelines
 
 Story-to-Video pipelines orchestrate multi-stage AI production: script → characters

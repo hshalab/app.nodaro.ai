@@ -182,8 +182,9 @@ describe("buildMcpServer full catalog (v1.1)", () => {
     // get_recipe (ungated content-delivery recipe catalog).
     // Upper bound has headroom for future tool additions; bump when adding
     // a new tool family rather than tracking every single tool.
+    // (last bump: +5 recast authored-script verbs, 2026-08-07)
     expect(tools.length).toBeGreaterThanOrEqual(30)
-    expect(tools.length).toBeLessThanOrEqual(145)
+    expect(tools.length).toBeLessThanOrEqual(155)
   })
 
   it("with only jobs:read, registers ping + jobs tools and nothing else", async () => {
@@ -265,13 +266,22 @@ describe("buildMcpServer full catalog (v1.1)", () => {
     // get_recipe: ungated content-delivery recipe catalog — same posture as
     // start_video_director / get_node_skill.
     expect(names).toContain("get_recipe")
+    // get_recast_authoring_skill + validate_recast_script: the ungated half of
+    // the recast authored-script lane — content delivery + free validation
+    // (charges nothing, persists nothing). Same posture as get_node_skill.
+    expect(names).toContain("get_recast_authoring_skill")
+    expect(names).toContain("validate_recast_script")
+    // …but the priced/persisting recast verbs stay scope-gated.
+    expect(names).not.toContain("import_recast_script")
+    expect(names).not.toContain("start_recast")
+    expect(names).not.toContain("get_recast_status")
     expect(names).not.toContain("list_jobs")
     expect(names).not.toContain("generate_image")
     expect(names).not.toContain("check_balance")
     // create_explainer / create_launch_video require workflows:execute
     expect(names).not.toContain("create_explainer")
     expect(names).not.toContain("create_launch_video")
-    expect(tools).toHaveLength(11)
+    expect(tools).toHaveLength(13)
   })
 
   it("v3.0: dynamic per-user tools dropped — list_apps + get_app_inputs + run_app cover the same surface", async () => {
