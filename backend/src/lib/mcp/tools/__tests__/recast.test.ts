@@ -234,6 +234,9 @@ describe("start_recast", () => {
       fidelity: "faithful",
       rightsAttested: true,
       renderMethod: "keyframes",
+      // C7 capability opt-in: declared on EVERY create (interactive or not) —
+      // the plugin only opens the sheet gate for runs that can answer it.
+      clientCapabilities: ["sheet-gate"],
     })
     const patch = calls.find((c) => c.method === "PATCH")!
     const run = (patch.payload as { settings: { recast: { run: Record<string, unknown> } } }).settings.recast.run
@@ -294,6 +297,9 @@ describe("interactive (P3)", () => {
     expect((est.payload as Record<string, unknown>).interactive).toBe(true)
     const create = calls.find((c) => c.url === "/v1/recast" && c.method === "POST")!
     expect((create.payload as Record<string, unknown>).interactive).toBe(true)
+    // The sheet-gate capability rides the interactive create too — same
+    // always-sent field the non-interactive test pins.
+    expect((create.payload as Record<string, unknown>).clientCapabilities).toEqual(["sheet-gate"])
   })
 
   it("start_recast on an interactive run advances the server-owned next hop (candidates)", async () => {

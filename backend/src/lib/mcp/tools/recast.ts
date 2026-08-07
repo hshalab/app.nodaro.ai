@@ -481,6 +481,11 @@ export function registerRecastTools({ server, session, fastify }: RegisterRecast
             resolution,
             segmentSec,
             renderMethod: "keyframes",
+            // Capability opt-in (C7): the plugin only opens the sheet gate for
+            // runs whose create declared support — and this MCP lane CAN
+            // answer it (widget + resolve_recast_gate). Sent always: additive
+            // field, a pre-sheet plugin Zod-strips it harmlessly.
+            clientCapabilities: ["sheet-gate"],
             ...(args.interactive ? { interactive: true } : {}),
             ...(args.provider ? { provider: args.provider } : {}),
           },
