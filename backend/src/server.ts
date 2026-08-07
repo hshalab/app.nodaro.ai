@@ -6,6 +6,7 @@ import { startReconcileCron } from "./lib/reconcile/start.js"
 import { startAppReportSweepCron } from "./lib/app-report-sweep.js"
 import { startScheduleCron, stopScheduleCron } from "./lib/schedule-cron.js"
 import { startScheduledPostsCron, stopScheduledPostsCron } from "./lib/scheduled-posts-cron.js"
+import { startRecastDriverCron, stopRecastDriverCron } from "./lib/recast-driver-cron.js"
 import { createSocialPublishWorker } from "./workers/social-publish-worker.js"
 import {
   startWorkflowExecutionsReconcileCron,
@@ -70,6 +71,10 @@ async function main() {
   startScheduledPostsCron()
   const socialPublishWorker = createSocialPublishWorker()
   console.log("[social-publish] Worker started in-process")
+
+  // Recast's server-side driver — see recast-driver-cron.ts. OFF by default;
+  // it spends credits, so it is enabled deliberately per environment.
+  startRecastDriverCron(app)
 
   // Backstop reaper for orphaned community-listing blobs (multi-user editions)
   if (isMultiUser()) startCommunityReaperCron()
@@ -155,6 +160,7 @@ async function main() {
   const shutdown = async () => {
     stopScheduleCron()
     stopScheduledPostsCron()
+    stopRecastDriverCron()
     stopWorkflowExecutionsReconcileCron()
     stopPipelinesReconcileCron()
     await orchestratorWorker.close()
