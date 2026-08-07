@@ -499,6 +499,21 @@ re-drive these automatically. It is **off by default**; enable it with
 reconciler only re-drives pipelines with no pending user action, so
 manual-mode runs paused at an approval gate are left untouched.
 
+**Recast interactive runs stop when the user closes the tab.** Recast's
+interactive lane — buying each round of image candidates, waiting out a
+gate's deadline, dispatching the render — historically ran in the
+browser, so a paid run went nowhere once every tab was closed. A
+server-side driver takes it over: a 5-second tick asks the recast plugin
+which runs owe a step and makes one. It is **off by default**; enable it
+with `RECAST_DRIVER_CRON_ENABLED=true` on the API service, and confirm
+`[recast-driver] started` in the boot log.
+
+Off by default deliberately: this cron spends users' credits with no
+request from them, so enabling it is a per-environment decision rather
+than a side effect of deploying. It also needs the recast plugin loaded —
+on an edition without it the route 404s and the cron disables itself
+after one logged warning.
+
 If you're still stuck, file an issue with the Docker logs at
 <https://github.com/nodaroai/app.nodaro.ai/issues>.
 
