@@ -316,14 +316,14 @@ describe("GenerateVideoProConfig — render method", () => {
 
 const ANCHOR_MODE_ID = "gvp-anchor-mode"
 
-function renderAnchor(data: Record<string, unknown> = {}) {
+function renderAnchor(data: Record<string, unknown> = {}, sources: SourceNodeInfo[] = []) {
   selectRegistry.clear()
   const onUpdate = vi.fn()
   const view = render(
     createElement(GenerateVideoProConfig as never, {
       data: { label: "Generate Video Pro", provider: "seedance-2", duration: 8, renderMethod: "keyframes", ...data },
       onUpdate,
-      sources: [],
+      sources,
       fieldMappings: {},
       onMapField: vi.fn(),
       nodes: [],
@@ -331,6 +331,8 @@ function renderAnchor(data: Record<string, unknown> = {}) {
   )
   return { ...view, onUpdate, select: () => selectRegistry.get(ANCHOR_MODE_ID) }
 }
+
+const END_FRAME_SOURCE = [imgSource("end-1", "endFrame", "https://r2/end.png")]
 
 describe("GenerateVideoProConfig — anchor frames", () => {
   it("offers every anchor choice under the keyframes method", () => {
@@ -378,5 +380,40 @@ describe("GenerateVideoProConfig — anchor frames", () => {
     expect(renderAnchor({ anchorMode: "reference" }).container.textContent).toContain(
       "No generated frames at all",
     )
+  })
+
+  // The engine rejects a reference-only run carrying a wired closing frame
+  // ("endFrameUrl cannot ride anchorMode \"none\""), which would otherwise be a
+  // 400 on every run of a perfectly reasonable-looking node.
+  it("drops References only while an end frame is wired, and says why", () => {
+    const { container } = renderAnchor({}, END_FRAME_SOURCE)
+    expect(container.textContent).toContain("Anchor frames")
+    expect(container.textContent).toContain("Start frame only")
+    expect(container.textContent).not.toContain("References only")
+    expect(container.textContent).toContain("no closing-frame lane")
+  })
+
+  it("keeps every choice when no end frame is wired", () => {
+    const { container } = renderAnchor({}, [imgSource("start-1", "startFrame", "https://r2/start.png")])
+    expect(container.textContent).toContain("References only")
+    expect(container.textContent).not.toContain("no closing-frame lane")
+  })
+
+  it("snaps a stored reference choice back to auto when an end frame is wired", () => {
+    // Hiding the option only protects a node configured after the edge exists;
+    // one already set to "reference" would keep the value while the dropdown
+    // stopped showing it, then fail at run time.
+    const { onUpdate } = renderAnchor({ anchorMode: "reference" }, END_FRAME_SOURCE)
+    expect(onUpdate).toHaveBeenCalledWith({ anchorMode: "auto" })
+  })
+
+  it("leaves the other choices alone when an end frame is wired", () => {
+    for (const anchorMode of ["auto", "start-end", "start-only"]) {
+      const { onUpdate } = renderAnchor({ anchorMode }, END_FRAME_SOURCE)
+      expect(
+        onUpdate.mock.calls.flatMap(([u]) => Object.keys(u as object)),
+        anchorMode,
+      ).not.toContain("anchorMode")
+    }
   })
 })

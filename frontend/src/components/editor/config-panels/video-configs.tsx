@@ -3615,6 +3615,14 @@ function GenerateVideoProConfigImpl({ data, onUpdate, sources, fieldMappings, on
   // Mirrors the render-method select's own resolution (a provider that cannot
   // extend is always on keyframes, whatever the stored value says).
   const keyframesActive = !canExtend || data.renderMethod === "keyframes"
+  // A reference-driven run has no closing-frame lane, so the engine REJECTS a
+  // wired end frame under it ("endFrameUrl cannot ride anchorMode \"none\"") —
+  // a 400 on every run. Drop the choice while an end frame is connected rather
+  // than offer one the run cannot honour.
+  const hasWiredEndFrame = sources.some((s) => s.targetHandle === "endFrame")
+  const anchorChoices = hasWiredEndFrame
+    ? GVP_ANCHOR_CHOICES.filter((choice) => choice !== "reference")
+    : GVP_ANCHOR_CHOICES
 
   // Fail-safe (Provider Enum Sync step 12b / CLAUDE.md pitfall 5): `extend`
   // sends the previous segment's tail as a reference VIDEO, which only the
@@ -3659,6 +3667,17 @@ function GenerateVideoProConfigImpl({ data, onUpdate, sources, fieldMappings, on
       onUpdate({ smartCutMode: "legacy-8x8" })
     }
   }, [keyframeAnchored]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fail-safe (CLAUDE.md pitfall 5 pattern): hiding the option only protects a
+  // node configured AFTER the end frame was wired. One already set to
+  // "reference" keeps that value when the edge is drawn, and the dropdown no
+  // longer shows it — the classic "value persists while the option hides, then
+  // the backend rejects it" trap. Snap back to the engine default instead.
+  useEffect(() => {
+    if (hasWiredEndFrame && data.anchorMode === "reference") {
+      onUpdate({ anchorMode: "auto" })
+    }
+  }, [hasWiredEndFrame]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="flex flex-col gap-3">
@@ -3831,7 +3850,7 @@ function GenerateVideoProConfigImpl({ data, onUpdate, sources, fieldMappings, on
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {GVP_ANCHOR_CHOICES.map((choice) => (
+              {anchorChoices.map((choice) => (
                 <SelectItem key={choice} value={choice}>
                   {GVP_ANCHOR_MODE_LABELS[choice]}
                 </SelectItem>
@@ -3840,6 +3859,9 @@ function GenerateVideoProConfigImpl({ data, onUpdate, sources, fieldMappings, on
           </Select>
           <p className="text-[11px] text-muted-foreground">
             {GVP_ANCHOR_MODE_HINTS[data.anchorMode ?? "auto"]}
+            {hasWiredEndFrame
+              ? " A reference-driven run has no closing-frame lane to pin one to, so that choice is unavailable while an end frame is connected."
+              : ""}
           </p>
         </div>
       )}

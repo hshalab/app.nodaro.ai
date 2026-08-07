@@ -158,6 +158,8 @@ Under the keyframes method, **Anchor frames** controls how much each shot is pin
 
 **Why "Start frame only" exists.** A closing still is generated *before* the shot is rendered, so it is a guess about where the world ends up after the motion. When the camera travels, that guess disagrees with what the shot actually does, and the model bends its world to reach the pinned frame — objects drift, rescale, or slide across the shot in the final second. Chaining each opening still off the previous render's *real* last frame removes the guess while keeping continuity, at the cost of scene endings that are no longer pinned (the hard cut at each seam absorbs it).
 
+**With an end frame wired.** A reference-driven run has no closing-frame lane, so **References only** is not offered while something is connected to the node's `endFrame` handle — and a node already set to it snaps back to **Auto** when that edge is drawn. Requesting the combination through the API is rejected rather than silently ignored.
+
 **Pricing.** Anchor mode does not change the reserve: a keyframes run still holds the worst case of two anchors per scene, and the commit charges the actual count. Choosing **Start frame only** generates one anchor per scene instead of two, and **References only** generates none at all, so the unused portion refunds — see the pricing shape above.
 
 Anchor frames requires the current cloud engine version; on an older deployment the field is ignored and the run uses that engine's own default.
