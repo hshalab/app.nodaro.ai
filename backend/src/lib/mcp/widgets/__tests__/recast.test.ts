@@ -11,8 +11,22 @@ describe("recast widget template", () => {
     // Gate rendering + the pick path.
     expect(html).toContain("resolve_recast_gate")
     expect(html).toContain("pendingGate")
+    expect(html).toContain("pendingSheetGate")
     expect(html).toContain("pendingAnchorGate")
     expect(html).toContain("pendingMusicGate")
+  })
+
+  it("renders the sheet gate as a wide pick-1-of-3 choosing body & wardrobe with the face locked", () => {
+    const html = buildRecastWidgetTemplate()
+    // The resolve call names the gate — cast picks stay bare (default).
+    expect(html).toContain("gate: 'sheet'")
+    // Label copy: the user is choosing body & clothes; the face is locked.
+    expect(html).toContain("Body & wardrobe")
+    expect(html).toContain("The face is locked from your cast pick")
+    // Sheets are landscape multi-panel composites — options stack full-width
+    // instead of the portrait candidates' 3-up grid.
+    expect(html).toContain(".options.wide")
+    expect(html).toContain("'options wide'")
   })
 
   it("polls ONLY the free status verb — never a purchasing verb", () => {
