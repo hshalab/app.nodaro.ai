@@ -47,7 +47,10 @@ export async function driverTick(app: FastifyInstance): Promise<"ran" | "skipped
     if (res.statusCode === 404) {
       unavailable = true
       console.log("[recast-driver] route not found — recast plugin not loaded; cron disabled")
-    } else if (res.statusCode >= 500) {
+    } else if (res.statusCode < 200 || res.statusCode >= 300) {
+      // Covers 5xx AND anything else non-2xx (e.g. a 403 from a desynced
+      // internal secret) — all transient-shaped, none of them a reason to
+      // latch off the way a 404 is.
       console.error(`[recast-driver] tick failed: ${res.statusCode}`)
     }
     return "ran"

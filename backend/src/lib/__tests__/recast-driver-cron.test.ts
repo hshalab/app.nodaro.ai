@@ -37,4 +37,29 @@ describe("driverTick", () => {
     expect(await driverTick(app as never)).toBe("ran")
     expect(await driverTick(app as never)).toBe("ran")
   })
+
+  it("logs a non-2xx, non-404 status (e.g. a desynced secret's 403) and does not disable permanently", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
+    const app = appWith(async () => ({ statusCode: 403 }))
+    expect(await driverTick(app as never)).toBe("ran")
+    expect(errorSpy).toHaveBeenCalledWith("[recast-driver] tick failed: 403")
+    // The latch matters more than the log: a second tick must still ATTEMPT
+    // (not "disabled"), proving 403 never set `unavailable` the way 404 does.
+    expect(await driverTick(app as never)).toBe("ran")
+    expect(app.inject).toHaveBeenCalledTimes(2)
+    errorSpy.mockRestore()
+  })
+
+  it("a rejecting inject is caught, logged, and clears inFlight for the next tick", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
+    const app = appWith(async () => { throw new Error("network blip") })
+    expect(await driverTick(app as never)).toBe("ran")
+    expect(errorSpy).toHaveBeenCalledWith("[recast-driver] tick threw:", expect.any(Error))
+    // The assertion that actually matters: inFlight was reset in `finally`,
+    // so the NEXT tick runs instead of being silently "skipped" forever — a
+    // leaked inFlight would wedge the cron with no further signal at all.
+    expect(await driverTick(app as never)).toBe("ran")
+    expect(app.inject).toHaveBeenCalledTimes(2)
+    errorSpy.mockRestore()
+  })
 })
