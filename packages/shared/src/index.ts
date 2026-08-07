@@ -120,6 +120,8 @@ export {
   supportsExtendRender,
   GVP_END_FRAME_PROVIDERS,
   supportsEndAnchor,
+  GVP_ANCHOR_CHOICES,
+  resolveGvpAnchorWire,
   segmentDurationsFor,
   minSegmentSecFor,
   maxSegmentSecFor,
@@ -193,6 +195,8 @@ export type {
   VideoModelCapabilities,
   VideoAudioMode,
   VideoAudioCapability,
+  GvpAnchorChoice,
+  GvpAnchorWireMode,
 } from "./model-constants.js"
 
 

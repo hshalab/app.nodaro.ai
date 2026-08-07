@@ -243,6 +243,43 @@ describe("payload-builder: generate-video-pro dispatch", () => {
       expect(result.modelIdentifier).toBe("generate-video-pro")
     }
   })
+
+  it("translates the node's anchor choice into the engine's chain mode", () => {
+    const cases = [
+      ["start-end", "upfront"],
+      ["start-only", "progressive"],
+      ["reference", "none"],
+    ] as const
+    for (const [choice, wire] of cases) {
+      const n = gvpNode({ prompt: "a cat", renderMethod: "keyframes", anchorMode: choice })
+      const result = buildPayload(n, JOB_ID, {}, undefined, { nodes: [n], edges: [], nodeStates: {} })
+      expect(result.payload.anchorMode, choice).toBe(wire)
+    }
+  })
+
+  it("emits no anchorMode key when the choice is auto, absent or stale", () => {
+    // The lever is additive: a node that never picked one — or that carries a
+    // value from a future build this one doesn't know — must enqueue exactly
+    // what it enqueued before the lever existed, leaving the engine default in
+    // charge rather than billing some other render.
+    for (const anchorMode of [undefined, "auto", "upfront", "nonsense"]) {
+      const n = gvpNode({ prompt: "a cat", renderMethod: "keyframes", ...(anchorMode ? { anchorMode } : {}) })
+      const result = buildPayload(n, JOB_ID, {}, undefined, { nodes: [n], edges: [], nodeStates: {} })
+      expect(result.payload.anchorMode, String(anchorMode)).toBeUndefined()
+      expect(JSON.stringify(result.payload), String(anchorMode)).not.toContain("anchorMode")
+    }
+  })
+
+  it("leaves the reserve surface untouched whatever the anchor choice", () => {
+    // Anchor mode moves how anchors are generated, never the money model: the
+    // engine still worst-cases the anchor budget and meters actuals down, so
+    // picking "reference" must not quietly reprice the run here.
+    for (const anchorMode of ["auto", "start-end", "start-only", "reference"]) {
+      const n = gvpNode({ prompt: "a cat", renderMethod: "keyframes", anchorMode })
+      const result = buildPayload(n, JOB_ID, {}, undefined, { nodes: [n], edges: [], nodeStates: {} })
+      expect(result.modelIdentifier, anchorMode).toBe("generate-video-pro")
+    }
+  })
 })
 
 // ---------------------------------------------------------------------------

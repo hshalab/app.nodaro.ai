@@ -40,7 +40,7 @@ import type {
   VideoAuditNodeData,
 } from "@/types/nodes"
 import { GENERATE_VIDEO_PRO_MAX_DURATION_FALLBACK, VIDEO_I2V_MODELS, VIDEO_T2V_MODELS, VIDEO_V2V_MODELS, VIDEO_GEN_MODELS, GVP_PROVIDERS, EVP_PROVIDERS, MOTION_TRANSFER_MODELS, KIE_VIDEO_DURATIONS, KIE_T2V_DURATIONS, VIDEO_DURATION_OPTIONS, VIDEO_FPS_OPTIONS, PROVIDERS_WITH_END_FRAME, KLING3_DURATIONS, VIDEO_RATIOS, SEEDANCE_2_VIDEO_RATIOS, PROVIDERS_WITH_REFERENCES, V2V_DURATION_OPTIONS, V2V_RESOLUTION_OPTIONS, V2V_ALEPH_ASPECT_RATIOS, EXTEND_VIDEO_MODELS, getVideoResolutionOptions, getAspectRatiosForVideoModel, getVideoModelCapabilitiesTooltip } from "./model-options"
-import { isSeedance2Provider, isMinimaxH3Provider, defaultVideoAspectRatio, maxSegmentSecFor, supportsExtendRender, MODEL_CATALOG, SEEDANCE_2_REF_LIMITS, VIDEO_PROMPT_MAX, getMaxVideoPromptChars, getMaxNegativePromptChars, buildVideoCreditModelIdentifier, characterMentionSlug, characterMentionableAssetArrays, DEFAULT_LABEL_BY_SOURCE, locationMentionSlug, resolveEffectiveSourceType, FRAME_TARGET_HANDLES, VIDEO_ANALYSIS_TIER_ORDER, VIDEO_ANALYSIS_TIER_LABELS, VIDEO_ANALYSIS_TIERS, VIDEO_ANALYSIS_LEGACY_MODELS, DEFAULT_VIDEO_ANALYSIS_TIER, isVideoAnalysisTier, VIDEO_AUDIT_BUCKET_CREDITS, LLM_MODELS, clampSmartCutWindow, SMART_CUT_WINDOW_MIN, SMART_CUT_WINDOW_MAX, SMART_CUT_WINDOW_DEFAULT } from "@nodaro/shared"
+import { isSeedance2Provider, isMinimaxH3Provider, defaultVideoAspectRatio, maxSegmentSecFor, supportsExtendRender, MODEL_CATALOG, SEEDANCE_2_REF_LIMITS, VIDEO_PROMPT_MAX, getMaxVideoPromptChars, getMaxNegativePromptChars, buildVideoCreditModelIdentifier, characterMentionSlug, characterMentionableAssetArrays, DEFAULT_LABEL_BY_SOURCE, locationMentionSlug, resolveEffectiveSourceType, FRAME_TARGET_HANDLES, VIDEO_ANALYSIS_TIER_ORDER, VIDEO_ANALYSIS_TIER_LABELS, VIDEO_ANALYSIS_TIERS, VIDEO_ANALYSIS_LEGACY_MODELS, DEFAULT_VIDEO_ANALYSIS_TIER, isVideoAnalysisTier, VIDEO_AUDIT_BUCKET_CREDITS, LLM_MODELS, clampSmartCutWindow, SMART_CUT_WINDOW_MIN, SMART_CUT_WINDOW_MAX, SMART_CUT_WINDOW_DEFAULT, GVP_ANCHOR_CHOICES, type GvpAnchorChoice } from "@nodaro/shared"
 import type { ReferenceSource, ConnectedReference } from "@nodaro/shared"
 import { resolveSeedance2Inputs } from "@nodaro/prompts"
 import { probeVideoAnalysis } from "@/lib/api"
@@ -3561,6 +3561,24 @@ export { GENERATE_VIDEO_PRO_MAX_DURATION_FALLBACK } from "./model-options"
  * multiple stitched segments server-side), the shared AspectRatioSelector,
  * a provider-aware resolution Select, and the audio toggle.
  */
+/** What each anchor mode actually does to the render, in the user's terms —
+ *  the panel's only explanation of a lever whose failure mode (a shot bending
+ *  its world to reach a pre-guessed closing frame) is invisible until it
+ *  happens. Keyed by the node's stored choice, "auto" included. */
+const GVP_ANCHOR_MODE_LABELS: Record<GvpAnchorChoice, string> = {
+  auto: "Auto (engine decides)",
+  "start-end": "Start + end frames",
+  "start-only": "Start frame only",
+  reference: "References only",
+}
+
+const GVP_ANCHOR_MODE_HINTS: Record<GvpAnchorChoice, string> = {
+  auto: "The engine chooses. Today that means a generated opening still per scene, plus a closing still on longer scenes where the provider supports one.",
+  "start-end": "Each scene renders between a generated opening and closing still. Best when a shot must land on a specific final image — a held pose, a product hero, a title frame. On a moving camera the closing still is a guess about where the world ends up, which is what makes shots warp.",
+  "start-only": "Each scene opens on a still generated from the previous shot's real last frame, then ends wherever its motion naturally lands. Removes the warping that comes from converging on a pre-generated closing frame.",
+  reference: "No generated frames at all — character and location references plus the prompt carry every shot. The most freedom for camera, light and atmosphere; the least control over exact composition.",
+}
+
 function GenerateVideoProConfigImpl({ data, onUpdate, sources, fieldMappings, onMapField, nodeRefs, refMap }: ConfigProps<GenerateVideoProNodeData> & { nodeId?: string }) {
   const promptSnippets = useSnippetPool("video", "prompt")
   const currentProvider = data.provider || "seedance-2"
@@ -3592,6 +3610,19 @@ function GenerateVideoProConfigImpl({ data, onUpdate, sources, fieldMappings, on
   const resolutionOptions = getVideoResolutionOptions(currentProvider)
   const aspectOptions = getAspectRatiosForVideoModel(currentProvider)
   const canExtend = supportsExtendRender(currentProvider)
+  // Anchor frames are a KEYFRAMES concept — under the extend chain each segment
+  // continues the previous one's video tail, so there is no anchor to choose.
+  // Mirrors the render-method select's own resolution (a provider that cannot
+  // extend is always on keyframes, whatever the stored value says).
+  const keyframesActive = !canExtend || data.renderMethod === "keyframes"
+  // A reference-driven run has no closing-frame lane, so the engine REJECTS a
+  // wired end frame under it ("endFrameUrl cannot ride anchorMode \"none\"") —
+  // a 400 on every run. Drop the choice while an end frame is connected rather
+  // than offer one the run cannot honour.
+  const hasWiredEndFrame = sources.some((s) => s.targetHandle === "endFrame")
+  const anchorChoices = hasWiredEndFrame
+    ? GVP_ANCHOR_CHOICES.filter((choice) => choice !== "reference")
+    : GVP_ANCHOR_CHOICES
 
   // Fail-safe (Provider Enum Sync step 12b / CLAUDE.md pitfall 5): `extend`
   // sends the previous segment's tail as a reference VIDEO, which only the
@@ -3636,6 +3667,17 @@ function GenerateVideoProConfigImpl({ data, onUpdate, sources, fieldMappings, on
       onUpdate({ smartCutMode: "legacy-8x8" })
     }
   }, [keyframeAnchored]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fail-safe (CLAUDE.md pitfall 5 pattern): hiding the option only protects a
+  // node configured AFTER the end frame was wired. One already set to
+  // "reference" keeps that value when the edge is drawn, and the dropdown no
+  // longer shows it — the classic "value persists while the option hides, then
+  // the backend rejects it" trap. Snap back to the engine default instead.
+  useEffect(() => {
+    if (hasWiredEndFrame && data.anchorMode === "reference") {
+      onUpdate({ anchorMode: "auto" })
+    }
+  }, [hasWiredEndFrame]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="flex flex-col gap-3">
@@ -3790,6 +3832,39 @@ function GenerateVideoProConfigImpl({ data, onUpdate, sources, fieldMappings, on
             : `${MODEL_CATALOG[currentProvider]?.label ?? currentProvider} has no reference-video transport, so it always renders with keyframes: each scene from its own generated start/end frames, every seam a hard cut.`}
         </p>
       </div>
+
+      {/* Anchor frames — how much each shot is pinned to pre-generated stills.
+          Keyframes-only: the extend chain conditions on the previous segment's
+          video tail and has no anchors to choose. Stored in the node's own
+          product vocabulary and translated to the engine's chain mode by the
+          shared `resolveGvpAnchorWire`, so the canvas Run path and a workflow
+          run cannot disagree about what was picked. */}
+      {keyframesActive && (
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="gvp-anchor-mode">Anchor frames</Label>
+          <Select
+            value={data.anchorMode ?? "auto"}
+            onValueChange={(v) => onUpdate({ anchorMode: v as NonNullable<GenerateVideoProNodeData["anchorMode"]> })}
+          >
+            <SelectTrigger id="gvp-anchor-mode" className="h-9 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {anchorChoices.map((choice) => (
+                <SelectItem key={choice} value={choice}>
+                  {GVP_ANCHOR_MODE_LABELS[choice]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-[11px] text-muted-foreground">
+            {GVP_ANCHOR_MODE_HINTS[data.anchorMode ?? "auto"]}
+            {hasWiredEndFrame
+              ? " A reference-driven run has no closing-frame lane to pin one to, so that choice is unavailable while an end frame is connected."
+              : ""}
+          </p>
+        </div>
+      )}
 
       {/* Planner model — the LLM that splits the script into segment prompts. */}
       <div className="flex flex-col gap-1.5">

@@ -2739,6 +2739,12 @@ export async function generateVideoPro(body: {
    *  provider without a reference-video transport (the pricing helper refuses
    *  to quote `extend` for those) — callers coerce it rather than omitting it. */
   renderMethod?: "keyframes"
+  /** Keyframes chain mode — how much each shot is pinned to pre-generated
+   *  stills: "upfront" (start + engine-policy closing stills), "progressive"
+   *  (start stills chained off each previous render's real last frame, no
+   *  closing pin) or "none" (no frame conditioning; references carry the
+   *  shot). Absent leaves the engine's own default in charge. */
+  anchorMode?: "upfront" | "progressive" | "none"
   idempotencyKey?: string
 }): Promise<{ jobId: string }> {
   const { idempotencyKey, ...rest } = body

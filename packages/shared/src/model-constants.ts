@@ -1317,6 +1317,55 @@ export function supportsEndAnchor(provider: string | undefined): boolean {
   return !!provider && (GVP_END_FRAME_PROVIDERS as readonly string[]).includes(provider)
 }
 
+/**
+ * KEYFRAMES ANCHOR CHOICE — how much a keyframes run pins its shots to
+ * pre-generated stills. The node stores this product vocabulary; the plugin
+ * wire speaks its own `anchorMode`, and `resolveGvpAnchorWire` is the SINGLE
+ * translation both send paths go through (canvas Run in `execute-node.ts` and
+ * the DAG's `payload-builder.ts`), so the two cannot disagree about what the
+ * user picked — the drift that left `renderMethod` unreachable from the canvas
+ * until 2026-08-05.
+ */
+export const GVP_ANCHOR_CHOICES = ["auto", "start-end", "start-only", "reference"] as const
+
+export type GvpAnchorChoice = (typeof GVP_ANCHOR_CHOICES)[number]
+
+/** The plugin engine's own chain-mode vocabulary. */
+export type GvpAnchorWireMode = "upfront" | "progressive" | "none"
+
+/**
+ * Translate the node's anchor choice into the plugin's `anchorMode` field.
+ *
+ * - `auto` (and absent/unknown) → `undefined`: send NOTHING, leaving the
+ *   engine's own default and env flags in charge exactly as they are for
+ *   callers predating this lever. Existing payloads stay byte-identical.
+ * - `start-end` → `upfront`: anchors pre-generated from plan text, and the
+ *   engine's own closing-frame policy applies (capability-gated, longer
+ *   scenes only). Today's shipped behaviour.
+ * - `start-only` → `progressive`: each start anchor is generated just-in-time
+ *   from the PREVIOUS render's real last frame, and no closing still is ever
+ *   pinned — so a shot can never warp its world to reach a pre-motion guess.
+ * - `reference` → `none`: no frame conditioning at all; identity/location
+ *   references plus the prompt carry the shot.
+ *
+ * Deliberately NOT emitting the per-segment `endAnchors` array: that is a
+ * per-scene lever whose natural home is a per-scene surface, and emitting it
+ * here would mean duplicating the plugin's `MAX_SEGMENTS` cap in this repo
+ * where nothing could keep the two in step.
+ */
+export function resolveGvpAnchorWire(choice: string | undefined): GvpAnchorWireMode | undefined {
+  switch (choice) {
+    case "start-end":
+      return "upfront"
+    case "start-only":
+      return "progressive"
+    case "reference":
+      return "none"
+    default:
+      return undefined
+  }
+}
+
 // ---------------------------------------------------------------------------
 // SEGMENT BOUNDS — pure catalog readers. The generate-video-pro splitter (in
 // three places: the plugin engine, the money closed-form, the UI estimate)
