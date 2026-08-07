@@ -1,9 +1,15 @@
 /**
  * Recast widget (spec 2026-08-06 §6 — P3) — the status/choice card for the
  * MCP movie lane: stage progress, the growing preview / final film, and the
- * interactive gates (cast / scene stills / music) rendered as pick-1-of-3
- * choices IN the card. A window onto the run, never a second UI — anything it
- * cannot show is one click away via "Open in Recast".
+ * interactive gates (cast / identity sheet / scene stills / music) rendered
+ * as pick-1-of-3 choices IN the card. A window onto the run, never a second
+ * UI — anything it cannot show is one click away via "Open in Recast".
+ *
+ * The SHEET gate (C7, 2026-08-07 doctrine) opens after the cast pick: per
+ * person slot, 3 composed identity sheets whose face panel is the SAME chosen
+ * portrait in all three — the user is choosing body & wardrobe only. Sheets
+ * are landscape multi-panel composites (unlike the portrait cast candidates),
+ * so their options stack full-width instead of sharing a 3-up grid.
  *
  * Static template registered at `ui://nodaro/widget/v4/recast`. Per-call data
  * arrives via the host's `ui/notifications/tool-result` event from
@@ -36,6 +42,7 @@ const CSS = `
   .gate-title { font-weight: 600; margin-bottom: 6px; }
   .gate-brief { font-size: 12px; opacity: 0.75; margin-bottom: 8px; }
   .options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .options.wide { grid-template-columns: 1fr; }
   .opt { position: relative; border: 2px solid transparent; border-radius: 8px; overflow: hidden; cursor: pointer; padding: 0; background: rgba(127,127,127,0.08); }
   .opt img { width: 100%; display: block; }
   .opt.picked { border-color: #5bd27f; }
@@ -95,9 +102,9 @@ ${uiProtocolShim()}
       }, '*');
     }
 
-    function imageOptions(container, urls, pickedUrl, makeArgs) {
+    function imageOptions(container, urls, pickedUrl, makeArgs, wide) {
       var grid = document.createElement('div');
-      grid.className = 'options';
+      grid.className = wide ? 'options wide' : 'options';
       (urls || []).forEach(function(url, i) {
         var b = document.createElement('button');
         b.className = 'opt' + (pickedUrl === url ? ' picked' : '');
@@ -120,6 +127,7 @@ ${uiProtocolShim()}
       gateEl.hidden = true;
       if (!interactive) return;
       var g = interactive.pendingGate;
+      var sh = interactive.pendingSheetGate;
       var a = interactive.pendingAnchorGate;
       var m = interactive.pendingMusicGate;
       if (g && g.slots) {
@@ -135,6 +143,27 @@ ${uiProtocolShim()}
             var picks = {}; picks[slotId] = i;
             return { recast_id: state.recastId, picks: picks };
           });
+        });
+      } else if (sh && sh.slots) {
+        // Sheet gate (C7): the face panel is the SAME chosen portrait in all
+        // three sheets — the pick is body & wardrobe only. Wide options: a
+        // sheet is a landscape multi-panel composite, illegible at 3-up.
+        gateEl.hidden = false;
+        Object.keys(sh.slots).forEach(function(slotId) {
+          var slot = sh.slots[slotId];
+          if (!slot || !slot.candidates || slot.picked) return;
+          var t = document.createElement('div');
+          t.className = 'gate-title';
+          t.textContent = 'Body & wardrobe: ' + (slot.label || slotId);
+          gateEl.appendChild(t);
+          var brief = document.createElement('div');
+          brief.className = 'gate-brief';
+          brief.textContent = 'The face is locked from your cast pick — choose the body and clothes.';
+          gateEl.appendChild(brief);
+          imageOptions(gateEl, slot.candidates, slot.picked, function(i) {
+            var picks = {}; picks[slotId] = i;
+            return { recast_id: state.recastId, gate: 'sheet', picks: picks };
+          }, true);
         });
       } else if (a) {
         gateEl.hidden = false;

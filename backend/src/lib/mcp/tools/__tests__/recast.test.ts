@@ -335,6 +335,102 @@ describe("interactive (P3)", () => {
     expect((res.structuredContent as { advanced?: string }).advanced).toBe("dispatch")
   })
 
+  it("resolve_recast_gate maps a sheet pick onto /select and stops at the open gate", async () => {
+    h.workflowsRow = seededInteractive({ recastId: "run-1", status: "planned", startedAt: "t" })
+    const sheetGate = {
+      kind: "sheet",
+      slots: { villain: { label: "Villain", candidates: ["s1.png", "s2.png", "s3.png"] } },
+    }
+    const { fastify, calls } = stubFastify({
+      "/v1/recast/run-1/select": () => ({ statusCode: 200, body: { ok: true } }),
+      "/v1/recast/run-1": () => ({
+        statusCode: 200,
+        body: {
+          status: "planned",
+          interactive: { phase: "candidates", pendingSheetGate: sheetGate, next: { kind: "gate", gate: "sheet" } },
+        },
+      }),
+    })
+    const server = buildServer()
+    registerRecastTools({ server, session: sessionWith(ALL), fastify })
+    const res = await callTool(server, "resolve_recast_gate", { recast_id: WF_ID, gate: "sheet", picks: { hero: 2 } })
+    expect(res.isError).toBeFalsy()
+    const sel = calls.find((c) => c.url === "/v1/recast/run-1/select")!
+    expect(sel.payload as Record<string, unknown>).toMatchObject({ gate: "sheet", picks: { hero: 2 } })
+    // A gate stops the walk: nothing was fired, and the note points back at
+    // resolve_recast_gate for the still-open sheet slot.
+    expect(calls.some((c) => c.url === "/v1/recast/run-1/dispatch")).toBe(false)
+    const sc = res.structuredContent as { advanced?: string; note?: string; interactive?: { pendingSheetGate?: unknown } }
+    expect(sc.advanced).toBeUndefined()
+    expect(sc.note).toContain("resolve_recast_gate")
+    expect(sc.interactive?.pendingSheetGate).toEqual(sheetGate)
+  })
+
+  it("resolve_recast_gate rejects an out-of-range sheet pick before touching /select", async () => {
+    h.workflowsRow = seededInteractive({ recastId: "run-1", status: "planned", startedAt: "t" })
+    const { fastify, calls } = stubFastify({
+      "/v1/recast/run-1/select": () => ({ statusCode: 200, body: { ok: true } }),
+      "/v1/recast/run-1": () => ({ statusCode: 200, body: { status: "planned", interactive: { phase: "candidates" } } }),
+    })
+    const server = buildServer()
+    registerRecastTools({ server, session: sessionWith(ALL), fastify })
+    const res = await callTool(server, "resolve_recast_gate", { recast_id: WF_ID, gate: "sheet", picks: { hero: 12 } })
+    expect(res.isError).toBe(true)
+    expect(calls.some((c) => c.url === "/v1/recast/run-1/select")).toBe(false)
+  })
+
+  it("finish_auto is untouched: alone it sends finishAuto with no gate; with sheet picks it rides them", async () => {
+    h.workflowsRow = seededInteractive({ recastId: "run-1", status: "planned", startedAt: "t" })
+    const { fastify, calls } = stubFastify({
+      "/v1/recast/run-1/select": () => ({ statusCode: 200, body: { ok: true } }),
+      "/v1/recast/run-1/dispatch": () => ({ statusCode: 200, body: { ok: true } }),
+      "/v1/recast/run-1": () => ({
+        statusCode: 200,
+        body: { status: "planned", interactive: { phase: "candidates", next: { kind: "dispatch" } } },
+      }),
+    })
+    const server = buildServer()
+    registerRecastTools({ server, session: sessionWith(ALL), fastify })
+
+    const alone = await callTool(server, "resolve_recast_gate", { recast_id: WF_ID, finish_auto: true })
+    expect(alone.isError).toBeFalsy()
+    const first = calls.find((c) => c.url === "/v1/recast/run-1/select")!
+    expect(first.payload as Record<string, unknown>).toMatchObject({ finishAuto: true })
+    expect(first.payload as Record<string, unknown>).not.toHaveProperty("gate")
+    expect(first.payload as Record<string, unknown>).not.toHaveProperty("picks")
+
+    calls.length = 0
+    const withPicks = await callTool(server, "resolve_recast_gate", {
+      recast_id: WF_ID,
+      gate: "sheet",
+      picks: { hero: 0 },
+      finish_auto: true,
+    })
+    expect(withPicks.isError).toBeFalsy()
+    const second = calls.find((c) => c.url === "/v1/recast/run-1/select")!
+    expect(second.payload as Record<string, unknown>).toMatchObject({ gate: "sheet", picks: { hero: 0 }, finishAuto: true })
+  })
+
+  it("get_recast_status surfaces a pending sheet gate as a waiting choice", async () => {
+    h.workflowsRow = seededInteractive({ recastId: "run-1", status: "planned", startedAt: "t" })
+    const sheetGate = { kind: "sheet", slots: { hero: { label: "Hero", candidates: ["s1.png", "s2.png", "s3.png"] } } }
+    const { fastify } = stubFastify({
+      "/v1/recast/run-1": () => ({
+        statusCode: 200,
+        body: {
+          status: "planned",
+          interactive: { phase: "candidates", pendingSheetGate: sheetGate, next: { kind: "gate", gate: "sheet" } },
+        },
+      }),
+    })
+    const server = buildServer()
+    registerRecastTools({ server, session: sessionWith(ALL), fastify })
+    const res = await callTool(server, "get_recast_status", { recast_id: WF_ID })
+    const sc = res.structuredContent as { interactive?: { pendingSheetGate?: unknown }; next?: string }
+    expect(sc.interactive?.pendingSheetGate).toEqual(sheetGate)
+    expect(sc.next).toContain("resolve_recast_gate")
+  })
+
   it("get_recast_status passes the interactive gate through for the widget", async () => {
     h.workflowsRow = seededInteractive({ recastId: "run-1", status: "planned", startedAt: "t" })
     const gate = { kind: "cast", slots: { hero: { label: "Hero", candidates: ["u1.png", "u2.png", "u3.png"] } } }

@@ -130,9 +130,23 @@ interface InteractiveState {
   phase?: string
   next?: InteractiveNext
   pendingGate?: unknown
+  /** C7 sheet gate (2026-08-07 doctrine): opens after cast, before anchors. */
+  pendingSheetGate?: unknown
   pendingAnchorGate?: unknown
   pendingMusicGate?: unknown
   cycle?: { n: number; state: string; error?: string }
+}
+
+/** The one open gate, in walk order (cast → sheet → anchors → music) — the
+ *  plugin sends at most one pending* view at a time, so this is a lookup,
+ *  not a tiebreak. */
+function pendingGateOf(interactive: InteractiveState | undefined): unknown {
+  return (
+    interactive?.pendingGate ??
+    interactive?.pendingSheetGate ??
+    interactive?.pendingAnchorGate ??
+    interactive?.pendingMusicGate
+  )
 }
 
 /**
@@ -381,7 +395,7 @@ export function registerRecastTools({ server, session, fastify }: RegisterRecast
           if (status.interactive) {
             const adv = await advanceInteractive(fastify, session.userId, run.recastId)
             if (adv.error) return errorResult(adv.error.statusCode, adv.error.body)
-            const gate = adv.interactive?.pendingGate ?? adv.interactive?.pendingAnchorGate ?? adv.interactive?.pendingMusicGate
+            const gate = pendingGateOf(adv.interactive)
             return textResult({
               recastRunId: run.recastId,
               status: adv.status,
@@ -503,18 +517,27 @@ export function registerRecastTools({ server, session, fastify }: RegisterRecast
       {
         title: "Resolve Recast Gate",
         description:
-          "Record the user's pick at an interactive gate (cast / scene stills / " +
-          "music) and advance the run. The pick itself is free — the interactive " +
-          "surcharge was consented at start_recast. Options are 0-based indexes " +
-          "into the candidates shown by get_recast_status. `finish_auto: true` " +
-          "resolves THIS gate and every remaining one with the critic's top pick " +
-          "(unattended finish).",
+          "Record the user's pick at an interactive gate (cast / identity sheet / " +
+          "scene stills / music) and advance the run. The pick itself is free — " +
+          "the interactive surcharge was consented at start_recast. Options are " +
+          "0-based indexes into the candidates shown by get_recast_status. The " +
+          "SHEET gate (`gate: \"sheet\"`, opens after the cast pick) chooses each " +
+          "person's body & wardrobe: the face panel is identical across its 3 " +
+          "sheets — locked by the cast pick — so the user is judging body and " +
+          "clothes only. `finish_auto: true` resolves THIS gate and every " +
+          "remaining one with the critic's top pick (unattended finish).",
         inputSchema: {
           recast_id: z.uuid().describe("The recastId returned by import_recast_script."),
+          gate: z
+            .enum(["cast", "sheet"])
+            .optional()
+            .describe(
+              'Which pick-1-of-3 gate `picks` answers: "cast" (default) or "sheet" (identity sheet — body & wardrobe; the face is locked from the cast pick).',
+            ),
           picks: z
             .record(z.string(), z.number().int().min(0).max(9))
             .optional()
-            .describe("CAST gate: slotId → chosen candidate index."),
+            .describe("CAST or SHEET gate: slotId → chosen candidate index."),
           segment: z.number().int().min(0).max(47).optional().describe("ANCHOR gate: which scene (0-based)."),
           anchor_start: z.number().int().min(0).max(9).optional().describe("ANCHOR gate: opening-frame pick."),
           anchor_end: z.number().int().min(0).max(9).optional().describe("ANCHOR gate: closing-frame pick."),
@@ -535,7 +558,10 @@ export function registerRecastTools({ server, session, fastify }: RegisterRecast
 
         const body: Record<string, unknown> = { userId: session.userId }
         if (args.picks) {
-          body.gate = "cast"
+          // `picks` serves two pick-1-of-3 gates; `gate` says which (default
+          // cast, the pre-sheet behavior). Anchors/music stay inferred from
+          // their own args, untouched.
+          body.gate = args.gate === "sheet" ? "sheet" : "cast"
           body.picks = args.picks
         } else if (args.anchor_start !== undefined || args.anchor_end !== undefined) {
           body.gate = "anchors"
@@ -562,7 +588,7 @@ export function registerRecastTools({ server, session, fastify }: RegisterRecast
         // The walk continues server-owned: fire the next non-gate hop so a
         // headless conversation never strands the run at "picked, now what".
         const adv = await advanceInteractive(fastify, session.userId, run.recastId)
-        const gate = adv.interactive?.pendingGate ?? adv.interactive?.pendingAnchorGate ?? adv.interactive?.pendingMusicGate
+        const gate = pendingGateOf(adv.interactive)
         return textResult({
           recastRunId: run.recastId,
           status: adv.status,
@@ -670,8 +696,7 @@ export function registerRecastTools({ server, session, fastify }: RegisterRecast
           })
         }
 
-        const pendingGate =
-          status.interactive?.pendingGate ?? status.interactive?.pendingAnchorGate ?? status.interactive?.pendingMusicGate
+        const pendingGate = pendingGateOf(status.interactive)
         return textResult({
           recastId: args.recast_id,
           recastRunId: run.recastId,
