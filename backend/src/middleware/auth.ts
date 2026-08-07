@@ -239,6 +239,16 @@ export function registerAuthHook(app: FastifyInstance): void {
       if (body?.userId && typeof body.userId === "string") {
         req.userId = body.userId
       }
+      // GET/DELETE injects have no body to carry userId — internal callers
+      // (the MCP verbs) pass it via header instead. Same trust level as
+      // `body.userId`: the secret above already grants impersonation, this
+      // only extends it to bodyless methods. Body wins when both are sent.
+      if (!req.userId) {
+        const headerUser = firstHeaderValue(req.headers["x-internal-user-id"])
+        if (typeof headerUser === "string" && headerUser.length > 0) {
+          req.userId = headerUser
+        }
+      }
       if (firstHeaderValue(req.headers["x-app-run"]) === "true") {
         req.isAppRun = true
       }

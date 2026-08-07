@@ -17,6 +17,7 @@ import { buildGalleryWidgetTemplate } from "./gallery.js"
 import { buildAppRunWidgetTemplate } from "./app-run.js"
 import { buildUploadWidget } from "./upload.js"
 import { buildJobAutoWidget } from "./job-auto.js"
+import { buildRecastWidgetTemplate } from "./recast.js"
 import { WIDGET_MEDIA_ORIGINS } from "./csp-origins.js"
 import { config } from "../../config.js"
 
@@ -32,6 +33,7 @@ export const WIDGET_URI = {
   uploadImage: "ui://nodaro/widget/v4/upload-image",
   uploadAudio: "ui://nodaro/widget/v4/upload-audio",
   uploadVideo: "ui://nodaro/widget/v4/upload-video",
+  recast: "ui://nodaro/widget/v4/recast",
 } as const
 
 const WIDGETS: Array<{
@@ -105,6 +107,12 @@ const WIDGETS: Array<{
     uri: WIDGET_URI.uploadVideo,
     description: "In-iframe video upload: file picker + drop-zone + auto-announce URL(s) on success",
     build: () => buildUploadWidget("video"),
+  },
+  {
+    name: "widget-recast",
+    uri: WIDGET_URI.recast,
+    description: "Recast run: stage progress + growing preview + interactive pick-1-of-3 gates (cast / stills / music) + Open in Recast",
+    build: () => buildRecastWidgetTemplate(),
   },
 ]
 

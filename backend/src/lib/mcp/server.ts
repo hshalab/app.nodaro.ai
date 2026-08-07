@@ -17,6 +17,7 @@ import { registerObjectTools } from "./tools/objects.js"
 import { registerCreatureTools } from "./tools/creatures.js"
 import { registerUploadTools } from "./tools/upload.js"
 import { registerFilmDirectorTool } from "./tools/film-director.js"
+import { registerRecastTools } from "./tools/recast.js"
 import { registerSkillLoaders } from "./tools/skill-loaders.js"
 import { registerPipelineTools } from "./tools/pipelines.js"
 import { registerReduce } from "./tools/reduce.js"
@@ -146,6 +147,9 @@ export async function buildMcpServer(opts: BuildOpts): Promise<McpServer> {
   if (hasCredits()) {
     registerFilmDirectorTool(server, session)
     registerPipelineTools({ server, session })
+    // Recast authored-script lane (spec 2026-08-06 §5): Cloud-only — the
+    // routes these verbs call live in the cloud plugin and 404 off-cloud.
+    registerRecastTools({ server, session, fastify: opts.fastify })
   }
   registerReduce({ server, session, fastify: opts.fastify })
   registerPromptHelper({ server, session, fastify: opts.fastify })
