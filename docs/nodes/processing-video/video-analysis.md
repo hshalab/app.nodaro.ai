@@ -229,6 +229,18 @@ bleeding into the others. When more looks are detected than the per-slot cap
 allows, the extras are folded into the default look and the fold is recorded on
 the result's `variationFolds` so nothing disappears silently.
 
+**Looks are found two ways, and both run.** One pass watches the footage for
+wardrobe, hair and makeup changes. A second reads the finished analysis —
+scene prose, dialogue and narration — for looks the footage alone does not
+show: a time jump, a life stage, a flashback, an era. So a look can be
+reported for a subject whose *appearance* never visibly changes in a single
+shot, because the writing establishes a different context for it ("twenty
+years later…"). The second pass only adds looks the first did not already
+find; neither can rename a slot, alter a scene's text, or introduce an entity
+the analysis does not have, and the per-slot cap applies to their combined
+output. If either pass cannot run, the analysis still completes with whatever
+the other found.
+
 Looks are an **opt-in on the API request** (`variations: true`); the platform
 node analyzes without them, and consuming apps that support per-look casting
 (for example Recast) opt in on your behalf.
