@@ -309,3 +309,74 @@ describe("GenerateVideoProConfig — render method", () => {
     expect(back.onUpdate).toHaveBeenLastCalledWith({ renderMethod: "extend" })
   })
 })
+
+// =============================================================================
+// GenerateVideoProConfig — anchor frames (keyframes anchor mode)
+// =============================================================================
+
+const ANCHOR_MODE_ID = "gvp-anchor-mode"
+
+function renderAnchor(data: Record<string, unknown> = {}) {
+  selectRegistry.clear()
+  const onUpdate = vi.fn()
+  const view = render(
+    createElement(GenerateVideoProConfig as never, {
+      data: { label: "Generate Video Pro", provider: "seedance-2", duration: 8, renderMethod: "keyframes", ...data },
+      onUpdate,
+      sources: [],
+      fieldMappings: {},
+      onMapField: vi.fn(),
+      nodes: [],
+    }),
+  )
+  return { ...view, onUpdate, select: () => selectRegistry.get(ANCHOR_MODE_ID) }
+}
+
+describe("GenerateVideoProConfig — anchor frames", () => {
+  it("offers every anchor choice under the keyframes method", () => {
+    const { container } = renderAnchor()
+    expect(container.textContent).toContain("Anchor frames")
+    for (const label of ["Auto (engine decides)", "Start + end frames", "Start frame only", "References only"]) {
+      expect(container.textContent, label).toContain(label)
+    }
+  })
+
+  it("hides the control on an extend run, where there are no anchors to choose", () => {
+    const { container } = renderAnchor({ renderMethod: "extend" })
+    expect(container.textContent).not.toContain("Anchor frames")
+    expect(selectRegistry.get(ANCHOR_MODE_ID)).toBeUndefined()
+  })
+
+  it("shows the control on a keyframes-only provider with no explicit render method", () => {
+    // veo3 has no reference-video transport, so it always renders keyframes —
+    // the panel must offer the anchor lever there even though the node never
+    // stored a renderMethod of its own.
+    const { container } = renderAnchor({ provider: "veo3", renderMethod: undefined })
+    expect(container.textContent).toContain("Anchor frames")
+  })
+
+  it("defaults to auto without writing anything back on mount", () => {
+    const { select, onUpdate } = renderAnchor()
+    expect(select()?.value).toBe("auto")
+    // Presentational default only — an untouched node must stay byte-identical
+    // on the wire, exactly as the render-method select behaves.
+    expect(onUpdate.mock.calls.flatMap(([u]) => Object.keys(u as object))).not.toContain("anchorMode")
+  })
+
+  it("reflects a persisted choice and writes the picked one back", () => {
+    expect(renderAnchor({ anchorMode: "reference" }).select()?.value).toBe("reference")
+
+    const { select, onUpdate } = renderAnchor()
+    select()?.onValueChange?.("start-only")
+    expect(onUpdate).toHaveBeenLastCalledWith({ anchorMode: "start-only" })
+  })
+
+  it("explains what each choice does, including the drift start-only removes", () => {
+    expect(renderAnchor({ anchorMode: "start-only" }).container.textContent).toContain(
+      "previous shot's real last frame",
+    )
+    expect(renderAnchor({ anchorMode: "reference" }).container.textContent).toContain(
+      "No generated frames at all",
+    )
+  })
+})

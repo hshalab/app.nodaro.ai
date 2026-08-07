@@ -1877,6 +1877,14 @@ export interface GenerateVideoProNodeData {
   contextTailSec?: number
   /** Render method: "extend" (default; video-chain continuation tails) or "keyframes" (per-scene generated start/end anchor frames — scenes re-render independently; music is added post-render). */
   renderMethod?: "extend" | "keyframes"
+  /** Keyframes anchor mode: "auto" (default; the engine decides), "start-end" (pre-generated start and closing stills), "start-only" (start stills chained from each previous render's real last frame — never pins a closing guess), or "reference" (no frame conditioning; identity references and the prompt carry the shot). Keyframes only — ignored under "extend". */
+  // Spelled out inline rather than aliased to @nodaro/shared's GvpAnchorChoice:
+  // `gen:skills` copies these declarations verbatim into the node skill docs an
+  // agent reads to build a workflow, and a bare type name would tell it nothing
+  // about what it may send (every sibling enum here lists its values too).
+  // Kept honest by the panel, which indexes a Record keyed by GvpAnchorChoice
+  // with this union — a value that drifts out of the shared list stops compiling.
+  anchorMode?: "auto" | "start-end" | "start-only" | "reference"
   /** AUTO-CAST: inject analysis-supplied per-slot reference frames as identity
    *  refs. OPT-IN (default off — v1 is text-only; the stamps become v2's
    *  user-editable cast gallery). */

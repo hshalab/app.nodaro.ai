@@ -400,6 +400,10 @@ export const NODE_REGISTRY: NodeDescriptor[] = [
         { key: "overlapAnchorMode", type: "string" },
         { key: "smartCutMode", type: "string" },
         { key: "smartCutAudio", type: "boolean" },
+        // Keyframes anchor mode: "auto" | "start-end" | "start-only" |
+        // "reference" — how much each shot is pinned to pre-generated stills.
+        // No-op under the extend render method.
+        { key: "anchorMode", type: "string" },
       ],
     },
     // Env-configurable cap (`GENERATE_VIDEO_PRO_MAX_DURATION`, default 120s) — read at
