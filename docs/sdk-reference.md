@@ -746,7 +746,11 @@ if ("jobId" in result) {
 
 > **Seedance 2 video** (`run("text-to-video" | "generate-video", …)`):
 > `seedance-2` (full) accepts `resolution: "4k"` and `aspectRatio: "adaptive"`
-> (plus `"21:9"`); `seedance-2-fast` / `seedance-2-mini` are 480p / 720p only.
+> (plus `"21:9"`); `seedance-2-fast` / `seedance-2-mini` / `seedance-2-5` are
+> 480p / 720p only. `seedance-2-5` runs to **30s** in a single call (the rest
+> stop at 15s) and takes 30 image / 10 video / 10 audio references; when a start
+> frame is wired it renders at that frame's aspect and rejects an explicit
+> `aspectRatio`.
 > **MiniMax Hailuo 3** (`minimax-h3`) takes the same reference fields (9 images /
 > 3 videos / 3 audio) at `resolution: "2K"` (default) or `"768P"` (cheaper
 > per-second rate; any other value renders and bills as 2K) — ref-video input

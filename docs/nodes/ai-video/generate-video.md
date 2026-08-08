@@ -61,7 +61,7 @@ Generate Video covers the union of the legacy image-to-video and text-to-video c
 | VEO 3.x | `veo3` (Quality), `veo3.1` (Fast), `veo3_lite` (Lite) | T2V, I2V, first+last, reference | 4 / 6 / 8s; 720p / 1080p; generate-audio default on; auto-translate |
 | Gemini Omni | `gemini-omni-video` | T2V, I2V, video-edit (V2V) | 4 / 6 / 8 / 10s; 720p / 1080p / 4K (4K not on free tier); no prompt-baked audio (external `audio_ids` only — see section); up to 7 reference images; V2V uses trim window ≤ 10 s |
 | Kling | `kling`, `kling-turbo`, `kling-3.0`, `kling-master` | T2V, I2V (`kling-master` is I2V-only) | 5 / 10s (Kling 3.0: continuous 3–15s) |
-| Seedance / Seedance 2 | `seedance`, `seedance-2`, `seedance-2-fast`, `seedance-2-mini` | T2V, I2V, reference (S2) | S2: 4–15s; aspect 16:9 / 9:16 / 1:1 / 4:3 / 3:4 / **21:9** / **adaptive** — **`adaptive` is the default** (output matches the wired input; was `16:9`). Resolution by variant (separate KIE models): `seedance-2` (full) **480p / 720p / 1080p / 4K**; `seedance-2-fast` **480p / 720p only** (no 1080p, no 4K); `seedance-2-mini` **480p / 720p only**. Up to 9 image + 3 video + 3 audio refs |
+| Seedance / Seedance 2 | `seedance`, `seedance-2`, `seedance-2-fast`, `seedance-2-mini`, `seedance-2-5` | T2V, I2V, reference (S2) | S2: 4–15s; **`seedance-2-5`: 4–30s in one shot**. Aspect 16:9 / 9:16 / 1:1 / 4:3 / 3:4 / **21:9** / **adaptive** — **`adaptive` is the default** (output matches the wired input; was `16:9`); on `seedance-2-5` a wired start frame forces `adaptive` (any explicit ratio is rejected, so the frame sets the ratio). Resolution by variant (separate KIE models): `seedance-2` (full) **480p / 720p / 1080p / 4K**; `seedance-2-fast` **480p / 720p only** (no 1080p, no 4K); `seedance-2-mini` **480p / 720p only**; `seedance-2-5` **480p / 720p only**. Refs: up to 9 image + 3 video + 3 audio (**`seedance-2-5`: 30 / 10 / 10**) |
 | MiniMax Hailuo 3 | `minimax-h3` | T2V, I2V (first/last frame), reference | 4–15s (any second, default 6); resolution **2K (default) / 768P** (768P is the cheaper per-second rate); aspect 21:9 / 16:9 / 4:3 / 1:1 / 3:4 / 9:16 + **adaptive** (default; pure T2V requires a concrete ratio and renders 16:9 when left on adaptive). Up to 9 image + 3 video + 3 audio refs; audio always on |
 | Hailuo | `hailuo-2.3-pro`, `hailuo-2.3`, `hailuo-standard` | T2V (`hailuo-standard`), I2V | 6 / 10s |
 | Bytedance | `bytedance-lite`, `bytedance-pro`, `bytedance-pro-fast` | T2V (lite, pro), I2V | 5 / 10s |
@@ -84,7 +84,7 @@ Providers that accept a paired last frame: `veo3`, `veo3.1`, `veo3_lite` (`image
 
 ### Multimodal references
 
-Seedance 2 (`seedance-2` / `seedance-2-fast` / `seedance-2-mini`) accepts up to 9 image refs, 3 video refs, and 3 audio refs in a single call. **`seedance-2-fast` requires each reference audio clip to be ≤ 15.2 seconds** (audio-driven r2v mode) — longer clips are rejected before the job is created with an `audio_too_long` error. MiniMax Hailuo 3 (`minimax-h3`) mirrors the same 9 / 3 / 3 caps through the same input resolver (frames fold into the reference pool when any reference is wired): reference videos are 2–15s each and ≤ 15s combined, reference audio is ≤ 15s per clip (enforced pre-submit with the same `audio_too_long` error) and **cannot be used alone** — it must ride with an image or video reference. HappyHorse Ref2V accepts 1–9 image refs. VEO 3.1 (`veo3.1`) supports `REFERENCE_2_VIDEO` mode when image references are wired without a start frame. Gemini Omni (`gemini-omni-video`) accepts up to 7 image refs in both modes — with a start frame (i2v) or without one (reference-conditioned t2v).
+Seedance 2 (`seedance-2` / `seedance-2-fast` / `seedance-2-mini`) accepts up to 9 image refs, 3 video refs, and 3 audio refs in a single call; **`seedance-2-5` raises those caps to 30 / 10 / 10** and accepts reference audio up to 30 s per clip. **`seedance-2-fast` requires each reference audio clip to be ≤ 15.2 seconds** (audio-driven r2v mode) — longer clips are rejected before the job is created with an `audio_too_long` error. MiniMax Hailuo 3 (`minimax-h3`) mirrors the same 9 / 3 / 3 caps through the same input resolver (frames fold into the reference pool when any reference is wired): reference videos are 2–15s each and ≤ 15s combined, reference audio is ≤ 15s per clip (enforced pre-submit with the same `audio_too_long` error) and **cannot be used alone** — it must ride with an image or video reference. HappyHorse Ref2V accepts 1–9 image refs. VEO 3.1 (`veo3.1`) supports `REFERENCE_2_VIDEO` mode when image references are wired without a start frame. Gemini Omni (`gemini-omni-video`) accepts up to 7 image refs in both modes — with a start frame (i2v) or without one (reference-conditioned t2v).
 
 **Seedance 2 unified inputs (frames + references together).** Seedance 2 no longer has a Frames-vs-References toggle (`data.seedance2InputMode` was removed) — first/last frames and references can all be connected at once, and the dispatch mode is derived from the wiring:
 
@@ -213,6 +213,10 @@ If neither has the identifier, the route returns HTTP 503 `price_not_configured`
 | `seedance-2-fast` | 8s | 720p | i2v | with ref | 400 |
 | `seedance-2-mini` | 8s | 720p | i2v | no ref | 410 |
 | `seedance-2-mini` | 8s | 480p | i2v | with ref | 120 |
+| `seedance-2-5` | 8s | 480p | i2v | no ref | 560 |
+| `seedance-2-5` | 8s | 720p | i2v | no ref | 1260 |
+| `seedance-2-5` | 8s | 720p | i2v | with ref | 760 |
+| `seedance-2-5` | 30s | 720p | i2v | no ref | 4730 |
 | `grok-imagine-video-1.5` | 8s | 480p | i2v | image required | 300 |
 | `grok-imagine-video-1.5` | 8s | 720p | i2v | image required | 510 |
 | `grok-imagine-video-1.5` | 15s | 720p | i2v | image required | 950 |
@@ -234,6 +238,15 @@ If neither has the identifier, the route returns HTTP 503 `price_not_configured`
 | 480p | 19 | 11.5 |
 
 So at 8s: 1080p = `ceil(102×8/4) × 10` = **2040** no-ref / `ceil(62×8/4) × 10` = **1240** with-ref; 4K = `ceil(208×8/4) × 10` = **4160** no-ref / `ceil(128×8/4) × 10` = **2560** with-ref. Wiring any reference (image / video / audio) selects the cheaper `-ref` ladder. 4K is the full `seedance-2` only — `seedance-2-fast` (480p / 720p) and `seedance-2-mini` (480p / 720p) are separate, cheaper KIE models with their own ladders (neither has a 1080p SKU).
+
+**Seedance 2.5** (`seedance-2-5`) uses the same formula and the same `-ref` split, on its own rates — and one tier per second across its full **4–30s** range, so no duration rounds up to a coarser tier:
+
+| Resolution | Per-sec (no ref) | Per-sec (with ref) |
+|---|---:|---:|
+| 720p | 63 | 38 |
+| 480p | 28 | 17 |
+
+So at 8s: 720p = `ceil(63×8/4) × 10` = **1260** no-ref / `ceil(38×8/4) × 10` = **760** with-ref; 480p = **560** / **340**. At its 30s maximum: 720p = `ceil(63×30/4) × 10` = **4730** no-ref / **2850** with-ref; 480p = **2100** / **1280**. Seedance 2.5 has **no 1080p or 4K SKU** — for those, use the full `seedance-2`.
 
 **MiniMax Hailuo 3** (`minimax-h3`) is per-second priced at two resolution rates. The composite is `minimax-h3:<N>s` (N = 4–15) for **2K** — the default, and what any non-768P resolution value renders and bills as — and `minimax-h3:<N>s:768p` for **768P**, the cheaper tier. Credits = `ceil(rate × seconds / 4) × 10`, with rate = 36.5 KIE cr/s @2K and 22.5 @768P. Examples: @2K 4s = 370, 6s = 550 (the default duration), 8s = 730, 15s = 1370; @768P 4s = 230, 6s = 340, 8s = 450, 15s = 850. There is no `-ref` dimension. Two extra billing dimensions are reserved dynamically on top of the composite:
 
@@ -276,7 +289,7 @@ A request is **voiced** only when a spec is present **and** the model can carry 
 
 | Audio mode | Models | Chain |
 |---|---|---|
-| `audio_driven` | `seedance-2`, `seedance-2-fast`, `seedance-2-mini`, `minimax-h3` (audio always on — no toggle) | Synthesize the dialogue (each line in its own voice) via ElevenLabs Dialogue v3 → feed as reference audio → the model lip-syncs to it. |
+| `audio_driven` | `seedance-2`, `seedance-2-fast`, `seedance-2-mini`, `seedance-2-5`, `minimax-h3` (audio always on — no toggle) | Synthesize the dialogue (each line in its own voice) via ElevenLabs Dialogue v3 → feed as reference audio → the model lip-syncs to it. |
 | `native_speech` | `veo3`, `veo3.1`, `veo3_lite` (always on); `kling`, `kling-3.0` (behind the `sound` toggle — enabling it on Kling raises the credit cost, see the `:audio` composites below); `kling-3-omni` (audio included in the flat rate) | Bake the line during generation, then revoice the baked audio to the primary character voice (ElevenLabs voice-changer, keeping the music/SFX bed). |
 
 Kling models speak scripted dialogue natively: quote the line in the prompt (optionally with a voice description, e.g. `[Anna: warm calm voice]: "good morning"`) and enable sound. Kling 2.6 voices are English/Chinese; other languages are auto-translated to English by the model.

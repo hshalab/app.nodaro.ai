@@ -74,7 +74,7 @@ import {
 import { supabase } from "../../lib/supabase.js"
 import { videoQueue } from "../../lib/queue.js"
 import { reserveCreditsForJob } from "../../middleware/credit-guard.js"
-import { FLUX_LORA_CHARACTER_MODEL_ID, type ConnectedReference } from "@nodaro/shared"
+import { FLUX_LORA_CHARACTER_MODEL_ID, PROMPT_HARD_CEILING, type ConnectedReference } from "@nodaro/shared"
 import { assembleImageInput } from "@nodaro/prompts"
 
 // ---------------------------------------------------------------------------
@@ -103,14 +103,18 @@ describe("generateImageBody aspectRatio enum", () => {
 
 describe("generateImageBody prompt length cap", () => {
   it("accepts up to the PROMPT_HARD_CEILING and rejects past it", () => {
-    // The route is a GENEROUS ceiling (PROMPT_HARD_CEILING = 20000), NOT a
-    // per-model reject — the prompt assembler truncates to the provider's
-    // verified cap (getMaxImagePromptChars; e.g. seedream 3000, nano-banana-2
-    // 20000) and the editor warns first (warn-don't-block). So a 5001-char
-    // prompt for a 20000-capable model must NOT be rejected at the route.
+    // The route is a GENEROUS ceiling, NOT a per-model reject — the prompt
+    // assembler truncates to the provider's verified cap
+    // (getMaxImagePromptChars; e.g. seedream 3000, nano-banana-2 20000) and the
+    // editor warns first (warn-don't-block). So a 5001-char prompt for a
+    // 20000-capable model must NOT be rejected at the route.
+    //
+    // Bounds come from the CONSTANT, not literals: the ceiling tracks the
+    // largest verified per-model cap and moves whenever a model with a longer
+    // prompt window ships (20000 -> 30000 for seedance-2-5).
     expect(generateImageBody.safeParse({ prompt: "a".repeat(5001) }).success).toBe(true)
-    expect(generateImageBody.safeParse({ prompt: "a".repeat(20000) }).success).toBe(true)
-    expect(generateImageBody.safeParse({ prompt: "a".repeat(20001) }).success).toBe(false)
+    expect(generateImageBody.safeParse({ prompt: "a".repeat(PROMPT_HARD_CEILING) }).success).toBe(true)
+    expect(generateImageBody.safeParse({ prompt: "a".repeat(PROMPT_HARD_CEILING + 1) }).success).toBe(false)
   })
 })
 

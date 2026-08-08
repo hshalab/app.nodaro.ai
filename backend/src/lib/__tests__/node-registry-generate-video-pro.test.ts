@@ -35,6 +35,7 @@ describe("generate-video-pro node registry", () => {
       "seedance-2",
       "seedance-2-fast",
       "seedance-2-mini",
+      "seedance-2-5",
       "minimax-h3",
       "veo3",
       "veo3.1",
@@ -115,7 +116,7 @@ describe("generate-video-pro node registry", () => {
 
   it("edit-video-pro stays Seedance-only (no minimax-h3 — no v2v mode / -ref axis)", () => {
     const d = NODE_REGISTRY.find((n) => n.type === "edit-video-pro")
-    expect(d?.providers).toEqual(["seedance-2", "seedance-2-fast", "seedance-2-mini"])
+    expect(d?.providers).toEqual(["seedance-2", "seedance-2-fast", "seedance-2-mini", "seedance-2-5"])
     expect(d?.providers).not.toContain("minimax-h3")
   })
 

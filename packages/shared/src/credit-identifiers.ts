@@ -16,6 +16,7 @@ import {
   VEO_RESOLUTION_TIERED_PROVIDERS,
   VIDEO_DURATION_TIERS,
   PRICING_DEFAULT_DURATION_SEC,
+  PRICING_DEFAULT_RESOLUTION,
   MOTION_DURATION_TIERS,
   T2I_TO_I2I_VARIANT,
   isVeoProvider,
@@ -260,7 +261,13 @@ export function buildVideoCreditModelIdentifier(
     // maps to its top priced tier instead of emitting an unpriced composite
     // (which the hard-fail credit guard would 503 on at runtime).
     const supported = MODEL_CATALOG[effectiveProvider]?.resolutions ?? ["480p", "720p", "1080p"]
-    const want = resolution === "4k" ? "4k" : resolution === "1080p" ? "1080p" : resolution === "720p" ? "720p" : "480p"
+    // An OMITTED resolution renders the model's KIE-side default, so price that
+    // default rather than the cheapest tier — otherwise an intent-less request
+    // reserves 480p against a 720p render and commit_credits (refund-only) can
+    // never collect the delta. Providers without an entry keep the historical
+    // 480p fallback, so this cannot reprice anything already live.
+    const requested = resolution ?? PRICING_DEFAULT_RESOLUTION[effectiveProvider]
+    const want = requested === "4k" ? "4k" : requested === "1080p" ? "1080p" : requested === "720p" ? "720p" : "480p"
     // Unsupported (e.g. a stale 1080p on seedance-2-mini) clamps to the model's
     // top priced tier so the emitted composite is always seeded.
     const res = supported.includes(want) ? want : (supported[supported.length - 1] ?? "480p")

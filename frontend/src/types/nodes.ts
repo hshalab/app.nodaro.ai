@@ -6641,6 +6641,7 @@ export const NODE_DEFINITIONS: ReadonlyArray<NodeTypeDefinition> = [
           { value: "seedance-2", label: "Seedance 2.0" },
           { value: "seedance-2-fast", label: "Seedance 2.0 Fast" },
           { value: "seedance-2-mini", label: "Seedance 2.0 Mini" },
+          { value: "seedance-2-5", label: "Seedance 2.5" },
           { value: "veo3", label: "VEO 3.1 (Quality)" },
           { value: "veo3.1", label: "VEO 3.1 (Fast)" },
           { value: "wan", label: "Wan 2.6" },

@@ -612,6 +612,38 @@ export const KIE_VIDEO_MODELS: Record<string, KieModelConfig> = {
     endFrameParam: "last_frame_url",
   },
 
+  // Seedance 2.5 — docs.kie.ai/market/bytedance/seedance-2-5
+  // Next generation, NOT a tier of the 2.0 ladder. Per-second pricing:
+  // 480p no-ref 28 cr/s, 480p ref 17 cr/s, 720p no-ref 63 cr/s, 720p ref 38 cr/s.
+  // Per-second composites in credits.ts are authoritative.
+  //
+  // Live-probe findings vs. the published schema (api.kie.ai, 2026-08-08):
+  //  - resolution is 480p/720p ONLY. 1080p / 4k / 2k / 1440p are rejected with
+  //    the same "not within the range of allowed options" as a nonsense value,
+  //    so ByteDance's native 4K is NOT exposed through KIE. Do not add tiers
+  //    here without re-probing.
+  //  - duration accepts 1-30; 31+ is rejected, so the "ultra-long 180s" mode is
+  //    likewise not exposed. We expose 4-30 (the documented floor is 4).
+  //  - a start frame forces aspect_ratio "adaptive" — see
+  //    FRAME_MODE_ADAPTIVE_ONLY_ASPECT, applied in video.ts.
+  "seedance-2-5": {
+    model: "bytedance/seedance-2-5",
+    credits: 126,
+    cost: 0.63,  // nominal 8s/720p/no-ref fallback (63 cr/s × 8); composites override
+    imageParam: "first_frame_url",
+    extraParams: {
+      resolution: "720p",
+      aspect_ratio: "adaptive",
+      duration: 8,
+      generate_audio: true,
+      web_search: false,
+      nsfw_checker: false,
+    },
+    allowedDurations: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
+    supportsEndFrame: true,
+    endFrameParam: "last_frame_url",
+  },
+
   // MiniMax Hailuo 3 — docs.kie.ai/market/minimax-h3/image-to-video (+
   // reference-to-video / text-to-video siblings; video.ts swaps the task model
   // per input mode via minimaxH3TaskModel). Resolution enum 768P | 2K
@@ -935,6 +967,25 @@ export const KIE_TEXT_TO_VIDEO_MODELS: Record<string, KieModelConfig> = {
       nsfw_checker: false,
     },
     allowedDurations: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+  },
+
+  // Seedance 2.5 T2V — docs.kie.ai/market/bytedance/seedance-2-5
+  // 480p/720p only and 4-30s — both probe-verified against KIE 2026-08-08; see
+  // the i2v entry above for the full findings. The adaptive-aspect restriction
+  // is frame-mode only, so t2v keeps the full ratio enum.
+  "seedance-2-5": {
+    model: "bytedance/seedance-2-5",
+    credits: 126,
+    cost: 0.63,  // nominal 8s/720p/no-ref fallback; per-second composites authoritative
+    extraParams: {
+      resolution: "720p",
+      aspect_ratio: "adaptive",
+      duration: 8,
+      generate_audio: true,
+      web_search: false,
+      nsfw_checker: false,
+    },
+    allowedDurations: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
   },
 
   // MiniMax Hailuo 3 T2V — docs.kie.ai/market/minimax-h3/text-to-video.

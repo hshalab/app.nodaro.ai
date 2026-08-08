@@ -65,6 +65,7 @@ export const PIPELINE_PINNABLE_VIDEO_MODELS = [
   "seedance-2",
   "seedance-2-fast",
   "seedance-2-mini",
+  "seedance-2-5",
   "veo3",
   "veo3.1",
   "veo3_lite",

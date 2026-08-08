@@ -1,7 +1,7 @@
 ---
 node_type: generate-video
-generated_at: 2026-08-01T21:07:07.563Z
-generated_from: 9baa8ce1d
+generated_at: 2026-08-08T17:46:55.726Z
+generated_from: c06705f7f
 ---
 
 # Generate Video
@@ -135,7 +135,7 @@ generated_from: 9baa8ce1d
 
 Model-family-specific prompting rules. Apply the section matching the node's `provider`.
 
-### Seedance 2.0 (seedance-2, seedance-2-fast, seedance-2-mini)
+### Seedance 2 (seedance-2, seedance-2-fast, seedance-2-mini, seedance-2-5)
 
 Prompt structure (front-load what matters most):
 precise subject → action details → scene/environment → lighting & color tone → camera movement → visual style → image quality → constraints.
@@ -146,6 +146,12 @@ precise subject → action details → scene/environment → lighting & color to
 - One camera movement type per shot — never ask for push + pan + orbit at once (image instability).
 - Prefer slow, gentle, continuous movements over high-burst action (sprints, big jumps, violent rolls morph). Describe actions per body part with quantified degree: "slowly raises a hand", "pushes hard off the ground". Chain actions with inertia: "uses the momentum of the turn to naturally raise an arm".
 - Express emotion as externalized physical detail, never abstract words: not "very sad" but "lowering the head, shoulders trembling slightly, eyes reddening, fingers clutching the corner of clothing".
+
+**Generation differences (seedance-2-5 vs the 2.0 SKUs)**
+- A single 2.5 shot runs to 30s, where every 2.0 SKU stops at 15s. Plan a complete 4-6 shot beat inside ONE generation instead of splitting it into two clips and stitching — no seam to hide, and continuity holds because it never leaves the model.
+- 2.5 also takes far more reference material (30 images / 10 videos / 10 audio vs 9/3/3). Treat that as room for COVERAGE — more distinct characters, locations and props in one shot — not as licence to pile refs onto one identity. The "ONE headshot + ONE full-body, 4-5 assets total" rule above still produces the best likeness on 2.5.
+- 2.5 renders at 480p/720p only: there is no 1080p or 4K tier, so route a job that needs one to seedance-2 (which has both) or upscale afterwards.
+- With a start frame, 2.5 always derives the output aspect from that frame — an explicit aspect ratio is rejected outright, so compose the frame at the ratio you want.
 
 **References (when reference media is attached)**
 - Refer to assets by ordinal in attachment order: "@Image 1", "Video 2", "Audio 1". Asset ORDER is priority — put the most identity-critical asset first. (In the editor, the `{image:N:label}` / `{video:N}` / `{audio:N}` prompt tokens auto-emit this binding — `{image:1:person}` resolves to "the person from @image_1" — so a wired reference and its mention stay in sync.)

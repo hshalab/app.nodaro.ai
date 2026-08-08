@@ -38,14 +38,15 @@ export interface ProviderPromptDoctrine {
 }
 
 const SEEDANCE_2_DOCTRINE: ProviderPromptDoctrine = {
-  providers: ["seedance-2", "seedance-2-fast", "seedance-2-mini"],
-  heading: "Seedance 2.0 (seedance-2, seedance-2-fast, seedance-2-mini)",
+  providers: ["seedance-2", "seedance-2-fast", "seedance-2-mini", "seedance-2-5"],
+  heading: "Seedance 2 (seedance-2, seedance-2-fast, seedance-2-mini, seedance-2-5)",
   tips: [
     "Storyboard complex videos as 'Shot 1: … Shot 2: …' WITHOUT timestamps — timed shots like '(0-3s)' are officially unstable and can break generation.",
     "One camera movement per shot; describe actions per body part with degree ('slowly raises a hand'); express emotion as physical detail, never abstract words.",
     "Native multi-track audio — cue it inline: （background music）, <sound effects>, and quoted dialogue.",
     "References go by ordinal (@Image 1, Video 2) in attachment order; earlier = higher priority. Identity = ONE headshot + ONE full-body (multi-view sheets cause ID drift). 4-5 assets total beats maxing the 9/3/3 caps.",
     "No negative-prompt parameter — put constraints in the prompt: 'keep it subtitle-free, do not generate a watermark, do not generate a logo'.",
+    "seedance-2-5 only: one shot runs to 30s (the 2.0 SKUs stop at 15s), so storyboard a whole beat instead of planning a stitch. Ref caps are wider (30/10/10), but 4-5 assets still gives the best identity fidelity.",
   ],
   doctrine: `Prompt structure (front-load what matters most):
 precise subject → action details → scene/environment → lighting & color tone → camera movement → visual style → image quality → constraints.
@@ -56,6 +57,12 @@ precise subject → action details → scene/environment → lighting & color to
 - One camera movement type per shot — never ask for push + pan + orbit at once (image instability).
 - Prefer slow, gentle, continuous movements over high-burst action (sprints, big jumps, violent rolls morph). Describe actions per body part with quantified degree: "slowly raises a hand", "pushes hard off the ground". Chain actions with inertia: "uses the momentum of the turn to naturally raise an arm".
 - Express emotion as externalized physical detail, never abstract words: not "very sad" but "lowering the head, shoulders trembling slightly, eyes reddening, fingers clutching the corner of clothing".
+
+**Generation differences (seedance-2-5 vs the 2.0 SKUs)**
+- A single 2.5 shot runs to 30s, where every 2.0 SKU stops at 15s. Plan a complete 4-6 shot beat inside ONE generation instead of splitting it into two clips and stitching — no seam to hide, and continuity holds because it never leaves the model.
+- 2.5 also takes far more reference material (30 images / 10 videos / 10 audio vs 9/3/3). Treat that as room for COVERAGE — more distinct characters, locations and props in one shot — not as licence to pile refs onto one identity. The "ONE headshot + ONE full-body, 4-5 assets total" rule above still produces the best likeness on 2.5.
+- 2.5 renders at 480p/720p only: there is no 1080p or 4K tier, so route a job that needs one to seedance-2 (which has both) or upscale afterwards.
+- With a start frame, 2.5 always derives the output aspect from that frame — an explicit aspect ratio is rejected outright, so compose the frame at the ratio you want.
 
 **References (when reference media is attached)**
 - Refer to assets by ordinal in attachment order: "@Image 1", "Video 2", "Audio 1". Asset ORDER is priority — put the most identity-critical asset first. (In the editor, the \`{image:N:label}\` / \`{video:N}\` / \`{audio:N}\` prompt tokens auto-emit this binding — \`{image:1:person}\` resolves to "the person from @image_1" — so a wired reference and its mention stay in sync.)

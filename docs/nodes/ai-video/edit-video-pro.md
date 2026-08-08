@@ -23,7 +23,7 @@ Where [Video Retake](./video-retake.md) targets short (down to 2s), audio-or-vid
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| Provider | Select | `seedance-2` | `seedance-2` (full) or `seedance-2-fast` — same supported set [Generate Video Pro](./generate-video-pro.md) uses |
+| Provider | Select | `seedance-2` | Any Seedance 2 SKU — `seedance-2` (full), `seedance-2-fast`, `seedance-2-mini` or `seedance-2-5` |
 | Prompt | Text | — | Describes what should replace the selected span; also settable via the `prompt` handle |
 | Replace Span (From / To) | Number pair (seconds) | `0` – `8` | The window to replace. Minimum span length 4s. Maximum span length is the configured cap (120s by default) — see [Span rules](#span-rules) |
 | Generate Audio | Checkbox | on | |
@@ -38,6 +38,8 @@ Edit Video Pro is scoped to the same supported providers as Generate Video Pro:
 |---|---|---|
 | `seedance-2` | Seedance 2.0 | 480p / 720p / 1080p / 4K |
 | `seedance-2-fast` | Seedance 2.0 Fast | 480p / 720p only |
+| `seedance-2-mini` | Seedance 2.0 Mini | 480p / 720p only |
+| `seedance-2-5` | Seedance 2.5 | 480p / 720p only |
 
 The bridge always renders at the largest resolution tier the selected provider supports that's still at or below the source video's shorter dimension — there's no manual resolution picker. A 4K source paired with `seedance-2` bridges at 4K; the same source paired with `seedance-2-fast` bridges at 720p, since it offers no higher tier.
 

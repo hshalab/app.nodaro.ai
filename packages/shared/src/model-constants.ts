@@ -89,11 +89,17 @@ export const SUNO_TEXT_MAX = 5000
  * video routes' Zod schemas. The PER-MODEL limits below (and the editor warning)
  * do the real work; the routes stay generous so they never hard-reject a legit
  * long prompt — the assembler/payload truncates to the model cap as a graceful
- * safety net (warn-don't-block). 20000 = the largest verified per-model image/
- * video limit (seedance-2 / nano-banana-2 / gemini-omni). Anything past this is
- * abuse, not a real prompt.
+ * safety net (warn-don't-block). 30000 = the largest verified per-model image/
+ * video limit (seedance-2-5; seedance-2 / nano-banana-2 / gemini-omni sit at
+ * 20000). Anything past this is abuse, not a real prompt.
+ *
+ * This MUST stay >= the largest entry in MAX_VIDEO_PROMPT_CHARS_BY_PROVIDER /
+ * MAX_IMAGE_PROMPT_CHARS_BY_PROVIDER — otherwise the route's Zod hard-rejects a
+ * prompt the model itself would have accepted, which is exactly the
+ * block-instead-of-warn behaviour this ceiling exists to avoid. A drift guard in
+ * `__tests__/prompt-length-limits.test.ts` enforces that relationship.
  */
-export const PROMPT_HARD_CEILING = 20000
+export const PROMPT_HARD_CEILING = 30000
 
 /**
  * Ceiling for LLM TEXT-generation node inputs (the "Generate Text"/llm-chat node
@@ -129,6 +135,9 @@ export const MAX_VIDEO_PROMPT_CHARS_BY_PROVIDER: Record<string, number> = {
   "seedance-2-fast": 20000,
   "seedance-2-mini": 20000,
   "seedance-2-extend": 20000,
+  // Seedance 2.5 raises the prompt ceiling to 30000
+  // (docs.kie.ai/market/bytedance/seedance-2-5).
+  "seedance-2-5": 30000,
   "gemini-omni-video": 20000,
   "bytedance-lite": 10000,
   "bytedance-pro": 10000,
@@ -644,6 +653,7 @@ export const IMAGE_TO_VIDEO_PROVIDERS = [
   "seedance-2",
   "seedance-2-fast",
   "seedance-2-mini",
+  "seedance-2-5",
   "minimax-h3",
   "hailuo-2.3-pro",
   "hailuo-2.3",
@@ -687,6 +697,7 @@ export const TEXT_TO_VIDEO_PROVIDERS = [
   "seedance-2",
   "seedance-2-fast",
   "seedance-2-mini",
+  "seedance-2-5",
   "minimax-h3",
   "wan",
   "hailuo-standard",
@@ -866,6 +877,7 @@ export const LIP_SYNC_PROVIDERS = [
   "seedance-2",
   "seedance-2-fast",
   "seedance-2-mini",
+  "seedance-2-5",
   // MiniMax Hailuo 3 — same multimodal audio-driven mechanism (r2v
   // reference_audio_urls paired with an image ref); rides the same
   // reference-audio lip-sync surface as the Seedance 2 family.
@@ -881,6 +893,7 @@ export const SEEDANCE_LIP_SYNC_PROVIDERS = new Set<string>([
   "seedance-2",
   "seedance-2-fast",
   "seedance-2-mini",
+  "seedance-2-5",
   "minimax-h3",
 ])
 
@@ -1116,6 +1129,7 @@ export const DURATION_PRICED_PROVIDERS = new Set([
   "seedance-2",
   "seedance-2-fast",
   "seedance-2-mini",
+  "seedance-2-5",
   "minimax-h3",
   "grok-imagine-video-1.5",
   "happyhorse",
@@ -1131,6 +1145,12 @@ export const SEEDANCE_2_PROVIDERS = new Set<string>([
   "seedance-2",
   "seedance-2-fast",
   "seedance-2-mini",
+  // Seedance 2.5 — a later generation, but it shares the whole 2.0 capability
+  // surface this set gates (frames + image/video/audio refs, adaptive aspect,
+  // per-second resolution × video-ref pricing), so it belongs here. Where it
+  // DIFFERS (30s ceiling, no 1080p/4K, wider ref caps) the difference is
+  // carried by the per-provider maps, never by branching on this set.
+  "seedance-2-5",
 ])
 
 export function isSeedance2Provider(provider: string | undefined): boolean {
@@ -1450,6 +1470,18 @@ export const SEEDANCE_2_REF_LIMITS = {
 } as const
 
 /**
+ * Seedance 2.5 raises every reference cap well above the 2.0 family's
+ * (docs.kie.ai/market/bytedance/seedance-2-5): 30 images, 10 videos, 10 audio.
+ * Kept as its own constant rather than widening {@link SEEDANCE_2_REF_LIMITS}
+ * so the 2.0 SKUs can't silently start advertising caps KIE rejects for them.
+ */
+export const SEEDANCE_2_5_REF_LIMITS = {
+  images: 30,
+  videos: 10,
+  audio: 10,
+} as const
+
+/**
  * KIE r2v REFERENCE-VIDEO MINIMUM (seconds) for the Seedance 2.0 family — the
  * provider hard-rejects shorter reference clips with a 400 BEFORE generation:
  * "the parameter video duration (seconds) specified in the request must be
@@ -1509,6 +1541,9 @@ export const SEEDANCE_2_EXTEND_STITCH = {
  */
 export const SEEDANCE_2_R2V_MAX_AUDIO_SEC_BY_PROVIDER: Record<string, number> = {
   "seedance-2-fast": 15.2,
+  // Seedance 2.5 — documented hard limit: each reference audio 2-30s, ≤15 MB
+  // per file (docs.kie.ai/market/bytedance/seedance-2-5).
+  "seedance-2-5": 30,
   // MiniMax Hailuo 3 — documented hard limit: each reference audio segment
   // 2-15s, ≤15s total (docs.kie.ai/market/minimax-h3/reference-to-video).
   "minimax-h3": 15,
@@ -1560,6 +1595,8 @@ export const VIDEO_REF_LIMITS_BY_PROVIDER: Record<
   "seedance-2": { ...SEEDANCE_2_REF_LIMITS },
   "seedance-2-fast": { ...SEEDANCE_2_REF_LIMITS },
   "seedance-2-mini": { ...SEEDANCE_2_REF_LIMITS },
+  // Seedance 2.5 — wider caps than the 2.0 family (30 / 10 / 10).
+  "seedance-2-5": { ...SEEDANCE_2_5_REF_LIMITS },
   // MiniMax Hailuo 3 — identical multimodal caps (9 images / 3 videos / 3
   // audio per docs.kie.ai/market/minimax-h3/reference-to-video). Note: KIE
   // bills input images beyond the first 5 (11 KIE cr each) — see the
@@ -1632,7 +1669,29 @@ export const NATIVE_ADAPTIVE_ASPECT: Record<string, string> = {
   "seedance-2": "adaptive",
   "seedance-2-fast": "adaptive",
   "seedance-2-mini": "adaptive",
+  "seedance-2-5": "adaptive",
 }
+
+/**
+ * Video providers that accept ONLY the "adaptive" aspect ratio once a START
+ * FRAME is present (first-frame or first+last-frame mode). Sending any explicit
+ * ratio in that mode is a hard 422 from the provider, so the payload builder
+ * coerces the value to `adaptive` for these instead of forwarding it.
+ *
+ * UNDOCUMENTED — KIE's schema advertises the full ratio enum unconditionally and
+ * only rejects the combination at request time:
+ *   "Seedance 2.5 first-frame and first-last-frame tasks only support adaptive
+ *    aspect ratio"
+ * (live probe against api.kie.ai, 2026-08-08). Verified as 2.5-ONLY: the same
+ * probe against the 2.0 SKUs accepts explicit ratios with a start frame, which
+ * is why this is a set and not a family-wide rule.
+ *
+ * Behaviourally this costs nothing — with a start frame the output aspect is
+ * derived from that frame anyway, which is exactly what `adaptive` means.
+ */
+export const FRAME_MODE_ADAPTIVE_ONLY_ASPECT: ReadonlySet<string> = new Set([
+  "seedance-2-5",
+])
 
 /**
  * Video providers that REQUIRE an input image (image-to-video only) even though
@@ -1761,6 +1820,10 @@ export const VIDEO_AUDIO_CAPABILITY: Record<string, VideoAudioCapability> = {
   "seedance-2": { mode: "audio_driven", field: "generateAudio" },
   "seedance-2-fast": { mode: "audio_driven", field: "generateAudio" },
   "seedance-2-mini": { mode: "audio_driven", field: "generateAudio" },
+  // Seedance 2.5 — same audio-driven surface; `generate_audio` defaults TRUE
+  // on KIE and is cost-affecting only through the -ref/no-ref rate split,
+  // which the resolution+ref composite already carries (no `:audio` suffix).
+  "seedance-2-5": { mode: "audio_driven", field: "generateAudio", defaultOn: true },
   // MiniMax Hailuo 3 — multimodal; lip-syncs to reference audio (r2v). The
   // KIE API exposes NO audio on/off parameter (audio is always produced), so
   // there is no toggle field — alwaysOn, like VEO.
@@ -1883,6 +1946,7 @@ export const VIDEO_VARIABLE_PRICING: Record<string, "duration" | "duration+audio
   "seedance-2": "duration+resolution+ref",
   "seedance-2-fast": "duration+resolution+ref",
   "seedance-2-mini": "duration+resolution+ref",
+  "seedance-2-5": "duration+resolution+ref",
   // MiniMax Hailuo 3 — per-second rate at two resolution tiers (2K default /
   // 768P). Duration + resolution form the composite (bare = 2K, ":768p"
   // appended for the cheaper tier); ref-video input seconds + extra input
@@ -1906,11 +1970,47 @@ export const PRICING_DEFAULT_DURATION_SEC: Record<string, number> = {
   "minimax-h3": 6,
 }
 
+/**
+ * Resolution assumed for PRICING when a request names a provider but omits
+ * `resolution` — the resolution twin of {@link PRICING_DEFAULT_DURATION_SEC},
+ * and it MUST match the provider's KIE-side default (`extraParams.resolution`
+ * in backend kie/models.ts) so an intent-less request reserves what it will
+ * actually render.
+ *
+ * Without an entry, `buildVideoCreditModelIdentifier` falls back to the
+ * CHEAPEST tier (480p) for a resolution-priced provider. That is safe only for
+ * a model whose KIE default IS the cheapest tier; for one defaulting to 720p it
+ * reserves the 480p price against a 720p render, and `commit_credits` cannot
+ * collect the difference afterwards.
+ *
+ * Providers absent here keep the historical 480p fallback — deliberately, so
+ * adding this map cannot reprice anything already live.
+ */
+export const PRICING_DEFAULT_RESOLUTION: Record<string, string> = {
+  // KIE renders 720p when `resolution` is omitted (kie/models.ts extraParams).
+  "seedance-2-5": "720p",
+}
+
 /** HappyHorse 1.1 per-second tiers — one per allowed duration (3–15s), shared
  *  by all three modes (t2v/i2v/ref2v) which bill at identical published rates. */
 const HAPPYHORSE_DURATION_TIERS: Array<{ maxSeconds: number; suffix: string }> = Array.from(
   { length: 13 },
   (_, i) => ({ maxSeconds: i + 3, suffix: `${i + 3}s` }),
+)
+
+/**
+ * Seedance 2.5 per-second tiers — one per allowed duration (4–30s), like
+ * minimax-h3 and unlike the 2.0 family's coarse 4/8/12/15 ladder.
+ *
+ * Per-second is REQUIRED here, not a nicety: the ladder snaps a request UP to
+ * the first tier whose `maxSeconds` covers it and falls back to the LAST tier
+ * when nothing does, so a coarse ladder over a 30s range would reserve the 15s
+ * price for a 30s render. `commit_credits` only ever refunds a surplus and can
+ * never collect an upward delta, so that under-reservation would be permanent.
+ */
+const SEEDANCE_2_5_DURATION_TIERS: Array<{ maxSeconds: number; suffix: string }> = Array.from(
+  { length: 27 },
+  (_, i) => ({ maxSeconds: i + 4, suffix: `${i + 4}s` }),
 )
 
 /**
@@ -1992,6 +2092,7 @@ export const VIDEO_DURATION_TIERS: Record<string, Array<{ maxSeconds: number; su
     { maxSeconds: 12, suffix: "12s" },
     { maxSeconds: 15, suffix: "15s" },
   ],
+  "seedance-2-5": SEEDANCE_2_5_DURATION_TIERS,
   // MiniMax Hailuo 3 — true per-second billing (KIE 36.5 cr/s @2K, 22.5 cr/s
   // @768P). One tier per allowed second (4-15s) so the composite identifier
   // maps 1:1 to the seeded price — no rounding/overcharge for any on-menu
@@ -2218,6 +2319,17 @@ export const VIDEO_MODEL_CAPS: Record<string, VideoModelCapabilities> = {
     // SEEDANCE_2_REF_LIMITS.images is the hard upper bound (9). 1C.1
     // caps to a more conservative 5 to leave headroom for primary
     // character + location + 3 secondary refs.
+    maxReferenceImages: 5,
+  },
+  "seedance-2-5": {
+    inputModes: ["first_frame", "first_last_frame", "ref_images", "video_continuation"],
+    supportsVideoExtension: true,
+    // 30s single-shot on KIE (probe-verified 2026-08-08: 30 accepted, 31 rejected).
+    maxDurationSeconds: 30,
+    prompting_style: "natural_language",
+    // SEEDANCE_2_5_REF_LIMITS.images is the hard upper bound (30); the same
+    // conservative headroom rule as seedance-2 applies to what the director
+    // actually allocates.
     maxReferenceImages: 5,
   },
   "hailuo-2.3-pro": {
