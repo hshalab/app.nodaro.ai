@@ -57,7 +57,7 @@ import {
   KIE_TTS_MODELS,
   KIE_STT_MODELS,
 } from "../kie/models.js"
-import { IMAGE_GEN_PROVIDERS, IMAGE_I2I_PROVIDERS, IMAGE_EDIT_PROVIDERS, IMAGE_TO_VIDEO_PROVIDERS, TEXT_TO_VIDEO_PROVIDERS, VIDEO_TO_VIDEO_PROVIDERS, VIDEO_UPSCALE_PROVIDERS, MOTION_TRANSFER_PROVIDERS, LIP_SYNC_PROVIDERS, TTS_PROVIDERS, TRANSCRIBE_PROVIDERS, VIDEO_PROVIDERS_REQUIRING_IMAGE } from "@nodaro/shared"
+import { IMAGE_GEN_PROVIDERS, IMAGE_I2I_PROVIDERS, IMAGE_EDIT_PROVIDERS, IMAGE_TO_VIDEO_PROVIDERS, TEXT_TO_VIDEO_PROVIDERS, VIDEO_TO_VIDEO_PROVIDERS, VIDEO_UPSCALE_PROVIDERS, MOTION_TRANSFER_PROVIDERS, LIP_SYNC_PROVIDERS, SEEDANCE_LIP_SYNC_PROVIDERS, TTS_PROVIDERS, TRANSCRIBE_PROVIDERS, VIDEO_PROVIDERS_REQUIRING_IMAGE } from "@nodaro/shared"
 
 /**
  * Providers in the shared list that DO NOT go through providerRegistry.
@@ -86,15 +86,16 @@ const DIRECT_API_EXEMPTIONS = new Set<string>([
   // (falLipSync) and dispatched from the lip-sync worker's fal branch, not via
   // providerRegistry/KIE.
   "sync-lipsync-v3",
-  // Seedance 2 family (incl. -mini) + MiniMax Hailuo 3 — go through the i2v
-  // worker with audio plumbed as reference_audio_urls. They appear in
+  // Seedance 2 family (incl. -mini and 2.5) + MiniMax Hailuo 3 — go through the
+  // i2v worker with audio plumbed as reference_audio_urls. They appear in
   // LIP_SYNC_PROVIDERS for UX purposes but the lip-sync route delegates to
   // the i2v code path. (minimax-h3 IS a KIE_VIDEO_MODELS key — the exemption
   // here only covers the KIE_LIP_SYNC_MODELS map.)
-  "seedance-2",
-  "seedance-2-fast",
-  "seedance-2-mini",
-  "minimax-h3",
+  //
+  // DERIVED, not hand-listed: SEEDANCE_LIP_SYNC_PROVIDERS *is* the set of
+  // multimodal models routed through i2v rather than a real lip-sync model, so
+  // a future family member is exempt for the same reason without a test edit.
+  ...SEEDANCE_LIP_SYNC_PROVIDERS,
   // ── TTS ────────────────────────────────────────────────────────────────
   // ElevenLabs v3 routes through ElevenLabs direct API
   // (backend/src/providers/elevenlabs/direct-tts.ts), not via KIE.

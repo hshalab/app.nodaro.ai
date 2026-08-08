@@ -45,6 +45,7 @@ describe("GVP_SUPPORTED_PROVIDERS", () => {
       "seedance-2",
       "seedance-2-fast",
       "seedance-2-mini",
+      "seedance-2-5",
       "minimax-h3",
       "veo3",
       "veo3.1",
@@ -130,6 +131,7 @@ describe("GVP_EXTEND_PROVIDERS", () => {
       "seedance-2",
       "seedance-2-fast",
       "seedance-2-mini",
+      "seedance-2-5",
       "minimax-h3",
     ])
     // Behaviour-neutral swap: the derived set is exactly what the old
@@ -167,6 +169,7 @@ describe("GVP_END_FRAME_PROVIDERS", () => {
       "seedance-2",
       "seedance-2-fast",
       "seedance-2-mini",
+      "seedance-2-5",
       "minimax-h3",
       "veo3",
       "veo3.1",

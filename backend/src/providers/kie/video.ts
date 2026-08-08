@@ -19,7 +19,7 @@ import type {
   ProviderOptions,
   ReconcileOpts,
 } from "../provider.interface.js"
-import { isSeedance2Provider, isMinimaxH3Provider, normalizeMinimaxH3Resolution, isVeoProvider, getLipSyncMaxAudioSeconds, applyVideoNegativePrompt, applyVideoAudioToggle, getModel, DEFAULT_VIDEO_PROVIDER } from "@nodaro/shared"
+import { FRAME_MODE_ADAPTIVE_ONLY_ASPECT, isSeedance2Provider, isMinimaxH3Provider, normalizeMinimaxH3Resolution, isVeoProvider, getLipSyncMaxAudioSeconds, applyVideoNegativePrompt, applyVideoAudioToggle, getModel, DEFAULT_VIDEO_PROVIDER } from "@nodaro/shared"
 import { resolveSeedance2Inputs } from "@nodaro/prompts"
 import {
   createSanitizedError,
@@ -100,6 +100,7 @@ const HAPPYHORSE_REF2V_ASPECT_RATIOS = new Set<string>([
 export function applySeedance2Params(
   input: Record<string, unknown>,
   options: ProviderOptions | undefined,
+  provider?: string,
 ): void {
   // Passthrough params (unchanged behavior).
   input.web_search = options?.webSearch ?? false
@@ -132,6 +133,21 @@ export function applySeedance2Params(
   else delete input.reference_video_urls
   if (resolved.referenceAudioUrls.length > 0) input.reference_audio_urls = resolved.referenceAudioUrls
   else delete input.reference_audio_urls
+
+  // Start-frame modes on some models (Seedance 2.5) reject every explicit aspect
+  // ratio with a 422 — see FRAME_MODE_ADAPTIVE_ONLY_ASPECT. Coerce AFTER the
+  // resolver, because only it knows whether a frame survived into frame mode (a
+  // frame can be demoted into reference_image_urls, where ratios stay legal).
+  // Lossless: with a start frame, "adaptive" IS the frame's own aspect.
+  if (
+    provider &&
+    FRAME_MODE_ADAPTIVE_ONLY_ASPECT.has(provider) &&
+    resolved.firstFrameUrl &&
+    input.aspect_ratio !== undefined &&
+    input.aspect_ratio !== "adaptive"
+  ) {
+    input.aspect_ratio = "adaptive"
+  }
 
   if (resolved.promptSuffix) {
     const base = typeof input.prompt === "string" ? input.prompt : ""
@@ -1145,7 +1161,7 @@ export class KieVideoProvider
       // processed (effectiveImageUrl/effectiveEndFrameUrl), so they're not
       // touched again.
       const seedance2Options = await normalizeSeedance2ReferenceImages(provider, options)
-      applySeedance2Params(input, seedance2Options)
+      applySeedance2Params(input, seedance2Options, provider)
     }
 
     if (isMinimaxH3Provider(provider)) {
@@ -1388,7 +1404,7 @@ export class KieVideoProvider
       // Size-normalize the user's reference images before the resolver runs —
       // same rationale as the i2v path (applySeedance2Params is synchronous).
       const seedance2Options = await normalizeSeedance2ReferenceImages(provider, options)
-      applySeedance2Params(input, seedance2Options)
+      applySeedance2Params(input, seedance2Options, provider)
     }
 
     if (isMinimaxH3Provider(provider)) {
