@@ -930,6 +930,14 @@ export function streamBackendExecution(
   // Whole-workflow discard reverts only IN-FLIGHT / QUEUED nodes to idle (clears the
   // node's currentJobId so the per-node poll guard bails); earlier-completed nodes
   // from this run keep their results (design: no pre-run snapshot to restore).
+  //
+  // Also the settle step for a run that ends FAILED / CANCELLED / TIMED OUT: when
+  // the orchestrator aborts on a bad node it never reaches the rest of the graph,
+  // so every node downstream of the abort keeps the optimistic "pending" flip
+  // handleRun applied and shows the animated running border forever — the run is
+  // long over and the canvas still says it's working. Call this AFTER the final
+  // nodeStates are applied so genuinely-completed and genuinely-failed nodes have
+  // already taken their terminal status and only true orphans are left to reset.
   const revertActiveNodesToIdle = () => {
     const { nodes, updateNodeData } = useWorkflowStore.getState();
     for (const node of nodes) {
@@ -983,6 +991,11 @@ export function streamBackendExecution(
       },
       onFailed: (data) => {
         if (finished) return;
+        // streamWorkflowExecution already delivered this event's final
+        // nodeStates through onNodeStatesChanged, so completed/failed nodes
+        // hold their terminal status by now and only never-reached nodes are
+        // still "pending" — settle those instead of leaving them spinning.
+        revertActiveNodesToIdle();
         cleanup();
         toast.error("Backend execution failed", {
           description: (data.errorMessage as string) ?? undefined,
@@ -990,6 +1003,7 @@ export function streamBackendExecution(
       },
       onCancelled: () => {
         if (finished) return;
+        revertActiveNodesToIdle();
         cleanup();
         toast.info("Backend execution cancelled");
       },
@@ -1038,6 +1052,10 @@ export function streamBackendExecution(
         exec.status === "timed_out"
       ) {
         if (finished) return;
+        // Same settle as the SSE onFailed/onCancelled path — whichever of the
+        // two wins the race must leave the canvas in the same state. applyStates
+        // above already wrote every terminal node status from this snapshot.
+        if (exec.status !== "completed") revertActiveNodesToIdle();
         cleanup();
         if (exec.status === "completed") {
           toast.success("Backend execution completed");
@@ -1088,11 +1106,13 @@ export function streamBackendExecution(
             return;
           }
           if (finalExec.status === "failed") {
+            revertActiveNodesToIdle();
             cleanup();
             toast.error("Backend execution failed", { description: finalExec.errorMessage });
             return;
           }
           if (finalExec.status === "cancelled") {
+            revertActiveNodesToIdle();
             cleanup();
             toast.info("Backend execution cancelled");
             return;

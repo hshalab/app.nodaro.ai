@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { z } from "zod"
 import type { FastifyInstance } from "fastify"
-import { stripExportContent, stripTransientRuntimeData, type GenericNode, type WorkflowExport } from "@nodaro/shared"
+import { stripExportContent, stripTransientRuntimeData, normalizeNodeModelParams, describeNodeAdjustments, type GenericNode, type WorkflowExport } from "@nodaro/shared"
 import type { McpSession } from "../session.js"
 import { passesGate, type ToolGate } from "../tool-schemas.js"
 import { supabase } from "../../supabase.js"
@@ -248,7 +248,12 @@ export function registerWorkflows({
             user_id: session.userId,
             name: args.name,
             description: args.description ?? null,
-            nodes: args.nodes ?? [],
+            // Heal impossible provider/parameter pairs at the write boundary —
+            // same reason as update_workflow_json: an agent-authored node never
+            // renders the config panel, so nothing else ever snaps its values.
+            nodes: normalizeNodeModelParams(
+              (args.nodes ?? []) as Array<{ id?: unknown; type?: unknown; data?: unknown }>,
+            ).nodes,
             edges: args.edges ?? [],
             settings: args.settings ?? {},
           })
@@ -352,6 +357,7 @@ export function registerWorkflows({
         const updates: Record<string, unknown> = {
           updated_at: new Date().toISOString(),
         }
+        let nodeAdjustments: ReturnType<typeof normalizeNodeModelParams>["adjustments"] = []
         if (hasNodes) {
           const migratedEdges = migrateGenerateImageHandles(
             args.nodes as Array<{ id: string; type?: string }>,
@@ -359,7 +365,15 @@ export function registerWorkflows({
           )
           // Server-side strip of transient run-state (status/jobId/progress) —
           // agent-authored graphs must never seed phantom "running" state.
-          updates.nodes = stripTransientRuntimeData(args.nodes as Array<{ data?: Record<string, unknown> }>)
+          const stripped = stripTransientRuntimeData(args.nodes as Array<{ data?: Record<string, unknown> }>)
+          // …and heal impossible provider/parameter pairs. An agent writing JSON
+          // never renders the config panel, so the panel's provider-aware
+          // dropdown and its stale-value snap never run for these nodes. Left
+          // alone, a pair like gpt-image + 16:9 survives to the provider call
+          // and aborts the whole run at generate-time (incident 2026-08-09).
+          const healed = normalizeNodeModelParams(stripped as Array<{ id?: unknown; type?: unknown; data?: unknown }>)
+          nodeAdjustments = healed.adjustments
+          updates.nodes = healed.nodes
           updates.edges = migratedEdges
         }
         if (args.settings !== undefined) updates.settings = args.settings
@@ -408,9 +422,22 @@ export function registerWorkflows({
         if (hasNodes) changed.push(`${args.nodes!.length} nodes`)
         if (args.settings !== undefined) changed.push("settings")
         if (args.thumbnail_url !== undefined) changed.push("thumbnail")
+        // Tell the agent what we corrected. Silently healing would leave it
+        // believing it wrote 16:9 and re-sending the same pair next turn.
+        const healNote =
+          nodeAdjustments.length > 0
+            ? `\n\nAdjusted ${nodeAdjustments.length} parameter(s) the selected model does not accept:\n` +
+              describeNodeAdjustments(nodeAdjustments).map((l) => `  - ${l}`).join("\n")
+            : ""
         return ok(
-          `Updated workflow ${args.workflow_id} (${changed.join(", ")}).`,
-          { id: updated.id, name: updated.name, updated_at: updated.updated_at, version: updated.version },
+          `Updated workflow ${args.workflow_id} (${changed.join(", ")}).${healNote}`,
+          {
+            id: updated.id,
+            name: updated.name,
+            updated_at: updated.updated_at,
+            version: updated.version,
+            ...(nodeAdjustments.length > 0 ? { adjustments: nodeAdjustments } : {}),
+          },
         )
       },
     )
@@ -453,7 +480,12 @@ export function registerWorkflows({
           }
         }
 
-        const remappedNodes = remapNodeAssetIds(wf.nodes, assetIdMap)
+        // Heal impossible provider/parameter pairs on the way in — an imported
+        // bundle can carry values authored against a different model (or a
+        // hand-edited JSON), and nothing downstream re-checks them.
+        const remappedNodes = normalizeNodeModelParams(
+          remapNodeAssetIds(wf.nodes, assetIdMap) as Array<{ id?: unknown; type?: unknown; data?: unknown }>,
+        ).nodes
 
         const migratedEdges = migrateGenerateImageHandles(
           remappedNodes as Array<{ id: string; type?: string }>,
