@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select"
 import { AspectRatioSelector } from "./aspect-ratio-selector"
 import { COMPOSITION_RATIOS, COLLAGE_ASPECT_RATIOS } from "./model-options"
-import { CombineTransitionPicker } from "./combine-transition-picker"
+import { CombineTransitionPicker } from "@/lib/picker-ui"
 import { AUDIO_CROSSFADE_CURVES, DEFAULT_AUDIO_CROSSFADE_CURVE_ID } from "@nodaro/shared"
 import { isCloud } from "@/lib/edition"
 import { useWorkflowStore } from "@/hooks/use-workflow-store"

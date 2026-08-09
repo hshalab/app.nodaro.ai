@@ -5,7 +5,7 @@ import type { NodeProps } from "@xyflow/react"
 import { Lightbulb } from "lucide-react"
 import { LIGHTING_CATEGORY_LABELS, LIGHTING_CATEGORY_ORDER, LIGHTING_FIELD_BY_CATEGORY, getLighting, getLightingLabel, type LightingCategory } from "@nodaro/prompts"
 import { ParameterNodeShell } from "./parameter-node-shell"
-import { LightingPreview } from "@/components/editor/config-panels/lighting-preview"
+import { LightingPreview } from "@/lib/picker-ui"
 import type { LightingData } from "@/types/nodes"
 
 interface EnabledEntry {

@@ -17,7 +17,7 @@ import { MappableField } from "./mappable-field"
 import { AspectRatioSelector } from "./aspect-ratio-selector"
 import { ReferenceImageList } from "./reference-image-list"
 import { PromptHelperButton } from "./prompt-helper-button"
-import { PromptEditor } from "./prompt-editor"
+import { PromptEditor } from "@/lib/picker-ui"
 import { useMediaEditor, MediaEditorModal } from "@/components/editor/media-editor"
 import { prefetchModelCredits } from "@/ee/hooks/use-model-credits"
 import {

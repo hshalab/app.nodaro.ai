@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { appendSnippetText, filterSnippets, groupSnippetsByCategory, type SnippetPoolItem } from "@/lib/snippet-pool"
 import { SnippetCategoryHeader, SnippetRowContent } from "./snippet-row"
 import { SnippetManageDialog } from "./snippet-manage-dialog"
-import { escapeScrollLock } from "./prompt-editor/scroll-lock-escape"
+import { escapeScrollLock } from "@/lib/scroll-lock-escape"
 import type { SnippetMedia, SnippetTarget } from "@nodaro/prompts"
 
 interface SnippetMenuButtonProps {

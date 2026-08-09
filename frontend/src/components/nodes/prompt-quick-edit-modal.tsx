@@ -35,8 +35,8 @@ import {
 } from "@/components/ui/dialog"
 import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
-import { PromptEditor } from "@/components/editor/config-panels/prompt-editor"
-import { isPromptEditorPortalInteraction } from "@/components/editor/config-panels/prompt-editor/prompt-editor-portal"
+import { PromptEditor } from "@/lib/picker-ui"
+import { isPromptEditorPortalInteraction } from "@/lib/picker-ui"
 import { PromptHelperButton } from "@/components/editor/config-panels/prompt-helper-button"
 import { SnippetMenuButton } from "@/components/editor/config-panels/snippet-menu-button"
 import {

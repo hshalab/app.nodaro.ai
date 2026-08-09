@@ -16,7 +16,7 @@ import {
   LipsIcon,
   EyewearIcon,
   HeadwearIcon,
-} from "@/components/editor/config-panels/small-silhouette-icons"
+} from "@/lib/picker-ui"
 import { ColorSwatch } from "@/components/editor/config-panels/color-swatch"
 import { getPersonSwatch } from "@/components/editor/config-panels/color-swatches"
 import { HairIcon } from "@/components/editor/config-panels/hair-icon"

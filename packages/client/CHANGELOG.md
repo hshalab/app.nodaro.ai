@@ -1,5 +1,27 @@
 # @nodaro/sdk
 
+## 1.15.0
+
+### Minor Changes
+
+- 8c09cd5: `client.models.list({ kind?, mode?, family?, featuredOnly? })` — the new public
+  `GET /v1/models` endpoint (REST twin of the MCP `list_models` tool): model
+  capability sheets, per-variant credit pricing, `promptTips`, and the
+  `doctrineCovered` truth flag for per-model optimizer badges.
+- a066015: `client.pickerCatalogs.analyzeText({ text, targetPickers?, ... })` — the new
+  `POST /v1/text-to-picker` endpoint: fill picker selections from a free-text
+  scene description (same `pickerJson` + `gaps` shape as describe-to-picker;
+  omit `targetPickers` to analyze against every catalog).
+
+### Patch Changes
+
+- Updated dependencies [8c09cd5]
+- Updated dependencies [34b3b31]
+- Updated dependencies [2554aea]
+- Updated dependencies [a066015]
+  - @nodaro/prompts@1.7.0
+  - @nodaro/shared@2.2.1
+
 ## 1.14.0
 
 ### Minor Changes

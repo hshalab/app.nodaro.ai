@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { GlassCard } from "../output-cards/shared"
 import { useWorkflowStore } from "@/hooks/use-workflow-store"
-import { DimensionTileGrid } from "@/components/editor/config-panels/dimension-tile-grid"
+import { DimensionTileGrid } from "@/lib/picker-ui"
 import { LocalePicker } from "@/components/editor/locale-picker"
 import { useLocalizedCatalog } from "@/hooks/use-localized-entry"
 import { useLocaleDir } from "@/lib/locale-store"
@@ -31,7 +31,7 @@ import {
   type MultiDimValue,
   type ParameterPickerMeta,
   type SingleDimParameterPickerMeta,
-} from "@/lib/parameter-picker-registry"
+} from "@/lib/picker-ui"
 
 export type PickerDisplayMode = "inline" | "modal" | "compact"
 

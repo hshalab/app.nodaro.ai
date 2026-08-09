@@ -2,7 +2,7 @@ import type { StudioPageProps } from "../../studio-shell/types"
 import type { CharacterStudioState } from "../use-character-studio"
 import type { CharacterStudioJobs } from "../use-character-studio-jobs"
 import type { PersonValue, WardrobeValue } from "@nodaro/prompts"
-import { PersonPickerDetailed } from "../../config-panels/person-picker-detailed"
+import { PersonPickerDetailed } from "@/lib/picker-ui"
 import { WardrobePicker } from "../wardrobe-picker"
 
 export function PickersPage({ state }: StudioPageProps<CharacterStudioState, CharacterStudioJobs>) {

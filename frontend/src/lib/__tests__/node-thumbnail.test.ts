@@ -8,7 +8,7 @@ import {
   getParameterPickerMeta,
   type SingleDimParameterPickerMeta,
   type MultiDimParameterPickerMeta,
-} from "../parameter-picker-registry"
+} from "@/lib/picker-ui"
 import { STYLINGS, STYLING_FIELD_BY_DIMENSION } from "@nodaro/prompts"
 import type { WorkflowNode } from "@/types/nodes"
 

@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useWorkflowStore } from "@/hooks/use-workflow-store"
 import { SunoField, isSunoFieldWired } from "@/components/editor/config-panels/suno-field"
 import { SunoFieldAiButton, isSunoAiField } from "./suno-field-ai-button"
-import { isPromptEditorPortalInteraction } from "@/components/editor/config-panels/prompt-editor/prompt-editor-portal"
+import { isPromptEditorPortalInteraction } from "@/lib/picker-ui"
 import { usePromptEditorRefs } from "./inline-node-prompt/use-prompt-editor-refs"
 import {
   SUNO_FIELD_EDIT_META,

@@ -6,7 +6,7 @@ import { Layers } from "lucide-react"
 import { getMaterial, getMaterialLabel } from "@nodaro/prompts"
 import { pickIds } from "@nodaro/shared"
 import { ParameterNodeShell } from "./parameter-node-shell"
-import { MaterialPreview } from "@/components/editor/config-panels/material-preview"
+import { MaterialPreview } from "@/lib/picker-ui"
 import type { MaterialData } from "@/types/nodes"
 
 function MaterialNodeComponent({ id, data, selected }: NodeProps) {

@@ -1,5 +1,44 @@
 # @nodaro/prompts
 
+## 1.7.0
+
+### Minor Changes
+
+- 8c09cd5: Provider prompt doctrine covers the full video roster: six new sourced+dated
+  family entries — VEO 3.1 (Google's official five-part formula, dialogue/SFX
+  syntax, timestamp multi-shot), Gemini Omni, Grok Imagine (incl. video-1.5),
+  Wan 2.x (Alibaba's official formulas + anti-patterns), HappyHorse 1.1, and
+  Runway-via-KIE. Kling doctrine now also covers the silent kling-turbo /
+  kling-master tiers (with a variant note). The Seedance doctrine gains the
+  auto-path six-step formula (subject→action→environment→camera→style→
+  constraints, 60-100 words, camera/subject motion separation) and the
+  magenta-line camera-path method for the manual pro path. bytedance-lite/pro
+  and hailuo-2.3 stay deliberately uncovered (different engines — mapping the
+  family doctrine would overclaim; pinned by test).
+- 2554aea: Add `picker-wiring.ts` — the parameter-picker wiring vocabulary as data:
+  `SINGLE_PICKER_WIRING` / `MULTI_PICKER_WIRING` / `getPickerWiring` with each
+  picker node type's value field(s), default, catalog id, entries, grouping, and
+  per-field option lists (`fieldOptions`) for multi-dim pickers. Extracted from
+  the app's parameter-picker registry so the app's community fallback, the
+  first-party rich picker package, and Nodaro Cine all share one definition.
+  Renderers are deliberately excluded — this is vocabulary, not presentation.
+- a066015: Extend `PICKER_ANALYZER_REGISTRY` from 5 to all 38 picker catalogs — 25 new
+  flat descriptors (setting, atmosphere, style, mood, color-look, photographer,
+  aesthetic, era, photo-genre, backdrop, render-quality, composition-effects,
+  post-process-effects, action-fx, loop-subject, transition, character-fx, pose,
+  material, held-prop, camera-motion, animal, vehicle, weapon, furniture) and 8
+  new discriminated ones (lighting, temporal, exposure-settings, music-genre,
+  music-mood, instrumentation, voice-character, voice-delivery; the sound/voice
+  pickers synthesize entries across their per-field catalogs with an explicit
+  dimension tag). Adds `PICKER_ANALYZER_FAMILIES` — the 6-family partition
+  (scene/look/camera/character/elements/audio) the text-to-picker route uses to
+  batch analysis calls (a single all-38 legend measures ~53k tokens).
+
+### Patch Changes
+
+- Updated dependencies [34b3b31]
+  - @nodaro/shared@2.2.1
+
 ## 1.6.0
 
 ### Minor Changes

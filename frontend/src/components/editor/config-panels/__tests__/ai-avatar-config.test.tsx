@@ -55,12 +55,12 @@ vi.mock("@/hooks/use-file-upload", () => ({
 vi.mock("@/lib/image", () => ({
   optimizedImageUrl: (url: string) => url,
 }))
-vi.mock("lucide-react", () => {
-  const icons = ["AlertTriangle", "Upload", "Loader2", "X"]
-  const out: Record<string, () => null> = {}
-  for (const name of icons) out[name] = () => null
-  return out
-})
+vi.mock("lucide-react", () => new Proxy({}, {
+  // Any icon name resolves to a null component — the rich picker-ui package
+  // imports icons a closed list cannot anticipate (Dog, Car, ...).
+  get: (_t, prop) => (typeof prop === "string" && prop !== "then" ? () => null : undefined),
+  has: () => true,
+}))
 
 // =============================================================================
 // Helpers

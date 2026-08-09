@@ -7,40 +7,12 @@ import { describe, it, expect, vi } from "vitest"
 // All values must be inline (vi.mock factories are hoisted before const decls).
 // ---------------------------------------------------------------------------
 
-vi.mock("lucide-react", () => {
-  const I = () => null
-  return {
-    Type: I, List: I, BookOpen: I, ImageIcon: I, Film: I,
-    Merge: I, Upload: I, Video: I, Rss: I, Palette: I,
-    PaintBucket: I, Server: I, Hash: I, Clock: I, RatioIcon: I,
-    Mic: I, ShieldCheck: I, Volume2: I, VolumeX: I, Captions: I, Maximize: I,
-    AudioLines: I, Music: I, SlidersHorizontal: I, Scissors: I,
-    HardDrive: I, Webhook: I, Clapperboard: I, UserPlus: I,
-    Package: I, MapPin: I, ChevronRight: I, Search: I, Download: I,
-    ArrowLeft: I, Wand2: I, Layers: I, Users: I, Waypoints: I,
-    ArrowUpFromLine: I, FileText: I, Disc3: I, FastForward: I,
-    Smile: I, Sparkles: I, Repeat: I, Gauge: I, SunDim: I,
-    RefreshCw: I, Shapes: I, Box: I, AudioWaveform: I, Eye: I,
-    Languages: I, AlignLeft: I, Workflow: I, LogIn: I, LogOut: I, Share2: I,
-    Instagram: I, Youtube: I, Linkedin: I, Twitter: I, Facebook: I, StickyNote: I, UserRound: I, Send: I,
-    GitBranch: I, Puzzle: I, MessageSquare: I, Frame: I, ZoomIn: I, Eraser: I, ListMusic: I,
-    Globe: I, Braces: I, Filter: I, Funnel: I, ListFilter: I, CopyMinus: I, GitMerge: I,
-    ArrowUpDown: I,
-    Aperture: I, Lightbulb: I, SwatchBook: I, CloudFog: I, Brush: I,
-    Mountain: I, PersonStanding: I, Gem: I,
-    PawPrint: I, Car: I, Swords: I, Armchair: I,
-    Camera: I, Hourglass: I, Cpu: I, LayoutDashboard: I, HandMetal: I,
-    Zap: I,
-    Activity: I, Piano: I, User: I, MessageCircle: I,
-    ScanFace: I,
-    ScanSearch: I,
-    SearchCheck: I,
-    VenetianMask: I,
-    TrendingUp: I, Star: I,
-    ListTree: I,
-    LayoutGrid: I,
-  }
-})
+vi.mock("lucide-react", () => new Proxy({}, {
+  // Any icon name resolves to a null component — the rich picker-ui package
+  // imports icons a closed list cannot anticipate (Dog, Car, ...).
+  get: (_t, prop) => (typeof prop === "string" && prop !== "then" ? () => null : undefined),
+  has: () => true,
+}))
 
 vi.mock("@/lib/utils", () => ({
   cn: (...args: unknown[]) => args.filter(Boolean).join(" "),

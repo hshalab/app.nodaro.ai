@@ -5,7 +5,7 @@ import type { NodeProps } from "@xyflow/react"
 import { SwatchBook } from "lucide-react"
 import { getColorLook, getColorLookLabel } from "@nodaro/prompts"
 import { ParameterNodeShell } from "./parameter-node-shell"
-import { ColorLookPreview } from "@/components/editor/config-panels/color-look-preview"
+import { ColorLookPreview } from "@/lib/picker-ui"
 import type { ColorLookData } from "@/types/nodes"
 
 function ColorLookNodeComponent({ id, data, selected }: NodeProps) {

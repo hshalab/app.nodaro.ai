@@ -47,6 +47,7 @@ const SEEDANCE_2_DOCTRINE: ProviderPromptDoctrine = {
     "References go by ordinal (@Image 1, Video 2) in attachment order; earlier = higher priority. Identity = ONE headshot + ONE full-body (multi-view sheets cause ID drift). 4-5 assets total beats maxing the 9/3/3 caps.",
     "No negative-prompt parameter — put constraints in the prompt: 'keep it subtitle-free, do not generate a watermark, do not generate a logo'.",
     "seedance-2-5 only: one shot runs to 30s (the 2.0 SKUs stop at 15s), so storyboard a whole beat instead of planning a stitch. Ref caps are wider (30/10/10), but 4-5 assets still gives the best identity fidelity.",
+    "Auto-path formula: Subject → Action → Environment → Camera → Style → Constraints in 60-100 words; ONE camera instruction (chain with 'then'); separate camera motion from subject motion; always add one lighting phrase.",
   ],
   doctrine: `Prompt structure (front-load what matters most):
 precise subject → action details → scene/environment → lighting & color tone → camera movement → visual style → image quality → constraints.
@@ -84,12 +85,35 @@ precise subject → action details → scene/environment → lighting & color to
 **Known weaknesses → workarounds**
 - Text rendering is weak: keep on-screen text to short common words; for exact text or logos, attach the artwork as a reference image and instruct "the logo from Image N stays in the corner unchanged".
 - More than 4 referenced people gets unstable: group people into composite images of ≤4 first (image generation), then reference those composites.
-- Repeated extension degrades quality: prefer high-definition reference assets and avoid stacking many continuations.`,
+- Repeated extension degrades quality: prefer high-definition reference assets and avoid stacking many continuations.
+
+**Auto-path formula (community-sourced enrichment — apiyi.com Seedance 2.0 prompt guide,
+higgsfield.ai 4K breakdown; captured 2026-08-09)**
+- Six steps IN ORDER, 60-100 words total (longer measurably degrades): Subject → Action → Environment → Camera → Style → Constraints.
+- ONE primary camera instruction per shot. Compound moves chain with "then": "camera slow tracking then subtle rise" — never two competing verbs. The 8 reliable camera types: push-in, pull-out, pan, tracking, orbit/arc, aerial, handheld, locked-off.
+- SEPARATE camera movement from subject movement — the single biggest quality lever: "The dancer spins slowly. Camera holds fixed framing." — never "spinning camera around a dancing person".
+- Pace with human words (slow / gentle / gradual / smooth / controlled) — never fps numbers or f-stops in the basic path.
+- ALWAYS add one lighting phrase (highest-impact single addition): golden hour / rim light / neon glow / backlit / overcast.
+- Bake stability constraints in: "avoid jitter and bent limbs", "avoid temporal flicker", "avoid identity drift".
+- Ban vague adjectives standing alone ("epic", "amazing", "beautiful", bare "cinematic") — every adjective needs a concrete noun.
+- Mode notes: i2v — skip subject description (the frame has it), focus on motion, append "preserve composition and colors". v2v — describe the style TRANSFORM, keep motion + identity.
+- Advanced (pro path): focal angles in degrees ("47° normal", "29° telephoto", "107° wide"); "180° shutter" for filmic motion blur; handheld texture as "organic shake, micro-drift, subtle dutch"; "white balance locked 5200K"; explicit POSITIVE LOCKS section + "100% matches the reference" for identity-critical shots.
+
+**Camera-path control — the magenta-line method (STORYBOARD community technique; the
+manual pro path for precise trajectories, NOT the auto path)**
+1. Duplicate the start frame; on the COPY draw a thick magenta line + arrowhead — the line is the camera's flight path, the arrow its end point. Keep the clean original.
+2. Attach BOTH frames and declare the guide: "Image N contains a magenta line and arrow — a hidden camera trajectory guide, NOT part of the scene. Completely remove it: no line, no arrow, no paint, no trail, no reflection." Skipping the removal order RENDERS the line.
+3. Command the path: "one continuous FPV drone glide following the S-shaped curve as closely as possible — do not shortcut. Camera motion is the priority." Lock the clean frame as first frame + scene reference; lock the destination frame if wired.
+4. Pace with timing blocks ("[00:00-00:02] rise over the rooftop … [00:07-00:09] settle on the doorway") and keep any dialogue SHORT — long lines fight the move.
+5. Assign image-input roles explicitly: first-frame/scene-ref · destination frame · path-guide · 3-6 character-identity refs — and bind identities with @-mentions exactly like the platform's reference pills.`,
 }
 
 const KLING_AUDIO_DOCTRINE: ProviderPromptDoctrine = {
-  providers: ["kling", "kling-3.0", "kling-3-omni"],
-  heading: "Kling 2.6 / 3.0 / 3 Omni (kling, kling-3.0, kling-3-omni)",
+  // kling-turbo (2.5 Turbo Pro) + kling-master (2.1 Master) are SILENT tiers of
+  // the same engine: the structure/motion guidance applies, the Audio block
+  // does not (variant note in the doctrine body).
+  providers: ["kling", "kling-3.0", "kling-3-omni", "kling-turbo", "kling-master"],
+  heading: "Kling 2.1 / 2.5 / 2.6 / 3.0 / 3 Omni (kling, kling-3.0, kling-3-omni, kling-turbo, kling-master)",
   tips: [
     "Kling speaks scripted dialogue natively with lip sync — quote the line and enable sound: [Anna: warm calm voice]: \"We made it.\" On kling/kling-3.0 audio raises the credit cost; kling-3-omni includes it.",
     "Structure prompts as Scene → character/element → Motion → Audio → style. Put ALL sound in one 'Audio:' block: dialogue in quotes, then SFX and ambience described plainly ('rain tapping on glass, no music').",
@@ -121,7 +145,11 @@ const KLING_AUDIO_DOCTRINE: ProviderPromptDoctrine = {
 
 **Limits**
 - Kling 2.6 prompts cap at 1000 characters — front-load scene + dialogue and trim style tails first. kling-3.0 accepts long prompts.
-- Durations: 2.6 = 5/10s; 3.0/omni = 3-15s. A spoken line needs roughly 1s per 2-3 words — don't script more dialogue than the clip can hold.`,
+- Durations: 2.6 = 5/10s; 3.0/omni = 3-15s. A spoken line needs roughly 1s per 2-3 words — don't script more dialogue than the clip can hold.
+
+**Variant note — kling-turbo (2.5 Turbo Pro) & kling-master (2.1 Master)**
+- SILENT tiers: no audio parameter, so the entire Audio block above does not apply — skip dialogue/SFX cues; the Scene → Character → Motion → Style structure and motion guidance carry over unchanged.
+- Durations 5/10s; kling-turbo takes an end frame (tail_image_url); kling-master is single-image i2v.`,
 }
 
 const MINIMAX_H3_DOCTRINE: ProviderPromptDoctrine = {
@@ -160,10 +188,205 @@ precise subject → action details → scene/environment → lighting & color to
 - There is NO negative-prompt parameter — all constraints belong in the prompt text itself: "keep it subtitle-free, do not generate a watermark, do not generate a logo, stable picture".`,
 }
 
+const VEO_31_DOCTRINE: ProviderPromptDoctrine = {
+  providers: ["veo3", "veo3.1", "veo3_lite", "veo-1080p", "veo-4k", "veo-extend"],
+  heading: "VEO 3.1 — Quality / Fast / Lite (veo3, veo3.1, veo3_lite)",
+  tips: [
+    "Structure prompts as [Cinematography] + [Subject] + [Action] + [Context] + [Style & Ambiance] — lead with the camera, not the subject (Google's official formula).",
+    "Dialogue: quote the exact line with attribution — A woman says, \"We have to leave now.\" (no subtitles). Cue sound as separate lines: SFX: thunder cracks; Ambient noise: quiet hum of a starship bridge.",
+    "Multi-shot pacing via timestamp blocks: [00:00-00:02] medium shot… [00:02-00:04] reverse shot… — VEO honors per-window actions inside one 8s generation.",
+    "Negative prompting is positive phrasing: not 'no buildings' but 'a desolate landscape with no buildings or roads'. Keep prompts under ~175 words — longer overloads the generation.",
+    "Start+end frame: pass both and describe the transition move ('smooth 180-degree arc ending on the POV behind her'). References (ingredients) keep characters/objects consistent and DO generate audio.",
+  ],
+  doctrine: `Prompt structure (Google's official Veo 3.1 formula — lead with the camera):
+[Cinematography] + [Subject] + [Action] + [Context] + [Style & Ambiance].
+Example: "Medium shot, a tired corporate worker, rubbing his temples in exhaustion, in front of a bulky 1980s computer in a cluttered office late at night, lit by harsh fluorescents and the green monitor glow. Retro aesthetic, 1980s color film, slightly grainy."
+
+**Camera vocabulary (use the exact terms)**
+- Movement: dolly shot, tracking shot, crane shot, aerial view, slow pan, POV shot, 180-degree arc shot.
+- Composition: wide shot, medium shot, close-up, extreme close-up, two-shot, low angle, high angle.
+- Lens/focus: shallow depth of field, deep focus, wide-angle lens, macro lens, soft focus.
+
+**Audio (native, multi-track — dialogue / SFX / ambience)**
+- Dialogue: quote the exact line with attribution: The detective says in a weary voice, "Of all the offices in this town, you had to walk into mine." Append "(no subtitles)" — VEO otherwise tends to burn captions in.
+- Sound effects on their own line: "SFX: a crystal wine glass shatters on the marble floor". Ambient bed: "Ambient noise: rain against the window, distant traffic".
+- Sound can drive the visual ("the sound reverberating through the empty ballroom") — VEO syncs audio-visual timing.
+
+**Multi-shot timestamp prompting (inside one generation)**
+- Split the clip into [mm:ss-mm:ss] windows, one action per window:
+[00:00-00:02] Medium shot from behind a young explorer walking toward a clearing.
+[00:02-00:04] Reverse shot of her freckled face, eyes widening.
+[00:04-00:08] Wide, high-angle crane shot revealing the ruins below.
+- 4 / 6 / 8 second clips; budget ~2s per window.
+
+**Frames & references**
+- Start + end frame: wire both (imageUrls [start, end]) and describe the camera path between them — "a smooth 180-degree arc shot, starting front-facing and circling to end on the POV from behind her".
+- Reference images (ingredients): attach character/object/scene refs and name them in the prompt ("using the provided images for the detective and the office, …"). Reference runs DO generate audio.
+
+**Constraints**
+- Negative prompting works by positive description: write "a desolate landscape with no buildings or roads", not "no buildings".
+- Keep prompts ≤ ~175 words — beyond that instructions conflict and adherence drops. Resolution 720p/1080p; aspect 16:9 / 9:16.
+
+Sources: Google Cloud "Ultimate prompting guide for Veo 3.1"
+(cloud.google.com/blog/products/ai-machine-learning/ultimate-prompting-guide-for-veo-3-1),
+KIE VEO API docs (docs.kie.ai/veo3-api/generate-veo-3-video). Captured 2026-08-09.`,
+}
+
+const GEMINI_OMNI_DOCTRINE: ProviderPromptDoctrine = {
+  providers: ["gemini-omni-video"],
+  heading: "Gemini Omni Video (gemini-omni-video)",
+  tips: [
+    "Multimodal Google video with native audio: text-to-video, image-to-video, and video-edit through the same prompt surface. 4/6/8/10s; 720p/1080p or 4K tier.",
+    "Structure like the platform default: subject → action → scene → lighting → camera → style. Quote dialogue lines to have them spoken; describe SFX/ambience plainly in the prompt.",
+    "Text-to-video REQUIRES a concrete aspect ratio (the API hard-rejects a missing one); image runs infer aspect from the input.",
+    "Reference images ride along as additional imageUrls — bind them in the prompt ('the woman from the first image'). Video-edit: wire a source clip and describe the change, not the whole scene.",
+  ],
+  doctrine: `Prompt structure (no public Google prompt guide exists for the Omni video endpoint —
+the API contract is the doctrine source, like MiniMax H3; structure guidance mirrors the
+platform's ordinal-reference conventions):
+subject → action → scene/environment → lighting → camera movement → style → constraints.
+
+**Modes (picked from the wired inputs)**
+- Nothing visual → text-to-video. A concrete aspect ratio is REQUIRED — the API hard-rejects a missing one (Nodaro sends the node's ratio; there is no adaptive).
+- Image(s) wired → image-to-video: the first image anchors the scene; extra images are references — bind each in the prompt ("the woman from the first image", "the interior from the second image").
+- Source video wired → video-edit (served through the same handle): describe the CHANGE ("replace the daylight with dusk, keep the motion and framing"), not a full re-description.
+
+**Audio (native)**
+- Audio is generated with the clip. Quote dialogue to have it spoken; describe SFX and ambience plainly ("rain on glass, low synth bed"). State exclusions ("no music") or a bed may be invented.
+
+**Duration & tiers**
+- 4 / 6 / 8 / 10 seconds. 720p/1080p tier or the pricier 4K tier — pick 4K only when the deliverable needs it (nearly 2× the credits).
+
+Source: KIE gemini-omni-video market contract (parameters + live behavior probed for the
+aspect-ratio hard-reject, see providers/kie/video.ts). Captured 2026-08-09.`,
+}
+
+const GROK_IMAGINE_DOCTRINE: ProviderPromptDoctrine = {
+  providers: ["grok-i2v", "grok-imagine-video-1.5"],
+  heading: "Grok Imagine (grok-i2v, grok-imagine-video-1.5)",
+  tips: [
+    "Keep prompts simple and direct — Subject + Action + Setting + Camera + Mood. Grok expands the prompt itself; over-specification fights the expander.",
+    "Image-to-video: the input image IS the first frame (composition, identity, and style are preserved) — describe the MOTION, don't re-describe the still.",
+    "Video 1.5: 1-15s (default 8), 480p/720p/1080p, up to 7 input images (1080p allows only one). Native audio incl. music, SFX, and lip-synced dialogue — quote the line to have it spoken.",
+    "Aspect ratio applies to text runs (1:1/16:9/9:16/3:2/2:3/auto); a single input image locks the output to the image's own aspect.",
+  ],
+  doctrine: `Prompt structure (xAI's guidance is minimal by design — the model auto-expands prompts):
+Subject + Action + Setting + Camera + Lighting/Mood, written simply and directly. Reduce
+descriptions of static/unchanged parts — spend the words on what MOVES.
+
+**Image-to-video (the primary mode)**
+- The input image is the FIRST FRAME, not a loose reference: composition, subject identity, and visual style carry over. Describe motion and camera only ("she turns toward the window as the camera slowly pushes in"); re-describing the still wastes adherence.
+- grok-imagine-video-1.5 accepts up to 7 images (identity/scene references beyond the first frame); at 1080p only ONE image is allowed.
+
+**Audio (video-1.5)**
+- Native audio generates with the clip — background music, SFX, and lip-synced dialogue. Quote the spoken line; describe the music/SFX plainly. There is no audio toggle on the KIE contract — cue (or exclude) sound in the prompt text.
+
+**Durations / tiers**
+- grok-i2v: 6 or 10 seconds. grok-imagine-video-1.5: 1-15 seconds in 1s steps (default 8), 480p (default) / 720p / 1080p. Prompt cap 4096 chars — but shorter is better here.
+
+Sources: KIE Grok Imagine contracts (docs.kie.ai/market/grok-imagine/image-to-video,
+docs.kie.ai/market/grok-imagine/1-5-preview), xAI Grok Imagine 1.5 release notes
+(x.ai/news/grok-imagine-1-5). Captured 2026-08-09.`,
+}
+
+const WAN_DOCTRINE: ProviderPromptDoctrine = {
+  providers: ["wan", "wan-i2v", "wan-turbo", "wan-flash", "wan-2.7", "wan-2.7-i2v", "wan-2.7-t2v", "wan-2.7-pro", "wan-videoedit"],
+  heading: "Wan 2.x (wan, wan-i2v, wan-turbo, wan-2.7 family)",
+  tips: [
+    "Alibaba's official formula: Entity + Scene + Motion (basic) → add Aesthetic control + Stylization (advanced). Image-to-video: Motion + Camera only — the image already defines entity and scene.",
+    "Sound (2.5+): append a sound description block — voice / sound effects / background music. Avoid scripting EXACT lip-synced lines (official anti-pattern); describe the voice and intent instead.",
+    "Multi-shot (2.6/2.7): Overall description + shot number + timestamp + per-shot content. For ONE continuous take write 'Generate single shot' (the shot_type parameter is gone in 2.7).",
+    "References go by 'Image 1' / 'Video 1' (capitalized, with a space). Anti-patterns: naming real people, demanding exact legible text, rapid scene changes in one clip, very long choreography.",
+    "Style words are strong levers: cyberpunk, claymation, pixel style, felt style, tilt-shift, time-lapse. wan-videoedit: describe the transform, keep motion + identity.",
+  ],
+  doctrine: `Prompt structure (Alibaba Model Studio's official formulas):
+- Basic: Entity + Scene + Motion.
+- Advanced: Entity (description) + Scene (description) + Motion (description) + Aesthetic control + Stylization.
+- Image-to-video: Motion + Camera movement ONLY — the wired image already defines entity and scene; re-describing it fights the frame.
+- Sound (2.5/2.6/2.7): … + Sound description (voice / sound effects / background music).
+- Multi-shot (2.6/2.7): Overall description + Shot number + Timestamp + Shot content.
+- Reference-to-video (2.6/2.7): Reference identifier + Action + Scene + optional Lines + optional BGM.
+
+**Camera vocabulary**
+push-in (intimacy/tension), pull-out (scale/isolation), tracking shot, orbit, fixed camera, and compound movements chained sequentially for epic scale.
+
+**Single-shot control (2.7)**
+- The shot_type parameter no longer exists — write "Generate single shot" in the prompt to force one continuous take; otherwise 2.7's planner may cut.
+
+**References**
+- English format is "Image 1" / "Video 1" (capitalized, space-separated) — bind every wired asset by that name or it may be ignored.
+
+**Official anti-patterns (from Alibaba's guide)**
+- Do NOT name specific real people.
+- Do NOT script exact lip-synced dialogue — describe the voice and intent ("she murmurs a reassurance, warm and low") instead of demanding word-perfect lips.
+- Avoid rapid scene changes inside a single clip, very long choreographed sequences, and demands for exactly legible on-screen text.
+
+**Stylization**
+- Style words are strong levers: cyberpunk, line-art illustration, felt style, 3D cartoon, pixel style, puppet animation, claymation, black-and-white animation, tilt-shift, time-lapse.
+
+Source: Alibaba Cloud Model Studio — "Text-to-video / image-to-video prompt guide"
+(alibabacloud.com/help/en/model-studio/text-to-video-prompt). Captured 2026-08-09.`,
+}
+
+const HAPPYHORSE_DOCTRINE: ProviderPromptDoctrine = {
+  providers: ["happyhorse", "happyhorse-i2v", "happyhorse-ref2v", "happyhorse-edit"],
+  heading: "HappyHorse 1.1 (happyhorse, happyhorse-i2v, happyhorse-ref2v)",
+  tips: [
+    "Any-language prompts up to 5000 chars (2500 Chinese) — excess is silently truncated, so front-load subject → action → scene → camera → style.",
+    "3-15 seconds per second of billing; 720p or 1080p; ratios 16:9 / 9:16 / 1:1 / 4:3 / 3:4. Pick the shortest duration that serves the shot.",
+    "ref2v is one of the few true REFERENCE modes on the roster: wired refs keep identity across the clip — bind each reference explicitly in the prompt.",
+    "No published vendor style guide — the platform's standard structure applies; keep one camera move per shot and quantify motion physically.",
+  ],
+  doctrine: `Prompt structure (no public HappyHorse prompt guide exists — the KIE API contract is the
+doctrine source; platform-standard structure applies):
+subject → action → scene/environment → lighting → camera movement → style → constraints.
+
+**Contract facts (KIE, per-mode pages)**
+- Prompts: any language, up to 5000 non-Chinese / 2500 Chinese characters — excess is TRUNCATED silently, so put the load-bearing content first.
+- Duration 3-15s (default 5), billed per second. Resolution 720p / 1080p (default). Aspect 16:9 (default) / 9:16 / 1:1 / 4:3 / 3:4.
+- Modes: text-to-video (happyhorse), image-to-video (happyhorse-i2v), reference-to-video (happyhorse-ref2v) — ref2v preserves wired identities; name each reference in the prompt so the binding is explicit.
+
+**Style guidance (platform-standard, honestly generic)**
+- One camera movement per shot; physical, quantified action ("slowly raises a hand") over abstract emotion words; state exclusions ("no on-screen text, no watermark") in the prompt.
+
+Source: KIE HappyHorse 1.1 contracts (docs.kie.ai/market/happyhorse/text-to-video,
+…/happyhorse-1-1/image-to-video, …/happyhorse-1-1/reference-to-video). Captured 2026-08-09.`,
+}
+
+const RUNWAY_KIE_DOCTRINE: ProviderPromptDoctrine = {
+  providers: ["runway-kie", "runway-extend", "runway-aleph"],
+  heading: "Runway via KIE (runway-kie)",
+  tips: [
+    "Prompt cap is 1800 chars; KIE's own guidance: be specific about subject, action, style, and setting. No native audio — plan sound as a separate pass.",
+    "Durations 5 or 10s with a hard trade-off: 10s cannot be 1080p, 1080p cannot exceed 5s — pick per deliverable.",
+    "Text runs REQUIRE an aspect ratio (16:9/4:3/1:1/3:4/9:16); image runs IGNORE it — the input image dictates output dimensions.",
+    "Image-to-video treats the image as the anchor frame: describe motion and camera, not the still.",
+  ],
+  doctrine: `Prompt structure (KIE contract guidance): "be specific about subject, action, style, and
+setting" — subject → action → scene → camera → style, within the 1800-character cap.
+
+**Contract facts (KIE Runway endpoint)**
+- Duration 5 or 10 seconds; quality 720p or 1080p — 10s@1080p does NOT exist (10s forces 720p; 1080p forces 5s). Choose by deliverable: crisp hero shot → 5s/1080p; longer beat → 10s/720p.
+- Text-to-video REQUIRES aspectRatio (16:9 / 4:3 / 1:1 / 3:4 / 9:16). Image-to-video IGNORES aspectRatio — the input image dictates output dimensions.
+- No audio is generated — score/SFX are a separate pass (merge-video-audio / video-sfx downstream).
+
+**Style guidance**
+- The image input anchors composition and identity — describe the motion ("she pushes the door open as the camera tracks left"), not the still.
+- Keep one continuous camera idea per clip; front-load the subject and action.
+
+Source: KIE Runway contract (docs.kie.ai/runway-api/generate-ai-video). Captured 2026-08-09.`,
+}
+
 export const PROVIDER_PROMPT_DOCTRINES: readonly ProviderPromptDoctrine[] = [
   SEEDANCE_2_DOCTRINE,
   KLING_AUDIO_DOCTRINE,
   MINIMAX_H3_DOCTRINE,
+  VEO_31_DOCTRINE,
+  GEMINI_OMNI_DOCTRINE,
+  GROK_IMAGINE_DOCTRINE,
+  WAN_DOCTRINE,
+  HAPPYHORSE_DOCTRINE,
+  RUNWAY_KIE_DOCTRINE,
 ]
 
 const DOCTRINE_BY_PROVIDER: ReadonlyMap<string, ProviderPromptDoctrine> = new Map(

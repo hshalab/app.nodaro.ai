@@ -59,14 +59,14 @@ import type { RefImageItem } from "./tag-textarea"
 // importing them from `../video-configs`.
 import { buildVideoRefVideoAutocomplete, buildVideoRefAudioAutocomplete } from "./video-audio-ref-items"
 export { buildVideoRefVideoAutocomplete, buildVideoRefAudioAutocomplete }
-import { PromptEditor } from "./prompt-editor"
+import { PromptEditor } from "@/lib/picker-ui"
 import { usePromptEditorRefs } from "@/components/nodes/inline-node-prompt/use-prompt-editor-refs"
 // Lazy-loaded so the heavy Kling3 studio panel ships in its OWN chunk instead
 // of being statically bundled into the video-configs chunk. config-panel.tsx
 // lazy-imports the same module path, so both share a single on-demand chunk.
 const Kling3StudioConfig = lazyWithRetry(() => import("./kling3-studio-config").then(m => ({ default: m.Kling3StudioConfig })))
 import { AspectRatioSelector } from "./aspect-ratio-selector"
-import { CameraMotionPicker } from "./camera-motion-picker"
+import { CameraMotionPicker } from "@/lib/picker-ui"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ConnectedMediaList, getSourceThumbnail } from "./connected-media-list"

@@ -163,12 +163,8 @@ describe("frontend parity net (source) — llm-chat in remaining §6.2 sites", (
     ).toMatch(/===\s*"llm-chat"/)
   })
 
-  it("variable-suggestion-list: TYPE_CATEGORY maps 'llm-chat' → 'Text'", () => {
-    const src = readSrc("components/editor/config-panels/prompt-editor/variable-suggestion-list.tsx")
-    // Match `"llm-chat": "Text"` tolerant of whitespace. Removing the row drops
-    // the Generate Text node out of the Text group in the @-mention dropdown.
-    expect(src).toMatch(/"llm-chat"\s*:\s*"Text"/)
-  })
+  // The variable-suggestion-list TYPE_CATEGORY assertion moved with the editor
+  // into @nodaroai/picker-ui (prompt-editor/__tests__/type-category-parity.test.ts).
 
   it("admin/node-defaults: GROUPS nodeTypes array lists 'llm-chat' (LLM-driven group)", () => {
     const src = readSrc("ee/app/(admin)/admin/node-defaults/page.tsx")

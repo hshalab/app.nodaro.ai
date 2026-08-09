@@ -55,6 +55,12 @@ const ALLOWED_PATHS = [
   /^src\/routes\/stripe-webhook\.ts$/,
   /^src\/routes\/social-auth\.ts$/,
   /^src\/routes\/webhook-triggers\.ts$/,
+
+  // text-to-picker: exact twin of describe-to-picker (baseline entry) — same
+  // job-lifecycle writes (insert + own-row status updates filtered by
+  // user_id); migrates to the user-scoped client together with its twin
+  // under roadmap #4.
+  /^src\/routes\/text-to-picker\.ts$/,
   /^src\/routes\/webhook-output\.ts$/,
   /^src\/routes\/telegram-webhook\.ts$/,
   // Meta privacy callbacks: server-to-server POSTs from Meta with no user JWT.
@@ -82,6 +88,10 @@ const ALLOWED_PATHS = [
   // Public / share-token / app runtime — cross-user access by design.
   /^src\/routes\/presentation\.ts$/,
   /^src\/routes\/gallery\.ts$/,
+  // Cine shots (/v1/shots): the public GET is cross-user by design (opaque id
+  // = capability; private shots 404 for non-owners in-handler). Every owner
+  // write scopes `.eq("owner_id", req.userId)`.
+  /^src\/routes\/shots\.ts$/,
   /^src\/routes\/download\.ts$/,
   /^src\/routes\/app-runner\.ts$/,
   /^src\/routes\/component-execute\.ts$/,

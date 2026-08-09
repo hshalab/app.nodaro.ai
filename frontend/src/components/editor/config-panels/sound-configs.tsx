@@ -10,11 +10,11 @@ import { useLocaleDir } from "@/lib/locale-store"
 import { LocaleHeader } from "./locale-header"
 import { CustomTextRows } from "./custom-text-rows"
 import { PromptInjectionPreview } from "./prompt-injection-preview"
-import { MusicGenrePicker } from "./music-genre-picker"
-import { MusicMoodPicker } from "./music-mood-picker"
-import { InstrumentationPicker } from "./instrumentation-picker"
-import { VoiceCharacterPicker } from "./voice-character-picker"
-import { VoiceDeliveryPicker } from "./voice-delivery-picker"
+import { MusicGenrePicker } from "@/lib/picker-ui"
+import { MusicMoodPicker } from "@/lib/picker-ui"
+import { InstrumentationPicker } from "@/lib/picker-ui"
+import { VoiceCharacterPicker } from "@/lib/picker-ui"
+import { VoiceDeliveryPicker } from "@/lib/picker-ui"
 
 /** Copy a string|ReadonlyArray<string>|undefined patch field into a fresh
  *  mutable string[] (or pass-through for string/undefined). */

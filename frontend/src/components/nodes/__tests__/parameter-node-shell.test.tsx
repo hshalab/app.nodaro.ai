@@ -103,15 +103,13 @@ vi.mock("../run-node-button", () => ({
 }))
 
 vi.mock("lucide-react", () => {
-  const I = (p: any) => <span data-testid="mock-icon" {...p} />
-  return {
-    Smile: I, Palette: I, CloudFog: I, Eye: I, FileText: I, Layers: I,
-    // picker-handles registry icons (transitively loaded)
-    Aperture: I, Lightbulb: I, Cloud: I, Wind: I, Shirt: I, PersonStanding: I,
-    Frame: I, Sparkle: I, Camera: I, Brush: I, Sparkles: I, MapPin: I, Zap: I,
-    Repeat: I, Bot: I, Car: I, Crosshair: I, Sofa: I, Hand: I, Box: I,
-    Activity: I, Film: I, Scissors: I, Music: I, Mic: I,
-  }
+  const I = (p: Record<string, unknown>) => <span data-testid="mock-icon" {...p} />
+  // Proxy: any icon name resolves to the stub — the rich picker-ui package
+  // imports icons a closed list cannot anticipate.
+  return new Proxy({} as Record<PropertyKey, unknown>, {
+    get: (_t, prop) => (typeof prop === "string" && prop !== "then" ? I : undefined),
+    has: () => true,
+  })
 })
 
 vi.mock("@/components/editor/config-panels/mood-emoji", () => ({

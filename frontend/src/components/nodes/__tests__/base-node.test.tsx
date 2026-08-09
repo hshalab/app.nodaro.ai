@@ -32,7 +32,10 @@ vi.mock("@/components/editor/workflow-editor/use-node-insert-animation", () => (
   useNodeInsertAnimation: () => undefined,
 }))
 
-vi.mock("lucide-react", () => ({ MoreHorizontal: (p: any) => <span data-testid="more" {...p} /> }))
+vi.mock("lucide-react", () => new Proxy({ MoreHorizontal: (p: Record<string, unknown>) => <span data-testid="more" {...p} /> }, {
+  get: (t, prop) => (prop in t ? (t as Record<PropertyKey, unknown>)[prop] : typeof prop === "string" && prop !== "then" ? () => null : undefined),
+  has: () => true,
+}))
 
 vi.mock("@/hooks/use-workflow-store", () => ({
   useWorkflowStore: Object.assign(

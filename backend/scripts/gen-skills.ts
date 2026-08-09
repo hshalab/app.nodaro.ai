@@ -173,7 +173,11 @@ function gitShortSha(): string {
  * stamps a fresh ISO timestamp.
  */
 function stripFrontmatter(source: string): string {
-  const fmMatch = source.match(/^---\n[\s\S]*?\n---\n?/)
+  // \r?-tolerant: a Windows checkout (core.autocrlf) reads the committed LF
+  // files as CRLF; an LF-only match then fails and the generator PREPENDS a
+  // second frontmatter block instead of replacing (186-file corruption, found
+  // 2026-08-09). Git re-normalizes to LF on commit, so output stays canonical.
+  const fmMatch = source.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/)
   if (fmMatch) return source.slice(fmMatch[0].length)
   return source
 }
@@ -186,7 +190,7 @@ function ensureFrontmatter(source: string, type: string | null, sha: string): st
   lines.push(`generated_from: ${sha}`)
   lines.push("---")
   const fm = lines.join("\n")
-  const fmMatch = source.match(/^---\n[\s\S]*?\n---\n?/)
+  const fmMatch = source.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/)
   if (fmMatch) return fm + "\n" + source.slice(fmMatch[0].length)
   return fm + "\n\n" + source
 }

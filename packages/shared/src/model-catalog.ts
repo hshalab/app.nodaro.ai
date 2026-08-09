@@ -948,7 +948,7 @@ const VIDEO_MODELS: Record<string, ModelCatalogEntry> = {
     kind: "video",
     modes: ["i2v", "t2v"] as const,
     family: "MiniMax",
-    label: "Hailuo 3 (H3)",
+    label: "minimax-h3",
     series: "Hailuo",
     description: "MiniMax Hailuo 3 — premium multimodal tier: first/last frame + image/video/audio references, native audio, 2K (default) or 768P output, 4-15s per-second pricing.",
     useCases: ["premium", "narrative"],

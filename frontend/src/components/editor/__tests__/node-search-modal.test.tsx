@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeAll } from "vitest"
 import { render, screen } from "@testing-library/react"
-import { getParameterPickerMeta, type SingleDimParameterPickerMeta } from "@/lib/parameter-picker-registry"
+import { getParameterPickerMeta, type SingleDimParameterPickerMeta } from "@/lib/picker-ui"
 
 // jsdom doesn't implement scrollIntoView; the modal scrolls the active row.
 beforeAll(() => {

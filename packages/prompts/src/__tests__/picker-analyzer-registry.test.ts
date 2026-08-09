@@ -77,7 +77,17 @@ describe("registry membership (Task 2: person only)", () => {
 describe("registry invariants (all analyzable pickers)", () => {
   it("registers the batch", () => {
     expect(new Set(PICKER_TYPES)).toEqual(
-      new Set(["person", "styling", "framing", "lens", "camera-format"]),
+      new Set([
+        // multi-dim (discriminated)
+        "person", "styling", "framing", "lighting", "temporal", "exposure-settings",
+        "music-genre", "music-mood", "instrumentation", "voice-character", "voice-delivery",
+        // single-value (flat)
+        "lens", "camera-format", "setting", "atmosphere", "style", "mood", "color-look",
+        "photographer", "aesthetic", "era", "photo-genre", "backdrop", "render-quality",
+        "composition-effects", "post-process-effects", "action-fx", "loop-subject",
+        "transition", "character-fx", "pose", "material", "held-prop", "camera-motion",
+        "animal", "vehicle", "weapon", "furniture",
+      ]),
     )
   })
   it.each(PICKER_TYPES)("%s: every dimension enum equals its catalog ids and is non-empty", (t) => {
