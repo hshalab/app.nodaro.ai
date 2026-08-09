@@ -3219,6 +3219,37 @@ const serene = data.options?.find((o) => o.id === "serene")
 console.log(serene?.promptHint) // the clause this option injects downstream
 ```
 
+#### `analyzeText`
+
+```ts
+analyzeText(params: TextToPickerParams): Promise<TextToPickerResult>
+```
+
+`POST /v1/text-to-picker` → fill picker selections from a **free-text scene
+description** ("AI Fill"): the text twin of describe-to-picker. Returns
+`{ jobId, pickerJson, gaps }` where `pickerJson` is keyed
+`pickerType → dimension → catalog id(s)` — hydrate pickers from it verbatim,
+then let the user tweak. Dimensions the text says nothing about are omitted
+(the analyzer is instructed not to guess).
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `text` | `string` | The scene/shot description (up to the prompt ceiling). |
+| `targetPickers` | `string[]?` | Picker node types to fill. Omit for **all** analyzable pickers — the server batches the analysis per catalog family and merges. |
+| `instructions` | `string?` | Extra guidance for the analyzer. |
+| `llmModel` / `reasoningEffort` | `string?` | Standard LLM selection; billed as the describe-to-picker feature. |
+
+`gaps` reports described attributes no catalog id represents well
+(`missingItems` / `missingCategories`) — surface as "we couldn't infer X —
+pick one".
+
+```ts
+const { pickerJson, gaps } = await client.pickerCatalogs.analyzeText({
+  text: "Neon-soaked Tokyo alley at night, rain, handheld tracking shot, moody synthwave",
+})
+console.log(pickerJson["setting"], pickerJson["camera-motion"], gaps)
+```
+
 ---
 
 ### `client.community`

@@ -58,12 +58,46 @@ export interface GetPickerCatalogOptions {
   field?: string
 }
 
+/** Input for `analyzeText` (POST /v1/text-to-picker). */
+export interface TextToPickerParams {
+  /** Free-text scene/shot description to analyze. */
+  text: string
+  /** Picker node types to fill. Omit for ALL analyzable pickers (the server
+   *  fans the analysis out per family and merges). */
+  targetPickers?: string[]
+  /** Extra guidance appended to the analyzer system prompt. */
+  instructions?: string
+  /** Originating client app slug (e.g. "cine") — attribution only. */
+  origin?: string
+  llmModel?: string
+  reasoningEffort?: string
+}
+
+export interface TextToPickerResult {
+  jobId: string
+  /** pickerType → dimension → chosen catalog id(s) — same shape as
+   *  describe-to-picker; hydrate pickers from it verbatim. */
+  pickerJson: Record<string, Record<string, string | string[]>>
+  /** Catalog-coverage feedback (attributes the text described that no
+   *  catalog id represents well). Surface as "we couldn't infer X". */
+  gaps?: {
+    missingItems: Array<{ picker: string; dimension: string; observed: string }>
+    missingCategories: Array<{ picker: string; suggestedDimension: string; observed: string }>
+  }
+}
+
 export class PickerCatalogsResource {
   constructor(private client: NodaroClient) {}
 
   /** List every parameter-picker node type + its option count. Cached publicly 5 min. */
   list(): Promise<{ data: PickerCatalogSummary[] }> {
     return this.client.request("GET", "/v1/picker-catalogs")
+  }
+
+  /** Fill pickers from a free-text description (Cine "AI Fill"): returns the
+   *  same pickerJson shape as describe-to-picker, keyed by picker node type. */
+  analyzeText(params: TextToPickerParams): Promise<TextToPickerResult> {
+    return this.client.request("POST", "/v1/text-to-picker", { body: params })
   }
 
   /** Get one picker's catalog of valid values. */
