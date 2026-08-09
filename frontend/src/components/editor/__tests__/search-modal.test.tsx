@@ -19,10 +19,12 @@ vi.mock("@/lib/supabase", () => ({ createClient: () => mockCreateClient() }))
 
 vi.mock("@/hooks/use-click-outside", () => ({ useClickOutside: () => {} }))
 
-vi.mock("lucide-react", () => {
-  const Icon = (props: Record<string, unknown>) => <span data-testid="icon" {...props} />
-  return { Search: Icon, Folder: Icon, GitBranch: Icon, X: Icon, ExternalLink: Icon }
-})
+vi.mock("lucide-react", () => new Proxy({}, {
+  // Any icon name resolves to a null component — the rich picker-ui package
+  // imports icons a closed list cannot anticipate (Dog, Car, ...).
+  get: (_t, prop) => (typeof prop === "string" && prop !== "then" ? () => null : undefined),
+  has: () => true,
+}))
 
 const mockReadFlag = vi.fn().mockReturnValue(false)
 vi.mock("@/hooks/queries/use-client-apps-queries", () => ({

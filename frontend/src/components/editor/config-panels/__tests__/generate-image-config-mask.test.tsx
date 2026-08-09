@@ -67,8 +67,10 @@ vi.mock("@/components/editor/config-panels/reference-image-list", () => ({
 vi.mock("@/components/editor/config-panels/injected-reference-list", () => ({
   InjectedReferenceList: () => <div />,
 }))
-vi.mock("@/components/editor/config-panels/prompt-editor", () => ({
+vi.mock("@/lib/picker-ui", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   PromptEditor: () => <div />,
+  CameraMotionPicker: () => null,
 }))
 vi.mock("@/components/editor/config-panels/reference-support-warning", () => ({
   ReferenceSupportWarning: () => <div />,
@@ -159,15 +161,12 @@ vi.mock("@/lib/lazy-with-retry", () => ({
 vi.mock("sonner", () => ({
   toast: { warning: vi.fn(), success: vi.fn(), error: vi.fn(), info: vi.fn() },
 }))
-vi.mock("lucide-react", () => {
-  const iconNames = [
-    "X", "FileText", "Plus", "UserPlus", "Loader2", "Upload", "UserCircle",
-    "Package", "MapPin", "Paintbrush", "Check", "Wand2", "Sparkles",
-  ]
-  const out: Record<string, () => null> = {}
-  for (const name of iconNames) out[name] = () => null
-  return out
-})
+vi.mock("lucide-react", () => new Proxy({}, {
+  // Any icon name resolves to a null component — the real package (rich lane)
+  // imports icons this test cannot enumerate (Dog, Car, ...).
+  get: (_t, prop) => (typeof prop === "string" && prop !== "then" ? () => null : undefined),
+  has: () => true,
+}))
 
 function commonProps(data: any): any {
   return {

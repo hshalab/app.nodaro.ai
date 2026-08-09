@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import type { WorkflowNode } from "@/types/nodes"
-import { getParameterPickerMeta } from "./parameter-picker-registry"
+import { getParameterPickerMeta } from "@/lib/picker-ui"
 
 /** Matches URLs whose extension is a known video container. Used so a node
  *  field that happens to hold a video URL (e.g. a character's starred motion

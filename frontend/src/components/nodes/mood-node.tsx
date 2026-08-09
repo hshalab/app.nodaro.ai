@@ -6,7 +6,7 @@ import { Smile } from "lucide-react"
 import { getMood, getMoodLabel } from "@nodaro/prompts"
 import { pickIds } from "@nodaro/shared"
 import { ParameterNodeShell } from "./parameter-node-shell"
-import { MoodEmoji } from "@/components/editor/config-panels/mood-emoji"
+import { MoodEmoji } from "@/lib/picker-ui"
 import type { MoodData } from "@/types/nodes"
 
 function MoodNodeComponent({ id, data, selected }: NodeProps) {

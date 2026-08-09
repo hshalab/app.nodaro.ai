@@ -1,9 +1,9 @@
 // frontend/src/components/nodes/inline-node-prompt/inline-node-prompt.tsx
 import { useEffect, useRef, useState } from "react"
-import { PromptEditor } from "@/components/editor/config-panels/prompt-editor"
+import { PromptEditor } from "@/lib/picker-ui"
 import { PromptHelperButton } from "@/components/editor/config-panels/prompt-helper-button"
 import { SnippetMenuButton } from "@/components/editor/config-panels/snippet-menu-button" // AUDIT FIX: real module + props are pool/value/onInsert/target/media
-import { PROMPT_EDITOR_PORTAL_ATTR } from "@/components/editor/config-panels/prompt-editor/prompt-editor-portal"
+import { PROMPT_EDITOR_PORTAL_ATTR } from "@/lib/picker-ui"
 import { useWorkflowStore } from "@/hooks/use-workflow-store"
 import { getPromptFields, getSnippetMedia } from "@/lib/prompt-fields"
 import { usePromptEditorRefs } from "./use-prompt-editor-refs"

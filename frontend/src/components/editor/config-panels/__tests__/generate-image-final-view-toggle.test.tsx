@@ -73,7 +73,8 @@ vi.mock("@/components/editor/config-panels/aspect-ratio-selector", () => ({
 }))
 vi.mock("@/components/editor/config-panels/reference-image-list", () => ({ ReferenceImageList: () => <div /> }))
 vi.mock("@/components/editor/config-panels/injected-reference-list", () => ({ InjectedReferenceList: () => <div /> }))
-vi.mock("@/components/editor/config-panels/prompt-editor", () => ({
+vi.mock("@/lib/picker-ui", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   // Prompt field's edit-mode body.
   PromptEditor: () => <div data-testid="prompt-editor" />,
 }))
@@ -122,15 +123,12 @@ vi.mock("@/lib/lazy-with-retry", () => ({ lazyWithRetry: () => (() => null) as a
 vi.mock("@/lib/supabase", () => ({ createClient: () => ({}) }))
 vi.mock("@/hooks/queries/use-prompt-snippets-queries", () => ({ useSnippetPool: () => [] }))
 vi.mock("sonner", () => ({ toast: { warning: vi.fn(), success: vi.fn(), error: vi.fn(), info: vi.fn() } }))
-vi.mock("lucide-react", () => {
-  const names = [
-    "X", "FileText", "Plus", "UserPlus", "Loader2", "Upload", "UserCircle", "Package",
-    "MapPin", "Paintbrush", "Check", "Wand2", "Sparkles", "Eye", "EyeOff", "Pencil", "Copy",
-  ]
-  const out: Record<string, () => null> = {}
-  for (const n of names) out[n] = () => null
-  return out
-})
+vi.mock("lucide-react", () => new Proxy({}, {
+  // Any icon name resolves to a null component — the rich picker-ui package
+  // imports icons a closed list cannot anticipate (Dog, Car, ...).
+  get: (_t, prop) => (typeof prop === "string" && prop !== "then" ? () => null : undefined),
+  has: () => true,
+}))
 
 import { useWorkflowStore } from "@/hooks/use-workflow-store"
 import { GenerateImageConfig } from "../image-configs"

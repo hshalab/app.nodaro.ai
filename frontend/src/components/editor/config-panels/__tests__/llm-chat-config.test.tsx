@@ -2,25 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, fireEvent, within } from "@testing-library/react"
 
 // --- Icon stub (avoid pulling real SVGs / lucide internals) ---
-vi.mock("lucide-react", () => {
-  const Icon = (props: any) => <span data-testid="mock-icon" {...props} />
-  return {
-    AlertCircle: Icon,
-    BookmarkPlus: Icon,
-    Loader2: Icon,
-    Image: Icon,
-    Video: Icon,
-    Music: Icon,
-    X: Icon,
-    Save: Icon,
-    Trash2: Icon,
-    ChevronDown: Icon,
-    ChevronDownIcon: Icon,
-    ChevronUpIcon: Icon,
-    CheckIcon: Icon,
-    Check: Icon,
-  }
-})
+vi.mock("lucide-react", () => new Proxy({}, {
+  // Any icon name resolves to a null component — the rich picker-ui package
+  // imports icons a closed list cannot anticipate (Dog, Car, ...).
+  get: (_t, prop) => (typeof prop === "string" && prop !== "then" ? () => null : undefined),
+  has: () => true,
+}))
 
 // --- Workflow store: selector-based mock. Tests override via `storeState`. ---
 const createNodesFromWriterMock = vi.fn()

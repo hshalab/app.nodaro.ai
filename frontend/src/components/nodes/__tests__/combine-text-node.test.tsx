@@ -38,10 +38,12 @@ vi.mock("../handle-with-popover", async (importOriginal) => ({
   ),
 }))
 
-vi.mock("lucide-react", () => {
-  const I = (p: any) => <span data-testid="mock-icon" {...p} />
-  return { Merge: I, FileText: I, X: I, Copy: I, Type: I }
-})
+vi.mock("lucide-react", () => new Proxy({}, {
+  // Any icon name resolves to a null component — the rich picker-ui package
+  // imports icons a closed list cannot anticipate (Dog, Car, ...).
+  get: (_t, prop) => (typeof prop === "string" && prop !== "then" ? () => null : undefined),
+  has: () => true,
+}))
 
 vi.mock("../run-node-button", () => ({
   RunNodeButton: () => <div data-testid="run-node-button" />,

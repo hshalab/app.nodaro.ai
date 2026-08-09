@@ -7,7 +7,7 @@ import { getCameraFormat, getCameraFormatLabel } from "@nodaro/prompts"
 import { ParameterNodeShell } from "./parameter-node-shell"
 import { usePickerJsonConsumer } from "./use-picker-json-consumer"
 import { PICKER_CONSUMER_INPUT_HANDLES, PickerJsonHandleIcon, PickerUpdateButton } from "./picker-json-handle"
-import { CameraFormatPreview } from "@/components/editor/config-panels/camera-format-preview"
+import { CameraFormatPreview } from "@/lib/picker-ui"
 import type { CameraFormatData } from "@/types/nodes"
 
 function CameraFormatNodeComponent({ id, data, selected }: NodeProps) {

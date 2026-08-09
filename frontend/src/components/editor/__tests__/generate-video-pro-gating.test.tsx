@@ -28,7 +28,10 @@ describe("generate-video-pro discovery gating", () => {
     vi.resetModules()
   })
 
-  it("is hidden from BOTH the popup and the sidebar toolbar when the edition has no credits (community/business)", async () => {
+  // 20s timeout: vi.resetModules + fresh dynamic imports re-evaluate the whole
+  // editor import graph, which since the picker-ui seam includes the full
+  // picker/editor surface — slow under a loaded parallel run, not a hang.
+  it("is hidden from BOTH the popup and the sidebar toolbar when the edition has no credits (community/business)", { timeout: 20_000 }, async () => {
     vi.doMock("@/lib/edition", () => ({ hasCredits: () => false, isCloud: () => false }))
     const { getNodeOptions: getPopupOptions } = await import("../add-node-popup")
     const { getNodeOptions: getToolbarOptions } = await import("../node-toolbar")

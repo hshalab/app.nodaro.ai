@@ -156,6 +156,24 @@ ENV VITE_CLARITY_ID=$VITE_CLARITY_ID
 ENV VITE_PLATFORM_OWNER_EMAIL=$VITE_PLATFORM_OWNER_EMAIL
 ENV VITE_IMAGE_REFERENCE_FORMAT=$VITE_IMAGE_REFERENCE_FORMAT
 
+# Optional PRIVATE picker UI (@nodaroai/picker-ui — animated previews + the
+# @-mention prompt editor; see frontend/src/lib/picker-ui/). Same mechanism as
+# @nodaroai/cloud-plugins in prod-deps: with NPM_TOKEN + PICKER_UI_VERSION the
+# package installs (--no-save, token never persisted in a layer) and
+# vite.config's pickerUiAlias switches the seam to the rich lane; without them
+# (self-hosted/community/public CI) this is a no-op and the build ships the
+# functional stub lane. Token is read via $(printenv ...) — see the prod-deps
+# note on why `${NPM_TOKEN}` would leak into BuildKit's printed command.
+ARG NPM_TOKEN
+ARG PICKER_UI_VERSION
+RUN if [ -n "$(printenv NPM_TOKEN)" ] && [ -n "${PICKER_UI_VERSION}" ]; then \
+      echo "@nodaroai:registry=https://npm.pkg.github.com" > .npmrc && \
+      echo "//npm.pkg.github.com/:_authToken=$(printenv NPM_TOKEN)" >> .npmrc && \
+      npm install --no-save "@nodaroai/picker-ui@${PICKER_UI_VERSION}" && \
+      node -e "const fs=require('fs');if(!fs.existsSync('node_modules/@nodaroai/picker-ui/dist/index.js')){console.error('picker-ui smoke: dist missing');process.exit(1)}" && \
+      rm -f .npmrc; \
+    fi
+
 WORKDIR /app/frontend
 # Skip the `prebuild` lifecycle hook (would re-run tsup for shared+client
 # but src dirs aren't copied; prebuilt dists are already in place).

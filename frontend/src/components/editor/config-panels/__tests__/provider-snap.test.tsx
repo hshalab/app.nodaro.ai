@@ -91,8 +91,10 @@ vi.mock("@/components/editor/config-panels/reference-image-list", () => ({
 vi.mock("@/components/editor/config-panels/injected-reference-list", () => ({
   InjectedReferenceList: () => <div />,
 }))
-vi.mock("@/components/editor/config-panels/prompt-editor", () => ({
+vi.mock("@/lib/picker-ui", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   PromptEditor: () => <div />,
+  CameraMotionPicker: () => null,
 }))
 vi.mock("@/components/editor/config-panels/reference-support-warning", () => ({
   ReferenceSupportWarning: () => <div />,
@@ -143,9 +145,6 @@ vi.mock("@/components/editor/config-panels/model-description-hint", () => ({
 vi.mock("@/components/editor/config-panels/multi-provider-picker", () => ({
   MultiProviderPicker: () => null,
 }))
-vi.mock("@/components/editor/config-panels/camera-motion-picker", () => ({
-  CameraMotionPicker: () => null,
-}))
 vi.mock("@/components/editor/media-editor", () => ({
   useMediaEditor: () => ({ open: vi.fn(), close: vi.fn() }),
   MediaEditorModal: () => null,
@@ -194,29 +193,12 @@ vi.mock("@/lib/lazy-with-retry", () => ({
 vi.mock("sonner", () => ({
   toast: { warning: vi.fn(), success: vi.fn(), error: vi.fn(), info: vi.fn() },
 }))
-vi.mock("lucide-react", () => {
-  // Build a generous icon-name list to cover all imports across the configs.
-  const iconNames = [
-    "X", "FileText", "Plus", "UserPlus", "Loader2", "Upload", "UserCircle",
-    "Package", "MapPin", "Paintbrush", "Check", "Download", "AlertCircle",
-    "Sparkles", "Film", "Music", "Link", "GripVertical", "Scissors", "Trash",
-    "Trash2", "Edit", "Edit2", "Edit3", "Copy", "Eye", "EyeOff", "Settings",
-    "ChevronDown", "ChevronUp", "ChevronLeft", "ChevronRight", "ArrowLeft",
-    "ArrowRight", "ArrowUp", "ArrowDown", "Image", "ImageIcon", "Video",
-    "Mic", "MicOff", "Volume", "Volume1", "Volume2", "VolumeX", "Play",
-    "Pause", "Stop", "Square", "Circle", "Triangle", "Star", "Heart",
-    "Lock", "Unlock", "User", "Users", "Folder", "FolderOpen", "File",
-    "Search", "RefreshCw", "RotateCw", "RotateCcw", "Maximize", "Minimize",
-    "Maximize2", "Minimize2", "Wand", "Wand2", "Camera", "CameraOff",
-    "Globe", "Wifi", "WifiOff", "AlertTriangle", "Info", "HelpCircle",
-    "ChevronsUpDown", "ChevronsDown", "ChevronsUp",
-  ]
-  const out: Record<string, () => null> = {}
-  for (const name of iconNames) {
-    out[name] = () => null
-  }
-  return out
-})
+vi.mock("lucide-react", () => new Proxy({}, {
+  // Any icon name resolves to a null component — the real package (rich lane)
+  // imports icons this test cannot enumerate (Dog, Car, ...).
+  get: (_t, prop) => (typeof prop === "string" && prop !== "then" ? () => null : undefined),
+  has: () => true,
+}))
 
 // =============================================================================
 // Helpers

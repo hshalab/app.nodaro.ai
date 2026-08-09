@@ -7,7 +7,7 @@ import { getLens, getLensLabel } from "@nodaro/prompts"
 import { ParameterNodeShell } from "./parameter-node-shell"
 import { usePickerJsonConsumer } from "./use-picker-json-consumer"
 import { PICKER_CONSUMER_INPUT_HANDLES, PickerJsonHandleIcon, PickerUpdateButton } from "./picker-json-handle"
-import { LensPreview } from "@/components/editor/config-panels/lens-preview"
+import { LensPreview } from "@/lib/picker-ui"
 import type { LensData } from "@/types/nodes"
 
 function LensNodeComponent({ id, data, selected }: NodeProps) {

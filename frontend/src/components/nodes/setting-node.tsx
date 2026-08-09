@@ -5,7 +5,7 @@ import type { NodeProps } from "@xyflow/react"
 import { Mountain } from "lucide-react"
 import { getSetting, getSettingLabel } from "@nodaro/prompts"
 import { ParameterNodeShell } from "./parameter-node-shell"
-import { SettingPreview } from "@/components/editor/config-panels/setting-preview"
+import { SettingPreview } from "@/lib/picker-ui"
 import type { SettingData } from "@/types/nodes"
 
 function SettingNodeComponent({ id, data, selected }: NodeProps) {

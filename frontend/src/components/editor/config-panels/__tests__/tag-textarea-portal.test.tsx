@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
 import { TagTextarea } from "../tag-textarea"
-import { PROMPT_EDITOR_PORTAL_ATTR } from "../prompt-editor/prompt-editor-portal"
+import { PROMPT_EDITOR_PORTAL_ATTR } from "@/lib/prompt-editor-portal"
 
 /**
  * Phase C (field-edit modal) renders TagTextarea inside a Radix Dialog. Its

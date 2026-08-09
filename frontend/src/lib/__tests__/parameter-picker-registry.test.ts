@@ -31,7 +31,7 @@ import {
 import {
   ALL_PARAMETER_PICKERS,
   getParameterPickerMeta,
-} from "../parameter-picker-registry"
+} from "@/lib/picker-ui"
 import { PARAMETER_NODE_TYPES, getParameterValue } from "@nodaro/shared"
 
 // =============================================================================

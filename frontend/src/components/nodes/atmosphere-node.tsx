@@ -6,7 +6,7 @@ import { CloudFog } from "lucide-react"
 import { getAtmosphere, getAtmosphereLabel } from "@nodaro/prompts"
 import { pickIds } from "@nodaro/shared"
 import { ParameterNodeShell } from "./parameter-node-shell"
-import { AtmospherePreview } from "@/components/editor/config-panels/atmosphere-preview"
+import { AtmospherePreview } from "@/lib/picker-ui"
 import type { AtmosphereData } from "@/types/nodes"
 
 function AtmosphereNodeComponent({ id, data, selected }: NodeProps) {

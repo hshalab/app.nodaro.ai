@@ -5,7 +5,7 @@ import type { NodeProps } from "@xyflow/react"
 import { Brush } from "lucide-react"
 import { getStyle, getStyleLabel } from "@nodaro/prompts"
 import { ParameterNodeShell } from "./parameter-node-shell"
-import { StylePreview } from "@/components/editor/config-panels/style-preview"
+import { StylePreview } from "@/lib/picker-ui"
 import type { StyleData } from "@/types/nodes"
 
 function StyleNodeComponent({ id, data, selected }: NodeProps) {

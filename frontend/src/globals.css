@@ -1,5 +1,9 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+/* Rich-lane picker UI (@nodaroai/picker-ui) ships prebuilt JS whose Tailwind
+   utility classes must survive the content scan — v4 skips node_modules by
+   default. Harmless when the private package isn't installed (community). */
+@source "../../node_modules/@nodaroai/picker-ui/dist";
 
 /* Self-hosted Geist fonts — served from /fonts/ to eliminate the
    JS → CSS → woff2 waterfall that @fontsource-variable introduced. */

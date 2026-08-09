@@ -15,7 +15,7 @@ import { PICKER_CATALOGS } from "@nodaro/prompts"
 import {
   SINGLE_PICKERS,
   MULTI_PICKERS,
-} from "../parameter-picker-registry"
+} from "@/lib/picker-ui"
 
 const sharedByNodeType = new Map(PICKER_CATALOGS.map((c) => [c.nodeType, c]))
 

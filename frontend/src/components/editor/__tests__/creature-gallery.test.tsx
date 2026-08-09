@@ -2,16 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
 
 // Stub every lucide icon the gallery uses to a plain span.
-vi.mock("lucide-react", () => {
-  const Icon = (props: any) => <span data-testid="mock-icon" {...props} />
-  return {
-    PawPrint: Icon,
-    X: Icon,
-    Loader2: Icon,
-    AlertCircle: Icon,
-    Plus: Icon,
-  }
-})
+vi.mock("lucide-react", () => new Proxy({}, {
+  // Any icon name resolves to a null component — the rich picker-ui package
+  // imports icons a closed list cannot anticipate (Dog, Car, ...).
+  get: (_t, prop) => (typeof prop === "string" && prop !== "then" ? () => null : undefined),
+  has: () => true,
+}))
 
 vi.mock("@/components/ui/cached-image", () => ({
   CachedImage: (props: any) => <img alt={props.alt} src={props.src} />,

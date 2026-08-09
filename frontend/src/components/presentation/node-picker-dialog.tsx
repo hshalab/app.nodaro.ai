@@ -32,7 +32,7 @@ import { PickerRestrictDialog } from "./picker-restrict-dialog"
 import {
   getParameterPickerMeta,
   type ParameterPickerMeta,
-} from "@/lib/parameter-picker-registry"
+} from "@/lib/picker-ui"
 
 interface NodePickerDialogProps {
   open: boolean

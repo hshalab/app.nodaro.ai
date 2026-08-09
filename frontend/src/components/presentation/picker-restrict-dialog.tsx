@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input"
 import { useLocalizedCatalog } from "@/hooks/use-localized-entry"
 import { useLocaleDir } from "@/lib/locale-store"
 import { cn } from "@/lib/utils"
-import type { SingleDimParameterPickerMeta } from "@/lib/parameter-picker-registry"
+import type { SingleDimParameterPickerMeta } from "@/lib/picker-ui"
 
 interface PickerRestrictDialogProps {
   open: boolean

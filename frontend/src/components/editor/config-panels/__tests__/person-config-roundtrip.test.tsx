@@ -1,8 +1,14 @@
-import { describe, it, expect, vi } from "vitest"
+import { describe, it, expect, vi, beforeAll } from "vitest"
 import { useState } from "react"
 import { render, screen, fireEvent } from "@testing-library/react"
 import { PersonConfig } from "../parameter-configs"
+import { PICKER_UI_MODE } from "@/lib/picker-ui"
 import type { PersonData } from "@/types/nodes"
+
+// The roundtrip drives the RICH person picker's tile UI; the community stub
+// renders per-field selects instead (its picking is covered by the package's
+// own person-picker tests). Skip on the stub lane.
+const itRich = (PICKER_UI_MODE as string) === "rich" ? it : it.skip
 
 // LocaleHeader → LocalePicker drags in router + react-query providers we don't
 // mount here; it's decorative for this test, so stub it out.
@@ -10,10 +16,12 @@ vi.mock("../locale-header", () => ({ LocaleHeader: () => null }))
 
 // Force the Detailed view so every dimension's option tiles render flat (Compact
 // collapses them into popovers, which would hide the tile under test).
-vi.mock("@/lib/parameter-node-prefs", async (orig) => ({
-  ...(await orig<typeof import("@/lib/parameter-node-prefs")>()),
-  getStickyPersonPickerMode: () => "detailed",
-}))
+// Via the REAL sticky-mode storage key (not a module mock): in the rich lane
+// the PersonPicker reads the package's own prefs module, which a mock of the
+// app path cannot intercept — localStorage is the shared contract.
+beforeAll(() => {
+  window.localStorage.setItem("nodaro:person-picker-mode", "detailed")
+})
 
 // Rendering the full PersonConfig (all dimensions + options) is heavy.
 vi.setConfig({ testTimeout: 15000 })
@@ -35,7 +43,7 @@ function Harness() {
 }
 
 describe("PersonConfig round-trip — facial-geometry fields", () => {
-  it("a picked eye-spacing option is reflected back as selected (the new field round-trips)", () => {
+  itRich("a picked eye-spacing option is reflected back as selected (the new field round-trips)", () => {
     render(<Harness />)
     // "Wide-set" is the eye-spacing → eye-wide-set option (label is unique to this dim).
     const tile = () => screen.getByRole("radio", { name: /^Wide-set$/i })
