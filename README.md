@@ -2,10 +2,10 @@
 
 # Nodaro
 
-*The API-first studio for AI media — image, video, voice & music workflows on one canvas.**
+*The API-first studio for AI media - image, video, voice & music workflows on one canvas.**
 
 Chain 100+ models (Seedance, Veo, Kling, Flux, ElevenLabs, Suno) into node-based pipelines.
-Run them from the visual canvas, REST API, typed SDK, CLI — or let any AI drive them over MCP (150+ tools).
+Run them from the visual canvas, REST API, typed SDK, CLI - or let any AI drive them over MCP (150+ tools).
 
 [Website](https://nodaro.ai) · [Hosted App](https://app.nodaro.ai) · [Documentation](https://nodaroai.github.io/app.nodaro.ai/) · [SDK Quickstart](docs/sdk-quickstart.md) · [MCP](docs/mcp/index.md)
 
