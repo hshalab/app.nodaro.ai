@@ -693,6 +693,8 @@ export {
   creditRangesAll,
   modelIdsByKindMode,
   buildModelMenu,
+  normalizeModelInput,
+  defaultResolutionFor,
 } from "./model-catalog.js"
 export type {
   ModelCatalogEntry,
@@ -704,6 +706,8 @@ export type {
   ValidationField,
   LabeledOption,
   ModelMenuOption,
+  ModelInputAdjustment,
+  NormalizedModelInput,
 } from "./model-catalog.js"
 
 export {
@@ -876,6 +880,13 @@ export type { VoiceChangerModel } from "./voice-changer-models.js"
 
 // --- Node presets ---
 export { EXECUTION_DATA_KEYS, TRANSIENT_RUNTIME_KEYS, stripTransientRuntimeData } from "./node-runtime-keys.js"
+
+export {
+  MODEL_PARAM_NODE_TYPES,
+  normalizeNodeModelParams,
+  describeNodeAdjustments,
+} from "./normalize-node-params.js"
+export type { NodeParamAdjustment, NormalizedNodes } from "./normalize-node-params.js"
 export { extractPresetData, PRESET_EXCLUDED_KEYS, PRESET_APPLY_CLEAR_KEYS, presetDataMatches } from "./node-preset-extract.js"
 
 // --- Factory prompt-snippets (reusable inline prompt fragments) ---

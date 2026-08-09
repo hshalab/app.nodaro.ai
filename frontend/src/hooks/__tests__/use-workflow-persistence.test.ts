@@ -95,7 +95,7 @@ vi.mock("@/hooks/use-workflow-store", () => {
 // Import under test (after mocks)
 // ---------------------------------------------------------------------------
 
-import { useWorkflowPersistence } from "../use-workflow-persistence"
+import { useWorkflowPersistence, TERMINAL_RESTORABLE_STATUSES } from "../use-workflow-persistence"
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -1160,6 +1160,144 @@ describe("useWorkflowPersistence — single-node restore via load (Gap 3)", () =
       expect(n.data).not.toHaveProperty("currentJobProgress")
       expect(n.data).not.toHaveProperty("executionStatus")
     }
+  })
+})
+
+// ===========================================================================
+// Terminal-execution restore via load
+//
+// A whole-workflow run that aborts on one bad node still generated — and
+// billed — every node that finished before the abort. Those results live ONLY
+// in workflow_executions.node_states until load() paints them onto the canvas.
+// Restoring only `completed` executions dropped all of them and silently
+// restored an OLDER successful run in their place (incident 2026-08-09:
+// 5 images × 30 CR generated, canvas empty after reload).
+// ===========================================================================
+
+describe("useWorkflowPersistence — terminal-execution restore via load", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockGetBatchJobStatus.mockResolvedValue([])
+  })
+
+  /** Nothing active; the terminal-status query returns `items`. */
+  function mockTerminal(items: unknown[]) {
+    mockListWorkflowExecutions.mockImplementation((_id: string, opts: { status?: string }) =>
+      Promise.resolve({ data: opts?.status === "pending,running,stopping" ? [] : items }),
+    )
+  }
+
+  function failedRun(nodeStates: Record<string, unknown>) {
+    return {
+      id: "exec-failed",
+      triggerType: "manual",
+      status: "failed",
+      createdAt: new Date().toISOString(),
+      nodeStates,
+    }
+  }
+
+  it("TERMINAL_RESTORABLE_STATUSES covers aborted runs but never discarded or live ones", () => {
+    const statuses = TERMINAL_RESTORABLE_STATUSES.split(",")
+    // The whole point of the fix: an aborted run's results are restorable.
+    expect(statuses).toContain("failed")
+    expect(statuses).toContain("timed_out")
+    expect(statuses).toContain("completed")
+    // Discard means "throw this away" — restoring would undo an explicit choice.
+    expect(statuses).not.toContain("discarded")
+    // Live runs belong to the active-orchestrator branch (restores polling).
+    for (const live of ["pending", "running", "stopping"]) {
+      expect(statuses).not.toContain(live)
+    }
+  })
+
+  it("restores results from a FAILED run's completed nodes and skips the failed one", async () => {
+    setupSupabaseLoad({
+      id: "w1",
+      name: "WF",
+      nodes: [
+        makeNode({ id: "ok1", data: { label: "A", executionStatus: "idle" } }),
+        makeNode({ id: "ok2", data: { label: "B", executionStatus: "idle" } }),
+        makeNode({ id: "bad", data: { label: "C", executionStatus: "idle" } }),
+      ],
+      edges: [],
+    })
+    mockTerminal([
+      failedRun({
+        ok1: { status: "completed", output: { imageUrl: "https://cdn.test/ok1.png" } },
+        ok2: { status: "completed", output: { imageUrl: "https://cdn.test/ok2.png" } },
+        bad: { status: "failed", error: "Invalid aspect ratio setting." },
+      }),
+    ])
+
+    const { result } = renderHook(() => useWorkflowPersistence("p1"))
+    await act(async () => {
+      await result.current.load("w1")
+    })
+
+    const byId = Object.fromEntries(
+      getSyncedNodes().map((n) => [(n as { id: string }).id, (n as { data: Record<string, unknown> }).data]),
+    )
+    expect(byId.ok1.generatedImageUrl).toBe("https://cdn.test/ok1.png")
+    expect(byId.ok2.generatedImageUrl).toBe("https://cdn.test/ok2.png")
+    expect(byId.ok1.executionStatus).toBe("completed")
+    // The node that actually failed must not be dressed up as completed.
+    expect(byId.bad.generatedImageUrl).toBeUndefined()
+    expect(byId.bad.executionStatus).not.toBe("completed")
+  })
+
+  it("a later single-node run does not shadow the orchestrator run's results", async () => {
+    setupSupabaseLoad({
+      id: "w1",
+      name: "WF",
+      nodes: [makeNode({ id: "ok1", data: { label: "A", executionStatus: "idle" } })],
+      edges: [],
+    })
+    // Newest-first: the single-node row sorts ahead of the orchestrator run.
+    // Taking [0] blind would read a nodeStates entry that carries no `output`
+    // and restore nothing at all.
+    mockTerminal([
+      {
+        id: VALID_UUID,
+        triggerType: "single-node",
+        status: "completed",
+        createdAt: new Date().toISOString(),
+        nodeStates: { ok1: { nodeId: "ok1", jobId: VALID_UUID, status: "completed" } },
+      },
+      failedRun({ ok1: { status: "completed", output: { imageUrl: "https://cdn.test/ok1.png" } } }),
+    ])
+
+    const { result } = renderHook(() => useWorkflowPersistence("p1"))
+    await act(async () => {
+      await result.current.load("w1")
+    })
+
+    const ok1 = getSyncedNodes().find((n) => (n as { id: string }).id === "ok1") as {
+      data: Record<string, unknown>
+    }
+    expect(ok1.data.generatedImageUrl).toBe("https://cdn.test/ok1.png")
+  })
+
+  it("asks for the terminal statuses with room to skip single-node rows", async () => {
+    setupSupabaseLoad({ id: "w1", name: "WF", nodes: [makeNode()], edges: [] })
+    mockTerminal([])
+
+    const { result } = renderHook(() => useWorkflowPersistence("p1"))
+    await act(async () => {
+      await result.current.load("w1")
+    })
+
+    // NB: a separate `status: "completed"` call also fires here — that one is
+    // reconcileCompletedSingleNodeJobs (per-node Run recovery), a different
+    // feature. What matters is that the ORCHESTRATOR restore asks for the full
+    // terminal set, and with limit>1 so it can skip merged single-node rows.
+    const restoreCall = mockListWorkflowExecutions.mock.calls.find(
+      (c) => (c[1] as { status?: string } | undefined)?.status === TERMINAL_RESTORABLE_STATUSES,
+    )
+    expect(restoreCall).toBeDefined()
+    const opts = restoreCall![1] as { limit?: number; source?: string }
+    expect(opts.limit).toBeGreaterThan(1)
+    expect(opts.source).toBe("editor")
   })
 })
 

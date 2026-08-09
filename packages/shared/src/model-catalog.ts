@@ -28,6 +28,8 @@
  *   `docs/choosing-models.md` guide. CI (`gen:skills:check`) fails on drift.
  */
 
+import { isFlux2Model } from "./flux2-pricing.js"
+
 export type ModelKind = "image" | "video" | "audio"
 
 export type ModelMode =
@@ -2383,6 +2385,165 @@ export function validateModelInput(
   }
 
   return null
+}
+
+/**
+ * The resolution a Flux 2 model should land on when its stored value is absent
+ * or invalid. Flux 2 exposes ascending megapixel options ("0.5 MP"…"4 MP"), so
+ * snapping to `options[0]` would silently downgrade every node to the cheapest
+ * tier; each variant has a sensible mid default instead. Returns undefined for
+ * every non-Flux-2 model (they snap to `options[0]` normally).
+ */
+export function defaultResolutionFor(modelId: string): string | undefined {
+  if (!isFlux2Model(modelId)) return undefined
+  return modelId === "flux-2-klein" ? "1 MP" : "2 MP"
+}
+
+/**
+ * True when two option values denote the same setting written differently.
+ * Handles case/whitespace ("4k" vs "4K") and the megapixel form Flux 2 stores
+ * as a bare count ("1") against the catalog's display form ("1 MP").
+ */
+function sameOptionValue(a: string | number, b: string | number): boolean {
+  if (a === b) return true
+  const norm = (v: string | number) =>
+    String(v).trim().toLowerCase().replace(/\s*mp$/, "").replace(/\s+/g, "")
+  const na = norm(a)
+  const nb = norm(b)
+  if (na === nb) return true
+  // Numeric equivalence so "1" matches "1.0" and " 1 MP".
+  const fa = Number(na)
+  const fb = Number(nb)
+  return Number.isFinite(fa) && Number.isFinite(fb) && fa === fb
+}
+
+/** One correction `normalizeModelInput` made, for disclosure to the user. */
+export interface ModelInputAdjustment {
+  field: "aspectRatio" | "resolution" | "quality" | "duration"
+  /** The value that was asked for. */
+  from: string | number
+  /** What it became — `undefined` means the lever was dropped entirely. */
+  to: string | number | undefined
+  reason: string
+}
+
+export interface NormalizedModelInput {
+  aspectRatio?: string
+  resolution?: string
+  quality?: string
+  duration?: number
+  /** Empty when the input was already valid. */
+  adjustments: ModelInputAdjustment[]
+}
+
+/**
+ * Coerce a model's parameters into a combination the model actually accepts.
+ *
+ * The correcting twin of `validateModelInput`. Validation is right when a
+ * human/agent is composing a single call and can retry (MCP verbs do this).
+ * It is the WRONG answer at a persistence or execution boundary: rejecting
+ * there turns a fixable typo into a failed run — and a failed run takes every
+ * already-generated, already-billed sibling node down with it. Incident
+ * 2026-08-09: one node carrying `gpt-image` + `16:9` (a pair the config panel
+ * cannot produce, written straight into workflow JSON by a non-UI author)
+ * aborted a run whose five other nodes had already produced images.
+ *
+ * Rules, mirroring the config panels' provider-change snap:
+ *  - Model has no such lever → drop the value (sending it 400s upstream).
+ *  - Value outside the model's allow-list → snap to the model's default
+ *    (`defaultResolutionFor`) or the first valid option.
+ *  - Then apply cross-field constraints that only hold for certain models.
+ *
+ * Unknown model ids pass through untouched — the route's Zod model enum is the
+ * right gate for those, exactly as in `validateModelInput`.
+ *
+ * Every correction is reported in `adjustments` so callers can disclose what
+ * changed rather than silently handing back something else.
+ */
+export function normalizeModelInput(
+  modelId: string,
+  input: {
+    aspectRatio?: string
+    resolution?: string
+    quality?: string
+    duration?: number
+  },
+): NormalizedModelInput {
+  const m = MODEL_CATALOG[modelId]
+  const adjustments: ModelInputAdjustment[] = []
+  if (!m) return { ...input, adjustments }
+
+  const out: NormalizedModelInput = { ...input, adjustments }
+
+  const snap = <T extends string | number>(
+    field: ModelInputAdjustment["field"],
+    value: T | undefined,
+    allowed: readonly T[] | undefined,
+    preferred?: T,
+  ): T | undefined => {
+    if (value === undefined) return undefined
+    if (!allowed || allowed.length === 0) {
+      adjustments.push({
+        field,
+        from: value,
+        to: undefined,
+        reason: `${m.label} has no ${field} setting — the value was dropped.`,
+      })
+      return undefined
+    }
+    if (allowed.includes(value)) return value
+    // Same value, different spelling — canonicalize instead of "correcting".
+    // Stored data is not uniform with the catalog's display form: Flux 2 bills
+    // off a bare megapixel count ("1") while the catalog lists "1 MP", and "4k"
+    // appears alongside "4K". Treating those as invalid would snap a perfectly
+    // good value to a DIFFERENT tier — i.e. silently re-price the node — which
+    // is worse than the bug this function exists to fix.
+    const canonical = allowed.find((a) => sameOptionValue(a, value))
+    if (canonical !== undefined) return canonical
+    const next = preferred !== undefined && allowed.includes(preferred) ? preferred : allowed[0]
+    adjustments.push({
+      field,
+      from: value,
+      to: next,
+      reason: `${m.label} does not support ${field} "${value}" — using "${next}" instead. Supported: ${allowed.join(", ")}.`,
+    })
+    return next
+  }
+
+  out.aspectRatio = snap("aspectRatio", input.aspectRatio, m.aspectRatios)
+  out.resolution = snap(
+    "resolution",
+    input.resolution,
+    m.resolutions,
+    defaultResolutionFor(modelId),
+  )
+  out.quality = snap("quality", input.quality, m.qualities)
+  out.duration = snap("duration", input.duration, m.durations)
+
+  // Cross-field constraints — a pair that is individually valid but jointly
+  // rejected upstream. GPT Image 2 (per docs.kie.ai): `auto` requires 1K, and
+  // 1:1 cannot go to 4K. Applied last so it sees the already-snapped values.
+  if (modelId === "gpt-image-2" || modelId === "gpt-image-2-i2i") {
+    if (out.aspectRatio === "auto" && out.resolution !== undefined && out.resolution !== "1K") {
+      adjustments.push({
+        field: "resolution",
+        from: out.resolution,
+        to: "1K",
+        reason: `${m.label} only renders 1K at the "auto" aspect ratio.`,
+      })
+      out.resolution = "1K"
+    } else if (out.aspectRatio === "1:1" && out.resolution === "4K") {
+      adjustments.push({
+        field: "resolution",
+        from: "4K",
+        to: "2K",
+        reason: `${m.label} cannot render 4K at a 1:1 aspect ratio.`,
+      })
+      out.resolution = "2K"
+    }
+  }
+
+  return out
 }
 
 // =============================================================================
