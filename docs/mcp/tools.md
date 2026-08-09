@@ -281,6 +281,36 @@ This prevents accidental overwrites when two agents or sessions edit the same
 workflow concurrently. Omit `expected_updated_at` to skip the check and
 overwrite unconditionally.
 
+**Model parameters are corrected, not rejected.** Image nodes
+(`generate-image`, `image-to-image`) carry model-specific levers — `aspectRatio`,
+`resolution`, `quality` — and the allowed values differ sharply per provider.
+GPT Image 1.5 (`gpt-image`) renders `1:1 / 3:2 / 2:3` and has no resolution
+setting at all, while `gpt-image-2` accepts `auto / 1:1 / 16:9 / 9:16 / 4:3 /
+3:4` at 1K–4K. Rather than failing the write, a value the selected model does
+not accept is snapped to a valid one (or dropped, when the model has no such
+lever), and the response tells you exactly what changed:
+
+```
+Updated workflow 4f0c… (12 nodes).
+
+Adjusted 2 parameter(s) the selected model does not accept:
+  - node_8 (gpt-image): aspectRatio "16:9" → "1:1" — GPT Image 1.5 does not
+    support aspect_ratio "16:9". Supported: 1:1, 3:2, 2:3.
+  - node_8 (gpt-image): resolution "2K" → removed — GPT Image 1.5 has no
+    resolution setting.
+```
+
+The structured payload carries the same information under `adjustments`. Read
+it: the stored value is not what you sent, and re-sending the original pair on
+the next turn just repeats the correction. Use `list_models` to see each
+model's supported values up front, or pick the sibling model that supports what
+you want. The same correction applies to `create_workflow` and
+`import_workflow`.
+
+Nodes configured with multiple providers at once are left untouched — the valid
+set there is the intersection across every selected provider, and no single
+replacement is correct for all of them.
+
 ---
 
 ### `export_workflow`
