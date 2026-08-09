@@ -1,5 +1,11 @@
 # @nodaro/shared
 
+## 2.2.1
+
+### Patch Changes
+
+- 34b3b31: Rename the minimax-h3 display label from "Hailuo 3 (H3)" to "minimax-h3" (label-only; id unchanged).
+
 ## 2.2.0
 
 ### Minor Changes
