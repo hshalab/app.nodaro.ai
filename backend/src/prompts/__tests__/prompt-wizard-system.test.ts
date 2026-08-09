@@ -43,7 +43,10 @@ describe("buildWizardEnhanceSystem", () => {
   })
 
   it("omits the doctrine section for providers without one", () => {
-    const sys = buildWizardEnhanceSystem({ nodeType: "text-to-video", provider: "veo3.1" })
+    // bytedance-lite is the PINNED deliberately-generic provider (older engine;
+    // see doctrine-roster-completeness.test in @nodaro/prompts). veo3.1 gained
+    // a doctrine in the 2026-08 roster expansion.
+    const sys = buildWizardEnhanceSystem({ nodeType: "text-to-video", provider: "bytedance-lite" })
     expect(sys).not.toContain("Provider Prompting Doctrine")
   })
 

@@ -7,7 +7,7 @@ import { hasCredits } from "../../config.js"
 import { supabase } from "../../supabase.js"
 import { CreditsService } from "../../../ee/billing/credits.js"
 import { MODEL_CATALOG, MODEL_RECOMMENDATIONS, listModels, groupByFamily, type ModelCatalogEntry, type ModelKind, type ModelMode } from "@nodaro/shared"
-import { getPromptTips } from "@nodaro/prompts"
+import { getPromptTips, getPromptDoctrine } from "@nodaro/prompts"
 
 const creditsReadGate: ToolGate = { required: ["credits:read"] }
 
@@ -21,7 +21,7 @@ export interface RegisterModelsOpts {
  * Strip undefined fields so the JSON output stays compact when a model
  * doesn't expose a particular lever (e.g., audio models have no aspectRatios).
  */
-function projectModel(m: ModelCatalogEntry): Record<string, unknown> {
+export function projectModel(m: ModelCatalogEntry): Record<string, unknown> {
   const out: Record<string, unknown> = {
     id: m.id,
     label: m.label,
@@ -38,6 +38,10 @@ function projectModel(m: ModelCatalogEntry): Record<string, unknown> {
   if (m.durations?.length) out.durations = m.durations
   const promptTips = getPromptTips(m.id)
   if (promptTips.length) out.promptTips = promptTips
+  // Truth flag for optimizer badges ("vendor doctrine · real rewrite"):
+  // true ONLY when a sourced per-family doctrine exists for this id — clients
+  // must show a generic label otherwise, never overclaim (Cine build-brief §7).
+  out.doctrineCovered = getPromptDoctrine(m.id) !== undefined
   return out
 }
 

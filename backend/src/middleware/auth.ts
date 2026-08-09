@@ -104,6 +104,8 @@ export function invalidateAuthCache(userId: string): void {
 const PUBLIC_ROUTES: { method?: string; path: string; prefix?: boolean }[] = [
   { path: "/health" },
   { method: "GET", path: "/v1/gallery" },
+  // Model catalog: public availability info (same stance as MCP list_models).
+  { method: "GET", path: "/v1/models" },
   { method: "GET", path: "/v1/gallery/items" },
   { path: "/v1/gallery/report" },
   // Public share-by-link read of an OPT-IN-shared workflow (studio /example/:id).

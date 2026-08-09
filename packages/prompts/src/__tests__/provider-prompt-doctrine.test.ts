@@ -13,7 +13,7 @@ describe("PROVIDER_PROMPT_DOCTRINES", () => {
       expect(d.providers.length).toBeGreaterThan(0)
       for (const p of d.providers) expect(MODEL_CATALOG[p]).toBeDefined()
       expect(d.tips.length).toBeGreaterThanOrEqual(3)
-      expect(d.tips.length).toBeLessThanOrEqual(6)
+      expect(d.tips.length).toBeLessThanOrEqual(7)
       for (const t of d.tips) expect(t.length).toBeLessThanOrEqual(220)
       expect(d.doctrine.length).toBeGreaterThan(500)
       expect(d.heading.length).toBeGreaterThan(0)
@@ -23,9 +23,11 @@ describe("PROVIDER_PROMPT_DOCTRINES", () => {
   it("resolves by provider id, returns undefined/[] for providers without doctrine", () => {
     expect(getPromptDoctrine("seedance-2")).toBeDefined()
     expect(getPromptDoctrine("seedance-2-fast")).toBeDefined()
-    expect(getPromptDoctrine("veo3.1")).toBeUndefined()
+    // bytedance-lite/pro + hailuo-2.3 are DELIBERATELY uncovered (older engines
+    // whose surfaces differ — mapping the family doctrine would overclaim).
+    expect(getPromptDoctrine("bytedance-lite")).toBeUndefined()
     expect(getPromptTips("seedance-2").length).toBeGreaterThan(0)
-    expect(getPromptTips("veo3.1")).toEqual([])
+    expect(getPromptTips("bytedance-lite")).toEqual([])
   })
 
   it("seedance doctrine encodes the official rules and bans the unstable patterns", () => {
