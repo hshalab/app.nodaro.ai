@@ -2,7 +2,7 @@
 
 # Nodaro
 
-*The API-first studio for AI media - image, video, voice & music workflows on one canvas.**
+**The API-first studio for AI media - image, video, voice & music workflows on one canvas.**
 
 Chain 100+ models (Seedance, Veo, Kling, Flux, ElevenLabs, Suno) into node-based pipelines.
 Run them from the visual canvas, REST API, typed SDK, CLI - or let any AI drive them over MCP (150+ tools).
@@ -32,6 +32,8 @@ an API endpoint, a webhook target, and an MCP tool — all at the same time.
   LTX, Flux, Nano Banana, GPT-Image, Suno, ElevenLabs, Claude, Gemini, GPT and more,
   routed through pluggable providers (KIE.ai, Replicate, fal, ElevenLabs,
   HeyGen, Beeble, Apify).
+- **Workflows are portable JSON** — export any workflow as a file, share it, 
+    import it on any Nodaro instance (hosted or self-hosted). No lock-in.  
 - **Server-side execution engine** — workflows run autonomously as DAGs on a
   BullMQ orchestrator: no browser tab required, with schedules, webhook
   triggers, sub-workflows, and per-node retry semantics.
