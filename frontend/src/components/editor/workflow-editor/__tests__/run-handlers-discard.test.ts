@@ -32,6 +32,17 @@ vi.mock("@/hooks/use-workflow-store", () => ({
       edges: mockEdges,
       updateNodeData: mockUpdateNodeData,
     }),
+    // syncNodeStatesToStore batches its patches through setState (one React
+    // re-render instead of N). The partial-failure tests below drive that real
+    // path, so the mock has to actually commit the new nodes — otherwise the
+    // subsequent revert step would still see pre-sync statuses.
+    setState: (updater: unknown) => {
+      const next =
+        typeof updater === "function"
+          ? (updater as (s: { nodes: typeof mockNodes }) => { nodes?: typeof mockNodes })({ nodes: mockNodes })
+          : (updater as { nodes?: typeof mockNodes })
+      if (next?.nodes) mockNodes = next.nodes
+    },
   },
 }))
 
@@ -352,6 +363,111 @@ describe("streamBackendExecution — discarded run detach", () => {
 
     expect(mockGetWorkflowExecution).not.toHaveBeenCalled()
     expect(mockUpdateNodeData).not.toHaveBeenCalled()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Partial-failure settle
+//
+// When the orchestrator aborts on a bad node it never reaches the rest of the
+// graph, so every unreached node keeps the optimistic "pending" flip handleRun
+// applied and shows the animated running border forever — long after the run
+// is over. Only the discard path used to reset them. Meanwhile the nodes that
+// DID finish must keep their results: they were generated and billed.
+// ---------------------------------------------------------------------------
+
+describe("streamBackendExecution — failed run settles orphaned nodes", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.useFakeTimers()
+    mockNodes = []
+    mockEdges = []
+    teardownActiveWorkflowStream()
+    mockStreamWorkflowExecution.mockReturnValue(new Promise(() => {}))
+  })
+
+  afterEach(() => {
+    teardownActiveWorkflowStream()
+    vi.useRealTimers()
+  })
+
+  /** One node that succeeded, one that failed, one the run never reached. */
+  function partialFailureNodes() {
+    return [
+      { id: "done", type: "generate-image", data: { label: "a", executionStatus: "running", currentJobId: "job-1" } },
+      { id: "bad", type: "generate-image", data: { label: "b", executionStatus: "running", currentJobId: "job-2" } },
+      { id: "never-reached", type: "generate-image", data: { label: "c", executionStatus: "pending" } },
+    ]
+  }
+
+  const failedStates = {
+    done: { status: "completed", output: { imageUrl: "https://cdn.example.com/done.png" } },
+    bad: { status: "failed", error: "Invalid aspect ratio setting." },
+  }
+
+  it("SSE onFailed: keeps the completed result, resets the never-reached node to idle", async () => {
+    mockNodes = partialFailureNodes()
+    mockGetWorkflowExecution.mockResolvedValue({ status: "running", nodeStates: {} })
+
+    streamBackendExecution("exec-fail-sse", makeCtx(), vi.fn(), vi.fn())
+
+    // Mirror api.ts: the final nodeStates are delivered BEFORE onFailed.
+    const cb = lastSseCallbacks()
+    cb.onNodeStatesChanged?.(failedStates as Record<string, unknown>)
+    cb.onFailed?.({ errorMessage: "Node execution failed: bad" })
+
+    const byId = Object.fromEntries(mockNodes.map((n) => [n.id, n.data]))
+    // The paid-for result survives — this is the whole point.
+    expect(byId.done.generatedImageUrl).toBe("https://cdn.example.com/done.png")
+    expect(byId.done.executionStatus).toBe("completed")
+    // The node that really failed keeps its failure (not reset to idle).
+    expect(byId.bad.executionStatus).toBe("failed")
+    // The orphan stops pretending to run.
+    expect(mockUpdateNodeData).toHaveBeenCalledWith("never-reached", {
+      executionStatus: "idle",
+      currentJobId: undefined,
+      currentJobProgress: undefined,
+    })
+  })
+
+  it("poll path reaches the same end state as SSE (whichever wins the race)", async () => {
+    mockNodes = partialFailureNodes()
+    mockGetWorkflowExecution.mockResolvedValue({
+      status: "failed",
+      errorMessage: "Node execution failed: bad",
+      nodeStates: failedStates,
+    })
+
+    streamBackendExecution("exec-fail-poll", makeCtx(), vi.fn(), vi.fn())
+    await vi.advanceTimersByTimeAsync(1000)
+
+    const byId = Object.fromEntries(mockNodes.map((n) => [n.id, n.data]))
+    expect(byId.done.generatedImageUrl).toBe("https://cdn.example.com/done.png")
+    expect(byId.bad.executionStatus).toBe("failed")
+    expect(mockUpdateNodeData).toHaveBeenCalledWith("never-reached", {
+      executionStatus: "idle",
+      currentJobId: undefined,
+      currentJobProgress: undefined,
+    })
+  })
+
+  it("a COMPLETED run is left alone (no blanket revert)", async () => {
+    mockNodes = [
+      { id: "done", type: "generate-image", data: { label: "a", executionStatus: "running", currentJobId: "job-1" } },
+    ]
+    mockGetWorkflowExecution.mockResolvedValue({
+      status: "completed",
+      nodeStates: { done: { status: "completed", output: { imageUrl: "https://cdn.example.com/done.png" } } },
+    })
+
+    streamBackendExecution("exec-ok", makeCtx(), vi.fn(), vi.fn())
+    await vi.advanceTimersByTimeAsync(1000)
+
+    const revertedToIdle = mockUpdateNodeData.mock.calls.find(
+      (c: any[]) => c[1]?.executionStatus === "idle",
+    )
+    expect(revertedToIdle).toBeUndefined()
+    expect(mockToastSuccess).toHaveBeenCalledWith("Backend execution completed")
   })
 })
 

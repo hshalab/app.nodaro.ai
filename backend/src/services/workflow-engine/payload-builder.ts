@@ -6,7 +6,7 @@
 import type { SimpleNode, SimpleEdge, ResolvedInputs, NodeExecutionState } from "./types.js"
 
 // Shared logic from packages/shared — single source of truth
-import { collectAncestorRefs as sharedCollectAncestorRefs, applyDefaultVideoSelection, LOCATION_REFERENCE_PHOTO_KINDS, locationReferencePhotoKindLabel, type LocationReferencePhotoKind, characterMentionableAssetArrays, buildCreditModelIdentifier, resolveImageGenCreditIdentifier, buildVideoCreditModelIdentifier, buildMotionCreditModelIdentifier, applyVideoNegativePrompt, resolveVideoProviderForMode, videoProviderRequiresImage, isVeoProvider, buildLipSyncCreditId, isPerSecondLipSyncProvider, resolveAiAvatarCreditId, resolveSwitchXCreditId, resolveCinematicCreditId, referenceSheetCreditId, buildVideoAnalysisCreditId, buildVideoAuditCreditId, resolveVideoAnalysisModel, extractReferencedLabels, combineSameLabelRefs, refHandleCategory, canonicalVarName, validateAiAvatarPayload, validateCinematicAvatarPayload, resolveNodeRefs, resolveEffectiveSourceType, PARAMETER_NODE_TYPES, characterMentionSlug, expandExtraRefsToConnectedReferences, PLATFORM_SPECS, isSeedance2Provider, isMinimaxH3Provider, supportsExtendRender, MODEL_CATALOG, hasFeature, referenceModalityForHandle, countRefModalityEdges as countRefModalityEdgesCore, type ReferenceModality, COMPOSER_PLAN_MAP, ASPECT_RATIO_DIMENSIONS, buildLlmCreditIdentifier, motionGraphicsFeature, FLUX_LORA_CHARACTER_MODEL_ID, extractCharacterLoraFields, clampSmartCutWindow, resolveGvpAnchorWire } from "@nodaro/shared"
+import { collectAncestorRefs as sharedCollectAncestorRefs, applyDefaultVideoSelection, LOCATION_REFERENCE_PHOTO_KINDS, locationReferencePhotoKindLabel, type LocationReferencePhotoKind, characterMentionableAssetArrays, buildCreditModelIdentifier, resolveImageGenCreditIdentifier, buildVideoCreditModelIdentifier, buildMotionCreditModelIdentifier, applyVideoNegativePrompt, resolveVideoProviderForMode, videoProviderRequiresImage, isVeoProvider, buildLipSyncCreditId, isPerSecondLipSyncProvider, resolveAiAvatarCreditId, resolveSwitchXCreditId, resolveCinematicCreditId, referenceSheetCreditId, buildVideoAnalysisCreditId, buildVideoAuditCreditId, resolveVideoAnalysisModel, extractReferencedLabels, combineSameLabelRefs, refHandleCategory, canonicalVarName, validateAiAvatarPayload, validateCinematicAvatarPayload, resolveNodeRefs, resolveEffectiveSourceType, PARAMETER_NODE_TYPES, characterMentionSlug, expandExtraRefsToConnectedReferences, PLATFORM_SPECS, isSeedance2Provider, isMinimaxH3Provider, supportsExtendRender, MODEL_CATALOG, hasFeature, referenceModalityForHandle, countRefModalityEdges as countRefModalityEdgesCore, type ReferenceModality, COMPOSER_PLAN_MAP, ASPECT_RATIO_DIMENSIONS, buildLlmCreditIdentifier, motionGraphicsFeature, FLUX_LORA_CHARACTER_MODEL_ID, extractCharacterLoraFields, clampSmartCutWindow, resolveGvpAnchorWire, normalizeModelInput } from "@nodaro/shared"
 import { composeNegative, resolveTemplate, applyTemplate, computeNodePrompt, assembleImageInput, buildImagePrompt, buildScenePrompt, collectIdentityLockClause as sharedCollectIdentityLockClause, getParameterPromptHint, characterLockToRefLock, buildCharacterPrompt, buildObjectPrompt, buildCreaturePrompt, buildLocationPrompt, buildFaceTemplateInputs, appendMusicMeta, composeSoundHintFromConnections, truncateForField, appendField, assembleSunoInput, type SoundConsumerType, type SoundComposition, resolveVideoReferenceCore } from "@nodaro/prompts"
 import type { CharacterDef, ConnectedReference, SceneData, ExtraRefInput, ExtraRefCharacterContext } from "@nodaro/shared"
 import type { CharacterMeta } from "@nodaro/prompts"
@@ -1667,6 +1667,23 @@ export function buildPayload(
     case "generate-image": {
       const provider = (data.provider as string) ?? "nano-banana"
       const settings = buildCtx?.settings
+      // Last-mile guard on the catalog-governed levers. The config panel snaps
+      // these when the provider changes, but that only runs when the panel is
+      // mounted — and `aspectRatio` / `provider` are BOTH MappableFields, so a
+      // FieldMapping can inject either at run time, after every UI guard is out
+      // of the picture. Normalizing here is the only place that covers that.
+      // Feeds the credit identifier too, so we bill for what we actually send.
+      const imageParams = normalizeModelInput(provider, {
+        aspectRatio: data.aspectRatio as string | undefined,
+        resolution: data.resolution as string | undefined,
+        quality: data.quality as string | undefined,
+      })
+      if (imageParams.adjustments.length > 0) {
+        console.warn(
+          `[payload-builder] ${node.id} (${provider}): ` +
+          imageParams.adjustments.map((a) => `${a.field} "${a.from}" → ${a.to ?? "removed"}`).join("; "),
+        )
+      }
 
       // Build a map of all available reference images by ID
       const refUrlMap = new Map<string, string>()
@@ -1865,8 +1882,8 @@ export function buildPayload(
           ? FLUX_LORA_CHARACTER_MODEL_ID
           : resolveImageGenCreditIdentifier({
               provider,
-              quality: data.quality as string | undefined,
-              resolution: data.resolution as string | undefined,
+              quality: imageParams.quality,
+              resolution: imageParams.resolution,
               renderingSpeed: data.renderingSpeed as string | undefined,
               // refCount = the assembled refs actually sent to the worker, and
               // swapToI2i mirrors the route's T2I→I2I auto-swap when refs attach.
@@ -1888,9 +1905,9 @@ export function buildPayload(
           // valid provider/router model identifier. Matches the single-node
           // route at `routes/generate-image.ts:288`.
           model: lora ? FLUX_LORA_CHARACTER_MODEL_ID : undefined,
-          aspectRatio: data.aspectRatio,
-          resolution: data.resolution,
-          quality: data.quality,
+          aspectRatio: imageParams.aspectRatio,
+          resolution: imageParams.resolution,
+          quality: imageParams.quality,
           negativePrompt: result.nativeNegativePrompt,
           seed: data.seed,
           renderingSpeed: data.renderingSpeed,
@@ -2032,6 +2049,18 @@ export function buildPayload(
     case "image-to-image": {
       const provider = (data.provider as string) ?? "nano-banana"
       const settings = buildCtx?.settings
+      // Same last-mile guard as generate-image — see the comment there.
+      const i2iParams = normalizeModelInput(provider, {
+        aspectRatio: data.aspectRatio as string | undefined,
+        resolution: data.resolution as string | undefined,
+        quality: data.quality as string | undefined,
+      })
+      if (i2iParams.adjustments.length > 0) {
+        console.warn(
+          `[payload-builder] ${node.id} (${provider}): ` +
+          i2iParams.adjustments.map((a) => `${a.field} "${a.from}" → ${a.to ?? "removed"}`).join("; "),
+        )
+      }
 
       // Apply connectedMediaOrder to determine main image vs references
       let i2iMainImage = resolvedInputs.imageUrl || data.imageUrl
@@ -2147,8 +2176,8 @@ export function buildPayload(
         // cheapest tier in workflow runs.
         modelIdentifier: resolveImageGenCreditIdentifier({
           provider,
-          quality: data.quality as string | undefined,
-          resolution: data.resolution as string | undefined,
+          quality: i2iParams.quality,
+          resolution: i2iParams.resolution,
           renderingSpeed: data.renderingSpeed as string | undefined,
           refCount: 1 + (i2iResult.referenceImageUrls?.length ?? 0),
           swapToI2i: false,
@@ -2160,9 +2189,9 @@ export function buildPayload(
           referenceImageUrls: i2iResult.referenceImageUrls,
           provider,
           strength: data.strength,
-          aspectRatio: data.aspectRatio,
-          resolution: data.resolution,
-          quality: data.quality,
+          aspectRatio: i2iParams.aspectRatio,
+          resolution: i2iParams.resolution,
+          quality: i2iParams.quality,
           negativePrompt: i2iResult.nativeNegativePrompt,
           seed: data.seed,
           renderingSpeed: data.renderingSpeed,

@@ -15,6 +15,27 @@ import { isValidUuid } from "@/lib/uuid"
 import { collectRestorableSingleNodeJobs, applySingleNodeJobRestore } from "@/lib/single-node-restore"
 import { hydrateCharacterNodeFromDetail } from "@/lib/character-node-data"
 
+/**
+ * Execution statuses whose `node_states` are worth restoring onto the canvas on
+ * load — i.e. the run is over AND its per-node results are the user's to keep.
+ *
+ * Every entry here is terminal. `failed` and `timed_out` are the load-bearing
+ * ones: a run that aborts on one bad node still generated (and billed) every
+ * node that finished before it, and those results live only in `node_states`
+ * until something paints them onto the canvas.
+ *
+ * Deliberately EXCLUDED:
+ *  - `discarded` — Discard Run means "throw this away"; its in-flight results
+ *    go to My Library off-canvas by design. Restoring them would undo the
+ *    user's explicit choice.
+ *  - `pending` / `running` / `stopping` — still live; handled by the active
+ *    orchestrator branch above, which restores polling instead.
+ *
+ * Guarded by the "terminal-execution restore via load" block in
+ * `__tests__/use-workflow-persistence.test.ts`.
+ */
+export const TERMINAL_RESTORABLE_STATUSES = "completed,failed,cancelled,timed_out"
+
 interface StillRunningJob {
   readonly nodeId: string
   readonly jobId: string
@@ -969,17 +990,39 @@ export function useWorkflowPersistence(projectId?: string) {
             restoredSingleNodeJobs = restorable.map((j) => ({ nodeId: j.nodeId, jobId: j.jobId, nodeType: j.nodeType }))
           }
 
-          // --- Nothing active → apply the most recent COMPLETED execution's
+          // --- Nothing active → apply the most recent TERMINAL execution's
           // results to nodes still missing outputs (execution ran while the
-          // editor was closed). Use source=editor to exclude app-runner/component. ---
+          // editor was closed). Use source=editor to exclude app-runner/component.
+          //
+          // Deliberately NOT "completed" only. A run that ends `failed` (one bad
+          // node aborts the run) still has every earlier node's result in its
+          // node_states — already generated, already billed. Querying only
+          // completed rows dropped all of them on reload AND silently restored an
+          // OLDER completed run in their place, so the user saw an empty canvas
+          // for images they paid for. `applyCompletedExecutionResults` filters
+          // per node on `state.status === "completed"`, so feeding it a failed
+          // run's states applies exactly the nodes that succeeded and skips the
+          // one that failed.
+          //
+          // `discarded` is excluded on purpose: Discard Run means "throw this
+          // away", and its results go to My Library off-canvas by design. Stop
+          // (`cancelled`) is not discard — nodes that finished before the stop
+          // keep their results, matching revertActiveNodesToIdle's contract. ---
           if (!orchestrator && restorable.length === 0) {
-            const { data: completedExecs } = await listWorkflowExecutions(id, {
-              limit: 1,
-              status: "completed",
+            // limit>1 + find(manual): the list MERGES standalone single-node job
+            // rows into the same feed (see pickLatestCompletedJobPerNode, which
+            // filters them the other way). Taking [0] blind means one per-node Run
+            // after a partially-failed workflow shadows the orchestrator row — its
+            // nodeStates is a single {nodeId, jobId, status} entry with no output,
+            // so the restore silently no-ops. Mirrors the active branch above.
+            const { data: terminalExecs } = await listWorkflowExecutions(id, {
+              limit: 10,
+              status: TERMINAL_RESTORABLE_STATUSES,
               source: "editor",
             })
-            if (completedExecs.length > 0) {
-              const nodeStates = (completedExecs[0].nodeStates ?? {}) as Record<string, NodeExecutionState>
+            const lastOrchestrated = terminalExecs.find((e) => e.triggerType === "manual")
+            if (lastOrchestrated) {
+              const nodeStates = (lastOrchestrated.nodeStates ?? {}) as Record<string, NodeExecutionState>
               if (Object.keys(nodeStates).length > 0) {
                 // Only apply outputs to nodes that don't already have results
                 const before = JSON.stringify(nodes)
