@@ -109,6 +109,9 @@ const PUBLIC_ROUTES: { method?: string; path: string; prefix?: boolean }[] = [
   // Public share-by-link read of an OPT-IN-shared workflow (studio /example/:id).
   // The handler only returns workflows with settings.studio.shared === true.
   { method: "GET", path: "/v1/public/workflows/", prefix: true },
+  // Cine share links (/s/:id): GET is public BY DESIGN — the opaque id is the
+  // capability; the handler 404s private shots for non-owners (shots.ts).
+  { method: "GET", path: "/v1/shots/", prefix: true },
   { path: "/v1/download", prefix: true },
   { path: "/v1/billing/stripe-webhook" },
   { path: "/v1/image-proxy" },

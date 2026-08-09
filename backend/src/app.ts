@@ -142,6 +142,7 @@ import { textToDialogueRoutes } from "./routes/text-to-dialogue.js"
 import { imageToTextRoutes } from "./routes/image-to-text.js"
 import { describeToPickerRoutes } from "./routes/describe-to-picker.js"
 import { textToPickerRoutes } from "./routes/text-to-picker.js"
+import { shotsRoutes } from "./routes/shots.js"
 import { voicesRoutes } from "./routes/voices.js"
 import { heygenCatalogRoutes } from "./routes/heygen-catalog.js"
 import { voiceCloneRoutes } from "./routes/voice-clones.js"
@@ -467,6 +468,7 @@ export async function buildApp() {
   await app.register(imageToTextRoutes)
   await app.register(describeToPickerRoutes)
   await app.register(textToPickerRoutes)
+  await app.register(shotsRoutes)
   await app.register(voicesRoutes)
   await app.register(heygenCatalogRoutes)
   await app.register(voiceCloneRoutes)

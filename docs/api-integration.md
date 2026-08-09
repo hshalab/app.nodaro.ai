@@ -1371,6 +1371,24 @@ the orchestrator transparently swaps:
 The credit identifier becomes `flux-lora-character` (**20 cr**). Multi-character
 mentions fall back to the selected provider + ref injection.
 
+## Cine shots — share → remix records
+
+Small persisted records of a builder state (picker selections, prompts, chosen
+models, entity refs) behind an opaque short id, powering `/s/:id` share links
+and one-click remixing.
+
+| Endpoint | Auth | Purpose |
+|---|---|---|
+| `POST /v1/shots` | Bearer | Create; body carries `mode`, `selectionState` (verbatim `{ pickerNodeType → valueId \| { field: valueId } }`), optional `freeText` / `negativePrompt` / `assembledPrompt` / `perModelPrompts` / `models` / `entityRefs` / `resultUrls`, and `visibility` (**default `private`**). Returns `{ id }`. |
+| `GET /v1/shots/:id` | **public** | Read for the share page / remix hydration. The id is the capability; private shots return 404 to everyone but their owner. Rate-limited per IP. |
+| `PATCH /v1/shots/:id` | owner | Update any subset — including flipping `visibility` to `public` (the explicit "make shareable" action). |
+| `DELETE /v1/shots/:id` | owner | Delete. |
+
+Rules: `resultUrls` accept only plain public http(s) URLs (signed URLs are
+rejected — their tokens must not leak into a shareable record). Records carry
+`schemaVersion`; hydrators should skip-with-note on ids referencing catalog
+entries that no longer exist rather than fail the remix.
+
 ## See also
 
 - [Character Training](./features/character-training.md) — user-facing feature doc

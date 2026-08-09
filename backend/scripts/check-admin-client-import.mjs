@@ -88,6 +88,10 @@ const ALLOWED_PATHS = [
   // Public / share-token / app runtime — cross-user access by design.
   /^src\/routes\/presentation\.ts$/,
   /^src\/routes\/gallery\.ts$/,
+  // Cine shots (/v1/shots): the public GET is cross-user by design (opaque id
+  // = capability; private shots 404 for non-owners in-handler). Every owner
+  // write scopes `.eq("owner_id", req.userId)`.
+  /^src\/routes\/shots\.ts$/,
   /^src\/routes\/download\.ts$/,
   /^src\/routes\/app-runner\.ts$/,
   /^src\/routes\/component-execute\.ts$/,
