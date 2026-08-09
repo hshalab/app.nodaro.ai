@@ -2,11 +2,10 @@
 
 # Nodaro
 
-**The open, API-first studio for AI video production.**
+*The API-first studio for AI media — image, video, voice & music workflows on one canvas.**
 
-Compose image generation, video generation, voice, music, and LLM steps into
-node-based workflows — run them from a visual canvas, a REST API, a typed SDK,
-or straight from your AI assistant over MCP.
+Chain 100+ models (Seedance, Veo, Kling, Flux, ElevenLabs, Suno) into node-based pipelines.
+Run them from the visual canvas, REST API, typed SDK, CLI — or let any AI drive them over MCP (150+ tools).
 
 [Website](https://nodaro.ai) · [Hosted App](https://app.nodaro.ai) · [Documentation](https://nodaroai.github.io/app.nodaro.ai/) · [SDK Quickstart](docs/sdk-quickstart.md) · [MCP](docs/mcp/index.md)
 
@@ -17,13 +16,12 @@ or straight from your AI assistant over MCP.
 </div>
 
 ---
-
 Nodaro turns multi-step AI media production — *generate an image, animate it,
-voice it, lip-sync it, score it, cut it* — into workflows you can build once and
-run anywhere. The backend is **REST-first**: the included visual editor is one
-client of the API, not the product itself. Publish a workflow and it becomes an
-app with a shareable UI, an API endpoint, a webhook target, and an MCP tool —
-all at the same time.
+voice it, lip-sync it, score it, cut it* — into workflows you can build once and run anywhere. 
+The backend is **REST-first**: the included visual editor is one client of the API, 
+not the product itself. Publish a workflow and it becomes an app with a shareable UI, 
+an API endpoint, a webhook target, and an MCP tool — all at the same time.
+
 
 ## Highlights
 
