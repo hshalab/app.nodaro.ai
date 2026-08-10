@@ -2,6 +2,13 @@
 -- Adds granular asset policies (INSERT/UPDATE/DELETE with library_item + admin)
 -- and fixes faces to use per-operation policies instead of ALL.
 
+-- Fresh-replay drift repair (2026-08-11): assets.is_shared predates the
+-- migration files (the live DB has had it since before 001), so a from-zero
+-- replay reaches this file without the column and the policy below fails.
+-- Definition mirrors production exactly (boolean, nullable, default false);
+-- a no-op on any DB that already has it.
+ALTER TABLE assets ADD COLUMN IF NOT EXISTS is_shared BOOLEAN DEFAULT false;
+
 -- ============================================================
 -- 1. ASSETS — granular library + admin policies
 -- ============================================================

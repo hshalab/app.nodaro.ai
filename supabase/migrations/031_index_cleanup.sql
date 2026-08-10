@@ -19,17 +19,22 @@ CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_webhook_id
 CREATE INDEX IF NOT EXISTS idx_webhooks_user_id
   ON webhooks (user_id);
 
--- executions.user_id — user-owned, filtered by RLS
-CREATE INDEX IF NOT EXISTS idx_executions_user_id
-  ON executions (user_id);
-
--- executions.workflow_id — FK lookup
-CREATE INDEX IF NOT EXISTS idx_executions_workflow_id
-  ON executions (workflow_id);
-
--- api_keys.user_id — FK, will be filtered by RLS
-CREATE INDEX IF NOT EXISTS idx_api_keys_user_id
-  ON api_keys (user_id);
+-- executions / api_keys: legacy tables that exist on the live DB from before
+-- the migration files but are never created BY the files — a from-zero
+-- replay (self-host) reaches here without them. Guarded so both paths work
+-- (fresh-replay drift repair, 2026-08-11).
+DO $$ BEGIN
+  IF to_regclass('public.executions') IS NOT NULL THEN
+    CREATE INDEX IF NOT EXISTS idx_executions_user_id
+      ON executions (user_id);
+    CREATE INDEX IF NOT EXISTS idx_executions_workflow_id
+      ON executions (workflow_id);
+  END IF;
+  IF to_regclass('public.api_keys') IS NOT NULL THEN
+    CREATE INDEX IF NOT EXISTS idx_api_keys_user_id
+      ON api_keys (user_id);
+  END IF;
+END $$;
 
 -- faces.workflow_id — FK lookup
 CREATE INDEX IF NOT EXISTS idx_faces_workflow_id

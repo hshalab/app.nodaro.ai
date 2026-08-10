@@ -9,6 +9,10 @@ dist
 
 docs
 supabase
+# Self-host migration runner needs the SQL files inside the image
+# (applied on boot when RUN_MIGRATIONS_ON_BOOT=true — see start.sh).
+!supabase/migrations
+!supabase/migrations/*.sql
 
 .env
 .env.*
