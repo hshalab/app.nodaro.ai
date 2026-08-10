@@ -103,6 +103,10 @@ export function invalidateAuthCache(userId: string): void {
 
 const PUBLIC_ROUTES: { method?: string; path: string; prefix?: boolean }[] = [
   { path: "/health" },
+  // Self-host install health screen (route registers only when !isCloud()).
+  // Public BY DESIGN: a broken Supabase config breaks login itself, so the
+  // screen that diagnoses it cannot require a session. Booleans only.
+  { method: "GET", path: "/v1/setup/status" },
   { method: "GET", path: "/v1/gallery" },
   // Model catalog: public availability info (same stance as MCP list_models).
   { method: "GET", path: "/v1/models" },

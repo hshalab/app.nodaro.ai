@@ -366,6 +366,22 @@ const ALLOWED_PATHS = [
   /^src\/routes\/extract-audio\.ts$/,
   /^src\/routes\/remove-audio\.ts$/,
 
+  // Onboarding demo seed: writes ONLY the caller's own profiles row via an
+  // atomic claim (.eq("id", req.userId).is("demo_seeded_at", null)) and
+  // INSERTs a workflow with `user_id: req.userId`. Service-role required
+  // because profiles RLS denies even self-writes by design (same rationale
+  // as me.ts / credits-balance.ts / profile-attribution.ts). No cross-user
+  // reads or writes.
+  /^src\/routes\/onboarding\.ts$/,
+
+  // Setup status (self-host install health screen, registers only when
+  // !isCloud()): public route with NO user context by design — a broken
+  // Supabase config breaks login itself. The only tenant-table touch is a
+  // reachability probe (profiles select limit 1) whose rows are never
+  // returned; the response is presence/latency booleans only. Service-role
+  // required because there is no session to scope by.
+  /^src\/routes\/setup-status\.ts$/,
+
   // Test fixtures mock the supabase module.
   /^src\/routes\/__tests__\//,
 ]

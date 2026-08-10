@@ -383,6 +383,15 @@ restart the Nodaro container and it'll pick up.
 
 ## 9. Troubleshooting
 
+**Start at `/setup`.** Self-hosted (community/business) installs serve a
+live health screen at `http://<your-host>/setup` (backed by
+`GET /v1/setup/status`, both public — no login needed, presence booleans
+only). It shows green/red cards for the database (including a dedicated
+"Migrations missing" state), Redis, storage, and provider keys, with a
+hint per failing card, and polls every 5 seconds. Most of the issues
+below are visible there at a glance. The route does not exist on the
+Cloud edition.
+
 **"Missing or invalid env vars" on startup.** The error message lists
 which Zod-validated vars are wrong. Common culprits:
 `SUPABASE_SERVICE_ROLE_KEY` empty, `INTERNAL_ORCHESTRATOR_SECRET` shorter
