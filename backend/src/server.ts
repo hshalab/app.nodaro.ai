@@ -19,6 +19,7 @@ import {
 import { createOrchestratorWorker } from "./workers/orchestrator-worker.js"
 import { createVideoDirectorWorker } from "./workers/video-director-worker.js"
 import { logFfmpegVersion } from "./providers/video/ffmpeg-utils.js"
+import { ensureStorageBucket } from "./lib/storage.js"
 import { initTelegramRoutingTable } from "./lib/telegram-router.js"
 import { pipelineEvents } from "./ee/pipelines/events.js"
 
@@ -39,6 +40,11 @@ async function main() {
   } catch (err) {
     console.error("[telegram] Failed to load routing table:", err)
   }
+
+  // Self-host storage bootstrap: create the bucket + public-read policy on a
+  // custom S3 endpoint (MinIO in the community compose). No-op on cloud R2;
+  // failures log and never block boot (surfaced by /v1/setup/status instead).
+  await ensureStorageBucket()
 
   await app.listen({ port: config.PORT, host: config.HOST })
 

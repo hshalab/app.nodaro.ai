@@ -71,6 +71,20 @@ clip before configuring any provider key. When you are ready to generate,
 edit the Scene Idea text and press Run on the Scene Image node (it defaults
 to Z-Image, the cheapest and fastest image model).
 
+## Storage
+
+The compose file bundles **MinIO** — generated media is saved to a Docker
+volume on your machine, with zero cloud accounts and zero configuration.
+The bucket is created automatically on first boot, and the browser reads
+media through the app itself (`/storage/...` — one origin for everything).
+
+To use Cloudflare R2 instead, set `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`,
+`R2_SECRET_ACCESS_KEY` and `R2_PUBLIC_URL` in `.env`, and set `R2_ENDPOINT=`
+and `R2_FORCE_PATH_STYLE=` (empty) to disable the MinIO defaults.
+
+The default MinIO credentials in the compose file are fine for local play —
+change them before exposing the stack to a network.
+
 ## Troubleshooting
 
 - **Something red on /setup**: each failing card carries a hint naming the
@@ -78,6 +92,6 @@ to Z-Image, the cheapest and fastest image model).
 - **CORS errors in browser**: set `CORS_ORIGIN=http://localhost:3000` in `.env`.
 - **`Missing or invalid env vars` on startup**: check the error message lists
   the missing var; add it to `.env` and restart.
-- **R2 errors on upload**: configure `R2_*` vars or use a different S3-compatible
-  storage (MinIO, AWS S3, Backblaze B2).
+- **Storage errors on upload**: open the MinIO console at http://localhost:9001
+  (or check your `R2_*` values if you switched to Cloudflare R2).
 - **Need help?** Open an issue at https://github.com/nodaroai/app.nodaro.ai/issues.

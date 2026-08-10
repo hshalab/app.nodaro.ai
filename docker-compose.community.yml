@@ -9,6 +9,11 @@
 #        echo "INTERNAL_ORCHESTRATOR_SECRET=$(openssl rand -hex 32)" >> .env
 #        echo "SOCIAL_ENCRYPTION_KEY=$(openssl rand -hex 32)" >> .env
 #
+# Storage: bundled MinIO by default — generated media lands on your disk
+# (minio-data volume), zero cloud accounts. The default MinIO credentials
+# below are fine for local play; CHANGE THEM (or switch to Cloudflare R2 by
+# setting the R2_* vars in .env) before exposing the stack to a network.
+#
 # Run:    docker compose -f docker-compose.community.yml up
 # Logs:   docker compose -f docker-compose.community.yml logs -f
 # Stop:   docker compose -f docker-compose.community.yml down
@@ -23,6 +28,27 @@ services:
       - redis-data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${R2_ACCESS_KEY_ID:-nodaro-minio}
+      MINIO_ROOT_PASSWORD: ${R2_SECRET_ACCESS_KEY:-nodaro-minio-secret}
+    ports:
+      # Web console (optional): http://localhost:9001. The S3 API itself is
+      # NOT host-published — the app reaches it as minio:9000 on the compose
+      # network, and the browser reads media through Caddy's /storage/* proxy
+      # (see R2_PUBLIC_URL below), so one origin serves app + media.
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -48,11 +74,16 @@ services:
       REDIS_URL: redis://redis:6379
       INTERNAL_ORCHESTRATOR_SECRET: ${INTERNAL_ORCHESTRATOR_SECRET}
       SOCIAL_ENCRYPTION_KEY: ${SOCIAL_ENCRYPTION_KEY}
+      # Storage defaults to the bundled MinIO (media on your disk, zero cloud
+      # accounts). Setting R2_ACCOUNT_ID + the R2_* keys in .env switches to
+      # Cloudflare R2 — clear R2_ENDPOINT/R2_FORCE_PATH_STYLE when you do.
+      R2_ENDPOINT: ${R2_ENDPOINT:-http://minio:9000}
+      R2_FORCE_PATH_STYLE: ${R2_FORCE_PATH_STYLE:-true}
       R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
-      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
-      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-nodaro-minio}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-nodaro-minio-secret}
       R2_BUCKET_NAME: ${R2_BUCKET_NAME:-nodaro-assets}
-      R2_PUBLIC_URL: ${R2_PUBLIC_URL:-}
+      R2_PUBLIC_URL: ${R2_PUBLIC_URL:-http://localhost:3000/storage/nodaro-assets}
       KIE_API_KEY: ${KIE_API_KEY:-}
       REPLICATE_API_TOKEN: ${REPLICATE_API_TOKEN:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
@@ -60,6 +91,8 @@ services:
       APIFY_API_TOKEN: ${APIFY_API_TOKEN:-}
     depends_on:
       redis:
+        condition: service_healthy
+      minio:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
@@ -70,3 +103,4 @@ services:
 
 volumes:
   redis-data:
+  minio-data:

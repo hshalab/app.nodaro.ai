@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, DeleteObjectsCommand, CopyObjectCommand, HeadObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3"
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, DeleteObjectsCommand, CopyObjectCommand, HeadObjectCommand, ListObjectsV2Command, CreateBucketCommand, PutBucketPolicyCommand } from "@aws-sdk/client-s3"
 import { Upload } from "@aws-sdk/lib-storage"
 import { randomUUID } from "node:crypto"
 import { createReadStream, createWriteStream } from "node:fs"
@@ -15,14 +15,93 @@ import {
   type FileCategory,
 } from "../utils/file-validation.js"
 
+/**
+ * Resolve the S3 endpoint: an explicit R2_ENDPOINT (MinIO / any S3-compatible
+ * server — the community-compose default) wins; otherwise the Cloudflare R2
+ * endpoint is derived from R2_ACCOUNT_ID exactly as before. Exported for the
+ * unit test — the S3Client below is constructed at module load, so the
+ * selection logic must be testable on its own.
+ */
+export function resolveStorageEndpoint(cfg: {
+  R2_ENDPOINT: string
+  R2_ACCOUNT_ID: string
+}): string {
+  return cfg.R2_ENDPOINT || `https://${cfg.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`
+}
+
+/**
+ * Storage is configured when credentials exist AND we know where to send
+ * them — either a custom endpoint or an R2 account id. Single source of
+ * truth shared with the /v1/setup/status probe.
+ */
+export function isStorageConfigured(): boolean {
+  return Boolean(
+    config.R2_ACCESS_KEY_ID &&
+    config.R2_SECRET_ACCESS_KEY &&
+    (config.R2_ENDPOINT || config.R2_ACCOUNT_ID),
+  )
+}
+
 export const s3 = new S3Client({
   region: "auto",
-  endpoint: `https://${config.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  endpoint: resolveStorageEndpoint(config),
+  // MinIO and most self-hosted S3 servers require path-style addressing.
+  forcePathStyle: config.R2_FORCE_PATH_STYLE,
   credentials: {
     accessKeyId: config.R2_ACCESS_KEY_ID,
     secretAccessKey: config.R2_SECRET_ACCESS_KEY,
   },
 })
+
+/**
+ * Anonymous-read bucket policy for self-host storage: the app hands the
+ * browser plain public URLs (`R2_PUBLIC_URL/<key>`), so objects must be
+ * readable without auth — same posture as the public R2 bucket on cloud.
+ * Writes still require the access keys. Exported for the unit test.
+ */
+export function buildPublicReadPolicy(bucket: string): string {
+  return JSON.stringify({
+    Version: "2012-10-17",
+    Statement: [
+      {
+        Effect: "Allow",
+        Principal: { AWS: ["*"] },
+        Action: ["s3:GetObject"],
+        Resource: [`arn:aws:s3:::${bucket}/*`],
+      },
+    ],
+  })
+}
+
+/**
+ * Self-host boot helper: create the bucket and open anonymous reads on a
+ * CUSTOM S3 endpoint (MinIO etc.). Deliberately a no-op on Cloudflare R2
+ * (no R2_ENDPOINT): R2 API tokens are object-scoped and cannot create
+ * buckets, and the cloud bucket already exists. Every failure is logged
+ * and swallowed — a storage hiccup at boot must not take the API down;
+ * the /v1/setup/status probe surfaces the broken state instead.
+ */
+export async function ensureStorageBucket(): Promise<void> {
+  if (!config.R2_ENDPOINT || !isStorageConfigured()) return
+  const bucket = config.R2_BUCKET_NAME
+  try {
+    await s3.send(new CreateBucketCommand({ Bucket: bucket }))
+    console.log(`[storage] created bucket "${bucket}" on ${config.R2_ENDPOINT}`)
+  } catch (err) {
+    const name = err instanceof Error ? err.name : ""
+    if (name !== "BucketAlreadyOwnedByYou" && name !== "BucketAlreadyExists") {
+      console.error(`[storage] failed to create bucket "${bucket}":`, err)
+      return
+    }
+  }
+  try {
+    await s3.send(
+      new PutBucketPolicyCommand({ Bucket: bucket, Policy: buildPublicReadPolicy(bucket) }),
+    )
+  } catch (err) {
+    console.error(`[storage] failed to set public-read policy on "${bucket}":`, err)
+  }
+}
 
 type MediaType = "image" | "video" | "audio"
 

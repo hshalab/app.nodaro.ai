@@ -83,6 +83,11 @@ FAL_KEY=
 # When unset, the webhook fast-fails 503 webhook_not_configured.
 REPLICATE_WEBHOOK_SECRET=
 
+# Storage — leave ALL of these unset to use the MinIO bundled in the
+# community compose (see 2d). For Cloudflare R2, set the four R2_* values
+# and keep R2_ENDPOINT / R2_FORCE_PATH_STYLE empty.
+R2_ENDPOINT=
+R2_FORCE_PATH_STYLE=
 R2_ACCOUNT_ID=
 R2_ACCESS_KEY_ID=
 R2_SECRET_ACCESS_KEY=
@@ -156,7 +161,18 @@ seeded data); re-running them on a fresh DB is fine.
 
 ### 2d. Configure object storage
 
-Cloudflare R2 example:
+**Default: the bundled MinIO — nothing to configure.**
+`docker-compose.community.yml` ships a MinIO service with working
+defaults: `R2_ENDPOINT=http://minio:9000`, path-style addressing, and
+`R2_PUBLIC_URL=http://localhost:3000/storage/nodaro-assets` (media is
+proxied through the app's own origin by Caddy, so the browser and the
+backend read the same URL). The bucket is auto-created with a
+public-read policy on first boot. Media lives in the `minio-data`
+Docker volume. Change the default credentials before exposing the
+stack to a network; when serving on a real domain, set `R2_PUBLIC_URL`
+to `https://<your-domain>/storage/nodaro-assets`.
+
+**Cloudflare R2** (recommended for real deployments — zero egress):
 
 1. Create a bucket called `nodaro-assets` (or anything; match
    `R2_BUCKET_NAME`).
@@ -166,9 +182,14 @@ Cloudflare R2 example:
 3. Under **Manage R2 API tokens**, mint an access key with
    `Object Read & Write` on this bucket. Copy `R2_ACCESS_KEY_ID` /
    `R2_SECRET_ACCESS_KEY` / `R2_ACCOUNT_ID`.
+4. Set `R2_ENDPOINT=` and `R2_FORCE_PATH_STYLE=` (empty) so the MinIO
+   compose defaults don't apply — with them empty, the endpoint is
+   derived from `R2_ACCOUNT_ID`.
 
-For MinIO or AWS S3, use the same env vars — the SDK is
-S3-compatible. Set `R2_PUBLIC_URL` to the bucket's public URL.
+For any other S3-compatible store (AWS S3, Backblaze B2, self-managed
+MinIO), set `R2_ENDPOINT` to its S3 API URL, `R2_FORCE_PATH_STYLE=true`
+for most self-hosted servers, and `R2_PUBLIC_URL` to the bucket's
+public URL.
 
 ### 2e. Start the stack
 

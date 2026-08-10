@@ -3,7 +3,7 @@ import IORedis from "ioredis"
 import { ListObjectsV2Command } from "@aws-sdk/client-s3"
 import { config } from "../lib/config.js"
 import { supabase } from "../lib/supabase.js"
-import { s3 } from "../lib/storage.js"
+import { s3, isStorageConfigured } from "../lib/storage.js"
 
 /**
  * GET /v1/setup/status — self-host install health screen backend.
@@ -106,16 +106,12 @@ async function probeRedis(): Promise<CheckResult> {
 }
 
 async function probeStorage(): Promise<CheckResult> {
-  const configured =
-    config.R2_ACCOUNT_ID.length > 0 &&
-    config.R2_ACCESS_KEY_ID.length > 0 &&
-    config.R2_SECRET_ACCESS_KEY.length > 0
-  if (!configured) {
+  if (!isStorageConfigured()) {
     return {
       ok: false,
       status: "not_configured",
       latencyMs: null,
-      hint: "No storage configured - generated media cannot be saved. Set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME and R2_PUBLIC_URL",
+      hint: "No storage configured - generated media cannot be saved. The community compose bundles MinIO (defaults work out of the box); for cloud storage set R2_ACCOUNT_ID (or R2_ENDPOINT), R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME and R2_PUBLIC_URL",
     }
   }
   const started = Date.now()

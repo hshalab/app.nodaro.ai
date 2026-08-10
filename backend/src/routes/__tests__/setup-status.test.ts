@@ -14,6 +14,7 @@ const { mockConfig, mockSelect, mockS3Send, mockPing, mockConnect, mockDisconnec
     R2_SECRET_ACCESS_KEY: "",
     R2_BUCKET_NAME: "nodaro-assets",
     R2_PUBLIC_URL: "",
+    R2_ENDPOINT: "",
     KIE_API_KEY: "",
     REPLICATE_API_TOKEN: "",
     ANTHROPIC_API_KEY: "",
@@ -45,6 +46,12 @@ vi.mock("@/lib/supabase.js", () => ({
 
 vi.mock("@/lib/storage.js", () => ({
   s3: { send: (...args: unknown[]) => mockS3Send(...args) },
+  // Mirrors the real isStorageConfigured so the existing R2_* toggles in
+  // these tests keep exercising the same decision the route makes.
+  isStorageConfigured: () =>
+    mockConfig.R2_ACCESS_KEY_ID.length > 0 &&
+    mockConfig.R2_SECRET_ACCESS_KEY.length > 0 &&
+    (mockConfig.R2_ENDPOINT.length > 0 || mockConfig.R2_ACCOUNT_ID.length > 0),
 }))
 
 vi.mock("ioredis", () => ({
@@ -69,6 +76,7 @@ beforeEach(async () => {
   mockConfig.R2_ACCOUNT_ID = ""
   mockConfig.R2_ACCESS_KEY_ID = ""
   mockConfig.R2_SECRET_ACCESS_KEY = ""
+  mockConfig.R2_ENDPOINT = ""
   mockConfig.KIE_API_KEY = ""
   mockConfig.REPLICATE_API_TOKEN = ""
 
@@ -143,6 +151,15 @@ describe("GET /v1/setup/status", () => {
     const res = await app.inject({ method: "GET", url: "/v1/setup/status" })
     expect(res.json().checks.storage).toMatchObject({ ok: true, status: "ok" })
     expect(mockS3Send).toHaveBeenCalledTimes(1)
+  })
+
+  it("treats a custom S3 endpoint (MinIO) as configured without an R2 account id", async () => {
+    mockConfig.R2_ENDPOINT = "http://minio:9000"
+    mockConfig.R2_ACCESS_KEY_ID = "key"
+    mockConfig.R2_SECRET_ACCESS_KEY = "secret"
+
+    const res = await app.inject({ method: "GET", url: "/v1/setup/status" })
+    expect(res.json().checks.storage).toMatchObject({ ok: true, status: "ok" })
   })
 
   it("reports provider keys as present without exposing values", async () => {
