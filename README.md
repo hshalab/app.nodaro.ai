@@ -13,6 +13,8 @@ Run them from the visual canvas, REST API, typed SDK, CLI - or let any AI drive 
 [![License: Fair-code](https://img.shields.io/badge/license-Sustainable%20Use%20%2B%20Apache--2.0-blue)](LICENSE.md)
 [![Docs](https://img.shields.io/badge/docs-github%20pages-brightgreen)](https://nodaroai.github.io/app.nodaro.ai/)
 
+https://github.com/user-attachments/assets/cedbf408-6d3c-48ad-a9cf-923467ee9d45
+
 </div>
 
 ---
@@ -22,6 +24,9 @@ The backend is **REST-first**: the included visual editor is one client of the A
 not the product itself. Publish a workflow and it becomes an app with a shareable UI, 
 an API endpoint, a webhook target, and an MCP tool — all at the same time.
 
+## How it was made
+
+<img width="880" height="495" alt="how_it_was_made_v3" src="https://github.com/user-attachments/assets/17b6d5c4-c28e-45c5-8ea7-b81283c0e909" />
 
 ## Highlights
 
