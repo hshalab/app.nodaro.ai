@@ -15,9 +15,12 @@ You need:
 
 - **Docker 24+** and **Docker Compose v2** (`docker compose` not
   `docker-compose`).
-- **A Supabase project.** Create one at <https://supabase.com> (free
-  tier is fine for testing and small teams) or run Supabase yourself.
-  You'll need: project URL, service-role key, anon key.
+- **A database + auth stack.** The community compose BUNDLES one (Supabase
+  Postgres + GoTrue + PostgREST, migrations applied automatically, email +
+  password sign-up) — nothing to create. Alternatively, use a managed
+  project at <https://supabase.com> (free tier is fine): you'll need the
+  project URL, service-role key, and anon key, and you apply
+  `supabase/migrations/` yourself (see 2c).
 - **An S3-compatible object store** for assets. Tested options:
   Cloudflare R2 (recommended, zero egress), AWS S3, MinIO, Backblaze
   B2. The bucket must be readable from the public internet (assets are
@@ -145,7 +148,14 @@ which account to connect (single-account logins connect directly, as before).
 
 ### 2c. Apply database migrations
 
-In the Supabase dashboard for your project, open **SQL editor** and
+**Bundled stack (compose default): automatic.** The app container applies
+`supabase/migrations/` on boot (gated by `RUN_MIGRATIONS_ON_BOOT=true` +
+`DATABASE_URL`, both defaulted in the compose file), tracks applied files
+in `public._nodaro_migrations`, and refuses to start against a
+half-migrated schema. Skip to 2d.
+
+**Managed Supabase project:** set `RUN_MIGRATIONS_ON_BOOT=false` and apply
+them yourself. In the Supabase dashboard, open **SQL editor** and
 paste each file from `supabase/migrations/` in **filename order**
 (zero-padded prefixes are intentional — `001_…sql`, `002_…sql`, …).
 

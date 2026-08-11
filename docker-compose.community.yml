@@ -1,22 +1,30 @@
-# Nodaro Community Edition — minimal docker-compose
+# Nodaro Community Edition — self-contained docker-compose
 #
-# Prerequisites:
-#   1. Create a Supabase project at https://supabase.com (free tier OK)
-#   2. Run the SQL migrations in supabase/migrations/ via the Supabase SQL editor
-#   3. Copy .env.example to .env and fill in SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
-#      SUPABASE_ANON_KEY
-#   4. Generate two secrets:
-#        echo "INTERNAL_ORCHESTRATOR_SECRET=$(openssl rand -hex 32)" >> .env
-#        echo "SOCIAL_ENCRYPTION_KEY=$(openssl rand -hex 32)" >> .env
-#
-# Storage: bundled MinIO by default — generated media lands on your disk
-# (minio-data volume), zero cloud accounts. The default MinIO credentials
-# below are fine for local play; CHANGE THEM (or switch to Cloudflare R2 by
-# setting the R2_* vars in .env) before exposing the stack to a network.
+# Zero cloud accounts: Postgres (Supabase image) + GoTrue auth + PostgREST +
+# MinIO storage + Redis all run locally. Database migrations apply themselves
+# on first boot. Sign-up is email + password.
 #
 # Run:    docker compose -f docker-compose.community.yml up
+# Open:   http://localhost:3000  (install health: http://localhost:3000/setup)
 # Logs:   docker compose -f docker-compose.community.yml logs -f
 # Stop:   docker compose -f docker-compose.community.yml down
+#
+# .env is OPTIONAL for local play — every value below has a working default.
+# To actually generate media, add at least one provider key to .env:
+#   KIE_API_KEY=...        (kie.ai — broadest model coverage)
+#   REPLICATE_API_TOKEN=...
+#
+# SECURITY — before exposing this stack to a network:
+#   1. Run `node tools/generate-selfhost-keys.mjs >> .env` to replace the
+#      default JWT secret + anon/service keys (the defaults are public
+#      knowledge by definition).
+#   2. Set POSTGRES_PASSWORD, DATABASE_URL, and the MinIO credentials
+#      (R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY) to fresh values.
+#   NOTE: changing SUPABASE_ANON_KEY requires rebuilding the app image
+#   (docker compose build) — Vite inlines it into the frontend at build time.
+#
+# If you set POSTGRES_PASSWORD, also set DATABASE_URL + the GoTrue/PostgREST
+# connection strings are derived from it automatically below.
 
 services:
   redis:
@@ -31,6 +39,62 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+
+  db:
+    image: supabase/postgres:15.8.1.085
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nodaro-postgres-pw}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      # First-init only: aligns the Supabase internal role passwords
+      # (supabase_auth_admin, authenticator, ...) with POSTGRES_PASSWORD.
+      # Without it GoTrue/PostgREST crash-loop on "password authentication
+      # failed". Init scripts do NOT re-run on an existing db-data volume —
+      # to change POSTGRES_PASSWORD later, wipe the volume or ALTER USER
+      # manually as supabase_admin.
+      - ./docker/selfhost/roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:ro
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  auth:
+    image: supabase/gotrue:v2.177.0
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: "9999"
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD:-nodaro-postgres-pw}@db:5432/postgres
+      GOTRUE_SITE_URL: ${PUBLIC_URL:-http://localhost:3000}
+      API_EXTERNAL_URL: ${PUBLIC_URL:-http://localhost:3000}/supabase/auth/v1
+      GOTRUE_JWT_SECRET: ${SUPABASE_JWT_SECRET:-nodaro-community-default-jwt-secret-change-me-please}
+      GOTRUE_JWT_EXP: "3600"
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_JWT_ADMIN_ROLES: service_role
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      # No SMTP on a local stack — accounts are usable immediately after
+      # sign-up. Wire GOTRUE_SMTP_* and set this to "false" to require
+      # email confirmation.
+      GOTRUE_MAILER_AUTOCONFIRM: "true"
+
+  rest:
+    image: postgrest/postgrest:v12.2.12
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD:-nodaro-postgres-pw}@db:5432/postgres
+      PGRST_DB_SCHEMAS: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${SUPABASE_JWT_SECRET:-nodaro-community-default-jwt-secret-change-me-please}
 
   minio:
     image: minio/minio:latest
@@ -60,8 +124,12 @@ services:
       args:
         VITE_API_URL: ${PUBLIC_URL:-http://localhost:3000}
         VITE_EDITION: community
-        VITE_SUPABASE_URL: ${SUPABASE_URL}
-        VITE_SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+        # The bundled Supabase stack is reached through the app's own origin
+        # (Caddy routes /supabase/auth/v1 + /supabase/rest/v1 to the auth and
+        # rest containers). Point these at a managed supabase.com project
+        # instead to skip the bundled stack entirely.
+        VITE_SUPABASE_URL: ${SUPABASE_URL:-http://localhost:3000/supabase}
+        VITE_SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzU0Nzg0MDAwLCJleHAiOjIwNzAxNDQwMDB9.Z1_aDD7opHbwv6f8yrHK0ptlIM2tg1ulhXsggLuDyqo}
     restart: unless-stopped
     ports:
       - "3000:3000"   # Caddy serves both frontend + /v1/* API on the same port
@@ -69,11 +137,19 @@ services:
       EDITION: community
       PUBLIC_URL: ${PUBLIC_URL:-http://localhost:3000}
       CORS_ORIGIN: ${CORS_ORIGIN:-}
-      SUPABASE_URL: ${SUPABASE_URL}
-      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      # In-container, localhost:3000 is this container's own Caddy, which
+      # routes /supabase/* to the auth/rest containers — so backend and
+      # browser share one Supabase URL.
+      SUPABASE_URL: ${SUPABASE_URL:-http://localhost:3000/supabase}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UiLCJpYXQiOjE3NTQ3ODQwMDAsImV4cCI6MjA3MDE0NDAwMH0.1S--a7iJ0v6nNEKWYcqAfE3-xI0iZ30ypsFs_xrLLbA}
+      # Self-host migration runner (start.sh): applies supabase/migrations/
+      # before the API starts. Keep the password segment in sync with
+      # POSTGRES_PASSWORD if you change it.
+      RUN_MIGRATIONS_ON_BOOT: ${RUN_MIGRATIONS_ON_BOOT:-true}
+      DATABASE_URL: ${DATABASE_URL:-postgres://postgres:nodaro-postgres-pw@db:5432/postgres}
       REDIS_URL: redis://redis:6379
-      INTERNAL_ORCHESTRATOR_SECRET: ${INTERNAL_ORCHESTRATOR_SECRET}
-      SOCIAL_ENCRYPTION_KEY: ${SOCIAL_ENCRYPTION_KEY}
+      INTERNAL_ORCHESTRATOR_SECRET: ${INTERNAL_ORCHESTRATOR_SECRET:-}
+      SOCIAL_ENCRYPTION_KEY: ${SOCIAL_ENCRYPTION_KEY:-}
       # Storage defaults to the bundled MinIO (media on your disk, zero cloud
       # accounts). Setting R2_ACCOUNT_ID + the R2_* keys in .env switches to
       # Cloudflare R2 — clear R2_ENDPOINT/R2_FORCE_PATH_STYLE when you do.
@@ -94,6 +170,12 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+      db:
+        condition: service_healthy
+      auth:
+        condition: service_started
+      rest:
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
       interval: 10s
@@ -103,4 +185,5 @@ services:
 
 volumes:
   redis-data:
+  db-data:
   minio-data:

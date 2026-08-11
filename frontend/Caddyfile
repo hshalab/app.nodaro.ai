@@ -95,6 +95,22 @@
 		reverse_proxy {$MINIO_UPSTREAM:minio:9000}
 	}
 
+	# Self-host Supabase path: SUPABASE_URL=http://localhost:3000/supabase, and
+	# supabase-js appends /auth/v1 + /rest/v1 to it. These routes play the role
+	# Kong plays in the official Supabase compose — strip the prefix and hand
+	# GoTrue/PostgREST the bare path (both serve at their root). GoTrue and
+	# PostgREST validate the JWTs themselves, so no gateway key-auth layer is
+	# needed. Same one-origin trick as /storage/*: browser AND backend share
+	# the URL. Realtime is not bundled (the app's polling covers job updates);
+	# supabase-js retries its websocket quietly against the 502. Dead routes on
+	# cloud — upstreams resolve lazily, never at boot.
+	handle_path /supabase/auth/v1/* {
+		reverse_proxy {$SUPABASE_AUTH_UPSTREAM:auth:9999}
+	}
+	handle_path /supabase/rest/v1/* {
+		reverse_proxy {$SUPABASE_REST_UPSTREAM:rest:3000}
+	}
+
 	# Bust stale CDN cache for favicon.ico by rewriting to a versioned file
 	rewrite /favicon.ico /favicon-v11.ico
 	handle {
