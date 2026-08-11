@@ -3,7 +3,7 @@ import { requestLogSerializer } from "./lib/log-redaction.js"
 import { createHash } from "node:crypto"
 import cors from "@fastify/cors"
 import { isOriginAllowedDynamic } from "./lib/dynamic-origins.js"
-import { hasAdmin, hasCredits, isMultiUser } from "./lib/config.js"
+import { hasAdmin, hasCredits, isCloud, isMultiUser } from "./lib/config.js"
 import { CLIENT_HEADER } from "./lib/job-source.js"
 import { loadPrivatePlugins } from "./lib/private-plugins/load.js"
 import { healthRoutes } from "./routes/health.js"
@@ -202,6 +202,8 @@ import { adminTutorialsRoutes } from "./ee/routes/admin-tutorials.js"
 import { adminTutorialCategoriesRoutes } from "./ee/routes/admin-tutorial-categories.js"
 import { adminClientAppsRoutes } from "./ee/routes/admin-client-apps.js"
 import { executionStatsRoutes } from "./routes/execution-stats.js"
+import { onboardingRoutes } from "./routes/onboarding.js"
+import { setupStatusRoutes } from "./routes/setup-status.js"
 import { openapiRoutes } from "./routes/openapi.js"
 import { registerAuthHook } from "./middleware/auth.js"
 import { registerMcpHostFilter } from "./middleware/mcp-host-filter.js"
@@ -534,6 +536,11 @@ export async function buildApp() {
   if (hasAdmin()) await app.register(adminTutorialsRoutes)
   if (hasAdmin()) await app.register(adminTutorialCategoriesRoutes)
   if (hasAdmin()) await app.register(adminClientAppsRoutes)
+  await app.register(onboardingRoutes)
+  // Self-host install health screen — deliberately NOT registered on cloud
+  // (operators there have the admin panel; no reason to expose config-presence
+  // booleans on a public SaaS endpoint).
+  if (!isCloud()) await app.register(setupStatusRoutes)
   await app.register(openapiRoutes)
 
   return app

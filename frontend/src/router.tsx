@@ -1,7 +1,7 @@
 import { createBrowserRouter, Navigate, type RouteObject } from "react-router-dom"
 import { Suspense } from "react"
 import { lazyWithRetry as lazy } from "@/lib/lazy-with-retry"
-import { hasAdmin, isMultiUser } from "@/lib/edition"
+import { hasAdmin, isCloud, isMultiUser } from "@/lib/edition"
 
 // Error handling
 import RouteErrorBoundary from "@/components/route-error-boundary"
@@ -55,6 +55,9 @@ const AuthCliPage = lazy(() => import("@/app/auth/cli/page"))
 
 // MCP marketing landing page (lazy — public route, no chrome)
 const McpPage = lazy(() => import("@/app/mcp/page"))
+
+// Self-host install health screen (lazy — public route, non-cloud builds only)
+const SetupPage = lazy(() => import("@/app/setup/page"))
 
 // Admin layout + all admin pages (lazy — admin-only, most users never visit)
 const AdminLayout = lazy(() => import("@/ee/layouts/admin-layout"))
@@ -135,6 +138,16 @@ const adminRoutes: RouteObject[] = hasAdmin() ? [
 // ExplorePage chunk is never loaded.
 const communityRoutes: RouteObject[] = isMultiUser()
   ? [{ path: "/explore", element: <SuspenseWrapper><ExplorePage /></SuspenseWrapper> }]
+  : []
+
+// Self-host install health screen — never registered on cloud builds (the
+// backend route is likewise gated behind !isCloud() in app.ts).
+const setupRoutes: RouteObject[] = !isCloud()
+  ? [{
+      path: "/setup",
+      element: <SuspenseWrapper><SetupPage /></SuspenseWrapper>,
+      errorElement: <RouteErrorBoundary />,
+    }]
   : []
 
 export const router = createBrowserRouter([
@@ -304,6 +317,7 @@ export const router = createBrowserRouter([
     ],
   },
   ...adminRoutes,
+  ...setupRoutes,
   {
     path: "*",
     element: <NotFound />,

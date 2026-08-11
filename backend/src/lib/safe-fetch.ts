@@ -38,6 +38,7 @@
 import { Agent, fetch as undiciFetch, type RequestInit as UndiciRequestInit } from "undici"
 import { lookup as dnsLookup } from "node:dns"
 import { isIP } from "node:net"
+import { isConfiguredStorageUrl } from "./own-storage-url.js"
 
 const DEFAULT_TIMEOUT_MS = 30_000
 
@@ -174,6 +175,13 @@ export async function resolvesOnlyToPublicAddresses(hostname: string): Promise<b
  * IP among the results fails the connection before a socket is opened.
  * Redirects flow through the same agent, so each hop is re-validated.
  */
+/**
+ * Plain agent for fetches inside the configured own-storage subtree (see
+ * isConfiguredStorageUrl): no private-IP lookup gate — localhost/compose-
+ * network addresses are the POINT there. Everything else keeps safeAgent.
+ */
+const ownStorageAgent = new Agent({})
+
 const safeAgent = new Agent({
   connect: {
     lookup(hostname, options, cb) {
@@ -235,10 +243,15 @@ export async function safeFetch(url: string, init: SafeFetchInit = {}): Promise<
     throw new Error(`safeFetch: blocked — protocol ${parsed.protocol}`)
   }
 
+  // Own-storage subtree (self-host MinIO behind the app origin): private-IP
+  // gates don't apply — but redirects are refused, so the exemption cannot
+  // be parlayed into a fetch of anything outside the subtree.
+  const ownStorage = isConfiguredStorageUrl(parsed)
+
   // Fast-fail before opening a connection. The agent's lookup would also
   // catch this, but doing it here gives a clearer error message.
   const hostname = parsed.hostname.replace(/^\[|\]$/g, "")
-  if (isIP(hostname) && isPrivateOrReservedIP(hostname)) {
+  if (!ownStorage && isIP(hostname) && isPrivateOrReservedIP(hostname)) {
     throw new Error(`safeFetch: blocked — ${hostname} is a private/reserved IP`)
   }
 
@@ -252,8 +265,9 @@ export async function safeFetch(url: string, init: SafeFetchInit = {}): Promise<
 
   const response = await undiciFetch(url, {
     ...forward,
+    ...(ownStorage ? { redirect: "error" as const } : {}),
     signal,
-    dispatcher: safeAgent,
+    dispatcher: ownStorage ? ownStorageAgent : safeAgent,
   })
   // undici's Response is a structural superset of the global one — the cast
   // keeps callers typed against globalThis.Response without pulling undici's

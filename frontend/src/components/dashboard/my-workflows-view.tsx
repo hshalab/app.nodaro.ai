@@ -10,7 +10,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { WorkflowThumbnail } from "./workflow-thumbnail"
+import { useAuth } from "@/hooks/use-auth"
 import { useMyWorkflows, type MyWorkflow } from "@/hooks/queries/use-my-workflows-queries"
+import { useDemoSeed } from "@/hooks/use-demo-seed"
 import { useProjectsStore } from "@/hooks/use-projects-store"
 import { queryClient } from "@/lib/query-client"
 import { queryKeys } from "@/lib/query-keys"
@@ -23,6 +25,12 @@ interface MyWorkflowsViewProps {
 
 export function MyWorkflowsView({ onCreateWorkflow, onMoveWorkflow, isCreating }: MyWorkflowsViewProps) {
   const { data: workflows = [], isLoading } = useMyWorkflows()
+  const { user } = useAuth()
+  // First-time users get the Welcome Demo seeded into their default project.
+  // Gated on a resolved session: the hook fires exactly once per mount, so
+  // firing during an auth-timing edge (query resolved [] with no user yet)
+  // would burn that one attempt on a 401.
+  const { isSeeding } = useDemoSeed(!isLoading && workflows.length === 0 && !!user)
   const deleteWorkflow = useProjectsStore((s) => s.deleteWorkflow)
   const [search, setSearch] = useState("")
 
@@ -41,7 +49,7 @@ export function MyWorkflowsView({ onCreateWorkflow, onMoveWorkflow, isCreating }
     queryClient.invalidateQueries({ queryKey: queryKeys.workflows.all })
   }
 
-  if (isLoading) {
+  if (isLoading || isSeeding) {
     return (
       <div className="flex justify-center py-16">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />

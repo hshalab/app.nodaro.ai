@@ -166,6 +166,32 @@ export function useAuth() {
     }
   }, [])
 
+  /** Email/password sign-in (self-host; GoTrue handles it natively). The
+   *  resulting SIGNED_IN event flows through onAuthStateChange, which reloads
+   *  role/tier — see loadRoleAndTier's docstring for why that matters. */
+  const signInWithEmail = useCallback(async (email: string, password: string) => {
+    const supabase = createClient()
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) {
+      throw new Error(error.message)
+    }
+  }, [])
+
+  /** Email/password sign-up. Returns whether a live session was created:
+   *  true → signed in immediately (autoconfirm installs); false → the
+   *  instance requires email confirmation first. */
+  const signUpWithEmail = useCallback(
+    async (email: string, password: string): Promise<{ sessionCreated: boolean }> => {
+      const supabase = createClient()
+      const { data, error } = await supabase.auth.signUp({ email, password })
+      if (error) {
+        throw new Error(error.message)
+      }
+      return { sessionCreated: Boolean(data.session) }
+    },
+    [],
+  )
+
   const signOut = useCallback(async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
@@ -174,5 +200,5 @@ export function useAuth() {
 
   const isAdmin = role === "admin" || role === "super_admin"
 
-  return { user, role, isAdmin, loading, roleLoaded, signInWithGoogle, signOut }
+  return { user, role, isAdmin, loading, roleLoaded, signInWithGoogle, signInWithEmail, signUpWithEmail, signOut }
 }

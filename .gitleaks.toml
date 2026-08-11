@@ -27,3 +27,16 @@ matchCondition = "AND"
 paths = ['''.*\.md$''']
 regexes = ['''Authorization:''']
 regexTarget = "match"
+
+[[allowlists]]
+description = """Community self-host DEFAULT Supabase keys — deliberately public. These are the
+working-out-of-the-box anon/service JWTs minted from the documented change-me secret
+('nodaro-community-default-jwt-secret-change-me-please', tools/generate-selfhost-keys.mjs).
+Anon keys are public by design; the compose header + quickstart tell operators to mint
+fresh keys before network exposure. Pinned by exact signature so ANY OTHER JWT in these
+files still trips the gate."""
+regexTarget = "match"
+regexes = [
+  '''Z1_aDD7opHbwv6f8yrHK0ptlIM2tg1ulhXsggLuDyqo''',
+  '''1S--a7iJ0v6nNEKWYcqAfE3-xI0iZ30ypsFs_xrLLbA''',
+]

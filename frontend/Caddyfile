@@ -82,6 +82,35 @@
 		reverse_proxy 127.0.0.1:9000
 	}
 
+	# Self-host media path: proxies the bundled MinIO so ONE origin serves both
+	# the app and stored media. R2_PUBLIC_URL=http://localhost:3000/storage/<bucket>
+	# works from the browser AND from server-side fetches inside this container
+	# (localhost:3000 = this Caddy), which localhost:9000-style URLs cannot do
+	# (in-container that port is the backend itself). handle_path strips the
+	# /storage prefix, so MinIO sees the path-style /<bucket>/<key>. On cloud
+	# deploys nothing references /storage/* and no `minio` host exists — the
+	# route is dead weight, resolved lazily per request, never at boot.
+	handle_path /storage/* {
+		header Cache-Control "public, max-age=31536000, immutable"
+		reverse_proxy {$MINIO_UPSTREAM:minio:9000}
+	}
+
+	# Self-host Supabase path: SUPABASE_URL=http://localhost:3000/supabase, and
+	# supabase-js appends /auth/v1 + /rest/v1 to it. These routes play the role
+	# Kong plays in the official Supabase compose — strip the prefix and hand
+	# GoTrue/PostgREST the bare path (both serve at their root). GoTrue and
+	# PostgREST validate the JWTs themselves, so no gateway key-auth layer is
+	# needed. Same one-origin trick as /storage/*: browser AND backend share
+	# the URL. Realtime is not bundled (the app's polling covers job updates);
+	# supabase-js retries its websocket quietly against the 502. Dead routes on
+	# cloud — upstreams resolve lazily, never at boot.
+	handle_path /supabase/auth/v1/* {
+		reverse_proxy {$SUPABASE_AUTH_UPSTREAM:auth:9999}
+	}
+	handle_path /supabase/rest/v1/* {
+		reverse_proxy {$SUPABASE_REST_UPSTREAM:rest:3000}
+	}
+
 	# Bust stale CDN cache for favicon.ico by rewriting to a versioned file
 	rewrite /favicon.ico /favicon-v11.ico
 	handle {

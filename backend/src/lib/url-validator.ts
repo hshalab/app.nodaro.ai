@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { isPrivateOrReservedIP } from "./safe-fetch.js"
+import { isConfiguredStorageUrl } from "./own-storage-url.js"
 
 /**
  * Syntactic SSRF gate — rejects URLs whose string form already targets
@@ -28,6 +29,9 @@ export const safeUrlSchema = z
         if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
           return false
         }
+        // This install's own public-storage subtree (self-host MinIO behind
+        // the app origin) is legitimately localhost — see safe-fetch.ts.
+        if (isConfiguredStorageUrl(parsed)) return true
         const hostname = parsed.hostname.toLowerCase()
         if (hostname === "localhost" || hostname === "[::1]") {
           return false

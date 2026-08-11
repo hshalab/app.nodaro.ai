@@ -11,6 +11,24 @@ const envSchema = z.object({
   R2_BUCKET_NAME: z.string().default("scenenode-assets"),
   R2_PUBLIC_URL: z.string().default(""),
   /**
+   * Custom S3-compatible storage endpoint (e.g. http://minio:9000 for the
+   * MinIO service bundled in docker-compose.community.yml, or any other
+   * S3-compatible server). Empty = Cloudflare R2, derived from R2_ACCOUNT_ID
+   * (the pre-existing behavior). When set, R2_ACCOUNT_ID is not needed.
+   */
+  R2_ENDPOINT: z.string().default(""),
+  /**
+   * Use path-style S3 addressing (https://host/bucket/key instead of
+   * https://bucket.host/key). Required by MinIO and most self-hosted
+   * S3-compatible servers; leave false for Cloudflare R2 / AWS S3.
+   * Strict parsing: only "true" or "1" enable it (same rationale as
+   * MCP_ENABLED — z.coerce.boolean() would treat "false" as true).
+   */
+  R2_FORCE_PATH_STYLE: z
+    .string()
+    .optional()
+    .transform((v) => v === "true" || v === "1"),
+  /**
    * Extra hostname to allow in the /v1/download + /v1/image-proxy origin
    * allowlist, in addition to the origin derived from R2_PUBLIC_URL. Use when
    * assets are served from a different host than R2_PUBLIC_URL (e.g. a raw

@@ -1,0 +1,19 @@
+# Line-ending policy for files a Linux container consumes VERBATIM.
+#
+# A default Windows checkout (core.autocrlf=true) materializes these with
+# CRLF, which breaks the community self-host build in ways CI never sees
+# (CI and Railway check out with LF):
+#   - The Dockerfile's embedded heredoc scripts (install-pinned-ffmpeg.sh,
+#     start.sh) run under dash inside the container: "set: pipefail:
+#     invalid option name" kills the image build at the runner stage
+#     (clean-machine matrix finding, 2026-08-11, Windows).
+#   - docker/selfhost/roles.sql is volume-mounted into Postgres first-init
+#     and read by psql, whose backtick \set line must not carry \r.
+#
+# Deliberately targeted, not a blanket `* text=auto` — a repo-wide
+# renormalization would touch thousands of files for no benefit.
+Dockerfile text eol=lf
+*.sh text eol=lf
+docker/** text eol=lf
+frontend/Caddyfile text eol=lf
+docker-compose*.yml text eol=lf

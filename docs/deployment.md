@@ -15,9 +15,12 @@ You need:
 
 - **Docker 24+** and **Docker Compose v2** (`docker compose` not
   `docker-compose`).
-- **A Supabase project.** Create one at <https://supabase.com> (free
-  tier is fine for testing and small teams) or run Supabase yourself.
-  You'll need: project URL, service-role key, anon key.
+- **A database + auth stack.** The community compose BUNDLES one (Supabase
+  Postgres + GoTrue + PostgREST, migrations applied automatically, email +
+  password sign-up) — nothing to create. Alternatively, use a managed
+  project at <https://supabase.com> (free tier is fine): you'll need the
+  project URL, service-role key, and anon key, and you apply
+  `supabase/migrations/` yourself (see 2c).
 - **An S3-compatible object store** for assets. Tested options:
   Cloudflare R2 (recommended, zero egress), AWS S3, MinIO, Backblaze
   B2. The bucket must be readable from the public internet (assets are
@@ -83,6 +86,11 @@ FAL_KEY=
 # When unset, the webhook fast-fails 503 webhook_not_configured.
 REPLICATE_WEBHOOK_SECRET=
 
+# Storage — leave ALL of these unset to use the MinIO bundled in the
+# community compose (see 2d). For Cloudflare R2, set the four R2_* values
+# and keep R2_ENDPOINT / R2_FORCE_PATH_STYLE empty.
+R2_ENDPOINT=
+R2_FORCE_PATH_STYLE=
 R2_ACCOUNT_ID=
 R2_ACCESS_KEY_ID=
 R2_SECRET_ACCESS_KEY=
@@ -140,7 +148,14 @@ which account to connect (single-account logins connect directly, as before).
 
 ### 2c. Apply database migrations
 
-In the Supabase dashboard for your project, open **SQL editor** and
+**Bundled stack (compose default): automatic.** The app container applies
+`supabase/migrations/` on boot (gated by `RUN_MIGRATIONS_ON_BOOT=true` +
+`DATABASE_URL`, both defaulted in the compose file), tracks applied files
+in `public._nodaro_migrations`, and refuses to start against a
+half-migrated schema. Skip to 2d.
+
+**Managed Supabase project:** set `RUN_MIGRATIONS_ON_BOOT=false` and apply
+them yourself. In the Supabase dashboard, open **SQL editor** and
 paste each file from `supabase/migrations/` in **filename order**
 (zero-padded prefixes are intentional — `001_…sql`, `002_…sql`, …).
 
@@ -156,7 +171,18 @@ seeded data); re-running them on a fresh DB is fine.
 
 ### 2d. Configure object storage
 
-Cloudflare R2 example:
+**Default: the bundled MinIO — nothing to configure.**
+`docker-compose.community.yml` ships a MinIO service with working
+defaults: `R2_ENDPOINT=http://minio:9000`, path-style addressing, and
+`R2_PUBLIC_URL=http://localhost:3000/storage/nodaro-assets` (media is
+proxied through the app's own origin by Caddy, so the browser and the
+backend read the same URL). The bucket is auto-created with a
+public-read policy on first boot. Media lives in the `minio-data`
+Docker volume. Change the default credentials before exposing the
+stack to a network; when serving on a real domain, set `R2_PUBLIC_URL`
+to `https://<your-domain>/storage/nodaro-assets`.
+
+**Cloudflare R2** (recommended for real deployments — zero egress):
 
 1. Create a bucket called `nodaro-assets` (or anything; match
    `R2_BUCKET_NAME`).
@@ -166,9 +192,14 @@ Cloudflare R2 example:
 3. Under **Manage R2 API tokens**, mint an access key with
    `Object Read & Write` on this bucket. Copy `R2_ACCESS_KEY_ID` /
    `R2_SECRET_ACCESS_KEY` / `R2_ACCOUNT_ID`.
+4. Set `R2_ENDPOINT=` and `R2_FORCE_PATH_STYLE=` (empty) so the MinIO
+   compose defaults don't apply — with them empty, the endpoint is
+   derived from `R2_ACCOUNT_ID`.
 
-For MinIO or AWS S3, use the same env vars — the SDK is
-S3-compatible. Set `R2_PUBLIC_URL` to the bucket's public URL.
+For any other S3-compatible store (AWS S3, Backblaze B2, self-managed
+MinIO), set `R2_ENDPOINT` to its S3 API URL, `R2_FORCE_PATH_STYLE=true`
+for most self-hosted servers, and `R2_PUBLIC_URL` to the bucket's
+public URL.
 
 ### 2e. Start the stack
 
@@ -382,6 +413,15 @@ crash-loop until it's reachable. That's fine — once Postgres is back,
 restart the Nodaro container and it'll pick up.
 
 ## 9. Troubleshooting
+
+**Start at `/setup`.** Self-hosted (community/business) installs serve a
+live health screen at `http://<your-host>/setup` (backed by
+`GET /v1/setup/status`, both public — no login needed, presence booleans
+only). It shows green/red cards for the database (including a dedicated
+"Migrations missing" state), Redis, storage, and provider keys, with a
+hint per failing card, and polls every 5 seconds. Most of the issues
+below are visible there at a glance. The route does not exist on the
+Cloud edition.
 
 **"Missing or invalid env vars" on startup.** The error message lists
 which Zod-validated vars are wrong. Common culprits:

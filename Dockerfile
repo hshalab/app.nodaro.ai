@@ -404,6 +404,13 @@ COPY --chown=node:node --from=backend-build /app/backend/dist ./backend/dist
 #     at module-load time via import.meta.url path resolution.
 COPY --chown=node:node --from=backend-build /app/backend/skills ./backend/skills
 
+# 5c. Self-host migration runner + SQL files (whitelisted in .dockerignore).
+#     Applied on boot ONLY when RUN_MIGRATIONS_ON_BOOT=true + DATABASE_URL are
+#     set (the community compose does; Railway/cloud never does — cloud
+#     migrations stay PR-event-driven through the Supabase integration).
+COPY --chown=node:node backend/scripts/run-migrations.mjs ./backend/scripts/run-migrations.mjs
+COPY --chown=node:node supabase/migrations ./supabase/migrations
+
 # 6. Remotion package source — bundled at runtime by @remotion/bundler.
 COPY --chown=node:node --from=frontend-build /app/packages/remotion/src ./packages/remotion/src
 COPY --chown=node:node --from=frontend-build /app/packages/remotion/tsconfig.json ./packages/remotion/tsconfig.json
@@ -444,6 +451,18 @@ forward_term() {
   kill -TERM $CHILD_PIDS 2>/dev/null
 }
 trap forward_term TERM INT
+
+# Self-host: apply supabase/migrations before anything touches the DB.
+# Gated on BOTH vars so cloud (neither set) and partial configs are no-ops.
+# A failed migration refuses to boot — an API against a half-migrated
+# schema fails stranger and later.
+if [ "$RUN_MIGRATIONS_ON_BOOT" = "true" ] && [ -n "$DATABASE_URL" ]; then
+  echo "[start.sh] applying database migrations..."
+  if ! node /app/backend/scripts/run-migrations.mjs; then
+    echo "[start.sh] migrations FAILED - refusing to start"
+    exit 1
+  fi
+fi
 
 # Start backend API server on fixed internal port
 cd /app/backend
