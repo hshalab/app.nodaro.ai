@@ -57,9 +57,11 @@ and watch the cards flip green. The backing endpoint is
 
 http://localhost:3000
 
-Sign-in is currently Google OAuth via your Supabase project: enable the
-Google provider under Authentication → Providers in the Supabase dashboard
-(email/password sign-in for a fully self-contained login is planned).
+Sign up with an email + password (the Email provider is enabled by default
+on Supabase projects; if your project requires email confirmation, check
+your inbox after signing up). Google sign-in also works if you enable the
+Google provider under Authentication → Providers in the Supabase dashboard —
+it is optional.
 The first user is a regular user; admin promotion is a manual SQL step (see
 [Deployment → First user + admin promotion](deployment.md#4-first-user--admin-promotion)).
 Note: the admin panel only exists in the Business and Cloud editions.
