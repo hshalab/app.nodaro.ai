@@ -3,22 +3,76 @@
 import { memo, useCallback, useMemo, useState } from "react"
 import {
   NodeResizer,
+  NodeToolbar,
+  Position,
   type NodeProps,
 } from "@xyflow/react"
 import { Boxes } from "lucide-react"
+import { useTheme } from "next-themes"
 import { groupHandleId, presentTypes } from "@nodaro/shared"
 import { useShallow } from "zustand/react/shallow"
 import { useWorkflowStore } from "@/hooks/use-workflow-store"
 import { useStaleHandleCleanup } from "@/hooks/use-stale-handle-cleanup"
 import { AggregateHandleIcon } from "@/components/nodes/handle-icon"
 import { computeGroupBuckets } from "@/components/editor/workflow-editor/execution-graph"
+import { NODE_COLORS, adjustColor, getEffectiveColor } from "@/lib/node-colors"
 import type { GroupNodeData, WorkflowNode } from "@/types/nodes"
 
-function GroupNodeComponent({ id, data, selected }: NodeProps) {
+/** Neutral frame — the look every existing group had before tinting existed. */
+const NEUTRAL_BORDER = "#2D2D2D"
+
+/** NODE_COLORS carries 8-digit (alpha) entries for the bright brand hues. The
+ *  frame wants that translucency, but the banner has to read as a solid block,
+ *  so drop the alpha byte before painting it. */
+function opaque(hex: string): string {
+  return hex.length === 9 ? hex.slice(0, 7) : hex
+}
+
+/** Black or white banner text, whichever the tint can carry. The palette spans
+ *  near-black navies and near-white pastels, so a fixed text colour is illegible
+ *  on one end of it. */
+function readableText(hex: string): string {
+  const c = hex.replace("#", "").slice(0, 6)
+  if (c.length !== 6) return "#ffffff"
+  const n = parseInt(c, 16)
+  const luma = 0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)
+  return luma > 150 ? "#0f172a" : "#ffffff"
+}
+
+function GroupNodeComponent({ id, data, selected, height }: NodeProps) {
   const nodeData = data as GroupNodeData
   const updateNodeData = useWorkflowStore((s) => s.updateNodeData)
   const [editing, setEditing] = useState(false)
   const [labelDraft, setLabelDraft] = useState(nodeData.label)
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === "dark"
+
+  // A tinted group reads as a titled section: the frame carries a wash of the
+  // colour and the label sits above it as a solid banner in the same colour.
+  // Untinted groups keep the original neutral frame and quiet label exactly.
+  const tint = nodeData.color ? opaque(getEffectiveColor(nodeData.color, isDark)) : null
+  const frameStyle = tint
+    ? {
+        backgroundColor: `${tint}${isDark ? "1f" : "40"}`,
+        borderColor: adjustColor(tint, isDark ? 45 : -45),
+      }
+    : undefined
+  // A frame is a canvas-scale object — thousands of units tall is normal — and
+  // it is read at fit-to-view zoom, where a fixed 15px title shrinks to an
+  // unreadable smudge. Scale the banner off the frame so the title stays legible
+  // at the zoom the frame is actually seen at. The untinted caption, which sits
+  // beside ordinary nodes, keeps its fixed size.
+  const bannerFont = Math.min(120, Math.max(15, (height ?? 400) * 0.045))
+  const bannerStyle = tint
+    ? {
+        backgroundColor: tint,
+        color: readableText(tint),
+        fontSize: `${bannerFont}px`,
+        gap: `${bannerFont * 0.4}px`,
+        padding: `${bannerFont * 0.26}px ${bannerFont * 0.55}px`,
+        borderRadius: `${bannerFont * 0.22}px ${bannerFont * 0.22}px 0 0`,
+      }
+    : undefined
 
   // computeGroupBuckets traverses this group's children (their parentId,
   // type, position.y and output values). Subscribing to the whole `s.nodes`
@@ -67,9 +121,29 @@ function GroupNodeComponent({ id, data, selected }: NodeProps) {
 
   return (
     <div
-      className="group-node relative rounded-lg border border-[#2D2D2D] bg-[#1E1E1E]/40"
-      style={{ width: "100%", height: "100%" }}
+      className={`group-node relative rounded-lg border ${tint ? "" : "border-[#2D2D2D] bg-[#1E1E1E]/40"}`}
+      style={{ width: "100%", height: "100%", ...frameStyle }}
     >
+      {/* Offset clears the banner when tinted, the caption when not. */}
+      <NodeToolbar isVisible={!!selected} position={Position.Top} offset={tint ? bannerFont * 1.6 + 24 : 40}>
+        <div className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-2 py-1.5 shadow-lg dark:border-white/10 dark:bg-zinc-900">
+          {/* Neutral (no tint) */}
+          <div
+            onClick={(e) => { e.stopPropagation(); updateNodeData(id, { color: undefined }) }}
+            title="No colour"
+            className={`w-4 h-4 rounded-full cursor-pointer border-2 transition-transform hover:scale-110 ${!nodeData.color ? "border-foreground dark:border-white" : "border-foreground/15 dark:border-white/20"}`}
+            style={{ backgroundColor: NEUTRAL_BORDER }}
+          />
+          {NODE_COLORS.map((c) => (
+            <div
+              key={c}
+              onClick={(e) => { e.stopPropagation(); updateNodeData(id, { color: c }) }}
+              className={`w-4 h-4 rounded-full cursor-pointer border-2 transition-transform hover:scale-110 ${nodeData.color === c ? "border-foreground dark:border-white" : "border-foreground/15 dark:border-white/20"}`}
+              style={{ backgroundColor: getEffectiveColor(c, isDark) }}
+            />
+          ))}
+        </div>
+      </NodeToolbar>
       <NodeResizer
         isVisible={!!selected}
         minWidth={240}
@@ -78,11 +152,22 @@ function GroupNodeComponent({ id, data, selected }: NodeProps) {
         handleClassName="!w-2.5 !h-2.5 !bg-[#ff0073] !border-none !rounded-sm"
       />
 
-      {/* Floating label above the node — matches the standard node title location. */}
+      {/* Label above the node. Untinted it stays the quiet floating caption it
+          has always been; tinted it becomes a solid banner flush against the
+          top edge, so the frame + banner read as one titled section. */}
       <div
-        className={`absolute -top-6 left-0 flex items-center gap-1.5 text-[12px] font-medium text-foreground/70 dark:text-white/70 ${editing ? "nopan nodrag nowheel" : "select-none"}`}
+        data-testid="group-label"
+        className={`absolute left-0 flex items-center max-w-full ${
+          tint
+            ? "bottom-full font-semibold"
+            : "-top-6 gap-1.5 text-[12px] font-medium text-foreground/70 dark:text-white/70"
+        } ${editing ? "nopan nodrag nowheel" : "select-none"}`}
+        style={bannerStyle}
       >
-        <Boxes className="w-3.5 h-3.5" />
+        <Boxes
+          className={tint ? "shrink-0" : "w-3.5 h-3.5 shrink-0"}
+          style={tint ? { width: bannerFont, height: bannerFont } : undefined}
+        />
         {editing ? (
           <input
             autoFocus
@@ -99,11 +184,12 @@ function GroupNodeComponent({ id, data, selected }: NodeProps) {
                 cancelLabel()
               }
             }}
-            className="bg-white border border-border rounded-md px-2 py-0.5 text-foreground outline-none min-w-[8rem] max-w-[20rem] text-[12px] focus:ring-1 focus:ring-[#ff0073]/40 focus:border-[#ff0073] dark:bg-zinc-900 dark:border-white/20 dark:text-white/90"
+            style={tint ? { fontSize: `${bannerFont}px` } : undefined}
+            className={`bg-white border border-border rounded-md px-2 py-0.5 text-foreground outline-none min-w-[8rem] focus:ring-1 focus:ring-[#ff0073]/40 focus:border-[#ff0073] dark:bg-zinc-900 dark:border-white/20 dark:text-white/90 ${tint ? "" : "max-w-[20rem] text-[12px]"}`}
           />
         ) : (
           <span
-            className="truncate cursor-text hover:text-foreground dark:hover:text-white/90 transition-colors"
+            className={`truncate cursor-text transition-colors ${tint ? "" : "hover:text-foreground dark:hover:text-white/90"}`}
             onDoubleClick={enterEditMode}
             onMouseDown={(e) => e.stopPropagation()}
             title="Double-click to rename"

@@ -1,7 +1,7 @@
 ---
 node_type: group
-generated_at: 2026-06-04T12:41:29.226Z
-generated_from: 9bf1388db
+generated_at: 2026-08-11T20:00:46.911Z
+generated_from: fc1ab51e9
 ---
 
 # Group
@@ -15,6 +15,9 @@ generated_from: 9bf1388db
 
 **Required data fields:**
 - `label: string`
+
+**Optional data fields:**
+- `color?: string`
 
 **Default data:**
 ```json

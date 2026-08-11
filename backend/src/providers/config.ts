@@ -2,9 +2,15 @@
  * Provider Routing Configuration
  *
  * Maps ProviderCapability values to provider preference chains.
- * For each operation, defines which provider to try first and what
- * the fallback is. Reads app settings (ai_provider) to determine
- * whether "kie" or "replicate" is the primary provider.
+ * KIE.ai is the sole primary provider; Replicate participates only as the
+ * image-generation fallback for the models that live exclusively there.
+ *
+ * The legacy `ai_provider` app-setting deliberately does NOT affect routing:
+ * migration 005 seeds it to "replicate" on every fresh database, nothing
+ * rewrites it on self-host (community has no admin routes, and the admin PUT
+ * only accepts "kie"), and the old non-"kie" branch returned an empty chain —
+ * which made every registry-routed node throw on a fresh install even with a
+ * valid KIE_API_KEY. Pinned by config.test.ts.
  *
  * This file does NOT import any existing routing code; it is a
  * self-contained config consumed only by the new providers/router.ts.
@@ -34,11 +40,9 @@ export interface RoutingDecision {
 
 // ─── Constants ────────────────────────────────────────────────────
 
-// Replicate disabled — KIE.ai is the sole provider
-
 /**
  * Capabilities that only KIE.ai supports (no Replicate fallback exists).
- * If ai_provider=replicate these operations are unavailable.
+ * These operations have no fallback provider — the chain is always ["kie"].
  */
 const KIE_ONLY_CAPABILITIES: ReadonlySet<ProviderCapability> = new Set([
   "video-to-video",
@@ -62,17 +66,6 @@ export async function buildRoutingDecision(
 ): Promise<RoutingDecision> {
   const settings = await getAppSettings()
 
-  // ── Self-hosted / non-KIE mode (Replicate disabled) ─────────
-  if (settings.ai_provider !== "kie") {
-    return {
-      providerChain: [],
-      markupPercent: 0,
-      activeProvider: "kie",
-      settings,
-    }
-  }
-
-  // ── Cloud / KIE mode ──────────────────────────────────────────
   // KIE-only capabilities have no fallback; image-generation falls through to
   // Replicate for the "Open" (uncensored) models that only live there
   // (flux-2-klein, kontext-multi) — the router.ts walker uses each provider's
@@ -105,8 +98,8 @@ export function applyMarkup(
 
 /**
  * Determine the markup to use when a specific provider was used.
- * Cloud mode applies the configured markup uniformly across KIE and the
- * Replicate fallback; self-hosted ("ai_provider != kie") applies none.
+ * The configured markup applies uniformly across KIE and the Replicate
+ * fallback (self-host simply seeds cost_markup_percent = 0).
  * `providerUsed` is kept in the signature so a future per-provider markup
  * (e.g. cheaper rate for Replicate fallback) can branch without an API break.
  */

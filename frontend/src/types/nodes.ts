@@ -4920,6 +4920,10 @@ export type StickyNoteData = {
 export interface GroupNodeData {
   [key: string]: unknown
   label: string
+  /** Frame tint, from NODE_COLORS (same palette as sticky notes). The label
+   *  above the frame renders as a solid banner in this color, so a group
+   *  reads as a titled section of the canvas. Undefined = the neutral frame. */
+  color?: string
 }
 
 export interface CollectNodeData {
