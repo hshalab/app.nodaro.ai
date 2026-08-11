@@ -9,6 +9,12 @@
 # Logs:   docker compose -f docker-compose.community.yml logs -f
 # Stop:   docker compose -f docker-compose.community.yml down
 #
+# The app image is PULLED, not built — first boot downloads ~2.4 GB rather
+# than compiling for 5-10 minutes. Build from source instead with:
+#     docker compose -f docker-compose.community.yml build
+# (needed if you changed the code, PUBLIC_URL, or the Supabase keys — see the
+# note on the `nodaro` service).
+#
 # .env is OPTIONAL for local play — every value below has a working default.
 # To actually generate media, add at least one provider key to .env:
 #   KIE_API_KEY=...        (kie.ai — broadest model coverage)
@@ -118,6 +124,16 @@ services:
       retries: 5
 
   nodaro:
+    # Pulls a prebuilt image so the first boot is a download, not a 5-10 minute
+    # compile. `latest` tracks main; pin the :<sha> tag for a reproducible
+    # install.
+    image: ${NODARO_IMAGE:-ghcr.io/nodaroai/nodaro-community:latest}
+    # Build from source instead with:
+    #     docker compose -f docker-compose.community.yml build
+    # Required if you changed the code, OR if you changed PUBLIC_URL or the
+    # Supabase keys — the frontend inlines VITE_* at BUILD time, so the
+    # published image carries the localhost defaults below and cannot pick up
+    # new values at runtime.
     build:
       context: .
       dockerfile: Dockerfile

@@ -9,8 +9,16 @@ cd nodaro
 docker compose -f docker-compose.community.yml up
 ```
 
-The first boot builds the app image (5-10 minutes) and pulls the bundled
-services. After that, boots take seconds.
+The first boot downloads the prebuilt app image (~2.4 GB, so a few minutes on
+a typical connection) plus the bundled services — a download rather than a
+compile, and it does not pin your CPU. After that, boots take seconds.
+
+Building from source instead (needed if you change the code, `PUBLIC_URL`,
+or the Supabase keys — the frontend inlines those at build time):
+
+```bash
+docker compose -f docker-compose.community.yml build
+```
 
 What comes up:
 
