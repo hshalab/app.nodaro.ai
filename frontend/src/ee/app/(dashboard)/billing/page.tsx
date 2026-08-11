@@ -198,7 +198,7 @@ export default function BillingPage() {
               subscription?.status === "canceled" && "bg-red-500/10 text-red-600 dark:text-red-400",
             )}
           >
-            {subLoading ? "..." : (subscription?.status ?? "free")}
+            {subLoading ? "..." : (subscription?.status ?? (balance?.effectiveTier === "payg" ? "pay as you go" : "free"))}
           </Badge>
         </div>
 
@@ -314,12 +314,23 @@ export default function BillingPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Total Used</p>
-              <p className="text-2xl font-bold font-mono">
-                {(currentTier?.credits ?? FREE_TIER_CREDITS) - balance.subscription}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                of {currentTier?.credits ?? FREE_TIER_CREDITS} {balance.effectiveTier === "free" ? "one-time" : "/ month"}
-              </p>
+              {balance.effectiveTier === "payg" ? (
+                <>
+                  <p className="text-2xl font-bold font-mono">&mdash;</p>
+                  <p className="text-xs text-muted-foreground">
+                    no monthly allocation &middot; credits never expire
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-2xl font-bold font-mono">
+                    {(currentTier?.credits ?? FREE_TIER_CREDITS) - balance.subscription}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    of {currentTier?.credits ?? FREE_TIER_CREDITS} {balance.effectiveTier === "free" ? "one-time" : "/ month"}
+                  </p>
+                </>
+              )}
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Today</p>

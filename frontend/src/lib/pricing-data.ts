@@ -158,6 +158,7 @@ export const PRICING_TIERS: readonly PricingTier[] = [
  */
 export const TIER_STORAGE_BYTES: Record<string, number> = {
   free: 1 * 1024 * 1024 * 1024,          // 1 GB
+  payg: 10 * 1024 * 1024 * 1024,         // 10 GB — derived tier, = basic
   basic: 10 * 1024 * 1024 * 1024,        // 10 GB
   standard: 25 * 1024 * 1024 * 1024,     // 25 GB
   pro: 50 * 1024 * 1024 * 1024,          // 50 GB
@@ -168,6 +169,7 @@ export const TIER_STORAGE_BYTES: Record<string, number> = {
 /** Max concurrent nodes per workflow execution, by tier. Must match backend TIER_PARALLELISM in stripe-config.ts. */
 export const TIER_PARALLELISM: Record<string, number> = {
   free: 2,
+  payg: 4, // derived tier, = basic
   basic: 4,
   standard: 6,
   pro: 10,
