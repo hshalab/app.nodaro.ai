@@ -63,22 +63,16 @@ export const TIER_CREDITS: Record<string, number> = {
 /** Max concurrent nodes per workflow execution, by tier. */
 export const TIER_PARALLELISM: Record<string, number> = {
   free: 2,
+  payg: 4, // derived tier (effective-tier.ts) — entitlements = basic's
   basic: 4,
   standard: 6,
   pro: 10,
   business: 12,
 }
 
-export const TIER_LLM_LIMITS: Record<string, number> = {
-  free: 20,
-  basic: 100,
-  standard: 300,
-  pro: 1000,
-  business: Infinity,
-}
-
 export const TIER_STORAGE_LIMITS: Record<string, number> = {
   free: 1 * 1024 * 1024 * 1024,          // 1 GB
+  payg: 10 * 1024 * 1024 * 1024,         // 10 GB — write-managed floor, = basic
   basic: 10 * 1024 * 1024 * 1024,        // 10 GB
   standard: 25 * 1024 * 1024 * 1024,     // 25 GB
   pro: 50 * 1024 * 1024 * 1024,          // 50 GB

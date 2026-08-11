@@ -276,6 +276,26 @@ All errors share the same shape:
 Treat anything in the 5xx range as transient — retry with exponential
 backoff. Treat 4xx as terminal — don't retry without fixing the request.
 
+## 8b. Pay-as-you-go accounts
+
+You do not need a subscription to use the API. Buying any credit pack
+activates the pay-as-you-go tier: balance responses report
+`effectiveTier: "payg"`, all models are unlocked, outputs are not
+watermarked, and there is no daily spending cap. Credits never expire.
+Subscriptions remain available and always include a lower per-credit
+rate at sustained volume.
+
+Two behaviors to know:
+
+- **Outputs are public by default.** Private mode is a subscription
+  feature (Standard plan and above) — pay-as-you-go outputs appear in
+  the public gallery like free-tier outputs do. (Jobs created through
+  the MCP server are always private, regardless of tier.)
+- **Media retention follows account activity.** Your generated files are
+  stored while your account is active; after roughly 3 months without a
+  purchase or any credit spend, files older than 60 days may be cleaned
+  up. Returning and spending credits stops future cleanup.
+
 ## 9. Characters
 
 Character routes let you fully script character creation, identity edits,

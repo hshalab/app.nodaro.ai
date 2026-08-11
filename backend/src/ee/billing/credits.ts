@@ -2,7 +2,7 @@ import { supabase } from "../../lib/supabase.js"
 import { hasCredits } from "../../lib/config.js"
 import { getAppSettings } from "../../lib/app-settings.js"
 import { FREE_TIER_RESTRICTIONS, TIER_STORAGE_LIMITS } from "./stripe-config.js"
-import { PIPELINE_PINNABLE_SCRIPT_LLMS, getLlmTier, buildCreditModelIdentifier, buildVideoCreditModelIdentifier, buildMotionCreditModelIdentifier, buildLlmCreditIdentifier, FLUX2_RES_MP, type Flux2Model, AI_AVATAR_DURATION_BUCKETS, resolveAiAvatarCreditId, type AiAvatarEngine, type AiAvatarResolution, CINEMATIC_MIN_DURATION_SEC, CINEMATIC_MAX_DURATION_SEC, cinematicCreditId, resolveCinematicCreditId, type CinematicResolution, resolveSwitchXCreditId, VIDEO_ANALYSIS_DURATION_BUCKETS, VIDEO_ANALYSIS_MAX_DURATION_SEC, VIDEO_ANALYSIS_BUCKET_CREDITS, buildVideoAnalysisCreditId, resolveVideoAnalysisModel, DEFAULT_VIDEO_ANALYSIS_MODEL, VIDEO_AUDIT_BUCKET_CREDITS, buildVideoAuditCreditId } from "@nodaro/shared"
+import { PIPELINE_PINNABLE_SCRIPT_LLMS, getLlmTier, buildCreditModelIdentifier, buildVideoCreditModelIdentifier, buildMotionCreditModelIdentifier, buildLlmCreditIdentifier, FLUX2_RES_MP, type Flux2Model, AI_AVATAR_DURATION_BUCKETS, resolveAiAvatarCreditId, type AiAvatarEngine, type AiAvatarResolution, CINEMATIC_MIN_DURATION_SEC, CINEMATIC_MAX_DURATION_SEC, cinematicCreditId, resolveCinematicCreditId, type CinematicResolution, resolveSwitchXCreditId, VIDEO_ANALYSIS_DURATION_BUCKETS, VIDEO_ANALYSIS_MAX_DURATION_SEC, VIDEO_ANALYSIS_BUCKET_CREDITS, buildVideoAnalysisCreditId, resolveVideoAnalysisModel, DEFAULT_VIDEO_ANALYSIS_MODEL, VIDEO_AUDIT_BUCKET_CREDITS, buildVideoAuditCreditId, resolveEffectiveTier, resolveStoredTier } from "@nodaro/shared"
 // Provider-$ cost formulas — CORE lib (not @nodaro/shared, an irrevocably
 // published Apache package). See the 2026-07-06 public-flip IP audit, S5.
 import { flux2BaseCredits } from "../../lib/pricing/flux2-cost.js"
@@ -169,7 +169,10 @@ export interface UserBalance {
   dailySpent: number
   dailyLimit: number | null
   monthlyAllocation: number
+  /** Stored tier (billing identity). Kept for back-compat — display should use effectiveTier. */
   tier: string
+  /** Derived tier: "payg" when stored-free with net lifetime top-ups > 0. */
+  effectiveTier: string
   features: Record<string, unknown>
   periodEnd: string | null
   /** Credits earned for app usage (free tier only — earned by running flows) */
@@ -196,6 +199,13 @@ export interface StorageLimitResult {
 export interface CreditProfile {
   tier?: string | null
   subscription_tier?: string | null
+  /**
+   * REQUIRED (not optional): the payg derivation needs it, and a producer
+   * whose SELECT forgot the column must fail to compile — `?? 0` here would
+   * silently deactivate payg (the exact regression the shared helper's
+   * required-field shape exists to prevent).
+   */
+  lifetime_topup_credits: number
   subscription_credits?: number | null
   topup_credits?: number | null
   daily_spent_credits?: number | null
@@ -205,10 +215,13 @@ export interface CreditProfile {
 
 /**
  * Pre-fetched profile shape for checkStorageLimitWithProfile.
- * Must include storage columns + tier for fallback.
+ * Must include storage columns + the tier trio for the effective-tier
+ * fallback (see CreditProfile.lifetime_topup_credits on why it's required).
  */
 export interface StorageProfile {
   tier?: string | null
+  subscription_tier?: string | null
+  lifetime_topup_credits: number
   storage_used_bytes?: number | null
   storage_limit_bytes?: number | null
 }
@@ -1368,8 +1381,10 @@ export const CREDIT_COSTS: Record<string, (data: Record<string, unknown>) => str
   "switchx": (data) => resolveSwitchXCreditId(data),
 }
 
-// Tier order for restriction checks
-const TIER_ORDER = ["free", "basic", "standard", "pro", "business"]
+// Tier order for restriction checks. payg ranks above free and below basic:
+// inert while all model_pricing.tier_restriction seeds are null, but keeps an
+// admin-set "basic and up" restriction meaning "not for payg" deliberately.
+const TIER_ORDER = ["free", "payg", "basic", "standard", "pro", "business"]
 
 // ============================================================
 // Helper Functions
@@ -1383,11 +1398,22 @@ function creditsDisabled(): boolean {
 }
 
 /**
- * Resolve the user's tier from profile, checking both `tier` and `subscription_tier`
- * columns for backward compatibility.
+ * Effective-tier adapter for profile rows. The derivation itself lives in
+ * @nodaro/shared (`resolveEffectiveTier`): stored "free" with net lifetime
+ * top-ups > 0 derives "payg"; every other stored tier passes through.
+ * Entitlement sites call this; billing/provisioning writers use
+ * `resolveStoredTier` (payg must never be written anywhere).
  */
-function resolveTier(profile: Record<string, unknown>): string {
-  return (profile.tier as string) ?? (profile.subscription_tier as string) ?? "free"
+function effectiveTierOf(profile: {
+  tier?: string | null
+  subscription_tier?: string | null
+  lifetime_topup_credits: number
+}): string {
+  return resolveEffectiveTier({
+    tier: profile.tier ?? null,
+    subscription_tier: profile.subscription_tier ?? null,
+    lifetime_topup_credits: profile.lifetime_topup_credits,
+  })
 }
 
 /**
@@ -1707,7 +1733,7 @@ export class CreditsService {
     // Get user's profile
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("tier, subscription_tier, subscription_credits, topup_credits, daily_spent_credits, last_daily_reset, app_credits_allowance")
+      .select("tier, subscription_tier, lifetime_topup_credits, subscription_credits, topup_credits, daily_spent_credits, last_daily_reset, app_credits_allowance")
       .eq("id", userId)
       .single()
 
@@ -1756,7 +1782,7 @@ export class CreditsService {
       }
     }
 
-    const userTier = resolveTier(profile as Record<string, unknown>)
+    const userTier = effectiveTierOf(profile)
     const isFree = userTier === "free"
     const watermark = isFree && FREE_TIER_RESTRICTIONS.watermark
 
@@ -1918,10 +1944,12 @@ export class CreditsService {
     // overridden) for the watermark decision.
     const { data: tierProfile } = await supabase
       .from("profiles")
-      .select("tier, subscription_tier")
+      .select("tier, subscription_tier, lifetime_topup_credits")
       .eq("id", userId)
       .single()
-    const userTier = tierProfile ? resolveTier(tierProfile as Record<string, unknown>) : "free"
+    const userTier = tierProfile
+      ? effectiveTierOf(tierProfile as { tier: string | null; subscription_tier: string | null; lifetime_topup_credits: number })
+      : "free"
     const watermark = watermarkOverride !== undefined
       ? watermarkOverride
       : (userTier === "free" && FREE_TIER_RESTRICTIONS.watermark)
@@ -2178,7 +2206,7 @@ export class CreditsService {
 
     const { data: profile, error } = await supabase
       .from("profiles")
-      .select("tier, storage_used_bytes, storage_limit_bytes")
+      .select("tier, subscription_tier, lifetime_topup_credits, storage_used_bytes, storage_limit_bytes")
       .eq("id", userId)
       .single()
 
@@ -2186,7 +2214,7 @@ export class CreditsService {
       return { allowed: false, error: "User profile not found", usedBytes: 0, limitBytes: 0 }
     }
 
-    return CreditsService.checkStorageLimitWithProfile(profile as StorageProfile)
+    return CreditsService.checkStorageLimitWithProfile(profile as unknown as StorageProfile)
   }
 
   /**
@@ -2199,7 +2227,7 @@ export class CreditsService {
     }
 
     const usedBytes = profile.storage_used_bytes ?? 0
-    const tier = (profile.tier as string) ?? "free"
+    const tier = effectiveTierOf(profile)
     const dbLimit = profile.storage_limit_bytes ?? 0
     const tierLimit = TIER_STORAGE_LIMITS[tier] ?? TIER_STORAGE_LIMITS.free
     // Use tier-based limit when DB has no value or the stale 500MB default (524288000)
@@ -2230,6 +2258,7 @@ export class CreditsService {
         topup_credits,
         tier,
         subscription_tier,
+        lifetime_topup_credits,
         daily_spent_credits,
         last_daily_reset,
         current_period_end,
@@ -2248,22 +2277,34 @@ export class CreditsService {
         dailyLimit: null,
         monthlyAllocation: 0,
         tier: "free",
+        effectiveTier: "free",
         features: {},
         periodEnd: null,
         appCreditsAllowance: 0,
       }
     }
 
-    const userTier = resolveTier(profile as Record<string, unknown>)
+    // SPLIT deliberately (do not merge back into one variable):
+    //  - storedTier gates the subscriptions/Stripe self-heal branch below and
+    //    is what gets WRITTEN into subscriptions.tier — "payg" must never
+    //    reach that table, and effective-gating would fire pointless Stripe
+    //    lookups on every payg balance poll.
+    //  - effectiveTier drives entitlement display: tier_config lookup and
+    //    the daily-limit branch (payg's row has NULL = uncapped).
+    const storedTier = resolveStoredTier({
+      tier: profile.tier ?? null,
+      subscription_tier: profile.subscription_tier ?? null,
+    })
+    const effectiveTier = effectiveTierOf(profile)
 
     // Get tier configuration (cached)
-    const tierConfig = await getTierConfig(userTier)
+    const tierConfig = await getTierConfig(effectiveTier)
 
     const subscriptionCredits = profile.subscription_credits ?? 0
     const topupCredits = profile.topup_credits ?? 0
 
     // For free tier, use FREE_TIER_RESTRICTIONS.dailyCreditCap
-    const dailyLimit = userTier === "free"
+    const dailyLimit = effectiveTier === "free"
       ? FREE_TIER_RESTRICTIONS.dailyCreditCap
       : (tierConfig.daily_credit_limit ?? null)
 
@@ -2276,7 +2317,7 @@ export class CreditsService {
 
     // Read current_period_end: DB first, then Stripe API as self-healing fallback
     let periodEnd: string | null = profile.current_period_end ?? null
-    if (userTier !== "free") {
+    if (storedTier !== "free") {
       const { data: sub } = await supabase
         .from("subscriptions")
         .select("current_period_end, stripe_subscription_id")
@@ -2323,7 +2364,7 @@ export class CreditsService {
                     user_id: userId,
                     stripe_subscription_id: activeSub.id,
                     stripe_price_id: activeSub.items.data[0]?.price?.id ?? "",
-                    tier: userTier,
+                    tier: storedTier,
                     status: "active",
                     current_period_start: freshStart,
                     current_period_end: freshEnd,
@@ -2349,7 +2390,8 @@ export class CreditsService {
       dailySpent,
       dailyLimit,
       monthlyAllocation: tierConfig.monthly_credits ?? 0,
-      tier: userTier,
+      tier: storedTier,
+      effectiveTier,
       features: (tierConfig.features as Record<string, unknown>) ?? {},
       periodEnd,
       appCreditsAllowance: profile.app_credits_allowance ?? 0,
@@ -2370,13 +2412,13 @@ export class CreditsService {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("tier, subscription_tier, topup_credits, app_credits_allowance")
+      .select("tier, subscription_tier, lifetime_topup_credits, topup_credits, app_credits_allowance")
       .eq("id", userId)
       .single()
 
     if (!profile) return { allowed: true } // fail open — per-node check will catch
 
-    const userTier = resolveTier(profile as Record<string, unknown>)
+    const userTier = effectiveTierOf(profile as unknown as { tier: string | null; subscription_tier: string | null; lifetime_topup_credits: number })
     if (userTier !== "free") return { allowed: true }
 
     const topup = (profile.topup_credits as number) ?? 0

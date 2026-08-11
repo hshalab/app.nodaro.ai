@@ -65,6 +65,7 @@ export function validateModeActivation(
 // Tier → max parallel pipelines (Architecture §5.4)
 export const TIER_PIPELINE_PARALLELISM: Record<string, number> = {
   free: 0,
+  payg: 1, // derived tier — pipeline entitlements copy basic's
   basic: 1,
   standard: 2,
   pro: 3,
@@ -80,6 +81,7 @@ export const TIER_PIPELINE_PARALLELISM: Record<string, number> = {
 // the user paid for, instead of the intended two-thirds.
 export const TIER_MAX_PIPELINE_COST_CREDITS: Record<string, number> = {
   free: 0,
+  payg: 3000, // derived tier — copies basic
   basic: 3000,
   standard: 8000,
   pro: 20000,

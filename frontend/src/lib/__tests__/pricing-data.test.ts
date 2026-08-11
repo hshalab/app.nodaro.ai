@@ -41,13 +41,14 @@ describe("frontend credit figures track their backend authority", () => {
 })
 
 describe("PRICING_TIERS", () => {
-  it("has exactly 5 tiers", () => {
-    expect(PRICING_TIERS).toHaveLength(5)
+  it("has exactly 6 entries — 5 plans + the synthetic payg display entry", () => {
+    expect(PRICING_TIERS).toHaveLength(6)
   })
 
   it("tiers are in order: free, basic, standard, pro, business", () => {
     expect(PRICING_TIERS.map((t) => t.id)).toEqual([
       "free",
+      "payg",
       "basic",
       "standard",
       "pro",
@@ -77,7 +78,7 @@ describe("PRICING_TIERS", () => {
   })
 
   it("paid tiers have positive prices", () => {
-    for (const tier of PRICING_TIERS.slice(1)) {
+    for (const tier of PRICING_TIERS.filter((t) => t.priceIdMonthly !== null)) {
       expect(tier.priceMonthly).toBeGreaterThan(0)
       expect(tier.priceAnnual).toBeGreaterThan(0)
     }
@@ -89,9 +90,10 @@ describe("PRICING_TIERS", () => {
     }
   })
 
-  it("credits increase with each tier", () => {
-    for (let i = 1; i < PRICING_TIERS.length; i++) {
-      expect(PRICING_TIERS[i].credits).toBeGreaterThan(PRICING_TIERS[i - 1].credits)
+  it("credits increase with each SUBSCRIPTION tier (payg display entry excluded)", () => {
+    const subs = PRICING_TIERS.filter((t) => t.id === "free" || t.priceIdMonthly !== null)
+    for (let i = 1; i < subs.length; i++) {
+      expect(subs[i].credits).toBeGreaterThan(subs[i - 1].credits)
     }
   })
 
@@ -206,7 +208,7 @@ describe("getAnnualSavingsPercent", () => {
   })
 
   it("returns positive savings for all paid tiers", () => {
-    for (const tier of PRICING_TIERS.slice(1)) {
+    for (const tier of PRICING_TIERS.filter((t) => t.priceIdMonthly !== null)) {
       expect(getAnnualSavingsPercent(tier)).toBeGreaterThan(0)
     }
   })
@@ -224,7 +226,7 @@ describe("getAnnualSavingsDollars", () => {
   })
 
   it("returns positive savings for all paid tiers", () => {
-    for (const tier of PRICING_TIERS.slice(1)) {
+    for (const tier of PRICING_TIERS.filter((t) => t.priceIdMonthly !== null)) {
       expect(getAnnualSavingsDollars(tier)).toBeGreaterThan(0)
     }
   })

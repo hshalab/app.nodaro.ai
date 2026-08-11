@@ -1116,7 +1116,7 @@ export function MobileAppShell({
         <GetCreditsModal
           open={showGetCreditsModal}
           onClose={() => setShowGetCreditsModal(false)}
-          tier={userCredits?.tier ?? "free"}
+          tier={userCredits?.effectiveTier ?? "free"}
           balance={userCredits?.total ?? 0}
           required={estimatedCost}
         />

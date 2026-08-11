@@ -9,6 +9,7 @@ import { supabase } from "../../lib/supabase.js"
 import { warmAdminCache } from "../../lib/admin-check.js"
 import { getAppSettings } from "../../lib/app-settings.js"
 import type { CreditReservation, StorageSnapshot, CreditGuardOpts } from "../../middleware/credit-guard.js"
+import { resolveEffectiveTier } from "@nodaro/shared"
 
 // 503 is right: the route exists and the request is valid, but the system
 // cannot serve it because pricing is unconfigured. Not 400 (client is fine);
@@ -77,7 +78,7 @@ export function creditGuardImpl(
     // Fetch profile ONCE with all columns needed by both storage + credit checks
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("role, tier, subscription_tier, subscription_credits, topup_credits, daily_spent_credits, last_daily_reset, storage_used_bytes, storage_limit_bytes")
+      .select("role, tier, subscription_tier, lifetime_topup_credits, subscription_credits, topup_credits, daily_spent_credits, last_daily_reset, storage_used_bytes, storage_limit_bytes")
       .eq("id", userId)
       .single()
 
@@ -93,7 +94,13 @@ export function creditGuardImpl(
     // Step 1: storage limit
     try {
       const storageCheck = CreditsService.checkStorageLimitWithProfile(profile as StorageProfile)
-      const tier = (profile as CreditProfile).tier ?? "free"
+      // Effective tier for the 413 payload + storage snapshot — payg users
+      // must see their real entitlement tier in storage errors, not "free".
+      const tier = resolveEffectiveTier({
+        tier: (profile as CreditProfile).tier ?? null,
+        subscription_tier: (profile as CreditProfile).subscription_tier ?? null,
+        lifetime_topup_credits: (profile as CreditProfile).lifetime_topup_credits,
+      })
 
       if (!storageCheck.allowed) {
         reply.status(413).send({

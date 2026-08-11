@@ -151,6 +151,7 @@ describe("CreditsService", () => {
     it("always allows when hasCredits() returns false", () => {
       mockHasCreditsRef.value = false
       const profile: StorageProfile = {
+        lifetime_topup_credits: 0,
         tier: "free",
         storage_used_bytes: 999_999_999_999,
         storage_limit_bytes: 1,
@@ -163,6 +164,7 @@ describe("CreditsService", () => {
     it("returns not allowed when used >= limit", () => {
       const limitBytes = 10 * 1024 * 1024 * 1024 // 10 GB
       const profile: StorageProfile = {
+        lifetime_topup_credits: 0,
         tier: "basic",
         storage_used_bytes: limitBytes,
         storage_limit_bytes: limitBytes,
@@ -177,6 +179,7 @@ describe("CreditsService", () => {
 
     it("returns allowed when used < limit", () => {
       const profile: StorageProfile = {
+        lifetime_topup_credits: 0,
         tier: "pro",
         storage_used_bytes: 1_000_000,
         storage_limit_bytes: 50 * 1024 * 1024 * 1024,
@@ -188,6 +191,7 @@ describe("CreditsService", () => {
 
     it("falls back to tier limit when DB has the stale 524288000 default", () => {
       const profile: StorageProfile = {
+        lifetime_topup_credits: 0,
         tier: "standard",
         storage_used_bytes: 0,
         storage_limit_bytes: 524288000, // stale 500MB default
@@ -200,6 +204,7 @@ describe("CreditsService", () => {
 
     it("falls back to tier limit when storage_limit_bytes is 0", () => {
       const profile: StorageProfile = {
+        lifetime_topup_credits: 0,
         tier: "basic",
         storage_used_bytes: 0,
         storage_limit_bytes: 0,
@@ -210,6 +215,7 @@ describe("CreditsService", () => {
 
     it("falls back to tier limit when storage_limit_bytes is null", () => {
       const profile: StorageProfile = {
+        lifetime_topup_credits: 0,
         tier: "pro",
         storage_used_bytes: 0,
         storage_limit_bytes: null,
@@ -220,6 +226,7 @@ describe("CreditsService", () => {
 
     it("uses free tier limit when tier is null", () => {
       const profile: StorageProfile = {
+        lifetime_topup_credits: 0,
         tier: null,
         storage_used_bytes: 0,
         storage_limit_bytes: null,
@@ -231,6 +238,7 @@ describe("CreditsService", () => {
     it("uses the DB limit when it is valid (not 0 and not 524288000)", () => {
       const customLimit = 15 * 1024 * 1024 * 1024 // 15 GB custom admin override
       const profile: StorageProfile = {
+        lifetime_topup_credits: 0,
         tier: "basic",
         storage_used_bytes: 0,
         storage_limit_bytes: customLimit,
@@ -248,6 +256,7 @@ describe("CreditsService", () => {
     const userId = "user-123"
 
     const paidProfile: CreditProfile = {
+      lifetime_topup_credits: 0,
       tier: "pro",
       subscription_credits: 1000,
       topup_credits: 500,
@@ -256,6 +265,7 @@ describe("CreditsService", () => {
     }
 
     const freeProfile: CreditProfile = {
+      lifetime_topup_credits: 0,
       tier: "free",
       subscription_credits: 30,
       topup_credits: 10,
@@ -291,6 +301,7 @@ describe("CreditsService", () => {
       })
 
       const basicProfile: CreditProfile = {
+        lifetime_topup_credits: 0,
         tier: "basic",
         subscription_credits: 100,
         topup_credits: 50,
@@ -335,6 +346,7 @@ describe("CreditsService", () => {
       })
 
       const dailyCapProfile: CreditProfile = {
+        lifetime_topup_credits: 0,
         tier: "free",
         subscription_credits: 50,
         topup_credits: 10,
@@ -378,6 +390,7 @@ describe("CreditsService", () => {
       })
 
       const lowSpendFreeProfile: CreditProfile = {
+        lifetime_topup_credits: 0,
         tier: "free",
         subscription_credits: 30,
         topup_credits: 10,
@@ -403,6 +416,7 @@ describe("CreditsService", () => {
       })
 
       const basicProfile: CreditProfile = {
+        lifetime_topup_credits: 0,
         tier: "basic",
         subscription_credits: 50,
         topup_credits: 10,
@@ -578,6 +592,7 @@ describe("CreditsService", () => {
       })
 
       const legacyProfile: CreditProfile = {
+        lifetime_topup_credits: 0,
         tier: null,
         subscription_tier: "standard",
         subscription_credits: 100,
@@ -622,6 +637,7 @@ describe("CreditsService", () => {
       })
 
       const nullProfile: CreditProfile = {
+        lifetime_topup_credits: 0,
         tier: "pro",
         subscription_credits: null,
         topup_credits: null,
@@ -637,6 +653,7 @@ describe("CreditsService", () => {
     it("blocks free tier on app run when no app credits allowance", async () => {
       mockTable("model_pricing", { credit_cost: 2, is_enabled: true, tier_restriction: null })
       const freeAppProfile: CreditProfile = {
+        lifetime_topup_credits: 0,
         tier: "free", subscription_credits: 30, topup_credits: 0,
         daily_spent_credits: 0, last_daily_reset: new Date().toISOString(),
         app_credits_allowance: 0,
@@ -650,6 +667,7 @@ describe("CreditsService", () => {
     it("allows free tier app run when app credits allowance is sufficient", async () => {
       mockTable("model_pricing", { credit_cost: 2, is_enabled: true, tier_restriction: null })
       const freeAppProfile: CreditProfile = {
+        lifetime_topup_credits: 0,
         tier: "free", subscription_credits: 30, topup_credits: 0,
         daily_spent_credits: 0, last_daily_reset: new Date().toISOString(),
         app_credits_allowance: 10,
@@ -662,6 +680,7 @@ describe("CreditsService", () => {
     it("skips app allowance check for free tier with topup credits", async () => {
       mockTable("model_pricing", { credit_cost: 2, is_enabled: true, tier_restriction: null })
       const freeWithTopup: CreditProfile = {
+        lifetime_topup_credits: 0,
         tier: "free", subscription_credits: 10, topup_credits: 20,
         daily_spent_credits: 0, last_daily_reset: new Date().toISOString(),
         app_credits_allowance: 0,
@@ -673,6 +692,7 @@ describe("CreditsService", () => {
     it("allows paid tier even with high daily spend (no daily cap for paid)", async () => {
       mockTable("model_pricing", { credit_cost: 10, is_enabled: true, tier_restriction: null })
       const paidDailyProfile: CreditProfile = {
+        lifetime_topup_credits: 0,
         tier: "pro", subscription_credits: 500, topup_credits: 100,
         daily_spent_credits: 45, last_daily_reset: new Date().toISOString(),
       }

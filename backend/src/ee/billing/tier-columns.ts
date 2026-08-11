@@ -10,8 +10,11 @@
 // Until the duplicate column is dropped, these two helpers are the only
 // sanctioned way to touch tier:
 //
-//   READ  -> resolveTier(profile)   (re-exported from credits.ts)
-//   WRITE -> tierColumns(tier)      spreads BOTH columns
+//   READ  -> resolveEffectiveTier / resolveStoredTier (@nodaro/shared) —
+//            entitlement sites use effective (payg derivation); billing/
+//            provisioning writers use stored. resolveTierFrom below mirrors
+//            the stored coalesce for admin display.
+//   WRITE -> tierColumns(tier)      spreads BOTH columns ("payg" NEVER written)
 //
 // `profiles-tier-columns.test.ts` fails the build if any writer sets `tier:`
 // on a profiles update without going through tierColumns().

@@ -876,6 +876,8 @@ export type Database = {
           full_name: string | null
           id: string
           last_daily_reset: string | null
+          last_topup_at: string | null
+          lifetime_topup_credits: number
           llm_requests_reset_at: string | null
           llm_requests_used: number | null
           prompt_templates: Json | null
@@ -903,6 +905,8 @@ export type Database = {
           full_name?: string | null
           id: string
           last_daily_reset?: string | null
+          last_topup_at?: string | null
+          lifetime_topup_credits?: number
           llm_requests_reset_at?: string | null
           llm_requests_used?: number | null
           prompt_templates?: Json | null
@@ -930,6 +934,8 @@ export type Database = {
           full_name?: string | null
           id?: string
           last_daily_reset?: string | null
+          last_topup_at?: string | null
+          lifetime_topup_credits?: number
           llm_requests_reset_at?: string | null
           llm_requests_used?: number | null
           prompt_templates?: Json | null

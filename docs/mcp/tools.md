@@ -1144,7 +1144,9 @@ before calling `generate_video` / `animate_image`.
 **Scope:** `credits:read` (cloud edition only)
 
 Returns your current credit balance split by pool (`subscription_credits`
-vs `topup_credits`).
+vs `topup_credits`), plus `tier` and `effectiveTier` — `"payg"` means
+pay-as-you-go: no subscription, but purchased credits (all models
+unlocked, no watermark, no daily cap).
 
 **Input:** none
 

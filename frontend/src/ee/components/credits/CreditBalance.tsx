@@ -44,7 +44,7 @@ export function CreditBalance({ userId, onClick }: CreditBalanceProps) {
         variant="secondary"
         className="text-[10px] px-1.5 py-0 h-4 capitalize"
       >
-        {balance.tier}
+        {balance.effectiveTier}
       </Badge>
     </>
   )

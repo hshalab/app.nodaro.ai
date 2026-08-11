@@ -541,6 +541,13 @@ export type {
 } from "./community.js"
 
 export {
+  resolveStoredTier,
+  resolveEffectiveTier,
+  isPaygRetentionActive,
+  PAYG_RETENTION_DAYS,
+} from "./effective-tier.js"
+
+export {
   NODE_DEFAULT_TYPES,
   validateProviderForNodeType,
   supportedDefaultDimensions,

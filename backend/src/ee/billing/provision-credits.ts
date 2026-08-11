@@ -14,6 +14,7 @@ import {
   TIER_STORAGE_LIMITS,
 } from "./stripe-config.js"
 import { tierColumns } from "./tier-columns.js"
+import { downgradeToEffectiveFloor, raiseStorageFloorOnActivation, reapplyStorageFloorAfterClawback } from "./downgrade-floor.js"
 import { CreditsService } from "./credits.js"
 import { invalidateBalanceCache } from "../routes/credits.js"
 
@@ -428,15 +429,15 @@ export async function handleSubscriptionCanceled(
   const freeCredits = TIER_CREDITS.free ?? 0
   const cappedCredits = Math.min(currentSubCredits, freeCredits)
 
-  const { error: profileError } = await supabase
-    .from("profiles")
-    .update({
-      ...tierColumns("free"),
+  // Effective floor: payg-landing users (net lifetime top-ups > 0) keep the
+  // 10 GB floor; genuinely-free users drop to 1 GB. One shared helper across
+  // all three downgrade writers (design §4.5).
+  const { error: profileError } = (
+    await downgradeToEffectiveFloor(userId, {
       subscription_credits: cappedCredits,
-      storage_limit_bytes: TIER_STORAGE_LIMITS.free,
       subscription_ended_at: now,
     })
-    .eq("id", userId)
+  )
 
   if (profileError) {
     console.error("[stripe] subscription.canceled: profile downgrade failed:", profileError.message)
@@ -585,6 +586,11 @@ export async function handleTransactionCompleted(
 
   invalidateBalanceCache(userId)
 
+  // First-purchase payg activation: lift the storage floor to 10 GB
+  // (GREATEST semantics — never lowers an admin-raised limit; no-op for
+  // subscribers, whose floor is write-managed by the subscription paths).
+  await raiseStorageFloorOnActivation(userId)
+
   console.log(`[stripe] transaction.completed: user=${userId} topup +${totalCredits} credits`)
 }
 
@@ -616,5 +622,82 @@ async function insertTransaction(params: InsertTransactionParams): Promise<void>
 
   if (error) {
     console.error("[stripe] insertTransaction failed:", error.message)
+  }
+}
+
+// ── Top-up Refund / Dispute Clawback (payg NET-lifetime, design §4.1a) ──
+
+interface TopupClawbackRefund {
+  /** Stripe refund id (re_...) or dispute id (dp_...) — the idempotency key. */
+  readonly refundId: string
+  /** Refunded amount in cents for THIS refund/dispute (not cumulative). */
+  readonly amountCents: number
+}
+
+interface TopupClawbackData {
+  /** The payment intent the original top-up claim was keyed by. */
+  readonly paymentIntentId: string | null
+  readonly refunds: readonly TopupClawbackRefund[]
+}
+
+/**
+ * Claw back credits for a refunded/disputed top-up. Per refund/dispute id:
+ * one idempotent `clawback_topup_credits` RPC call (claim row per id, both
+ * pools clamped at zero — a fully-refunded user drops out of payg). Credits
+ * are proportional to the refunded amount, so partial refunds claw partial
+ * grants. Non-topup charges (subscription invoices) no-op here — the
+ * transactions lookup only matches type='topup' claims.
+ *
+ * Admin comps are NOT reachable from this path: comps never write a
+ * transactions claim, so there is nothing to claw and lifetime is untouched.
+ */
+export async function handleTopupClawback(data: TopupClawbackData): Promise<void> {
+  if (!data.paymentIntentId || data.refunds.length === 0) return
+
+  const { data: claim } = await supabase
+    .from("transactions")
+    .select("user_id, credits_granted, amount_usd")
+    .eq("stripe_transaction_id", data.paymentIntentId)
+    .eq("type", "topup")
+    .single()
+
+  if (!claim || !claim.user_id) {
+    // Not a top-up we granted (e.g. a subscription invoice charge) — ignore.
+    return
+  }
+
+  const grantedCredits = (claim.credits_granted as number) ?? 0
+  const amountUsd = Number(claim.amount_usd ?? 0)
+  if (grantedCredits <= 0 || amountUsd <= 0) return
+
+  let clawedAny = false
+  for (const refund of data.refunds) {
+    const refundUsd = refund.amountCents / 100
+    const credits = Math.min(
+      grantedCredits,
+      Math.max(1, Math.round((grantedCredits * refundUsd) / amountUsd))
+    )
+    const { data: clawed, error } = await supabase.rpc("clawback_topup_credits", {
+      p_user_id: claim.user_id,
+      p_refund_id: refund.refundId,
+      p_credits: credits,
+      p_amount_usd: refundUsd,
+    })
+    if (error) {
+      console.error("[stripe] clawback_topup_credits failed:", refund.refundId, error.message)
+      continue
+    }
+    if (clawed === true) {
+      clawedAny = true
+      console.log(
+        `[stripe] clawback: user=${claim.user_id} refund=${refund.refundId} -${credits} credits`
+      )
+    }
+  }
+
+  if (clawedAny) {
+    invalidateBalanceCache(claim.user_id as string)
+    // NET lifetime may have hit zero — collapse the payg storage floor.
+    await reapplyStorageFloorAfterClawback(claim.user_id as string)
   }
 }

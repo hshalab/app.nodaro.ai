@@ -2,6 +2,8 @@ import { supabase } from "../../lib/supabase.js"
 import { config } from "../../lib/config.js"
 import { deleteFromR2, batchDeleteFromR2, listObjectsByPrefixWithMeta } from "../../lib/storage.js"
 import { tierColumns } from "./tier-columns.js"
+import { downgradeToEffectiveFloor, fetchLifetimeTopups } from "./downgrade-floor.js"
+import { isPaygRetentionActive, PAYG_RETENTION_DAYS } from "@nodaro/shared"
 /**
  * R2 prefix under which the video-analysis worker writes its transient
  * intermediates (`<prefix>/<jobId>/{source.mp4,window-<k>.mp4,state.json}`).
@@ -189,7 +191,7 @@ export async function cleanupFreeUserMedia(): Promise<CleanupResult> {
   // Step 1: Get free-tier user IDs
   const { data: freeUsers, error: usersError } = await supabase
     .from("profiles")
-    .select("id")
+    .select("id, lifetime_topup_credits, last_topup_at")
     .or("tier.eq.free,tier.is.null")
     // Exclude users canceled within the last MEDIA_RETENTION_DAYS. handleSubscriptionCanceled
     // downgrades to tier='free' IMMEDIATELY, so without this a just-canceled long-term
@@ -205,7 +207,46 @@ export async function cleanupFreeUserMedia(): Promise<CleanupResult> {
     return { filesDeleted: 0, bytesFreed: 0, errors: usersError ? 1 : 0 }
   }
 
-  const freeUserIds = freeUsers.map((u) => u.id)
+  // payg retention window (design §4.6): a stored-free user with net lifetime
+  // top-ups > 0 whose PURCHASE or SPEND activity falls inside the 90-day
+  // window is exempt from this reaper. Spend comes from usage_logs (never
+  // last_daily_reset — read-only balance polls bump that), batched in ONE
+  // query for the whole payg subset of the page.
+  const now = new Date()
+  const paygCandidates = freeUsers.filter(
+    (u) => ((u.lifetime_topup_credits as number) ?? 0) > 0
+  )
+  let activeSpenderIds = new Set<string>()
+  if (paygCandidates.length > 0) {
+    const spendCutoff = new Date(
+      now.getTime() - PAYG_RETENTION_DAYS * 24 * 60 * 60 * 1000
+    ).toISOString()
+    const { data: recentSpend } = await supabase
+      .from("usage_logs")
+      .select("user_id")
+      .in("user_id", paygCandidates.map((u) => u.id))
+      .gte("created_at", spendCutoff)
+      .limit(10000)
+    activeSpenderIds = new Set((recentSpend ?? []).map((r) => r.user_id as string))
+  }
+
+  const freeUserIds = freeUsers
+    .filter(
+      (u) =>
+        !isPaygRetentionActive(
+          {
+            lifetimeTopupCredits: ((u.lifetime_topup_credits as number) ?? 0),
+            lastTopupAt: (u.last_topup_at as string | null) ?? null,
+            lastSpendAt: activeSpenderIds.has(u.id) ? now : null,
+          },
+          now
+        )
+    )
+    .map((u) => u.id)
+
+  if (freeUserIds.length === 0) {
+    return { filesDeleted: 0, bytesFreed: 0, errors: 0 }
+  }
 
   // --- Phase A1: Clean assets table (batch R2 deletes) ---
   let hasMoreAssets = true
@@ -423,8 +464,27 @@ export async function cleanupCanceledUserMedia(): Promise<CleanupResult> {
       .in("id", [...activeUserIds])
   }
 
+  // payg-landing split: a canceled user with net lifetime top-ups > 0 keeps
+  // their media (the free-media reaper's retention window governs it from
+  // here) and gets the 10 GB floor instead of the full wipe (design §4.5/4.6).
+  const lifetimes = await fetchLifetimeTopups(users.map((u) => u.id))
+
   for (const user of users) {
     if (activeUserIds.has(user.id)) continue // active subscriber — never reap
+
+    if ((lifetimes.get(user.id) ?? 0) > 0) {
+      const { error: floorErr } = await downgradeToEffectiveFloor(user.id, {
+        subscription_credits: FREE_TIER_DEFAULTS.subscription_credits,
+      })
+      if (floorErr) {
+        console.error("[cleanup] payg floor downgrade failed:", user.id, floorErr.message)
+        errors++
+      } else {
+        console.log(`[cleanup] Canceled user ${user.id} landed on payg floor — media kept`)
+      }
+      continue
+    }
+
     let userFilesDeleted = 0
     let userBytesFreed = 0
 
@@ -623,15 +683,26 @@ export async function expireSubscriptions(): Promise<ExpiryResult> {
       .filter(p => p.tier !== "free" && !activeUserIds.has(p.id))
       .map(p => p.id)
     if (toDowngrade.length > 0) {
-      await supabase
-        .from("profiles")
-        .update({
-          ...tierColumns(FREE_TIER_DEFAULTS.tier),
-          subscription_credits: FREE_TIER_DEFAULTS.subscription_credits,
-          storage_limit_bytes: FREE_TIER_DEFAULTS.storage_limit_bytes,
-          subscription_ended_at: now,
-        })
-        .in("id", toDowngrade)
+      // Effective-floor split (design §4.5): payg-landing users (net lifetime
+      // top-ups > 0) keep the 10 GB floor; the rest drop to the free default.
+      const downLifetimes = await fetchLifetimeTopups(toDowngrade)
+      const paygIds = toDowngrade.filter(id => (downLifetimes.get(id) ?? 0) > 0)
+      const freeIds = toDowngrade.filter(id => (downLifetimes.get(id) ?? 0) === 0)
+      for (const [ids, floor] of [
+        [paygIds, TIER_STORAGE_LIMITS.payg],
+        [freeIds, FREE_TIER_DEFAULTS.storage_limit_bytes],
+      ] as const) {
+        if (ids.length === 0) continue
+        await supabase
+          .from("profiles")
+          .update({
+            ...tierColumns(FREE_TIER_DEFAULTS.tier),
+            subscription_credits: FREE_TIER_DEFAULTS.subscription_credits,
+            storage_limit_bytes: floor,
+            subscription_ended_at: now,
+          })
+          .in("id", ids)
+      }
 
       usersDowngraded = toDowngrade.length
     }

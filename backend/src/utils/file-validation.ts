@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabase.js"
+import { resolveEffectiveTier } from "@nodaro/shared"
 import { hasCredits } from "../lib/config.js"
 import { TIER_STORAGE_LIMITS } from "../ee/billing/stripe-config.js"
 
@@ -191,7 +192,7 @@ export async function checkStorageQuota(
   // Get user profile for tier, current storage usage, and admin-overridable limit
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("storage_used_bytes, storage_limit_bytes, tier")
+    .select("storage_used_bytes, storage_limit_bytes, tier, subscription_tier, lifetime_topup_credits")
     .eq("id", userId)
     .single()
 
@@ -202,7 +203,12 @@ export async function checkStorageQuota(
     }
   }
 
-  const tier = (profile.tier as string) ?? "free"
+  // Effective tier: payg users get the 10 GB basic-equivalent quota fallback.
+  const tier = resolveEffectiveTier({
+    tier: (profile.tier as string | null) ?? null,
+    subscription_tier: (profile.subscription_tier as string | null) ?? null,
+    lifetime_topup_credits: (profile.lifetime_topup_credits as number) ?? 0,
+  })
   const usedBytes = profile.storage_used_bytes ?? 0
   const dbLimit = profile.storage_limit_bytes ?? 0
   const tierLimit = TIER_STORAGE_LIMITS[tier] ?? TIER_STORAGE_LIMITS.free
