@@ -264,9 +264,9 @@ const STRIPE_FIXTURES: Record<string, unknown> = {
         id: "ch_test_refunded",
         payment_intent: "pi_test_abc",
         amount_refunded: 1000,
-        refunds: {
-          data: [{ id: "re_test_1", amount: 1000 }],
-        },
+        // Modern API versions omit the embedded refunds list — the handler
+        // falls back to stripe.refunds.list(). Pinned by the case's text.
+        refunds: null,
       },
     },
   },

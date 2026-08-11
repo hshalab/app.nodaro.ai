@@ -118,6 +118,9 @@ describe("webhook wiring text pins", () => {
       "utf8"
     )
     expect(src).toContain('case "charge.refunded"')
+    // The modern-API fallback: empty embedded list + amount_refunded > 0
+    // must fetch the real refunds (first live refund regression).
+    expect(src).toContain("refunds.list({ charge: charge.id")
     expect(src).toContain('case "charge.dispute.funds_withdrawn"')
     expect(src.match(/handleTopupClawback\(/g)?.length).toBeGreaterThanOrEqual(2)
   })
