@@ -3,7 +3,7 @@ export interface Profile {
   readonly email: string
   readonly full_name: string | null
   readonly avatar_url: string | null
-  readonly tier: 'free' | 'basic' | 'pro' | 'business' | 'enterprise'
+  readonly tier: 'free' | 'payg' | 'basic' | 'standard' | 'pro' | 'business' | 'enterprise'
   readonly credits_balance: number
   readonly storage_used_bytes: number
   readonly created_at: string

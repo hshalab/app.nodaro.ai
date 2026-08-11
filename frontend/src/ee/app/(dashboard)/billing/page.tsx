@@ -153,7 +153,7 @@ export default function BillingPage() {
     )
   }
 
-  const currentTier = PRICING_TIERS.find((t) => t.id === (balance?.tier ?? "free"))
+  const currentTier = PRICING_TIERS.find((t) => t.id === (balance?.effectiveTier ?? "free"))
   const subBillingCycle = getBillingCycleFromPriceId(subscription?.stripe_price_id)
   const displayPrice = currentTier
     ? subBillingCycle === "monthly" ? currentTier.priceMonthly : currentTier.priceAnnual
@@ -246,7 +246,7 @@ export default function BillingPage() {
             <div>
               <p className="text-sm text-muted-foreground">Credits / month</p>
               <p className="text-lg font-semibold">
-                {(balance?.tier ?? "free") === "free" ? (
+                {(balance?.effectiveTier ?? "free") === "free" ? (
                   <span className="text-muted-foreground text-sm">one-time grant</span>
                 ) : (
                   currentTier?.credits ?? 0
@@ -308,7 +308,7 @@ export default function BillingPage() {
               <p className="text-2xl font-bold font-mono">{balance.total}</p>
               {balance.topup > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  {balance.subscription} {balance.tier === "free" ? "one-time" : "sub"} + {balance.topup} top-up
+                  {balance.subscription} {balance.effectiveTier === "free" ? "one-time" : "sub"} + {balance.topup} top-up
                 </p>
               )}
             </div>
@@ -318,7 +318,7 @@ export default function BillingPage() {
                 {(currentTier?.credits ?? FREE_TIER_CREDITS) - balance.subscription}
               </p>
               <p className="text-xs text-muted-foreground">
-                of {currentTier?.credits ?? FREE_TIER_CREDITS} {balance.tier === "free" ? "one-time" : "/ month"}
+                of {currentTier?.credits ?? FREE_TIER_CREDITS} {balance.effectiveTier === "free" ? "one-time" : "/ month"}
               </p>
             </div>
             <div>

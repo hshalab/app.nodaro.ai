@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react"
+import { resolveEffectiveTier } from "@nodaro/shared"
 import { useNavigate } from "react-router-dom"
 import type { User } from "@supabase/supabase-js"
 import { createClient } from "@/lib/supabase"
@@ -45,11 +46,17 @@ async function loadRoleAndTier(user: User | null): Promise<void> {
   const supabase = createClient()
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, tier")
+    .select("role, tier, subscription_tier, lifetime_topup_credits")
     .eq("id", user.id)
     .single()
   cachedRole = (profile?.role as UserRole) ?? "user"
-  cachedTier = (profile?.tier as string) ?? "free"
+  cachedTier = profile
+    ? resolveEffectiveTier({
+        tier: (profile.tier as string | null) ?? null,
+        subscription_tier: (profile.subscription_tier as string | null) ?? null,
+        lifetime_topup_credits: (profile.lifetime_topup_credits as number) ?? 0,
+      })
+    : "free"
 }
 
 function initAuth() {

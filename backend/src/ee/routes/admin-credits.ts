@@ -9,6 +9,7 @@ import { invalidateAuthCache } from "../../middleware/auth.js"
 import { invalidateAdminCache } from "../../lib/admin-check.js"
 import { TIER_CREDITS } from "../billing/stripe-config.js"
 import { tierColumns, resolveTierFrom } from "../billing/tier-columns.js"
+import { resolveEffectiveTier } from "@nodaro/shared"
 
 // ---- Zod Schemas ----
 
@@ -32,7 +33,7 @@ export async function adminCreditsRoutes(app: FastifyInstance) {
       // `tier` as well as `subscription_tier`: the Stripe paths historically
       // wrote only `tier`, so a paying customer could show here as "free".
       // resolveTierFrom() picks the same column credit enforcement does.
-      .select("id, display_name, avatar_url, tier, subscription_tier, subscription_credits, topup_credits, daily_spent_credits, storage_used_bytes, storage_limit_bytes, created_at", { count: "exact" })
+      .select("id, display_name, avatar_url, tier, subscription_tier, lifetime_topup_credits, subscription_credits, topup_credits, daily_spent_credits, storage_used_bytes, storage_limit_bytes, created_at", { count: "exact" })
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1)
 
@@ -53,6 +54,13 @@ export async function adminCreditsRoutes(app: FastifyInstance) {
       // Report the tier that is actually enforced, not the raw column — see
       // tier-columns.ts for why the two can disagree.
       subscription_tier: resolveTierFrom(u),
+      // Derived entitlement tier ("payg" when stored-free with net lifetime
+      // top-ups). Read-only display — the admin tier enum never gains payg.
+      effective_tier: resolveEffectiveTier({
+        tier: u.tier ?? null,
+        subscription_tier: u.subscription_tier ?? null,
+        lifetime_topup_credits: (u.lifetime_topup_credits as number) ?? 0,
+      }),
       total_credits: (u.subscription_credits ?? 0) + (u.topup_credits ?? 0),
     }))
 

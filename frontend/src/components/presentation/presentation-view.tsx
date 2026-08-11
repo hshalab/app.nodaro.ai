@@ -2002,7 +2002,7 @@ export function PresentationView({ mode, isOwner, onExitFullscreen, onRun, onCan
         <GetCreditsModal
           open={showGetCreditsModal}
           onClose={() => setShowGetCreditsModal(false)}
-          tier={userCredits.tier}
+          tier={userCredits.effectiveTier}
           balance={userCredits.total}
           required={estimatedCost}
         />

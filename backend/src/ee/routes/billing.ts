@@ -9,6 +9,7 @@
  */
 
 import type { FastifyInstance } from "fastify"
+import { resolveEffectiveTier, resolveStoredTier } from "@nodaro/shared"
 import { z } from "zod"
 import { supabase } from "../../lib/supabase.js"
 import { getStripe } from "../billing/stripe-client.js"
@@ -54,6 +55,22 @@ export async function billingRoutes(app: FastifyInstance) {
       return reply.status(401).send({ error: "Authentication required" })
     }
 
+    // effectiveTier needs a profiles lookup — this route historically read
+    // only `subscriptions` and returned {data: null} for non-subscribers,
+    // which left payg users indistinguishable from free here.
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("tier, subscription_tier, lifetime_topup_credits")
+      .eq("id", userId)
+      .single()
+    const effectiveTier = profile
+      ? resolveEffectiveTier({
+          tier: (profile.tier as string | null) ?? null,
+          subscription_tier: (profile.subscription_tier as string | null) ?? null,
+          lifetime_topup_credits: (profile.lifetime_topup_credits as number) ?? 0,
+        })
+      : "free"
+
     const { data, error } = await supabase
       .from("subscriptions")
       .select(
@@ -65,10 +82,10 @@ export async function billingRoutes(app: FastifyInstance) {
       .single()
 
     if (error || !data) {
-      return reply.status(200).send({ data: null })
+      return reply.status(200).send({ data: null, effectiveTier })
     }
 
-    return reply.send({ data })
+    return reply.send({ data, effectiveTier })
   })
 
   // Get transaction history for a user

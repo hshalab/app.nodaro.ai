@@ -1,4 +1,5 @@
 import { Worker, type ConnectionOptions } from "bullmq"
+import { resolveEffectiveTier } from "@nodaro/shared"
 import IORedis from "ioredis"
 import { config } from "../lib/config.js"
 import { supabase } from "../lib/supabase.js"
@@ -734,7 +735,7 @@ export function createRenderWorker() {
       // Fetch job + user profile
       const { data: jobRecord } = await supabase
         .from("jobs")
-        .select("usage_log_id, user_id, force_private, mcp_client, workflow_execution_id, should_watermark, profiles!user_id(tier, public_outputs)")
+        .select("usage_log_id, user_id, force_private, mcp_client, workflow_execution_id, should_watermark, profiles!user_id(tier, subscription_tier, lifetime_topup_credits, public_outputs)")
         .eq("id", jobId)
         .single()
 
@@ -742,7 +743,14 @@ export function createRenderWorker() {
       const effectiveUsageLogId = usageLogId ?? jobRecord?.usage_log_id as string | undefined
 
       const profileData = (jobRecord as Record<string, unknown>)?.profiles as Record<string, unknown> | null
-      const userTier = (profileData?.tier as string) ?? "free"
+      // Effective tier — the legacy watermark fallback must not stamp payg output.
+      const userTier = profileData
+        ? resolveEffectiveTier({
+            tier: (profileData.tier as string | null) ?? null,
+            subscription_tier: (profileData.subscription_tier as string | null) ?? null,
+            lifetime_topup_credits: (profileData.lifetime_topup_credits as number) ?? 0,
+          })
+        : "free"
       // Prefer the should_watermark flag set by credit-guard at reservation time
       // (backend/CLAUDE.md: "Watermark decision stored on jobs.should_watermark"). Fall
       // back to tier check only if the flag is missing on the job row (legacy rows).

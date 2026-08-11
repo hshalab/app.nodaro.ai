@@ -5,7 +5,6 @@ import {
   TOP_UPS,
   TIER_CREDITS,
   TIER_PARALLELISM,
-  TIER_LLM_LIMITS,
   TIER_STORAGE_LIMITS,
   RETENTION_DAYS,
   FREE_TIER_RESTRICTIONS,
@@ -87,11 +86,8 @@ describe("stripe-config", () => {
     })
   })
 
-  describe("TIER_LLM_LIMITS", () => {
-    it("business tier is Infinity", () => {
-      expect(TIER_LLM_LIMITS.business).toBe(Infinity)
-    })
-  })
+  // TIER_LLM_LIMITS was deleted with the payg map split — it was a dead
+  // constant (zero production imports; display copy lives in pricing-data.ts).
 
   describe("TIER_STORAGE_LIMITS", () => {
     it("values are ascending, enterprise > business", () => {

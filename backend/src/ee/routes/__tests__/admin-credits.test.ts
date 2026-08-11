@@ -404,6 +404,7 @@ describe("GET /v1/admin/users/:id/balance", () => {
       dailyLimit: null,
       monthlyAllocation: 530,
       tier: "pro",
+      effectiveTier: "pro",
       features: {},
       periodEnd: null,
       appCreditsAllowance: 0,

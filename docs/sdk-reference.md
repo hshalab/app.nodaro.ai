@@ -100,7 +100,8 @@ Returns `UserIdentity`:
 | `email` | `string` | The user's email. |
 | `displayName` | `string \| null` | Human-readable display name (from `profiles.full_name`); `null` if unset. |
 | `avatarUrl` | `string \| null` | Avatar URL; `null` if unset. |
-| `tier` | `string` | Subscription tier (e.g. `"free"`, `"pro"`). |
+| `tier` | `string` | Stored subscription tier (e.g. `"free"`, `"pro"`). Display should prefer `effectiveTier`. |
+| `effectiveTier` | `string` | Entitlement tier actually enforced. `"payg"` = pay-as-you-go: no subscription, but purchased credits — all models unlocked, no watermark, no daily cap. |
 | `isAdmin` | `boolean` | Whether the user holds an admin role. **Descriptive only** — use it to decide whether to render admin UI instead of capability-probing an admin endpoint; every admin API stays enforced server-side regardless. |
 
 ---

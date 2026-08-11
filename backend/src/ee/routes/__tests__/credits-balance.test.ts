@@ -141,7 +141,7 @@ describe("GET /v1/credits/balance", () => {
     const res = await authedGet("/v1/credits/balance")
     expect(res.statusCode).toBe(200)
     const body = res.json()
-    expect(body).toEqual({ total: 0, subscription: 0, topup: 0, tier: "free" })
+    expect(body).toEqual({ total: 0, subscription: 0, topup: 0, tier: "free", effectiveTier: "free" })
   })
 })
 

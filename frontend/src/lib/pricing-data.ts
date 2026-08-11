@@ -46,6 +46,30 @@ export const PRICING_TIERS: readonly PricingTier[] = [
     cta: "Start Free",
   },
   {
+    // Synthetic DISPLAY entry for the derived pay-as-you-go tier. Not a
+    // purchasable plan (price ids null) — it exists so tier lookups
+    // (sidebar badge, upgrade modals) render paying non-subscribers
+    // correctly instead of falling back to the free entry's numbers.
+    id: "payg",
+    name: "Pay as you go",
+    priceMonthly: 0,
+    priceAnnual: 0,
+    priceIdMonthly: null,
+    priceIdAnnual: null,
+    credits: 0,
+    llmRequests: 100,
+    storage: "10 GB",
+    features: [
+      "No subscription — buy credit packs",
+      "Credits never expire",
+      "All models unlocked",
+      "No watermark",
+      "No daily cap",
+      "10 GB storage",
+    ],
+    cta: "Buy credits",
+  },
+  {
     id: "basic",
     name: "Basic",
     priceMonthly: 12,

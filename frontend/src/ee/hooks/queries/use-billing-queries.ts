@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { resolveEffectiveTier } from "@nodaro/shared"
 import {
   getSubscription,
   getTransactions,
@@ -35,11 +36,17 @@ export function useStorageProfile(userId: string | undefined) {
       const supabase = createClient()
       const { data } = await supabase
         .from("profiles")
-        .select("storage_used_bytes, storage_limit_bytes, tier")
+        .select("storage_used_bytes, storage_limit_bytes, tier, subscription_tier, lifetime_topup_credits")
         .eq("id", userId!)
         .single()
 
-      const tier = (data?.tier as string) ?? "free"
+      const tier = data
+        ? resolveEffectiveTier({
+            tier: (data.tier as string | null) ?? null,
+            subscription_tier: (data.subscription_tier as string | null) ?? null,
+            lifetime_topup_credits: (data.lifetime_topup_credits as number) ?? 0,
+          })
+        : "free"
       const dbLimit = (data?.storage_limit_bytes as number) ?? 0
       const tierLimit = TIER_STORAGE_BYTES[tier] ?? TIER_STORAGE_BYTES.free
 

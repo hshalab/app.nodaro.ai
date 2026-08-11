@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify"
+import { resolveEffectiveTier } from "@nodaro/shared"
 import { z } from "zod"
 import { supabase } from "../lib/supabase.js"
 import { insertJob } from "../lib/insert-job.js"
@@ -66,10 +67,16 @@ export async function videoDirectorRoutes(app: FastifyInstance) {
     // row is missing — never block the run on a tier lookup.
     const { data: profile } = await supabase
       .from("profiles")
-      .select("tier")
+      .select("tier, subscription_tier, lifetime_topup_credits")
       .eq("id", userId)
       .single()
-    const tier = (profile?.tier as string | undefined) ?? "free"
+    const tier = profile
+      ? resolveEffectiveTier({
+          tier: (profile.tier as string | null) ?? null,
+          subscription_tier: (profile.subscription_tier as string | null) ?? null,
+          lifetime_topup_credits: (profile.lifetime_topup_credits as number) ?? 0,
+        })
+      : "free"
 
     const mcpClient = extractMcpClient(req.body)
 

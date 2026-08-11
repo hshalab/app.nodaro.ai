@@ -37,7 +37,7 @@ import type {
   OrchestratorContext,
 } from "../services/workflow-engine/types.js"
 import { WORKFLOW_TIMEOUT_MS } from "../services/workflow-engine/types.js"
-import { filterCloneNodes, PARAMETER_NODE_TYPES, migrateEdgeOutputMode, REPEAT_PLACEHOLDER, getEffectiveRepeatCount, REPEATABLE_NODE_TYPES, expandItemsWithRepeat, decodeProviderItem, calculateMonetizationMarkup } from "@nodaro/shared"
+import { filterCloneNodes, PARAMETER_NODE_TYPES, migrateEdgeOutputMode, REPEAT_PLACEHOLDER, getEffectiveRepeatCount, REPEATABLE_NODE_TYPES, expandItemsWithRepeat, decodeProviderItem, calculateMonetizationMarkup, resolveEffectiveTier } from "@nodaro/shared"
 import { getParameterPromptHint } from "@nodaro/prompts"
 import { applyInputOverridesToNodes } from "./apply-input-overrides.js"
 import { buildStatsKey, upsertExecutionStats } from "../services/execution-stats.js"
@@ -409,11 +409,20 @@ export async function processWorkflowExecution(job: Job<WorkflowExecutionJob>): 
     // Load user-level prompt templates and tier from profiles
     const { data: userProfile } = await supabase
       .from("profiles")
-      .select("prompt_templates, tier")
+      .select("prompt_templates, tier, subscription_tier, lifetime_topup_credits")
       .eq("id", userId)
       .single()
 
-    const concurrencyLimit = getParallelismLimit(userProfile?.tier)
+    // Effective tier — payg users run at basic-equivalent parallelism (4).
+    const concurrencyLimit = getParallelismLimit(
+      userProfile
+        ? resolveEffectiveTier({
+            tier: (userProfile.tier as string | null) ?? null,
+            subscription_tier: (userProfile.subscription_tier as string | null) ?? null,
+            lifetime_topup_credits: (userProfile.lifetime_topup_credits as number) ?? 0,
+          })
+        : undefined
+    )
 
     ctx.workflowSettings = {
       ...((workflowData.settings as Record<string, unknown>) ?? {}),

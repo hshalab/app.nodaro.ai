@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
-import { type PipelineInput, validateDurationForFormat, validateModeActivation } from "@nodaro/shared"
+import { type PipelineInput, validateDurationForFormat, validateModeActivation, resolveEffectiveTier } from "@nodaro/shared"
 
 /**
  * Phase 2 — shared "create + reserve + enqueue a pipeline" service.
@@ -82,7 +82,7 @@ export async function createPipeline(
   const { data: profileRow } = await supabase
     .from("profiles")
     .select(
-      "tier, subscription_tier, subscription_credits, topup_credits, " +
+      "tier, subscription_tier, lifetime_topup_credits, subscription_credits, topup_credits, " +
         "daily_spent_credits, last_daily_reset, app_credits_allowance",
     )
     .eq("id", userId)
@@ -91,6 +91,7 @@ export async function createPipeline(
       data: r.data as {
         tier?: string | null
         subscription_tier?: string | null
+        lifetime_topup_credits: number
         subscription_credits?: number | null
         topup_credits?: number | null
         daily_spent_credits?: number | null
@@ -98,7 +99,14 @@ export async function createPipeline(
         app_credits_allowance?: number | null
       } | null,
     }))
-  const userTier = profileRow?.tier ?? "free"
+  // Effective tier: payg users get basic-equivalent pipeline entitlements.
+  const userTier = profileRow
+    ? resolveEffectiveTier({
+        tier: profileRow.tier ?? null,
+        subscription_tier: profileRow.subscription_tier ?? null,
+        lifetime_topup_credits: profileRow.lifetime_topup_credits,
+      })
+    : "free"
 
   const config = input.config ?? {}
 
@@ -118,7 +126,7 @@ export async function createPipeline(
   )
   if (pinnedModels.length > 0) {
     const { CreditsService } = await import("../billing/credits.js")
-    const profile = (profileRow ?? { tier: userTier }) as Parameters<
+    const profile = (profileRow ?? { tier: userTier, subscription_tier: null, lifetime_topup_credits: 0 }) as Parameters<
       typeof CreditsService.checkCreditsWithProfile
     >[1]
     for (const modelId of pinnedModels) {

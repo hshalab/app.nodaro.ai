@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify"
+import { resolveEffectiveTier, resolveStoredTier } from "@nodaro/shared"
 import { z } from "zod"
 import { hasCredits } from "../../lib/config.js"
 import { supabase } from "../../lib/supabase.js"
@@ -33,7 +34,7 @@ export async function registerCreditsBalanceRoutes(app: FastifyInstance): Promis
     }
     const { data, error } = await supabase
       .from("profiles")
-      .select("subscription_credits, topup_credits, tier")
+      .select("subscription_credits, topup_credits, tier, subscription_tier, lifetime_topup_credits")
       .eq("id", req.userId)
       .maybeSingle()
     if (error) {
@@ -54,7 +55,18 @@ export async function registerCreditsBalanceRoutes(app: FastifyInstance): Promis
       total: subscription + topup,
       subscription,
       topup,
-      tier: data.tier ?? "free",
+      // Stored tier kept for back-compat; display should use effectiveTier
+      // (must agree with getBalance's fields or the two balance surfaces
+      // disagree in the UI).
+      tier: resolveStoredTier({
+        tier: data.tier ?? null,
+        subscription_tier: data.subscription_tier ?? null,
+      }),
+      effectiveTier: resolveEffectiveTier({
+        tier: data.tier ?? null,
+        subscription_tier: data.subscription_tier ?? null,
+        lifetime_topup_credits: (data.lifetime_topup_credits as number) ?? 0,
+      }),
     })
   })
 

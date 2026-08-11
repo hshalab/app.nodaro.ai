@@ -285,7 +285,7 @@ export function AppSidebar({
                   className="bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white border-zinc-200 dark:border-zinc-700"
                 >
                   <p>{creditBalance.total} credits left</p>
-                  {creditBalance.tier === "free" ? (
+                  {creditBalance.effectiveTier === "free" ? (
                     creditBalance.dailyLimit != null && (
                       <p className="text-zinc-500 dark:text-zinc-400">Daily limit &middot; {Math.max(0, creditBalance.dailyLimit - creditBalance.dailySpent)} credits left</p>
                     )
@@ -304,9 +304,9 @@ export function AppSidebar({
             >
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                  {creditBalance.tier === "free" ? "Free Plan" : `${creditBalance.tier.charAt(0).toUpperCase() + creditBalance.tier.slice(1)} Plan`}
+                  {creditBalance.effectiveTier === "free" ? "Free Plan" : `${PRICING_TIERS.find((t) => t.id === creditBalance.effectiveTier)?.name ?? (creditBalance.effectiveTier.charAt(0).toUpperCase() + creditBalance.effectiveTier.slice(1))} Plan`}
                 </span>
-                {(creditBalance.tier === "free" || creditBalance.total <= (PRICING_TIERS.find((t) => t.id === creditBalance.tier)?.credits ?? FREE_TIER_CREDITS) * 0.1) && (
+                {(creditBalance.effectiveTier === "free" || creditBalance.total <= (PRICING_TIERS.find((t) => t.id === creditBalance.effectiveTier)?.credits ?? FREE_TIER_CREDITS) * 0.1) && (
                   <Link
                     to="/pricing"
                     onClick={(e) => e.stopPropagation()}
@@ -325,7 +325,7 @@ export function AppSidebar({
               </div>
 
               {(() => {
-                const tierAllocation = PRICING_TIERS.find((t) => t.id === creditBalance.tier)?.credits ?? FREE_TIER_CREDITS
+                const tierAllocation = PRICING_TIERS.find((t) => t.id === creditBalance.effectiveTier)?.credits ?? FREE_TIER_CREDITS
                 const remainPercent = Math.min(100, Math.max(0, Math.round((creditBalance.total / tierAllocation) * 100)))
                 return (
                   <div className="mb-3">
@@ -340,7 +340,7 @@ export function AppSidebar({
               })()}
 
               <div className="space-y-0.5">
-                {creditBalance.tier === "free" ? (
+                {creditBalance.effectiveTier === "free" ? (
                   creditBalance.dailyLimit != null && (
                     <p className="text-[11px] text-zinc-500 dark:text-zinc-500">
                       <span className="font-mono text-zinc-600 dark:text-zinc-400">{Math.max(0, creditBalance.dailyLimit - creditBalance.dailySpent)}</span> daily credits left

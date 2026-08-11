@@ -13,7 +13,10 @@ export interface UserBalance {
   dailySpent: number
   dailyLimit: number | null
   monthlyAllocation: number
+  /** Stored billing tier. Display should prefer `effectiveTier`. */
   tier: string
+  /** Derived entitlement tier: "payg" when stored-free with purchased credits. */
+  effectiveTier: string
   features: Record<string, unknown>
   periodEnd: string | null
   /** Credits earned for app usage (free tier only — earned by running flows). */

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
-import { PIPELINE_STAGE_NAMES, type JsonPatch, type PipelineStageName } from "@nodaro/shared"
+import { PIPELINE_STAGE_NAMES, type JsonPatch, type PipelineStageName, resolveEffectiveTier } from "@nodaro/shared"
 import { runScriptStage } from "./stages/script.js"
 import { pipelineEvents } from "./events.js"
 import { incrementCriticRetry, failPipelineWithCriticReason } from "./stage-utils.js"
@@ -478,8 +478,18 @@ export async function rejectScriptStage(
 }
 
 async function resolveUserTier(supabase: SupabaseClient, userId: string): Promise<string> {
-  const { data } = await supabase.from("profiles").select("tier").eq("id", userId).single()
-  return data?.tier ?? "free"
+  const { data } = await supabase
+    .from("profiles")
+    .select("tier, subscription_tier, lifetime_topup_credits")
+    .eq("id", userId)
+    .single()
+  if (!data) return "free"
+  // Effective tier — payg stages get basic-equivalent budgets/parallelism.
+  return resolveEffectiveTier({
+    tier: data.tier ?? null,
+    subscription_tier: data.subscription_tier ?? null,
+    lifetime_topup_credits: (data.lifetime_topup_credits as number) ?? 0,
+  })
 }
 
 async function resolveUserId(supabase: SupabaseClient, pipelineId: string): Promise<string> {

@@ -146,7 +146,7 @@ export function registerModels({ server, session }: RegisterModelsOpts): void {
     {
       title: "Check Credit Balance",
       description:
-        "Return the user's current credit balance, daily-spend cap, monthly allocation, tier, and period end. Cloud edition only.",
+        "Return the user's current credit balance, daily-spend cap, monthly allocation, tier, effectiveTier (\"payg\" = pay-as-you-go: no subscription but purchased credits — full model access, no watermark), and period end. Cloud edition only.",
       inputSchema: {},
       annotations: { readOnlyHint: true },
     },

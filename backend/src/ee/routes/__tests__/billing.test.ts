@@ -197,7 +197,7 @@ describe("GET /v1/billing/subscription", () => {
     })
 
     expect(res.statusCode).toBe(200)
-    expect(res.json()).toEqual({ data: null })
+    expect(res.json()).toEqual({ data: null, effectiveTier: "free" })
   })
 
   it("returns subscription data when found", async () => {
@@ -223,7 +223,10 @@ describe("GET /v1/billing/subscription", () => {
     })
 
     expect(res.statusCode).toBe(200)
-    expect(res.json()).toEqual({ data: subscription })
+    // The route now also reports the derived entitlement tier — the shared
+    // table mock feeds the profiles lookup the same pro row, and a stored
+    // paid tier passes through the derivation untouched.
+    expect(res.json()).toEqual({ data: subscription, effectiveTier: "pro" })
   })
 })
 

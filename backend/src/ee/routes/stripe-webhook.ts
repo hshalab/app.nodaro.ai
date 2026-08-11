@@ -16,6 +16,7 @@ import {
   handleSubscriptionUpdated,
   handleSubscriptionCanceled,
   handleTransactionCompleted,
+  handleTopupClawback,
   handleInvoicePaid,
   resolveUserId,
 } from "../billing/provision-credits.js"
@@ -156,6 +157,34 @@ export async function stripeWebhookRoutes(app: FastifyInstance) {
             stripeCustomerId: sub.customer as string,
             currentPeriodEnd: periodEnd,
             metadata: sub.metadata ?? null,
+          })
+          break
+        }
+
+        case "charge.refunded": {
+          // Top-up refund clawback (payg NET lifetime, design §4.1a). The
+          // grant claim is keyed by payment_intent, so the join is direct.
+          // Each refund in the charge is claimed individually by its own id —
+          // redeliveries and multiple partial refunds all converge to
+          // exactly-once per refund.
+          const charge = event.data.object as Stripe.Charge
+          const refunds = (charge.refunds?.data ?? [])
+            .filter((r) => typeof r.id === "string" && (r.amount ?? 0) > 0)
+            .map((r) => ({ refundId: r.id, amountCents: r.amount }))
+          await handleTopupClawback({
+            paymentIntentId: (charge.payment_intent as string) ?? null,
+            refunds,
+          })
+          break
+        }
+
+        case "charge.dispute.funds_withdrawn": {
+          // Chargeback: funds left our account — claw the credits back now.
+          // Idempotent per dispute id (same claim mechanism as refunds).
+          const dispute = event.data.object as Stripe.Dispute
+          await handleTopupClawback({
+            paymentIntentId: (dispute.payment_intent as string) ?? null,
+            refunds: [{ refundId: dispute.id, amountCents: dispute.amount ?? 0 }],
           })
           break
         }

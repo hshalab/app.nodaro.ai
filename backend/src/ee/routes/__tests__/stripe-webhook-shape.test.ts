@@ -48,6 +48,8 @@ const STRIPE_HANDLED_EVENTS: readonly string[] = [
   "customer.subscription.deleted",
   "invoice.paid",
   "invoice.payment_failed",
+  "charge.refunded",
+  "charge.dispute.funds_withdrawn",
 ] as const
 
 /**
@@ -60,6 +62,45 @@ const STRIPE_HANDLED_EVENTS: readonly string[] = [
  * matching schema below to match.
  */
 const STRIPE_EVENT_SHAPES: Record<string, z.ZodType> = {
+  // case "charge.refunded":
+  //   reads: charge.payment_intent, charge.refunds.data[].id/.amount
+  "charge.refunded": z
+    .object({
+      data: z.object({
+        object: z
+          .object({
+            payment_intent: z.string().nullable().optional(),
+            refunds: z
+              .object({
+                data: z.array(
+                  z.object({ id: z.string(), amount: z.number() }).passthrough(),
+                ),
+              })
+              .passthrough()
+              .nullable()
+              .optional(),
+          })
+          .passthrough(),
+      }),
+    })
+    .passthrough(),
+
+  // case "charge.dispute.funds_withdrawn":
+  //   reads: dispute.payment_intent, dispute.id, dispute.amount
+  "charge.dispute.funds_withdrawn": z
+    .object({
+      data: z.object({
+        object: z
+          .object({
+            id: z.string(),
+            payment_intent: z.string().nullable().optional(),
+            amount: z.number().optional(),
+          })
+          .passthrough(),
+      }),
+    })
+    .passthrough(),
+
   // case "checkout.session.completed":
   //   reads: session.mode, session.payment_intent, session.id,
   //          session.customer, session.amount_total, session.metadata
@@ -216,6 +257,29 @@ const STRIPE_EVENT_SHAPES: Record<string, z.ZodType> = {
  * surface fast.
  */
 const STRIPE_FIXTURES: Record<string, unknown> = {
+  "charge.refunded": {
+    type: "charge.refunded",
+    data: {
+      object: {
+        id: "ch_test_refunded",
+        payment_intent: "pi_test_abc",
+        amount_refunded: 1000,
+        refunds: {
+          data: [{ id: "re_test_1", amount: 1000 }],
+        },
+      },
+    },
+  },
+  "charge.dispute.funds_withdrawn": {
+    type: "charge.dispute.funds_withdrawn",
+    data: {
+      object: {
+        id: "dp_test_1",
+        payment_intent: "pi_test_abc",
+        amount: 1000,
+      },
+    },
+  },
   "checkout.session.completed": {
     type: "checkout.session.completed",
     data: {
