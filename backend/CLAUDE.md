@@ -219,9 +219,9 @@ backend/src/providers/
 | text-to-speech | No* | No | *All models (v3/turbo/multilingual) route through the direct ElevenLabs API — never KIE. KIE's TTS proxy remains registered in the provider registry (unused in production) only for historical actual-cost audit reconciliation. |
 
 ### Routing Logic
-- `ai_provider = "replicate"` -> [replicate] chain
-- `ai_provider = "kie"` + shared capability -> [kie, replicate] chain
-- `ai_provider = "kie"` + KIE-only capability -> [kie] chain
+- KIE.ai is the sole primary provider; the legacy `ai_provider` app-setting no longer affects routing (fresh installs seed `"replicate"`, and the old non-`"kie"` branch returned an empty chain that broke registry-routed nodes on self-host — see `providers/config.ts` + migration 307)
+- image-generation -> [kie, replicate] chain (Replicate serves only the "Open" models that live exclusively there)
+- Every other capability -> [kie] chain
 
 ### KIE.ai Models
 

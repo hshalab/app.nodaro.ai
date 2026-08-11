@@ -40,23 +40,29 @@ describe("buildRoutingDecision", () => {
     mockSettings.cost_markup_percent = 50
   })
 
-  it("non-kie mode returns empty chain (replicate disabled)", async () => {
+  // Regression: migration 005 seeds ai_provider='"replicate"' on every fresh
+  // database, and nothing ever rewrites it (community has no admin routes; the
+  // admin PUT only accepts "kie"). The old branch returned an EMPTY chain for
+  // any non-"kie" value, so every registry-routed node threw
+  // "No provider available" on a fresh self-host install even with a valid
+  // KIE_API_KEY. Routing must not depend on the legacy setting.
+  it("legacy ai_provider='replicate' routes identically to kie mode (fresh-install seed)", async () => {
     mockSettings.ai_provider = "replicate"
 
     const result = await buildRoutingDecision("image-generation", "flux")
 
-    expect(result.providerChain).toEqual([])
-    expect(result.markupPercent).toBe(0)
+    expect(result.providerChain).toEqual(["kie", "replicate"])
+    expect(result.markupPercent).toBe(50)
     expect(result.activeProvider).toBe("kie")
   })
 
-  it("non-kie mode returns empty chain for KIE-only capability", async () => {
+  it("legacy ai_provider='replicate' still routes KIE-only capabilities", async () => {
     mockSettings.ai_provider = "replicate"
 
     const result = await buildRoutingDecision("video-to-video", "wan-2.6")
 
-    expect(result.providerChain).toEqual([])
-    expect(result.markupPercent).toBe(0)
+    expect(result.providerChain).toEqual(["kie"])
+    expect(result.markupPercent).toBe(50)
     expect(result.activeProvider).toBe("kie")
   })
 
