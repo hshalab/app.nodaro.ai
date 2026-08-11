@@ -48,22 +48,62 @@ an API endpoint, a webhook target, and an MCP tool — all at the same time.
   identity-consistent reference sets that carry across every generation.
 - **Programmatic rendering** — captions, lottie overlays, 3D titles, and
   after-effects-style composites rendered with [Remotion](https://www.remotion.dev).
-- **Self-hostable & fair-code** — run the Community Edition on your own
-  infrastructure with your own provider keys.
+- **Self-hostable in two commands** — `git clone` and `docker compose up` bring
+  up the whole stack (database, auth, storage, queues) on your machine, with no
+  cloud accounts and no API keys to start. Bring your own provider key when you
+  want to generate; fair-code, no watermarks, no metering.
 
 ## Quickstart
 
 ### Self-host (Community Edition)
 
+Two commands. No cloud accounts, no API keys, nothing to configure:
+
 ```bash
 git clone https://github.com/nodaroai/app.nodaro.ai
 cd app.nodaro.ai
-cp .env.example .env   # Supabase keys + at least one AI provider key
 docker compose -f docker-compose.community.yml up
 ```
 
-Open `http://localhost:3000`. Full guide:
-[Community Edition Quickstart](docs/community-edition-quickstart.md).
+Then open `http://localhost:3000` and sign up with any email and password.
+
+That single command brings up the whole stack — Postgres, auth, the data API,
+object storage, Redis, and the app — and the database migrates itself on first
+boot. Your first visit seeds a **Welcome Demo**: a finished script → image →
+video → voice → final-cut workflow with every result already attached, so you
+can click through real nodes before configuring anything.
+
+**Where everything lives:**
+
+| | |
+|---|---|
+| Database | Postgres in the stack, on a Docker volume |
+| Sign-in | Email + password (no email server needed locally) |
+| Generated media | MinIO in the stack, on a Docker volume |
+| Job queues | Redis in the stack |
+
+Nothing leaves your machine, and nothing phones home.
+
+**To generate for real**, add one AI provider key to a `.env` file next to the
+compose file and restart:
+
+```bash
+KIE_API_KEY=...          # kie.ai — broadest model coverage
+# or
+REPLICATE_API_TOKEN=...  # replicate.com
+```
+
+You pay providers directly. The Community Edition has no credit system, no
+fees, and no watermarks.
+
+**Stuck?** `http://localhost:3000/setup` is a live health screen — database,
+Redis, storage and provider keys, green or red, with the exact variable to fix.
+No login required.
+
+Full guide, including how to swap in a managed Supabase project or Cloudflare
+R2, mint production keys, and put it behind a domain:
+[Community Edition Quickstart](docs/community-edition-quickstart.md) ·
+[Deployment](docs/deployment.md).
 
 ### Hosted
 
@@ -153,8 +193,8 @@ isolated under `ee/` directories — see [License](#license).
 | Backend | Fastify (Node.js / TypeScript) · Zod-validated routes |
 | Execution | BullMQ orchestrator on Redis · server-side DAG engine |
 | Rendering | [Remotion](https://www.remotion.dev) compositions · FFmpeg pipelines |
-| Data | Supabase (PostgreSQL + Auth + RLS) |
-| Storage | Cloudflare R2 (S3-compatible) |
+| Data | Supabase (PostgreSQL + Auth + RLS) — bundled in the self-host compose, or a managed project |
+| Storage | Any S3-compatible store — MinIO bundled in the self-host compose, Cloudflare R2 in the cloud |
 
 Deep dive: [Architecture](docs/architecture.md) ·
 [Deployment](docs/deployment.md) · curated design notes in
@@ -170,6 +210,8 @@ packages/prompts/   Prompt catalogs, hints, presets (FSL — non-competing use)
 packages/client/    Typed REST SDK, published as @nodaro/sdk (Apache-2.0)
 packages/cli/       nodaro CLI, compiled binaries via bun (Apache-2.0)
 packages/remotion/  Remotion video compositions (captions, lottie, 3D titles)
+docker/selfhost/    First-boot SQL for the bundled Postgres (role passwords)
+supabase/migrations/ Schema migrations — applied automatically on self-host boot
 docs/               Public documentation (GitHub Pages)
 ```
 
