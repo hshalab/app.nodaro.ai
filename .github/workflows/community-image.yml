@@ -7,14 +7,23 @@ name: Community Image
 # the npm publish workflow: the internal repo always skips, the mirror sync
 # carries this file over, and the package publishes from public code only.
 #
+# EACH ARCH BUILDS ON ITS OWN NATIVE RUNNER, then a merge job stitches the
+# two digests into one multi-arch tag. The previous single-job QEMU build
+# failed twice in a row at the same step — `npm ci` in the linux/arm64 leg,
+# ~6 minutes in, with npm's "network" error. Emulated arm64 is slow enough
+# that npm's registry calls time out, so it is not flaky luck, it is the
+# emulation. GitHub's ubuntu-24.04-arm runners are free for public repos and
+# remove the emulation entirely (they also cut the build from ~1h to minutes).
+#
 # The baked VITE_* values are the community-compose localhost defaults (the
 # frontend inlines them at build time — root CLAUDE.md Deployment rule). A
 # deployment on a real domain, or one with fresh minted keys, rebuilds
 # locally: docker compose -f docker-compose.community.yml build.
 #
-# ONE-TIME manual step after the first publish: flip the ghcr package
-# visibility to Public (org → Packages → nodaro-community → settings) —
-# GitHub creates it private by default and anonymous pulls 403 until then.
+# ONE-TIME manual step after the first successful publish: flip the ghcr
+# package visibility to Public (org → Packages → nodaro-community →
+# settings) — GitHub creates it private by default and anonymous pulls 403
+# until then.
 
 on:
   push:
@@ -33,15 +42,26 @@ permissions:
   contents: read
   packages: write
 
+env:
+  IMAGE: ghcr.io/nodaroai/nodaro-community
+
 jobs:
-  build-push:
-    name: Build + push ghcr community image
+  build:
+    name: Build ${{ matrix.platform }}
     if: github.repository == 'nodaroai/app.nodaro.ai'
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            arch: amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            arch: arm64
+            runner: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
-
-      - uses: docker/setup-qemu-action@v3
 
       - uses: docker/setup-buildx-action@v3
 
@@ -51,21 +71,68 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: docker/build-push-action@v6
+      # Push by digest only; the merge job below creates the tags. Without
+      # this, two jobs pushing the same tag would race and the last writer
+      # would win with a single-arch image.
+      - id: build
+        uses: docker/build-push-action@v6
         with:
           context: .
-          # amd64 + arm64 (Apple Silicon / Graviton). The arm64 half builds
-          # under QEMU and is slow (~1h) — acceptable for a per-main-push
-          # publish; the Dockerfile already carries per-arch ffmpeg pins.
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            ghcr.io/nodaroai/nodaro-community:latest
-            ghcr.io/nodaroai/nodaro-community:${{ github.sha }}
+          platforms: ${{ matrix.platform }}
           build-args: |
             VITE_API_URL=http://localhost:3000
             VITE_EDITION=community
             VITE_SUPABASE_URL=http://localhost:3000/supabase
             VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzU0Nzg0MDAwLCJleHAiOjIwNzAxNDQwMDB9.Z1_aDD7opHbwv6f8yrHK0ptlIM2tg1ulhXsggLuDyqo
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          # Per-arch cache scopes: one shared scope would have the two jobs
+          # overwrite each other's layers every run.
+          cache-from: type=gha,scope=${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.arch }}
+
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: digest-${{ matrix.arch }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    name: Publish multi-arch tags
+    if: github.repository == 'nodaroai/app.nodaro.ai'
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digest-*
+          merge-multiple: true
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create manifest list and push
+        working-directory: /tmp/digests
+        run: |
+          # SC2046: the word splitting is the point — one argument per digest
+          # file, which is how imagetools is told what to stitch together.
+          # shellcheck disable=SC2046
+          docker buildx imagetools create \
+            -t ${{ env.IMAGE }}:latest \
+            -t ${{ env.IMAGE }}:${{ github.sha }} \
+            $(printf '${{ env.IMAGE }}@sha256:%s ' *)
+
+      - name: Inspect published image
+        run: docker buildx imagetools inspect ${{ env.IMAGE }}:latest

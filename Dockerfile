@@ -16,6 +16,15 @@ RUN corepack enable npm && corepack prepare npm@11.12.1 --activate
 ENV YOUTUBE_DL_SKIP_PYTHON_CHECK=1
 ENV YOUTUBE_DL_SKIP_DOWNLOAD=1
 
+# npm gives up on a slow registry far too early for a container build: the
+# default is 2 retries with a 60s ceiling, and one transient stall then
+# fails the whole image (hit on both ghcr publish attempts, and locally).
+# These raise the retry budget only — a healthy network behaves identically,
+# since nothing waits unless a request actually stalls.
+ENV NPM_CONFIG_FETCH_RETRIES=5
+ENV NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT=120000
+ENV NPM_CONFIG_FETCH_TIMEOUT=600000
+
 WORKDIR /app
 
 # Copy ONLY package manifests first to maximise Docker layer caching.

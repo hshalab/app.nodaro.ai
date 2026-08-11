@@ -1,0 +1,13 @@
+Space Grotesk
+Copyright (c) 2020 Florian Karsten
+https://github.com/floriankarsten/space-grotesk
+
+JetBrains Mono
+Copyright 2020 The JetBrains Mono Project Authors
+https://github.com/JetBrains/JetBrainsMono
+
+Both fonts are licensed under the SIL Open Font License, Version 1.1 — the
+same license as the Geist fonts alongside them (full text in OFL.txt). The
+latin-subset woff2 files here were produced by Google Fonts and are
+self-hosted so that a community self-host install makes no third-party font
+requests.

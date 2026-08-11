@@ -1,23 +1,19 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { Link } from "react-router-dom"
-import {
-  CheckCircle2,
-  XCircle,
-  AlertTriangle,
-  Loader2,
-  RefreshCw,
-  Database,
-  Server,
-  HardDrive,
-  KeyRound,
-} from "lucide-react"
 
 /**
  * /setup — self-host install health screen.
  *
  * Public (works before login: a broken Supabase config breaks login itself)
- * and registered only on non-cloud builds. Polls GET /v1/setup/status and
- * renders one card per dependency: Database, Redis, Storage, Provider keys.
+ * and registered only on non-cloud builds. Polls GET /v1/setup/status every
+ * 5s and renders the design-handoff layout: summary bar, per-service cards
+ * with latency sparklines, and one provider-key table with a remediation
+ * callout.
+ *
+ * Colors are literal, not theme tokens, ON PURPOSE — this is a standalone
+ * diagnostics page with a single committed look, reached with no app chrome
+ * and often before any theme preference exists. Theme tokens would make it
+ * render two different ways for no benefit.
  */
 
 interface CheckResult {
@@ -45,58 +41,195 @@ interface SetupStatus {
 }
 
 const POLL_INTERVAL_MS = 5000
+/** Sparkline width: the last N polls. ~80s of history at a 5s cadence. */
+const SAMPLE_WINDOW = 16
 
-const STATUS_LABELS: Record<string, string> = {
-  ok: "Connected",
-  error: "Unreachable",
-  migrations_missing: "Migrations missing",
-  not_configured: "Not configured",
+const INK = "#0b0d12"
+const PAPER = "#f6f5f2"
+const SURFACE = "#fffefc"
+const MUTED = "#5b5f68"
+const SUBTLE = "#8a8e96"
+const FAINT = "#a3a7ae"
+const ACCENT = "#ff3159"
+const OK = "#16a34a"
+const WARN = "#d97706"
+const DANGER = "#dc2626"
+
+const SANS = "'Space Grotesk Variable', 'Geist Variable', system-ui, sans-serif"
+const MONO = "'JetBrains Mono Variable', 'Geist Mono Variable', ui-monospace, monospace"
+
+const codeStyle: React.CSSProperties = {
+  fontFamily: MONO,
+  fontSize: 12.5,
+  background: "rgba(11,13,18,.06)",
+  padding: "2px 6px",
+  borderRadius: 5,
 }
 
-const PROVIDER_LABELS: Record<string, string> = {
-  kie: "KIE.ai",
-  replicate: "Replicate",
-  anthropic: "Anthropic",
-  gemini: "Google Gemini",
-  elevenlabs: "ElevenLabs",
-  fal: "fal.ai",
+/** Caption shown next to the latency figure, per backend status value. */
+const STATUS_CAPTION: Record<string, string> = {
+  ok: "connected",
+  error: "unreachable",
+  migrations_missing: "migrations missing",
+  not_configured: "not configured",
 }
 
-function StatusIcon({ ok, warn }: { readonly ok: boolean; readonly warn?: boolean }) {
-  if (ok) return <CheckCircle2 className="h-5 w-5 text-green-500" aria-hidden />
-  if (warn) return <AlertTriangle className="h-5 w-5 text-amber-500" aria-hidden />
-  return <XCircle className="h-5 w-5 text-red-500" aria-hidden />
+type Severity = "up" | "degraded" | "down"
+
+const SEVERITY_COLOR: Record<Severity, string> = {
+  up: OK,
+  degraded: WARN,
+  down: DANGER,
 }
 
-function CheckCard({
-  title,
-  icon,
-  check,
-  warnStatuses = [],
-}: {
-  readonly title: string
-  readonly icon: React.ReactNode
+/**
+ * Three states, not two: "not configured" and "migrations missing" are
+ * operator to-dos, not outages, and the amber dot says so. Anything else
+ * that isn't ok is a red outage.
+ */
+function severityOf(check: CheckResult): Severity {
+  if (check.ok) return "up"
+  if (check.status === "not_configured" || check.status === "migrations_missing") return "degraded"
+  return "down"
+}
+
+interface ServiceView {
+  readonly id: "database" | "redis" | "storage"
+  readonly name: string
+  readonly detail: string
   readonly check: CheckResult
-  readonly warnStatuses?: readonly string[]
-}) {
-  const warn = warnStatuses.includes(check.status)
+}
+
+const PROVIDERS: ReadonlyArray<{ id: string; name: string; env: string }> = [
+  { id: "kie", name: "KIE.ai", env: "KIE_API_KEY" },
+  { id: "replicate", name: "Replicate", env: "REPLICATE_API_TOKEN" },
+  { id: "anthropic", name: "Anthropic", env: "ANTHROPIC_API_KEY" },
+  { id: "gemini", name: "Google Gemini", env: "GEMINI_API_KEY" },
+  { id: "elevenlabs", name: "ElevenLabs", env: "ELEVENLABS_API_KEY" },
+  { id: "fal", name: "fal.ai", env: "FAL_KEY" },
+]
+
+function clockOf(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0")
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+}
+
+/**
+ * Hints come from the backend verbatim (it owns the remediation copy — a new
+ * provider or a renamed env var updates the page for free). This only adds
+ * the design's typographic treatment on top: SCREAMING_SNAKE env-var names
+ * become inline code chips.
+ */
+/**
+ * Backend hints are written as "<what is wrong> - <what to do>". Split on the
+ * first such separator so the callout gets the design's heading + body without
+ * this page restating the diagnosis in its own words (which drifts). A hint
+ * with no separator degrades to body-only.
+ */
+function splitHint(text: string): { head: string | null; body: string } {
+  const at = text.indexOf(" - ")
+  if (at === -1) return { head: null, body: text }
+  const body = text.slice(at + 3)
+  return { head: text.slice(0, at), body: body.charAt(0).toUpperCase() + body.slice(1) }
+}
+
+function withCodeChips(text: string) {
+  return text.split(/(\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\b)/g).map((part, i) =>
+    /^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+$/.test(part) ? (
+      <code key={i} style={codeStyle}>
+        {part}
+      </code>
+    ) : (
+      <span key={i}>{part}</span>
+    ),
+  )
+}
+
+/**
+ * Latency sparkline. Bars are REAL samples collected from the polls (the
+ * design prototype's were synthetic); the window fills from the right, so a
+ * freshly-opened page shows a couple of bars rather than fabricated history.
+ * Heights normalize to the window max, floored at 30% so a fast sample is
+ * still visible.
+ */
+function Sparkline({ samples }: { readonly samples: readonly number[] }) {
+  const peak = Math.max(1, ...samples)
+  const empty = Math.max(0, SAMPLE_WINDOW - samples.length)
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm font-medium">
-          {icon}
-          {title}
+    <div style={{ display: "flex", gap: 3, height: 26, alignItems: "flex-end" }} aria-hidden>
+      {Array.from({ length: empty }, (_, i) => (
+        <span
+          key={`empty-${i}`}
+          style={{ flex: 1, height: "12%", background: "rgba(11,13,18,.05)", borderRadius: 2 }}
+        />
+      ))}
+      {samples.map((value, i) => (
+        <span
+          key={`s-${i}`}
+          style={{
+            flex: 1,
+            height: `${Math.round(30 + (value / peak) * 70)}%`,
+            background: "rgba(11,13,18,.14)",
+            borderRadius: 2,
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
+function ServiceCard({
+  service,
+  samples,
+}: {
+  readonly service: ServiceView
+  readonly samples: readonly number[]
+}) {
+  const { check } = service
+  const severity = severityOf(check)
+  const caption = STATUS_CAPTION[check.status] ?? check.status
+  return (
+    <div
+      style={{
+        background: SURFACE,
+        border: "1px solid rgba(11,13,18,.09)",
+        borderRadius: 16,
+        padding: "20px 22px",
+        display: "flex",
+        flexDirection: "column",
+        gap: 16,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+          <span style={{ fontSize: 16, fontWeight: 600 }}>{service.name}</span>
+          <span style={{ fontFamily: MONO, fontSize: 11, color: SUBTLE }}>{service.detail}</span>
         </div>
-        <StatusIcon ok={check.ok} warn={warn} />
+        <span
+          style={{
+            width: 9,
+            height: 9,
+            borderRadius: "50%",
+            background: SEVERITY_COLOR[severity],
+            marginTop: 6,
+            flex: "none",
+          }}
+        />
       </div>
-      <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
-        <span>{STATUS_LABELS[check.status] ?? check.status}</span>
-        {check.ok && check.latencyMs !== null && (
-          <span className="text-xs rounded bg-muted px-1.5 py-0.5">{check.latencyMs}ms</span>
-        )}
+      <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
+        <span style={{ fontFamily: MONO, fontSize: 32, fontWeight: 500, letterSpacing: "-0.02em" }}>
+          {check.latencyMs ?? "—"}
+        </span>
+        <span style={{ fontFamily: MONO, fontSize: 12, color: SUBTLE }}>
+          {check.latencyMs !== null ? `ms · ${caption}` : caption}
+        </span>
       </div>
-      {!check.ok && check.hint && (
-        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{check.hint}</p>
+      {check.ok ? (
+        <Sparkline samples={samples} />
+      ) : (
+        <p style={{ margin: 0, fontSize: 13, color: MUTED, lineHeight: 1.5 }}>
+          {withCodeChips(check.hint ?? "")}
+        </p>
       )}
     </div>
   )
@@ -105,21 +238,32 @@ function CheckCard({
 export default function SetupPage() {
   const [status, setStatus] = useState<SetupStatus | null>(null)
   const [apiDown, setApiDown] = useState(false)
-  const [refreshing, setRefreshing] = useState(false)
-  const [lastChecked, setLastChecked] = useState<Date | null>(null)
+  const [spinning, setSpinning] = useState(false)
+  const [checkedAt, setCheckedAt] = useState<Date | null>(null)
+  // Rolling latency history per service, oldest first (see Sparkline).
+  const [samples, setSamples] = useState<Record<string, number[]>>({})
+  const spinTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const load = useCallback(async () => {
-    setRefreshing(true)
     try {
       const res = await fetch("/v1/setup/status", { cache: "no-store" })
       if (!res.ok) throw new Error(`status ${res.status}`)
-      setStatus((await res.json()) as SetupStatus)
+      const json = (await res.json()) as SetupStatus
+      setStatus(json)
       setApiDown(false)
+      setSamples((prev) => {
+        const next: Record<string, number[]> = { ...prev }
+        for (const id of ["database", "redis", "storage"] as const) {
+          const ms = json.checks[id].latencyMs
+          if (ms === null) continue
+          next[id] = [...(prev[id] ?? []), ms].slice(-SAMPLE_WINDOW)
+        }
+        return next
+      })
     } catch {
       setApiDown(true)
     } finally {
-      setRefreshing(false)
-      setLastChecked(new Date())
+      setCheckedAt(new Date())
     }
   }, [])
 
@@ -129,119 +273,404 @@ export default function SetupPage() {
     return () => clearInterval(timer)
   }, [load])
 
-  const allOk =
-    status !== null &&
-    status.checks.database.ok &&
-    status.checks.redis.ok &&
-    status.checks.storage.ok &&
-    status.checks.providers.ok
+  useEffect(() => () => {
+    if (spinTimer.current) clearTimeout(spinTimer.current)
+  }, [])
+
+  const handleRefresh = () => {
+    setSpinning(true)
+    if (spinTimer.current) clearTimeout(spinTimer.current)
+    spinTimer.current = setTimeout(() => setSpinning(false), 700)
+    void load()
+  }
+
+  const services: ServiceView[] = status
+    ? [
+        { id: "database", name: "Database", detail: "Supabase / Postgres", check: status.checks.database },
+        { id: "redis", name: "Redis", detail: "queue + cache", check: status.checks.redis },
+        { id: "storage", name: "Storage", detail: "object storage", check: status.checks.storage },
+      ]
+    : []
+
+  const upCount = services.filter((s) => s.check.ok).length
+  const keysSet = status ? Object.values(status.checks.providers.keys).filter(Boolean).length : 0
+  const keysTotal = status ? Object.keys(status.checks.providers.keys).length : PROVIDERS.length
+  const keysMissing = keysTotal - keysSet
+  const latencies = services.map((s) => s.check.latencyMs).filter((v): v is number => v !== null)
+  const avgLatency = latencies.length
+    ? Math.round(latencies.reduce((a, b) => a + b, 0) / latencies.length)
+    : null
+
+  const anyDown = services.some((s) => severityOf(s.check) === "down")
+  const overallLabel = apiDown
+    ? "API unreachable"
+    : !status
+      ? "Checking…"
+      : anyDown
+        ? "Degraded"
+        : upCount === services.length && status.checks.providers.ok
+          ? "All systems go"
+          : "Needs attention"
+
+  const liveDotColor = apiDown ? DANGER : anyDown ? WARN : OK
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto max-w-2xl px-4 py-12">
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold">Install Health</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Live status of this Nodaro install{status ? ` (${status.edition} edition)` : ""}.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => void load()}
-            className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
-            aria-label="Refresh now"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
-            Refresh
-          </button>
-        </div>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: PAPER,
+        fontFamily: SANS,
+        color: INK,
+        padding: "56px 32px 80px",
+        boxSizing: "border-box",
+        display: "flex",
+        justifyContent: "center",
+        WebkitFontSmoothing: "antialiased",
+      }}
+    >
+      <style>{`
+        @keyframes nd-pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.82); } }
+        @keyframes nd-spin { to { transform: rotate(360deg); } }
+        .nd-refresh:hover { background: ${ACCENT} !important; }
+        .nd-back:hover { color: ${ACCENT}; }
+        /* Summary bar: a GRID, not wrapping flex. Flex with a wider first
+           basis re-divides the leftover space per row, so once the bar wraps
+           the second row's cells no longer line up under the first row's
+           (measured: 30px off at 560px). Fixed tracks keep every column on
+           the same axis at any width, and the desktop step keeps the
+           mockup's wider Overall cell. */
+        .nd-summary { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; column-gap: 24px; row-gap: 18px; }
+        @media (max-width: 720px) { .nd-summary { grid-template-columns: 1fr 1fr; } }
+        @media (max-width: 420px) { .nd-summary { grid-template-columns: 1fr; } }
+        @media (prefers-reduced-motion: reduce) {
+          .nd-live-dot, .nd-spin-glyph { animation: none !important; }
+        }
+      `}</style>
 
-        {status === null && !apiDown && (
-          <div className="flex justify-center py-16">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        )}
-
-        {apiDown && (
-          <div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 p-4">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <XCircle className="h-5 w-5 text-red-500" aria-hidden />
-              API unreachable
-            </div>
-            <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-              The frontend is up but the backend is not answering. Check the container logs
-              (docker compose logs -f) and that port 3000 is not blocked.
-            </p>
-          </div>
-        )}
-
-        {status && (
-          <>
-            {allOk && (
-              <div className="mb-4 rounded-lg border border-green-500/40 bg-green-500/10 p-3 text-sm">
-                Everything is connected. You are ready to generate.
-              </div>
-            )}
-            <div className="grid gap-3 sm:grid-cols-2">
-              <CheckCard
-                title="Database (Supabase)"
-                icon={<Database className="h-4 w-4 text-muted-foreground" />}
-                check={status.checks.database}
-              />
-              <CheckCard
-                title="Redis"
-                icon={<Server className="h-4 w-4 text-muted-foreground" />}
-                check={status.checks.redis}
-              />
-              <CheckCard
-                title="Storage (R2 / S3)"
-                icon={<HardDrive className="h-4 w-4 text-muted-foreground" />}
-                check={status.checks.storage}
-                warnStatuses={["not_configured"]}
-              />
-              <div className="rounded-lg border border-border bg-card p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    <KeyRound className="h-4 w-4 text-muted-foreground" />
-                    Provider keys
-                  </div>
-                  <StatusIcon ok={status.checks.providers.ok} warn />
-                </div>
-                <ul className="mt-2 space-y-1">
-                  {Object.entries(status.checks.providers.keys).map(([key, present]) => (
-                    <li
-                      key={key}
-                      className="flex items-center justify-between text-xs text-muted-foreground"
-                    >
-                      <span>{PROVIDER_LABELS[key] ?? key}</span>
-                      <span className={present ? "text-green-500" : "text-muted-foreground/60"}>
-                        {present ? "configured" : "missing"}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-                {!status.checks.providers.ok && status.checks.providers.hint && (
-                  <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                    {status.checks.providers.hint}
-                  </p>
+      <div style={{ width: "100%", maxWidth: 940, display: "flex", flexDirection: "column", gap: 32 }}>
+        {/* 1. Header */}
+        <header
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: 24,
+            flexWrap: "wrap",
+          }}
+        >
+          <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+            <img
+              src="/logo.svg"
+              alt="Nodaro"
+              width={44}
+              height={44}
+              style={{ width: 44, height: 44, borderRadius: 12, display: "block" }}
+            />
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                <h1 style={{ margin: 0, fontSize: 30, fontWeight: 700, letterSpacing: "-0.02em" }}>
+                  Install Health
+                </h1>
+                {status && (
+                  <span
+                    style={{
+                      fontFamily: MONO,
+                      fontSize: 11,
+                      letterSpacing: ".08em",
+                      textTransform: "uppercase",
+                      padding: "4px 8px",
+                      border: "1px solid rgba(11,13,18,.16)",
+                      borderRadius: 999,
+                      color: MUTED,
+                    }}
+                  >
+                    {status.edition}
+                  </span>
                 )}
               </div>
+              <p style={{ margin: 0, fontSize: 15, color: MUTED }}>Live status of this Nodaro install.</p>
             </div>
-          </>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div
+              style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: MONO, fontSize: 12, color: MUTED }}
+              aria-live="polite"
+            >
+              <span
+                className="nd-live-dot"
+                style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: "50%",
+                  background: liveDotColor,
+                  animation: "nd-pulse 2s ease-in-out infinite",
+                }}
+              />
+              <span>{checkedAt ? clockOf(checkedAt) : "--:--:--"}</span>
+            </div>
+            <button
+              type="button"
+              className="nd-refresh"
+              onClick={handleRefresh}
+              aria-label="Refresh install health"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                background: INK,
+                color: PAPER,
+                border: "none",
+                borderRadius: 10,
+                padding: "10px 16px",
+                fontFamily: SANS,
+                fontSize: 14,
+                fontWeight: 500,
+                cursor: "pointer",
+              }}
+            >
+              <span
+                className="nd-spin-glyph"
+                aria-hidden
+                style={{ display: "inline-block", animation: spinning ? "nd-spin .7s linear" : undefined }}
+              >
+                ↻
+              </span>
+              <span>Refresh</span>
+            </button>
+          </div>
+        </header>
+
+        {/* 2. Summary bar */}
+        <div
+          className="nd-summary"
+          style={{
+            background: INK,
+            color: PAPER,
+            borderRadius: 16,
+            padding: "22px 26px",
+          }}
+        >
+          {[
+            { label: "Overall", value: overallLabel },
+            { label: "Services", value: status ? `${upCount}/${services.length} up` : "—" },
+            { label: "Provider keys", value: status ? `${keysSet}/${keysTotal} set` : "—" },
+            { label: "Latency", value: avgLatency !== null ? `${avgLatency}ms avg` : "—" },
+          ].map((cell) => (
+            <div key={cell.label} style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
+              <span
+                style={{
+                  fontFamily: MONO,
+                  fontSize: 11,
+                  letterSpacing: ".1em",
+                  textTransform: "uppercase",
+                  color: "rgba(246,245,242,.5)",
+                }}
+              >
+                {cell.label}
+              </span>
+              <span style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-0.01em" }}>{cell.value}</span>
+            </div>
+          ))}
+        </div>
+
+        {apiDown && (
+          <div
+            style={{
+              display: "flex",
+              gap: 14,
+              alignItems: "flex-start",
+              padding: "20px 22px",
+              background: SURFACE,
+              border: "1px solid rgba(11,13,18,.09)",
+              borderRadius: 16,
+            }}
+          >
+            <span style={{ width: 3, alignSelf: "stretch", background: DANGER, borderRadius: 2, flex: "none" }} />
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <span style={{ fontSize: 14, fontWeight: 600 }}>API unreachable</span>
+              <span style={{ fontSize: 14, color: MUTED, lineHeight: 1.55, maxWidth: "62ch" }}>
+                The frontend is up but the backend is not answering. Check the container logs
+                (docker compose logs -f) and that port 3000 is not blocked.
+              </span>
+            </div>
+          </div>
         )}
 
-        <div className="mt-8 flex items-center justify-between text-xs text-muted-foreground">
-          <span>
-            {lastChecked
-              ? `Last checked ${lastChecked.toLocaleTimeString()} - refreshes every 5s`
-              : "Checking..."}
-          </span>
-          <Link to="/" className="hover:text-foreground underline underline-offset-2">
-            Back to app
-          </Link>
+        {/* 3. Service cards */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
+          {status
+            ? services.map((s) => <ServiceCard key={s.id} service={s} samples={samples[s.id] ?? []} />)
+            : Array.from({ length: 3 }, (_, i) => (
+                <div
+                  key={`skeleton-${i}`}
+                  style={{
+                    background: SURFACE,
+                    border: "1px solid rgba(11,13,18,.09)",
+                    borderRadius: 16,
+                    padding: "20px 22px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 16,
+                  }}
+                >
+                  <div style={{ height: 34, background: "rgba(11,13,18,.06)", borderRadius: 6 }} />
+                  <div style={{ height: 32, width: "50%", background: "rgba(11,13,18,.06)", borderRadius: 6 }} />
+                  <div style={{ height: 26, background: "rgba(11,13,18,.06)", borderRadius: 6 }} />
+                </div>
+              ))}
         </div>
+
+        {/* 4. Provider keys */}
+        <section
+          style={{
+            background: SURFACE,
+            border: "1px solid rgba(11,13,18,.09)",
+            borderRadius: 16,
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 16,
+              padding: "20px 22px",
+              borderBottom: "1px solid rgba(11,13,18,.07)",
+              flexWrap: "wrap",
+            }}
+          >
+            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              <span style={{ fontSize: 16, fontWeight: 600 }}>Provider keys</span>
+              <span style={{ fontFamily: MONO, fontSize: 11, color: SUBTLE }}>environment variables</span>
+            </div>
+            {status && (
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  fontSize: 13,
+                  fontWeight: 500,
+                  color: keysMissing > 0 ? "#92400e" : "#166534",
+                  background: keysMissing > 0 ? "#fef3c7" : "#dcfce7",
+                  borderRadius: 999,
+                  padding: "6px 12px",
+                }}
+              >
+                <span
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: "50%",
+                    background: keysMissing > 0 ? WARN : OK,
+                  }}
+                />
+                <span>{keysMissing > 0 ? `${keysMissing} missing` : "all set"}</span>
+              </span>
+            )}
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
+            {PROVIDERS.map((p) => {
+              const present = status?.checks.providers.keys[p.id] === true
+              return (
+                <div
+                  key={p.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    padding: "14px 22px",
+                    borderBottom: "1px solid rgba(11,13,18,.05)",
+                  }}
+                >
+                  <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                    <span style={{ fontSize: 14, fontWeight: 500 }}>{p.name}</span>
+                    <span style={{ fontFamily: MONO, fontSize: 11, color: FAINT }}>{p.env}</span>
+                  </div>
+                  <span
+                    style={{
+                      fontFamily: MONO,
+                      fontSize: 11,
+                      letterSpacing: ".06em",
+                      textTransform: "uppercase",
+                      color: present ? "#166534" : FAINT,
+                      border: present ? "1px solid rgba(22,163,74,.35)" : "1px dashed rgba(11,13,18,.18)",
+                      borderRadius: 6,
+                      padding: "3px 8px",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {present ? "set" : "missing"}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+
+          {status && !status.checks.providers.ok && (
+            <div
+              style={{
+                display: "flex",
+                gap: 14,
+                alignItems: "flex-start",
+                padding: "20px 22px",
+                background: "rgba(255,49,89,.05)",
+              }}
+            >
+              <span style={{ width: 3, alignSelf: "stretch", background: ACCENT, borderRadius: 2, flex: "none" }} />
+              {(() => {
+                const { head, body } = splitHint(status.checks.providers.hint ?? "")
+                return (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {head && <span style={{ fontSize: 14, fontWeight: 600 }}>{head}</span>}
+                    <span style={{ fontSize: 14, color: MUTED, lineHeight: 1.55, maxWidth: "62ch" }}>
+                      {withCodeChips(body)}
+                    </span>
+                  </div>
+                )
+              })()}
+            </div>
+          )}
+        </section>
+
+        {/* 5. Footer */}
+        <footer
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 16,
+            flexWrap: "wrap",
+            fontFamily: MONO,
+            fontSize: 12,
+            color: SUBTLE,
+          }}
+        >
+          <span>
+            {checkedAt ? `Last checked ${clockOf(checkedAt)} · refreshes every 5s` : "Checking…"}
+          </span>
+          <Link
+            to="/"
+            className="nd-back"
+            style={{
+              fontFamily: SANS,
+              fontSize: 14,
+              fontWeight: 500,
+              color: INK,
+              textDecoration: "none",
+              borderBottom: "1px solid rgba(11,13,18,.25)",
+              paddingBottom: 1,
+            }}
+          >
+            Back to app →
+          </Link>
+        </footer>
       </div>
     </div>
   )
 }
+
