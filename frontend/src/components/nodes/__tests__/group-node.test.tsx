@@ -1,12 +1,15 @@
 import { describe, it, expect, vi } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
 import { GroupNode } from "../group-node"
+import { NODE_COLORS } from "@/lib/node-colors"
 
 vi.mock("@xyflow/react", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@xyflow/react")>()
   return {
     ...actual,
     Position: { Top: "top", Bottom: "bottom", Left: "left", Right: "right" },
+    NodeToolbar: ({ children, isVisible }: any) =>
+      isVisible ? <div data-testid="node-toolbar">{children}</div> : null,
     Handle: ({ type, position, id, style }: any) => (
       <div
         data-testid={`handle-${id}`}
@@ -27,6 +30,9 @@ vi.mock("@xyflow/react", async (importOriginal) => {
     useUpdateNodeInternals: vi.fn(() => () => {}),
   }
 })
+
+// Pin the theme so the tint assertions below have one palette to expect.
+vi.mock("next-themes", () => ({ useTheme: () => ({ resolvedTheme: "dark" }) }))
 
 const updateNodeDataMock = vi.fn()
 const deleteEdgeMock = vi.fn()
@@ -185,5 +191,99 @@ describe("GroupNode", () => {
     fireEvent.change(input, { target: { value: "" } })
     fireEvent.keyDown(input, { key: "Enter" })
     expect(updateNodeDataMock).toHaveBeenCalledWith("group-1", { label: "New group" })
+  })
+
+  // --- tinted frames --------------------------------------------------------
+  // A group with `data.color` becomes a titled section: the frame carries a wash
+  // of the colour and the label above it becomes a solid banner in the same one.
+  const group = (data: Record<string, unknown>) => {
+    resetMocks([{ id: "group-1", type: "group", position: { x: 0, y: 0 }, data }])
+    return data
+  }
+  const frame = () => document.querySelector(".group-node") as HTMLElement
+  const label = () => screen.getByTestId("group-label")
+
+  describe("untinted (every group that existed before tinting)", () => {
+    it("keeps the neutral frame classes and paints no background of its own", () => {
+      renderNode({ data: group({ label: "G" }) })
+      expect(frame().className).toContain("border-[#2D2D2D]")
+      expect(frame().style.backgroundColor).toBe("")
+    })
+
+    it("keeps the quiet caption above the frame rather than a banner", () => {
+      renderNode({ data: group({ label: "G" }) })
+      expect(label().className).toContain("-top-6")
+      expect(label().className).not.toContain("bottom-full")
+      expect(label().style.backgroundColor).toBe("")
+      expect(label().style.fontSize).toBe("")
+    })
+  })
+
+  describe("tinted", () => {
+    it("drops the neutral classes and washes the frame in the tint", () => {
+      renderNode({ data: group({ label: "G", color: "#22D3EE40" }) })
+      expect(frame().className).not.toContain("border-[#2D2D2D]")
+      expect(frame().style.backgroundColor).not.toBe("")
+      expect(frame().style.borderColor).not.toBe("")
+    })
+
+    it("renders the label as a solid banner flush against the frame", () => {
+      renderNode({ data: group({ label: "G", color: "#22D3EE40" }) })
+      expect(label().className).toContain("bottom-full")
+      // The palette's bright entries carry an alpha byte. A banner reading as a
+      // translucent smear defeats the point, so the alpha must be dropped.
+      expect(label().style.backgroundColor).toBe("rgb(34, 211, 238)")
+    })
+
+    // A frame is thousands of canvas units tall and is read at fit-to-view zoom,
+    // where a fixed 15px title would be a ~3px smudge.
+    it("scales the banner with the frame height", () => {
+      renderNode({ data: group({ label: "G", color: "#22D3EE40" }), height: 2000 })
+      expect(parseFloat(label().style.fontSize)).toBeGreaterThan(60)
+    })
+
+    it.each([
+      [100, 15],
+      [100000, 120],
+    ])("clamps the banner at height %i", (height, px) => {
+      renderNode({ data: group({ label: "G", color: "#22D3EE40" }), height })
+      expect(parseFloat(label().style.fontSize)).toBe(px)
+    })
+
+    // The palette spans near-black navies and near-white pastels, so a fixed
+    // text colour is illegible on one end of it.
+    it.each([
+      ["#22D3EE40", "rgb(15, 23, 42)"],
+      ["#0f172a", "rgb(255, 255, 255)"],
+    ])("picks readable banner text for %s", (color, expected) => {
+      renderNode({ data: group({ label: "G", color }) })
+      expect(label().style.color).toBe(expected)
+    })
+  })
+
+  describe("colour toolbar", () => {
+    it("stays hidden until the group is selected", () => {
+      renderNode({ data: group({ label: "G" }) })
+      expect(screen.queryByTestId("node-toolbar")).not.toBeInTheDocument()
+    })
+
+    it("offers every palette colour plus a neutral reset", () => {
+      renderNode({ data: group({ label: "G" }), selected: true })
+      const swatches = screen.getByTestId("node-toolbar").querySelectorAll("div[style]")
+      expect(swatches.length).toBe(NODE_COLORS.length + 1)
+    })
+
+    it("applies a palette colour", () => {
+      renderNode({ data: group({ label: "G" }), selected: true })
+      const swatches = screen.getByTestId("node-toolbar").querySelectorAll("div[style]")
+      fireEvent.click(swatches[1])
+      expect(updateNodeDataMock).toHaveBeenCalledWith("group-1", { color: NODE_COLORS[0] })
+    })
+
+    it("clears the tint from the neutral swatch", () => {
+      renderNode({ data: group({ label: "G", color: NODE_COLORS[0] }), selected: true })
+      fireEvent.click(screen.getByTitle("No colour"))
+      expect(updateNodeDataMock).toHaveBeenCalledWith("group-1", { color: undefined })
+    })
   })
 })
