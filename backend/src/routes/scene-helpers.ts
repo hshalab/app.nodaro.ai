@@ -3,6 +3,7 @@ import type { ZodSchema } from "zod"
 import { z } from "zod"
 import { BridgeToNextSceneInputSchema, FixContinuityInputSchema, GenerateMotionInputSchema, ImprovePromptInputSchema, OptimizeForModelInputSchema, ValidateMatchCutInputSchema, type ImprovePromptInput, type SceneHelperName, type SceneNodeData, type ShowrunnerPlan, type ShotSpec } from "@nodaro/shared"
 import { hasCredits } from "../lib/config.js"
+import { paygSurfaceSpendHook } from "../middleware/credit-guard.js"
 import { requireScope, type Scope } from "../lib/scopes.js"
 import { supabase } from "../lib/supabase.js"
 
@@ -356,6 +357,10 @@ function registerHelperRoute(app: FastifyInstance, cfg: HelperConfig<unknown>) {
 }
 
 export async function sceneHelpersRoutes(app: FastifyInstance) {
+  // Same spend-surface gate as pipelinesRoutes — helper runs reserve credits
+  // via the direct RPC path, so the block must sit at the route entry.
+  app.addHook("preHandler", paygSurfaceSpendHook())
+
   for (const cfg of HELPERS) registerHelperRoute(app, cfg)
   registerAcceptMatchCutBreakRoute(app)
 }

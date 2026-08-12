@@ -7,7 +7,7 @@ import { insertJob } from "../lib/insert-job.js"
 import { requireScope, type Scope } from "../lib/scopes.js"
 import { createSSEStream } from "../lib/sse.js"
 import { supabase } from "../lib/supabase.js"
-import { creditGuard, reserveCreditsForJob } from "../middleware/credit-guard.js"
+import { creditGuard, paygSurfaceSpendHook, reserveCreditsForJob } from "../middleware/credit-guard.js"
 
 /**
  * Phase 1D.2b E1: body schema for the stage-approve route. `edits` is an
@@ -126,6 +126,12 @@ function gateAuth(req: FastifyRequest, reply: FastifyReply): string | null {
 }
 
 export async function pipelinesRoutes(app: FastifyInstance) {
+  // Spend-surface gate for every pipeline POST (creation, approvals, edits,
+  // regenerations, chat — they all reserve credits later, inside the pipeline
+  // worker, where the calling surface is gone). GETs pass; /cancel passes so
+  // a blocked user can always stop a running pipeline.
+  app.addHook("preHandler", paygSurfaceSpendHook({ skipUrlSuffixes: ["/cancel"] }))
+
   // ── POST /v1/pipelines ───────────────────────────────────────────────────
   app.post("/v1/pipelines", async (req, reply) => {
     if (!gateEdition(reply)) return

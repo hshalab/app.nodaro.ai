@@ -268,6 +268,7 @@ All errors share the same shape:
 | 403 | `forbidden` | — | Token isn't authorized for this workflow (workflow scoping). |
 | 403 | `insufficient_scope` | `missingScope` (+ `message`) | (OAuth tokens only) The token is missing a scope the route requires. Re-run the OAuth consent with the broader scope. See [OAuth Flow §4](./oauth-flow.md#4-scope-vocabulary). |
 | 403 | `edition_required` | `required_edition: "<edition>"` (+ `message`) | Endpoint needs a higher edition than the caller has. `required_edition` is the minimum: `"cloud"` for pipeline (`POST /v1/pipelines/:id/branch`) + scene-helper routes; `"business"` for API-token management (`POST /v1/api-tokens`, `DELETE /v1/api-tokens/:id`). |
+| 403 | `subscription_required` | — | (Cloud edition only) A pay-as-you-go account tried to spend from a first-party consumer surface (browser session in the studio or another Nodaro app). Payg credits are redeemable via the API/SDK/CLI/MCP — this never fires for token-authenticated calls. Rollout-gated: availability may lag this document. |
 | 404 | `not_found` | — | Workflow, execution, or token not found. |
 | 429 | `rate_limited` | — | You've exceeded the per-minute bucket. Back off. |
 | 500 | `internal_error` | — | Server bug or downstream dependency failure. Retry with backoff. |

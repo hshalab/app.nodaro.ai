@@ -9,6 +9,7 @@
 import type { FastifyInstance } from "fastify"
 import { z } from "zod"
 import { supabase } from "../lib/supabase.js"
+import { paygSurfaceGuard } from "../middleware/credit-guard.js"
 import { tryRemoveFromQueue } from "../lib/queue.js"
 import { orchestrationQueue } from "../lib/orchestration-queue.js"
 import { createSSEStream } from "../lib/sse.js"
@@ -215,7 +216,10 @@ const globalExecutionsQuery = z.object({
 
 export async function workflowExecutionRoutes(app: FastifyInstance) {
   // --- Run workflow ---
-  app.post("/v1/workflows/:id/run", async (req, reply) => {
+  // Spend-surface gate: node credits reserve later inside the orchestrator
+  // (internal calls), so the payg consumer-surface block must run here, at
+  // run creation, where the triggering surface is still visible.
+  app.post("/v1/workflows/:id/run", { preHandler: paygSurfaceGuard() }, async (req, reply) => {
     if (!req.userId) {
       return reply.status(401).send({
         error: { code: "unauthorized", message: "Authentication required" },

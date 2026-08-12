@@ -66,6 +66,18 @@ export class InsufficientCreditsError extends Error {
   }
 }
 
+/**
+ * Thrown when a pay-as-you-go account (credits, no active subscription) tries
+ * to spend from a consumer surface. The web studio is a subscription product;
+ * payg credits are redeemable via the API/SDK/CLI/MCP.
+ */
+export class SubscriptionRequiredError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "SubscriptionRequiredError"
+  }
+}
+
 export class TutorialCategoryInUseError extends Error {
   readonly videoCount: number
   readonly flowCount: number
@@ -110,6 +122,9 @@ function throwApiError(errJson: Record<string, unknown> | null, fallback: string
       (errObj.remainingBytes as number) ?? 0,
       (errObj.tier as string) ?? "free",
     )
+  }
+  if (errObj?.code === "subscription_required") {
+    throw new SubscriptionRequiredError((errObj.message as string) ?? fallback)
   }
   if (errObj?.code === "insufficient_app_credits" || errObj?.code === "insufficient_credits") {
     throw new InsufficientCreditsError(

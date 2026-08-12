@@ -276,12 +276,16 @@ describe("POST /v1/pipelines/:id/entities/:sceneId/helpers/audit_prompt", () => 
 
   it("returns 403 edition_required when hasCredits() is false", async () => {
     const config = await import("../../lib/config.js")
-    ;(config.hasCredits as ReturnType<typeof vi.fn>).mockReturnValueOnce(false)
+    // Persistent (not Once): route registration itself now consults
+    // hasCredits() too (paygSurfaceSpendHook), so a single-shot false would
+    // be consumed before the route's own edition gate ever ran.
+    ;(config.hasCredits as ReturnType<typeof vi.fn>).mockReturnValue(false)
     const app = await makeApp()
     const res = await app.inject({
       method: "POST",
       url: "/v1/pipelines/p1/entities/scene-1/helpers/audit_prompt",
     })
+    ;(config.hasCredits as ReturnType<typeof vi.fn>).mockReturnValue(true)
     expect(res.statusCode).toBe(403)
     expect(res.json().error.code).toBe("edition_required")
     expect(res.json().error.required_edition).toBe("cloud")

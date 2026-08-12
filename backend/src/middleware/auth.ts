@@ -43,6 +43,12 @@ declare module "fastify" {
       authorizationId: string
       scopes: readonly string[]
     }
+    /** Which credential kind authenticated this request. Distinguishes a
+     *  browser-session JWT from the developer credentials (personal API token,
+     *  app OAuth token, internal secret) — the spend-surface guard treats any
+     *  non-JWT kind as a programmatic caller regardless of Origin. Unset on
+     *  public routes and legacy body-userId fallbacks. */
+    authKind?: "internal" | "app_token" | "api_token" | "jwt"
   }
 }
 
@@ -244,6 +250,7 @@ export function registerAuthHook(app: FastifyInstance): void {
         return
       }
       req.isInternalCall = true
+      req.authKind = "internal"
       const body = req.body as Record<string, unknown> | undefined
       if (body?.userId && typeof body.userId === "string") {
         req.userId = body.userId
@@ -306,6 +313,7 @@ export function registerAuthHook(app: FastifyInstance): void {
       }
 
       req.userId = authRow.user_id
+      req.authKind = "app_token"
       req.appAuthorization = {
         appId: authRow.app_id,
         authorizationId: authRow.id,
@@ -333,6 +341,7 @@ export function registerAuthHook(app: FastifyInstance): void {
         return
       }
       req.userId = resolved.userId
+      req.authKind = "api_token"
       req.apiToken = resolved
       return
     }
@@ -343,6 +352,7 @@ export function registerAuthHook(app: FastifyInstance): void {
       if (cached) {
         req.userId = cached.userId
         req.userRole = cached.role ?? undefined
+        req.authKind = "jwt"
         if (cached.role) warmAdminCache(cached.userId, cached.role)
         return
       }
@@ -372,6 +382,7 @@ export function registerAuthHook(app: FastifyInstance): void {
       setCache(token, userId, role)
       req.userId = userId
       req.userRole = role ?? undefined
+      req.authKind = "jwt"
       if (role) warmAdminCache(userId, role)
       return
     }

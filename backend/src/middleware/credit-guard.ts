@@ -336,3 +336,42 @@ async function deleteJobBestEffort(jobId: string): Promise<void> {
     console.warn(`[credit-guard] delete threw for job ${jobId}: ${detail}`)
   }
 }
+
+/**
+ * Standalone spend-surface preHandler for run-creation routes that do NOT go
+ * through creditGuard (workflow run, app run, component execute, pipeline
+ * starts — their reservations happen later, inside the orchestrator or the
+ * pipeline worker, where the calling surface is no longer visible).
+ *
+ * creditGuard-protected routes get the same check for free inside the impl;
+ * this factory exists only for the entry points whose spending is deferred.
+ * No-op unless the edition has credits (same shim contract as creditGuard).
+ */
+export function paygSurfaceGuard() {
+  const implPromise = hasCredits() ? import("../ee/lib/payg-surface-guard.js") : null
+
+  return async (req: FastifyRequest, reply: FastifyReply): Promise<void> => {
+    if (!implPromise) return
+    const impl = await implPromise
+    await impl.blockPaygOnConsumerSurface(req, reply)
+  }
+}
+
+/**
+ * Plugin-scoped variant for route files where every POST spends (pipelines +
+ * scene-helpers): register once via `app.addHook("preHandler", ...)` instead
+ * of decorating each of the ~25 spend routes. GETs (reads) always pass;
+ * `skipUrlSuffixes` exempts non-spending POSTs (e.g. /cancel — a blocked
+ * user must still be able to stop a running pipeline).
+ */
+export function paygSurfaceSpendHook(opts?: { skipUrlSuffixes?: string[] }) {
+  const guard = paygSurfaceGuard()
+  const skips = opts?.skipUrlSuffixes ?? []
+
+  return async (req: FastifyRequest, reply: FastifyReply): Promise<void> => {
+    if (req.method !== "POST") return
+    const path = req.url.split("?")[0] ?? ""
+    if (skips.some((s) => path.endsWith(s))) return
+    await guard(req, reply)
+  }
+}

@@ -10,6 +10,7 @@ import { warmAdminCache } from "../../lib/admin-check.js"
 import { getAppSettings } from "../../lib/app-settings.js"
 import type { CreditReservation, StorageSnapshot, CreditGuardOpts } from "../../middleware/credit-guard.js"
 import { resolveEffectiveTier } from "@nodaro/shared"
+import { blockPaygOnConsumerSurface } from "./payg-surface-guard.js"
 
 // 503 is right: the route exists and the request is valid, but the system
 // cannot serve it because pricing is unconfigured. Not 400 (client is fine);
@@ -90,6 +91,16 @@ export function creditGuardImpl(
     }
 
     warmAdminCache(userId, (profile as Record<string, unknown>).role as string | undefined)
+
+    // Step 0: spend-surface enforcement — payg accounts cannot spend from a
+    // consumer surface. Before storage and reservation so a blocked request
+    // never creates any reservation state.
+    const surfaceBlocked = await blockPaygOnConsumerSurface(req, reply, {
+      tier: (profile as CreditProfile).tier ?? null,
+      subscription_tier: (profile as CreditProfile).subscription_tier ?? null,
+      lifetime_topup_credits: (profile as CreditProfile).lifetime_topup_credits,
+    })
+    if (surfaceBlocked) return
 
     // Step 1: storage limit
     try {

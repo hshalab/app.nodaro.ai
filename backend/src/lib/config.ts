@@ -105,6 +105,19 @@ const envSchema = z.object({
     .string()
     .optional()
     .transform((v) => v === "true" || v === "1"),
+  /** Spend-surface enforcement kill switch (decision log D1, 2026-08-12):
+   *  when on, pay-as-you-go accounts (stored free + lifetime top-ups > 0) are
+   *  blocked from SPENDING via first-party consumer surfaces (source web /
+   *  extension on a browser-session JWT) with 403 subscription_required.
+   *  Buying credits and all programmatic surfaces stay open. Default OFF;
+   *  strict parsing like MCP_ENABLED. */
+  PAYG_WEB_BLOCK_ENABLED: z
+    .string()
+    .optional()
+    .transform((v) => v === "true" || v === "1"),
+  /** Comma-separated user ids exempt from the payg web block (grandfathered
+   *  accounts that purchased before the surface model changed). */
+  PAYG_WEB_BLOCK_EXEMPT_USER_IDS: z.string().default(""),
   MCP_ENABLED: z
     .string()
     .optional()
