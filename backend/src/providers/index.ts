@@ -13,6 +13,7 @@
  *   const result = await generateImage("a cat", "nano-banana")
  */
 
+import { config } from "../lib/config.js"
 import { registerKieProviders } from "./kie/index.js"
 import { registerReplicateProviders } from "./replicate/index.js"
 import { registerNodaroCloudProviderIfConnected } from "./nodaro/index.js"
@@ -23,11 +24,24 @@ let nodaroRegistration: Promise<void> = Promise.resolve()
 export function initProviders(): void {
   if (initialized) return
 
-  registerKieProviders()
+  // Key-aware registration (Phase 4b follow-up, needed for cloud-connect):
+  // a KEYLESS self-host that registers KIE would still CLAIM every model KIE
+  // declares and then fail each call with a missing-key error — blocking the
+  // nodaro fallthrough entirely (the router skips UNREGISTERED providers,
+  // not registered-but-keyless ones). Cloud/keyed installs are unchanged.
+  if (config.KIE_API_KEY) {
+    registerKieProviders()
+  } else {
+    console.warn("[providers] KIE_API_KEY not set — KIE providers not registered")
+  }
   // Replicate is registered for a narrow set of "Open" (uncensored) image
   // models — see providers/replicate/image.ts. KIE wins the chain for every
   // model it declares; Replicate is the fallthrough.
-  registerReplicateProviders()
+  if (config.REPLICATE_API_TOKEN) {
+    registerReplicateProviders()
+  } else {
+    console.warn("[providers] REPLICATE_API_TOKEN not set — Replicate providers not registered")
+  }
 
   // Nodaro Cloud (community cloud-connect): registered ONLY when the instance
   // holds a cloud token — an async DB read, so it is kicked off here
