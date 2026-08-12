@@ -105,6 +105,13 @@ const envSchema = z.object({
     .string()
     .optional()
     .transform((v) => v === "true" || v === "1"),
+  /** Community cloud-connect (Phase 4a). Gates the community_instance DCR
+   *  branch and the connected-instances surface. Default OFF — also guards
+   *  the window before migration 312 reaches the shared DB. Strict parse. */
+  COMMUNITY_CONNECT_ENABLED: z
+    .string()
+    .optional()
+    .transform((v) => v === "true" || v === "1"),
   /** Spend-surface enforcement kill switch (decision log D1, 2026-08-12):
    *  when on, pay-as-you-go accounts (stored free + lifetime top-ups > 0) are
    *  blocked from SPENDING via first-party consumer surfaces (source web /

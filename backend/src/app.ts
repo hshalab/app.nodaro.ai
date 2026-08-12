@@ -3,7 +3,7 @@ import { requestLogSerializer } from "./lib/log-redaction.js"
 import { createHash } from "node:crypto"
 import cors from "@fastify/cors"
 import { isOriginAllowedDynamic } from "./lib/dynamic-origins.js"
-import { hasAdmin, hasCredits, isCloud, isMultiUser } from "./lib/config.js"
+import { config, hasAdmin, hasCredits, isCloud, isMultiUser } from "./lib/config.js"
 import { CLIENT_HEADER } from "./lib/job-source.js"
 import { loadPrivatePlugins } from "./lib/private-plugins/load.js"
 import { healthRoutes } from "./routes/health.js"
@@ -108,6 +108,7 @@ import { workflowCostRoutes } from "./routes/workflow-costs.js"
 import { sunoRoutes } from "./routes/suno.js"
 import { stripeWebhookRoutes } from "./ee/routes/stripe-webhook.js"
 import { billingRoutes } from "./ee/routes/billing.js"
+import { connectedInstancesRoutes } from "./ee/routes/connected-instances.js"
 import { galleryRoutes } from "./routes/gallery.js"
 import { userSettingsRoutes } from "./routes/user-settings.js"
 import { meRoutes } from "./routes/me.js"
@@ -437,6 +438,9 @@ export async function buildApp() {
   await app.register(sunoRoutes)
   if (hasCredits()) await app.register(stripeWebhookRoutes)
   if (hasCredits()) await app.register(billingRoutes)
+  // Community cloud-connect containment surface (Phase 4a) — flag-gated with
+  // the DCR branch so the whole feature appears/disappears together.
+  if (hasCredits() && config.COMMUNITY_CONNECT_ENABLED) await app.register(connectedInstancesRoutes)
   await app.register(galleryRoutes)
   await app.register(userSettingsRoutes)
   await app.register(meRoutes)

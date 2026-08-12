@@ -1767,7 +1767,7 @@ export class CreditsService {
     modelIdentifier: string,
     isAppRun?: boolean,
     creditOverride?: number,
-    webFreeMode?: boolean,
+    surface?: { webFreeMode?: boolean; communityInstance?: boolean },
   ): Promise<CreditCheckResult> {
     if (creditsDisabled()) {
       return { allowed: true, balance: 999999, watermark: false }
@@ -1795,7 +1795,7 @@ export class CreditsService {
     // Resolved here (not by callers) so the surface flag can be threaded
     // dumbly: for free users the restriction is vacuous, for subscribers it
     // must not apply.
-    const webFree = Boolean(webFreeMode) && userTier === "payg"
+    const webFree = Boolean(surface?.webFreeMode) && userTier === "payg"
     const isFree = userTier === "free" || webFree
     const watermark = isFree && FREE_TIER_RESTRICTIONS.watermark
 
@@ -1864,8 +1864,11 @@ export class CreditsService {
       }
     }
 
-    // Free tier: daily credit cap
-    if (isFree) {
+    // Free tier: daily credit cap. Connected community instances are exempt
+    // (founder decision D2: don't interrupt the first evening) — the total
+    // exposure is still bounded by the one-time 1,500 grant, and the
+    // per-instance monthly cap guards run in the credit guard.
+    if (isFree && !surface?.communityInstance) {
       const dailyCap = FREE_TIER_RESTRICTIONS.dailyCreditCap
       const dailySpent = await getEffectiveDailySpent(
         userId,
@@ -1903,7 +1906,9 @@ export class CreditsService {
     // today's first request against yesterday's spend and falsely 402-block,
     // even though the authoritative reserve_credits RPC resets it correctly.
     const tierConfig = await getTierConfig(userTier)
-    const dailyLimit = tierConfig.daily_credit_limit ?? undefined
+    const dailyLimit = surface?.communityInstance
+      ? undefined
+      : tierConfig.daily_credit_limit ?? undefined
     const dailySpent = await getEffectiveDailySpent(
       userId,
       profile.daily_spent_credits ?? 0,
@@ -1945,7 +1950,7 @@ export class CreditsService {
     modelIdentifier: string,
     providerCostUsd: number,
     displayCostUsd: number,
-    options?: { watermarkOverride?: boolean; isAppRun?: boolean; creditOverride?: number; skipAutoRecharge?: boolean; webFreeMode?: boolean },
+    options?: { watermarkOverride?: boolean; isAppRun?: boolean; creditOverride?: number; skipAutoRecharge?: boolean; webFreeMode?: boolean; communityInstance?: boolean },
   ): Promise<ReserveResult> {
     // Self-hosted: skip reservation
     if (creditsDisabled()) {
@@ -1980,9 +1985,11 @@ export class CreditsService {
     // TOCTOU the read-only creditGuard preHandler left open). Free tier uses the
     // fixed cap; paid tiers use their configured daily_credit_limit (null = no cap).
     // Web-free payg runs ride the free cap — they ARE free-tier spending.
-    const dailyLimit: number | null = (userTier === "free" || webFree)
-      ? FREE_TIER_RESTRICTIONS.dailyCreditCap
-      : (await getTierConfig(userTier)).daily_credit_limit
+    const dailyLimit: number | null = options?.communityInstance
+      ? null // D2: connected community instances ride uncapped days
+      : (userTier === "free" || webFree)
+        ? FREE_TIER_RESTRICTIONS.dailyCreditCap
+        : (await getTierConfig(userTier)).daily_credit_limit
 
     // Skip deduction for zero-cost models
     if (pricing.creditCost === 0) {

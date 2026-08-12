@@ -12,6 +12,35 @@ import type { CreditReservation, StorageSnapshot, CreditGuardOpts } from "../../
 import { resolveEffectiveTier } from "@nodaro/shared"
 import { isWebFreeModeCandidate, sendSubscriptionRequired } from "./payg-surface-guard.js"
 
+// Per-instance monthly spend rollup for the community-connect cap. Reads the
+// jobs ledger (source_detail carries the appId — stamped by insertJob) with a
+// 60s in-process cache so the guard adds at most one extra query per minute
+// per instance. Failure is fail-open: the cap is containment, not billing.
+const instanceSpendCache = new Map<string, { value: number; expires: number }>()
+
+async function monthlyInstanceSpend(userId: string, appId: string): Promise<number> {
+  const key = `${userId}:${appId}`
+  const hit = instanceSpendCache.get(key)
+  if (hit && hit.expires > Date.now()) return hit.value
+  const monthStart = new Date()
+  monthStart.setUTCDate(1)
+  monthStart.setUTCHours(0, 0, 0, 0)
+  try {
+    const { data } = await supabase
+      .from("jobs")
+      .select("credits")
+      .eq("user_id", userId)
+      .eq("source", "app")
+      .eq("source_detail", appId)
+      .gte("created_at", monthStart.toISOString())
+    const total = (data ?? []).reduce((sum, row) => sum + ((row as { credits: number | null }).credits ?? 0), 0)
+    instanceSpendCache.set(key, { value: total, expires: Date.now() + 60_000 })
+    return total
+  } catch {
+    return 0
+  }
+}
+
 // 503 is right: the route exists and the request is valid, but the system
 // cannot serve it because pricing is unconfigured. Not 400 (client is fine);
 // not 500 (system is functioning, just missing a config row).
@@ -97,6 +126,23 @@ export function creditGuardImpl(
     // The flag is a surface predicate; payg-ness resolves inside the credit
     // check / reservation / RPC, so free users and subscribers see no change.
     req.webFreeMode = isWebFreeModeCandidate(req)
+    const communityInstance = req.appAuthorization?.appKind === "community_instance"
+
+    // Step 0b: per-instance monthly spend cap (Phase 4a containment trio).
+    // Rollup is read-then-check — a small overshoot race is acceptable for
+    // MVP (documented in the PR); the cap is a soft budget, not a ledger.
+    if (communityInstance && req.appAuthorization?.monthlySpendCapCredits != null) {
+      const spent = await monthlyInstanceSpend(userId, req.appAuthorization.appId)
+      if (spent >= req.appAuthorization.monthlySpendCapCredits) {
+        reply.status(402).send({
+          error: {
+            code: "instance_cap_reached",
+            message: `This instance reached its monthly spend cap (${req.appAuthorization.monthlySpendCapCredits} credits). Raise or remove the cap from Connected Instances.`,
+          },
+        })
+        return
+      }
+    }
 
     // Step 1: storage limit
     try {
@@ -142,7 +188,7 @@ export function creditGuardImpl(
         modelIdentifier,
         req.isAppRun,
         computedCreditOverride,
-        req.webFreeMode,
+        { webFreeMode: req.webFreeMode ?? false, communityInstance },
       )
 
       if (!creditCheck.allowed) {
@@ -209,6 +255,7 @@ export async function reserveCreditsForJobImpl(
         skipAutoRecharge: Boolean(req.appAuthorization),
         creditOverride: req.creditReservation?.creditOverride,
         webFreeMode: req.webFreeMode,
+        communityInstance: req.appAuthorization?.appKind === "community_instance",
       },
     )
 

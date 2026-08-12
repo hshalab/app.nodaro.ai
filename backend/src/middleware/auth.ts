@@ -42,6 +42,13 @@ declare module "fastify" {
       appId: string
       authorizationId: string
       scopes: readonly string[]
+      /** Registration kind of the app behind this token (developer_apps.kind).
+       *  "community_instance" = a self-hosted Nodaro connecting via
+       *  cloud-connect — gets the free-tier daily-cap exemption and the
+       *  per-instance monthly spend cap. */
+      appKind?: string
+      /** Per-instance monthly spend cap (credits); null/undefined = uncapped. */
+      monthlySpendCapCredits?: number | null
     }
     /** Which credential kind authenticated this request. Distinguishes a
      *  browser-session JWT from the developer credentials (personal API token,
@@ -288,7 +295,8 @@ export function registerAuthHook(app: FastifyInstance): void {
         .from("developer_app_tokens")
         .select(`
           id, authorization_id, expires_at, revoked_at,
-          developer_app_authorizations!inner ( id, app_id, user_id, scopes_granted, revoked_at )
+          developer_app_authorizations!inner ( id, app_id, user_id, scopes_granted, revoked_at, monthly_spend_cap_credits,
+            developer_apps!inner ( kind ) )
         `)
         .eq("token_hash", tokenHash)
         .maybeSingle()
@@ -309,6 +317,8 @@ export function registerAuthHook(app: FastifyInstance): void {
         user_id: string
         scopes_granted: string[]
         revoked_at: string | null
+        monthly_spend_cap_credits: number | null
+        developer_apps: { kind: string | null } | null
       }
       if (authRow.revoked_at) {
         if (isPublic) return
@@ -322,6 +332,8 @@ export function registerAuthHook(app: FastifyInstance): void {
         appId: authRow.app_id,
         authorizationId: authRow.id,
         scopes: authRow.scopes_granted,
+        appKind: authRow.developer_apps?.kind ?? "user",
+        monthlySpendCapCredits: authRow.monthly_spend_cap_credits ?? null,
       }
 
       // Touch last_used_at (fire-and-forget — could be throttled in a follow-up)

@@ -17,6 +17,7 @@ import {
 import { CurrentPlanCard } from "@/ee/components/billing/CurrentPlanCard"
 import { CreditBalanceCard } from "@/ee/components/billing/CreditBalanceCard"
 import { CreditActivity } from "@/ee/components/billing/CreditActivity"
+import { ConnectedInstances } from "@/ee/components/billing/ConnectedInstances"
 import {
   SANS_FONT,
   formatCredits,
@@ -208,6 +209,8 @@ export default function BillingPage() {
         />
 
         <EarningsSection />
+
+        <ConnectedInstances />
 
         <CreditActivity transactions={transactions} loading={txLoading} />
 
