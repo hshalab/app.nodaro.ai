@@ -2,7 +2,6 @@
 
 import { memo, useState, useEffect, useLayoutEffect, useRef, useCallback, type ReactNode, type MouseEvent, type PointerEvent as ReactPointerEvent } from "react"
 import { Handle, Position, NodeToolbar, useUpdateNodeInternals, NodeResizeControl } from "@xyflow/react"
-import { Settings } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { NODE_TITLE_TYPOGRAPHY } from "@/lib/node-title-style"
 import { useWorkflowStore } from "@/hooks/use-workflow-store"
@@ -11,6 +10,7 @@ import { useAltKeyStore } from "@/hooks/use-alt-key"
 import { useMobileCanvas } from "@/components/editor/mobile-canvas-context"
 import { CustomHandle } from "./custom-handle"
 import { NodeRunStripShell } from "./node-run-strip-shell"
+import { NodeSettingsButton } from "./node-settings-button"
 import { InlineGluedStripContext } from "./inline-glued-strip-context"
 import { NodeTopToolbar } from "./node-top-toolbar"
 import { computeFittedNodeBox } from "./video-node-defaults"
@@ -819,7 +819,12 @@ function BaseNodeComponent({
       {/* Content below card (the run strip). `topToolbarContent` is framed in
           the shared zoom-scaled pill so every node matches; `rawToolbarContent`
           (bespoke self-framing toolbars) renders as-is. */}
-      {(topToolbarContent || rawToolbarContent) && (
+      {/* Unconditional now. The ~65 node types that pass no toolbar content at
+          all (parameter pickers, group frames) previously reached their settings
+          through the floating button; deleting it without giving them a strip
+          would have removed their only way in. They get one holding the settings
+          toggle alone. */}
+      {(
         chromeHeight > 0 ? (
           // Inline mode: glue the run strip to the card's DOM bottom so it
           // tracks `node.height` (exactly like the card) instead of
@@ -841,7 +846,7 @@ function BaseNodeComponent({
               <InlineGluedStripContext.Provider value={true}>
                 {rawToolbarContent
                   ? rawToolbarContent
-                  : <NodeRunStripShell>{topToolbarContent}</NodeRunStripShell>}
+                  : <NodeRunStripShell>{topToolbarContent ?? <NodeSettingsButton nodeId={id} />}</NodeRunStripShell>}
               </InlineGluedStripContext.Provider>
             </div>
           )
@@ -863,7 +868,7 @@ function BaseNodeComponent({
             >
               {rawToolbarContent
                 ? rawToolbarContent
-                : <NodeRunStripShell>{topToolbarContent}</NodeRunStripShell>}
+                : <NodeRunStripShell>{topToolbarContent ?? <NodeSettingsButton nodeId={id} />}</NodeRunStripShell>}
             </div>
           </NodeToolbar>
         )
@@ -906,29 +911,9 @@ function BaseNodeComponent({
       ))}
 
       </div>
-      {/* Settings button (right of the node): toggles this node's config-panel
-          sidebar. Brand pink while open, neutral card while closed — mirrors the
-          editor toolbar's settings toggle. */}
-      {(isHovered || isFocusedNode || isEditing) && !isMobile && (
-        <button
-          type="button"
-          aria-label={isEditing ? "Close settings" : "Open settings"}
-          title={isEditing ? "Close settings" : "Open settings"}
-          onMouseDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.stopPropagation()
-            selectNode(isEditing ? null : id)
-          }}
-          className={cn(
-            "nodrag absolute top-1/2 -translate-y-1/2 -right-14 z-40 flex items-center justify-center w-9 h-9 rounded-full border shadow-sm transition-colors",
-            isEditing
-              ? "bg-[#ff0073] border-[#ff0073] text-white hover:bg-[#e0006a]"
-              : "bg-card border-border text-muted-foreground hover:bg-accent hover:text-foreground",
-          )}
-        >
-          <Settings className="w-[18px] h-[18px]" />
-        </button>
-      )}
+      {/* The settings toggle used to float here, off the node's right edge. It
+          now lives at the end of the run strip (see {@link NodeSettingsButton}),
+          so the margins around a node are reserved for ports alone. */}
       {/* Bottom-corner controls. Parameter nodes (cinematography) and any
           node that opts in via `enableZoomHandle` get the zoom magnifier on
           one corner + a single resize dot on the other (Alt-swappable). All

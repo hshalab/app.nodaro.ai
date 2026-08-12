@@ -16,6 +16,7 @@ import { setSkipUndoCapture } from "./undo-flags"
 import { filterCloneNodes, EXECUTION_DATA_KEYS, TRANSIENT_RUNTIME_KEYS, migrateToItems, validateNoNestedGroups, cleanOrphanedItems, isCollectInEdge } from "@nodaro/shared"
 import type { PresentationItem, PipelineStatus } from "@nodaro/shared"
 import type { VariableDisplayMode } from "@/components/editor/config-panels/types"
+import type { NodeDoubleClickAction } from "@/lib/node-double-click-action"
 import { buildPreviewItemKey, getPreviewItemKey } from "@/lib/preview-items"
 import { ensureNodePositions } from "@/lib/node-position"
 import { findNonOverlappingPosition, nodeRect, DEFAULT_PLACEMENT_SIZE } from "@/lib/find-free-position"
@@ -442,6 +443,10 @@ interface WorkflowState {
   readonly closeImageEdit: () => void
   readonly variableDisplayMode: VariableDisplayMode
   readonly setVariableDisplayMode: (mode: VariableDisplayMode) => void
+  /** What double-clicking a canvas node does. Per-user, persisted via
+   *  /v1/user/settings; this field is the in-memory read path. */
+  readonly nodeDoubleClickAction: NodeDoubleClickAction
+  readonly setNodeDoubleClickAction: (action: NodeDoubleClickAction) => void
   readonly newNodeIds: Set<string>
   readonly characterDefinitions: CharacterDefinition[]
   readonly userPromptTemplates: Record<string, string>
@@ -926,6 +931,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   freecutEdit: null,
   imageEdit: null,
   variableDisplayMode: "raw" as const,
+  nodeDoubleClickAction: "settings" as NodeDoubleClickAction,
   newNodeIds: new Set<string>(),
   characterDefinitions: [],
   userPromptTemplates: {},
@@ -2762,6 +2768,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   closeImageEdit: () => set({ imageEdit: null }),
 
   setVariableDisplayMode: (mode) => set({ variableDisplayMode: mode }),
+  setNodeDoubleClickAction: (action) => set({ nodeDoubleClickAction: action }),
 
   clearNewNode: (id) =>
     set((state) => {

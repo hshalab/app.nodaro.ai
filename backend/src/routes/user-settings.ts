@@ -45,6 +45,60 @@ const SUPPORTED_LOCALES = [
  * MCP tool's own Zod gate catches stale picks at call time. We only enforce
  * type-shape so the JSONB payload stays sane.
  */
+/** How {nodeRef} placeholders render in prompt fields. Mirrors the CHECK
+ *  constraint in migration 315 — the renderer only branches on "annotated" vs
+ *  everything else, so an unvalidated value would silently read as "resolved". */
+const VariableDisplayModeSchema = z.enum(["raw", "annotated", "resolved"])
+
+/** What double-clicking a canvas node does. Mirrors migration 316's CHECK. */
+const NodeDoubleClickActionSchema = z.enum(["zoom", "settings"])
+
+/** Postgres `undefined_column`, surfaced verbatim by PostgREST. */
+const UNDEFINED_COLUMN = "42703"
+
+/**
+ * Profile columns this route reads, split so the newest one can be dropped.
+ *
+ * A deployment can run this code before its migration has been applied, so
+ * `variable_display_mode` may not exist yet. PostgREST fails the WHOLE select
+ * on one unknown column, which took the entire Settings page down rather than
+ * just defaulting that field. These helpers degrade instead, and self-heal the
+ * moment the migration lands — no restart, no flag to reset.
+ */
+const PROFILE_COLUMNS_BASE =
+  "tier, public_outputs, prompt_templates, text_templates, preferred_locale, mcp_preferences, show_recent_nodes, show_most_used_nodes"
+
+/**
+ * Columns whose migration may not have run yet on the database this process is
+ * talking to. Add a column here in the same change that adds it to the schema;
+ * remove it once the migration is everywhere. Everything in this list degrades
+ * to its default instead of taking the whole route down.
+ */
+const PENDING_COLUMNS = ["variable_display_mode", "node_double_click_action"] as const
+// Spelled out rather than joined from the array above: supabase-js infers the
+// row type from a STRING LITERAL, so a computed select() collapses every field
+// to `GenericStringError`. Keep this in sync with PENDING_COLUMNS by hand.
+const PROFILE_COLUMNS =
+  "tier, public_outputs, prompt_templates, text_templates, preferred_locale, mcp_preferences, show_recent_nodes, show_most_used_nodes, variable_display_mode, node_double_click_action"
+
+async function selectProfile(userId: string) {
+  const full = await supabase.from("profiles").select(PROFILE_COLUMNS).eq("id", userId).single()
+  if (!full.error || full.error.code !== UNDEFINED_COLUMN) return full
+  const base = await supabase.from("profiles").select(PROFILE_COLUMNS_BASE).eq("id", userId).single()
+  return base as typeof full
+}
+
+/** Same tolerance on the write side: retry once without the pending columns. */
+async function updateProfile(userId: string, updates: Record<string, unknown>) {
+  const first = await supabase.from("profiles").update(updates).eq("id", userId)
+  if (!first.error || first.error.code !== UNDEFINED_COLUMN) return first
+  const rest = Object.fromEntries(
+    Object.entries(updates).filter(([k]) => !PENDING_COLUMNS.includes(k as never)),
+  )
+  if (Object.keys(rest).length === 0) return first
+  return await supabase.from("profiles").update(rest).eq("id", userId)
+}
+
 const McpPreferencesPatch = z
   .object({
     image: z
@@ -95,6 +149,8 @@ const updateSettingsBody = z.object({
   mcpPreferences: McpPreferencesPatch.optional(),
   showRecentNodes: z.boolean().optional(),
   showMostUsedNodes: z.boolean().optional(),
+  variableDisplayMode: VariableDisplayModeSchema.optional(),
+  nodeDoubleClickAction: NodeDoubleClickActionSchema.optional(),
 })
 
 /** Generate Text user-defined template preset (stored on profiles.text_templates). */
@@ -111,11 +167,7 @@ export async function userSettingsRoutes(app: FastifyInstance) {
       return reply.status(401).send({ error: "Authentication required" })
     }
 
-    const { data: profile, error } = await supabase
-      .from("profiles")
-      .select("tier, public_outputs, prompt_templates, text_templates, preferred_locale, mcp_preferences, show_recent_nodes, show_most_used_nodes")
-      .eq("id", userId)
-      .single()
+    const { data: profile, error } = await selectProfile(userId)
 
     if (error || !profile) {
       return reply.status(404).send({ error: "Profile not found" })
@@ -131,6 +183,8 @@ export async function userSettingsRoutes(app: FastifyInstance) {
         mcpPreferences: (profile.mcp_preferences as McpPreferences) ?? {},
         showRecentNodes: profile.show_recent_nodes ?? false,
         showMostUsedNodes: profile.show_most_used_nodes ?? false,
+        variableDisplayMode: profile.variable_display_mode ?? "raw",
+        nodeDoubleClickAction: profile.node_double_click_action ?? "settings",
       },
     })
   })
@@ -151,18 +205,14 @@ export async function userSettingsRoutes(app: FastifyInstance) {
     }
 
     const userId = req.userId
-    const { publicOutputs, promptTemplates, textTemplates, preferredLocale, mcpPreferences, showRecentNodes, showMostUsedNodes } = parsed.data
+    const { publicOutputs, promptTemplates, textTemplates, preferredLocale, mcpPreferences, showRecentNodes, showMostUsedNodes, variableDisplayMode, nodeDoubleClickAction } = parsed.data
 
     if (!userId) {
       return reply.status(401).send({ error: "Authentication required" })
     }
 
     // Fetch current profile (include public_outputs for response accuracy)
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("tier, public_outputs, prompt_templates, text_templates, preferred_locale, mcp_preferences, show_recent_nodes, show_most_used_nodes")
-      .eq("id", userId)
-      .single()
+    const { data: profile, error: profileError } = await selectProfile(userId)
 
     if (profileError || !profile) {
       return reply.status(404).send({ error: "Profile not found" })
@@ -186,6 +236,12 @@ export async function userSettingsRoutes(app: FastifyInstance) {
     }
     if (showMostUsedNodes !== undefined) {
       updates.show_most_used_nodes = showMostUsedNodes
+    }
+    if (variableDisplayMode !== undefined) {
+      updates.variable_display_mode = variableDisplayMode
+    }
+    if (nodeDoubleClickAction !== undefined) {
+      updates.node_double_click_action = nodeDoubleClickAction
     }
 
     // Validate and filter prompt templates
@@ -245,10 +301,7 @@ export async function userSettingsRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: "No valid fields to update" })
     }
 
-    const { error: updateError } = await supabase
-      .from("profiles")
-      .update(updates)
-      .eq("id", userId)
+    const { error: updateError } = await updateProfile(userId, updates)
 
     if (updateError) {
       console.error("[user-settings] Update failed:", updateError)
@@ -278,6 +331,8 @@ export async function userSettingsRoutes(app: FastifyInstance) {
         mcpPreferences: confirmedMcpPreferences,
         showRecentNodes: showRecentNodes ?? (profile.show_recent_nodes ?? false),
         showMostUsedNodes: showMostUsedNodes ?? (profile.show_most_used_nodes ?? false),
+        variableDisplayMode: variableDisplayMode ?? (profile.variable_display_mode ?? "raw"),
+        nodeDoubleClickAction: nodeDoubleClickAction ?? (profile.node_double_click_action ?? "settings"),
       },
     })
   })

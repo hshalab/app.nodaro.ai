@@ -36,7 +36,7 @@ vi.mock("@nodaro/shared", () => ({
 
 vi.mock("lucide-react", () => {
   const I = (p: Record<string, unknown>) => <span data-testid="mock-icon" {...p} />
-  return { FastForward: I, Play: I, Loader2: I, Trash2: I, RotateCcw: I, Save: I }
+  return { FastForward: I, Play: I, Loader2: I, Trash2: I, RotateCcw: I, Save: I, SlidersHorizontal: I }
 })
 
 // Thin shells for the Radix UI primitives. jsdom doesn't implement the pointer

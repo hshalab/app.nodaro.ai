@@ -141,6 +141,45 @@ interface AppSidebarProps {
   readonly className?: string
 }
 
+/**
+ * One pool inside the sidebar credit card: label and amount on a line, a thin
+ * bar under them, and the expiry note below.
+ *
+ * The label and the amount sit on the SAME line on purpose — that is what frees
+ * the full card width for the note underneath, which is what was being clipped
+ * when the two pools were side-by-side columns.
+ */
+function CreditRow({
+  label,
+  value,
+  pct,
+  fill,
+  subline,
+}: {
+  readonly label: string
+  readonly value: number
+  readonly pct: number
+  readonly fill: string
+  readonly subline: string | null
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
+        <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", color: "var(--blg-t2-label)", whiteSpace: "nowrap" }}>
+          {label}
+        </span>
+        <span style={{ fontSize: 14, fontWeight: 600, color: "var(--blg-t1)", fontVariantNumeric: "tabular-nums" }}>
+          {value.toLocaleString()}
+        </span>
+      </div>
+      <div style={{ height: 3, borderRadius: 2, background: "var(--blg-track)", overflow: "hidden" }}>
+        <div style={{ width: `${pct}%`, height: 3, borderRadius: 2, background: fill }} />
+      </div>
+      {subline && <span style={{ fontSize: 11, color: "var(--blg-t3-head)" }}>{subline}</span>}
+    </div>
+  )
+}
+
 export function AppSidebar({
   defaultCollapsed = false,
   onMobileClose,
@@ -374,10 +413,16 @@ export function AppSidebar({
                   borderRadius: 14,
                   background: "var(--blg-card)",
                   overflow: "hidden",
+                  // The sidebar is a flex column, so this card was a shrinkable
+                  // item: when vertical space got tight it compressed and the
+                  // `overflow: hidden` above silently cut the bottom row off —
+                  // TOP-UP's bar and expiry note simply vanished. The nav below
+                  // scrolls instead (see its min-h-0 + overflow-y-auto).
+                  flexShrink: 0,
                 }}
                 onClick={() => navigate("/billing")}
               >
-                <div style={{ padding: "14px 16px 12px" }}>
+                <div style={{ padding: "14px 16px 14px" }}>
                   <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
                     <span style={{ fontSize: 10, letterSpacing: "0.14em", color: "var(--blg-t2-dim)", fontWeight: 600 }}>
                       TOTAL CREDITS
@@ -400,64 +445,27 @@ export function AppSidebar({
                     </span>
                     <span style={{ fontSize: 13, color: "var(--blg-t2-dim)" }}>credits</span>
                   </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      height: 5,
-                      borderRadius: 99,
-                      overflow: "hidden",
-                      marginTop: 12,
-                      background: "var(--blg-track)",
-                    }}
-                  >
-                    <div style={{ width: `${subPct}%`, background: "var(--blg-pink)" }} />
-                    <div style={{ width: `${topupPct}%`, background: "var(--blg-cyan)" }} />
-                  </div>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderTop: "1px solid var(--blg-border-3)" }}>
-                  <div style={{ padding: "11px 14px", borderRight: "1px solid var(--blg-border-3)" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ width: 6, height: 6, borderRadius: 99, background: "var(--blg-pink)" }} />
-                      <span style={{ fontSize: 10, letterSpacing: "0.08em", color: "var(--blg-t2-label)", fontWeight: 600, whiteSpace: "nowrap" }}>
-                        SUBSCRIPTION
-                      </span>
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 18,
-                        fontWeight: 700,
-                        marginTop: 4,
-                        fontVariantNumeric: "tabular-nums",
-                        color: "var(--blg-t1)",
-                      }}
-                    >
-                      {creditBalance.subscription.toLocaleString()}
-                    </div>
-                    {subscriptionSubline && (
-                      <div style={{ fontSize: 10.5, color: "var(--blg-t3-head)", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        {subscriptionSubline}
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ padding: "11px 14px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ width: 6, height: 6, borderRadius: 99, background: "var(--blg-cyan)" }} />
-                      <span style={{ fontSize: 10, letterSpacing: "0.08em", color: "var(--blg-t2-label)", fontWeight: 600, whiteSpace: "nowrap" }}>
-                        TOP&#8209;UP
-                      </span>
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 18,
-                        fontWeight: 700,
-                        marginTop: 4,
-                        fontVariantNumeric: "tabular-nums",
-                        color: "var(--blg-t1)",
-                      }}
-                    >
-                      {creditBalance.topup.toLocaleString()}
-                    </div>
-                    <div style={{ fontSize: 10.5, color: "var(--blg-t3-head)", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>valid 12 months</div>
+                  {/* Two stacked rows, each with its own bar — replaces the
+                      side-by-side columns from the first pass. Splitting the
+                      sidebar's width in two left each subline ~70px and clipped
+                      "renews Mar 8, 2027"; full-width rows give it the whole
+                      card. Colours stay on the --blg-* tokens rather than the
+                      mock's literals so both themes follow. */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 16 }}>
+                    <CreditRow
+                      label="SUBSCRIPTION"
+                      value={creditBalance.subscription}
+                      pct={subPct}
+                      fill="var(--blg-pink)"
+                      subline={subscriptionSubline}
+                    />
+                    <CreditRow
+                      label="TOP‑UP"
+                      value={creditBalance.topup}
+                      pct={topupPct}
+                      fill="var(--blg-cyan)"
+                      subline="valid 12 months"
+                    />
                   </div>
                 </div>
               </div>
@@ -466,7 +474,11 @@ export function AppSidebar({
         )}
 
         {/* Navigation */}
-        <nav className="flex-1 px-2 py-3 flex flex-col gap-1">
+        {/* min-h-0 is what lets this actually shrink — a flex item defaults to
+            min-height:auto and refuses to go below its content, which is what
+            pushed the squeeze onto the credit card above. With it, the nav is
+            the region that scrolls when the sidebar runs out of room. */}
+        <nav className="flex-1 min-h-0 overflow-y-auto px-2 py-3 flex flex-col gap-1">
           {isCollapsed ? (
             // Collapsed: flat icon list, no labels
             NAV_ITEMS.map((item) => {

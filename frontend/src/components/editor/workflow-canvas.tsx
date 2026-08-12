@@ -1315,9 +1315,17 @@ export function WorkflowCanvas({ sidebarVisible, onToggleSidebar }: WorkflowCanv
       // by InlineNodePrompt) — don't also fire focus-zoom here.
       if ((event.target as HTMLElement | null)?.closest?.(".inline-node-prompt")) return
       setFocusedNodeId(node.id)
+      // Per-user preference — people who live in this editor want opposite
+      // things here. `Enter` deliberately still zooms in BOTH modes (see
+      // NodeDoubleClickAction), so whichever action the mouse isn't doing is
+      // always one keypress away.
+      if (useWorkflowStore.getState().nodeDoubleClickAction === "settings") {
+        selectNode(node.id)
+        return
+      }
       handleZoomToggleRef.current(node.id)
     },
-    [setFocusedNodeId],
+    [setFocusedNodeId, selectNode],
   )
 
   const handlePaneClick = useCallback(() => {
