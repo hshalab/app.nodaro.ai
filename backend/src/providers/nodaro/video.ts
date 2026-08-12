@@ -86,7 +86,7 @@ function extractVideoResult(
   const url = typeof output.videoUrl === "string" ? output.videoUrl : undefined
   if (!url) {
     throw new NodaroCloudError(
-      `Nodaro Cloud: video job ${jobId} completed but returned no videoUrl`,
+      `nodaro.ai: video job ${jobId} completed but returned no videoUrl`,
     )
   }
   // The cloud's thumbnailUrl is ignored — the instance worker regenerates its

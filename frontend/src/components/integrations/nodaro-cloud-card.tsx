@@ -60,7 +60,7 @@ export function NodaroCloudCard() {
     const params = new URLSearchParams(window.location.search)
     if (params.get("nodaro") !== "connected") return
     connectToastShownRef.current = true
-    toast.success("Connected to Nodaro Cloud!")
+    toast.success("Connected to nodaro.ai!")
     params.delete("nodaro")
     const query = params.toString()
     window.history.replaceState(
@@ -100,7 +100,7 @@ export function NodaroCloudCard() {
         headers,
       })
       if (!res.ok) throw new Error(`status ${res.status}`)
-      toast.success("Disconnected from Nodaro Cloud")
+      toast.success("Disconnected from nodaro.ai")
       await refresh()
     } catch {
       toast.error("Failed to disconnect")
@@ -123,7 +123,7 @@ export function NodaroCloudCard() {
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-gray-900 dark:text-white text-sm">Nodaro Cloud</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-white text-sm">nodaro.ai</h3>
             {connected && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
@@ -133,8 +133,8 @@ export function NodaroCloudCard() {
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400">
             {connected
-              ? "This instance generates with Nodaro Cloud models through your connected account."
-              : "Generate with Nodaro Cloud models — 1,500 free credits, no credit card."}
+              ? "This instance generates with nodaro.ai models through your connected account."
+              : "Generate with nodaro.ai models — 1,500 free credits, no credit card."}
           </p>
         </div>
       </div>

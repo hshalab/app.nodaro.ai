@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Link, Navigate, useNavigate } from "react-router-dom"
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { NodaroLogo } from "@/components/nodaro-logo"
@@ -19,6 +19,11 @@ import { isCloud } from "@/lib/edition"
 export default function SignupPage() {
   const { signUpWithEmail } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  // Guided-setup flow: /setup links here with ?from=setup so a successful
+  // signup returns to the stepper (step 1 -> done, step 2 lights up) instead
+  // of dropping the user into the app mid-onboarding.
+  const fromSetup = searchParams.get("from") === "setup"
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirm, setConfirm] = useState("")
@@ -41,7 +46,7 @@ export default function SignupPage() {
     try {
       const { sessionCreated } = await signUpWithEmail(email, password)
       if (sessionCreated) {
-        navigate("/projects", { replace: true })
+        navigate(fromSetup ? "/setup" : "/projects", { replace: true })
       } else {
         setAwaitingConfirmation(true)
         setPending(false)
@@ -67,13 +72,21 @@ export default function SignupPage() {
           <h1>
             <NodaroLogo size="xl" />
           </h1>
-          <p className="text-base text-muted-foreground animate-in fade-in duration-700">
-            Visual workflows for AI video generation
+          <p className="animate-in fade-in duration-700">
+            <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 font-mono text-[11px] tracking-[0.14em] text-muted-foreground">
+              SELF-HOSTED &middot; {window.location.host}
+            </span>
           </p>
         </div>
 
         <div className="rounded-xl border border-white/[0.08] bg-card/60 backdrop-blur-sm p-6 shadow-lg space-y-4">
-          <h2 className="text-lg font-semibold">Create your account</h2>
+          <div className="space-y-1.5">
+            <h2 className="text-lg font-semibold">Create your account</h2>
+            <p className="text-xs text-muted-foreground">
+              A local account, stored only on this server &mdash; not a
+              nodaro.ai account. You can connect nodaro.ai later.
+            </p>
+          </div>
 
           {awaitingConfirmation ? (
             <div className="space-y-3">
@@ -116,7 +129,13 @@ export default function SignupPage() {
                 required
                 aria-label="Confirm password"
               />
-              <Button type="submit" className="w-full" disabled={pending}>
+              {/* Neutral (not brand-pink) on purpose: this creates a LOCAL
+                  server account; pink is reserved for Nodaro Cloud actions. */}
+              <Button
+                type="submit"
+                className="w-full bg-foreground text-background hover:bg-foreground/90"
+                disabled={pending}
+              >
                 {pending ? "Creating account..." : "Create account"}
               </Button>
             </form>

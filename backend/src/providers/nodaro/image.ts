@@ -80,7 +80,7 @@ export class NodaroCloudImageProvider implements ImageGenerationProvider {
     const url = typeof output.imageUrl === "string" ? output.imageUrl : undefined
     if (!url) {
       throw new NodaroCloudError(
-        `Nodaro Cloud: image job ${jobId} completed but returned no imageUrl`,
+        `nodaro.ai: image job ${jobId} completed but returned no imageUrl`,
       )
     }
     // Multi-variant results land as output_data.imageUrls with the primary at

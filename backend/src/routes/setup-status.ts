@@ -148,21 +148,48 @@ export async function setupStatusRoutes(app: FastifyInstance) {
       elevenlabs: config.ELEVENLABS_API_KEY.length > 0,
       fal: config.FAL_KEY.length > 0,
     }
-    const anyMediaProvider = providerKeys.kie || providerKeys.replicate
+    // Nodaro Cloud is a first-class media provider (Phase 4a): a connected
+    // instance can generate with zero local keys.
+    const { isNodaroConnected } = await import("../lib/nodaro-connect.js")
+    const nodaroConnected = await isNodaroConnected().catch(() => false)
+    const anyMediaProvider = providerKeys.kie || providerKeys.replicate || nodaroConnected
     const providers = {
       ok: anyMediaProvider,
+      nodaroCloud: nodaroConnected,
       keys: providerKeys,
       ...(anyMediaProvider
         ? {}
         : {
-            hint: "No media provider key set - add KIE_API_KEY (kie.ai) or REPLICATE_API_TOKEN (replicate.com) to generate images and video",
+            hint: "No media provider configured - connect nodaro.ai from Integrations (OAuth sign-in, no API keys to manage), or add KIE_API_KEY (kie.ai) / REPLICATE_API_TOKEN (replicate.com)",
           }),
     }
+
+    // First-boot detection: a fresh install has no operator account yet —
+    // the frontend lands on /setup and leads with "create your account"
+    // instead of a sign-in form (founder feedback 2026-08-13). Booleans
+    // only, same public-surface stance as the rest of this route.
+    let hasUsers = false
+    try {
+      const { count } = await supabase
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+      hasUsers = (count ?? 0) > 0
+    } catch {
+      // Unreachable DB already surfaces via the database check.
+    }
+
+    // Deliberate exception to the booleans-only stance: the compose file
+    // passes the HOST path of the install folder (${PWD}) so the setup UI
+    // can tell users where the .env lives. It is a directory path with no
+    // credentials in it; omit entirely when compose didn't provide one.
+    const installDir = (process.env.NODARO_INSTALL_DIR ?? "").trim()
 
     reply.header("Cache-Control", "no-store")
     return reply.send({
       edition: config.EDITION,
       timestamp: new Date().toISOString(),
+      hasUsers,
+      ...(installDir ? { installDir } : {}),
       checks: { database, redis, storage, providers },
     })
   })

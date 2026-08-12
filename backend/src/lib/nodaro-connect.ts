@@ -68,7 +68,7 @@ export async function isNodaroConnected(): Promise<boolean> {
 export async function nodaroCloudFetch(path: string, init?: RequestInit): Promise<Response> {
   const conn = await getNodaroConnection()
   if (!conn?.accessToken) {
-    throw new Error("Nodaro Cloud is not connected")
+    throw new Error("nodaro.ai is not connected")
   }
   return fetch(`${nodaroCloudBase()}${path}`, {
     ...init,

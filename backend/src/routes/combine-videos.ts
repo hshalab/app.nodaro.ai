@@ -92,7 +92,7 @@ export async function combineVideosRoutes(app: FastifyInstance) {
     // the fixed trimStartFrames/trimEndFrames stay available everywhere.
     if (smartCutEnabled && !isCloud()) {
       return reply.status(400).send({
-        error: { code: "cloud_only_feature", message: "Smart cut is available on Nodaro Cloud — use the fixed trim frame counts instead" },
+        error: { code: "cloud_only_feature", message: "Smart cut is available on nodaro.ai — use the fixed trim frame counts instead" },
       })
     }
 

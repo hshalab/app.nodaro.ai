@@ -25,6 +25,8 @@ interface CheckResult {
 
 interface ProvidersCheck {
   readonly ok: boolean
+  /** Live Nodaro Cloud connection — a first-class provider, not an env var. */
+  readonly nodaroCloud?: boolean
   readonly keys: Record<string, boolean>
   readonly hint?: string
 }
@@ -32,6 +34,9 @@ interface ProvidersCheck {
 interface SetupStatus {
   readonly edition: string
   readonly timestamp: string
+  readonly hasUsers?: boolean
+  /** Host path of the compose project dir (from NODARO_INSTALL_DIR). */
+  readonly installDir?: string
   readonly checks: {
     readonly database: CheckResult
     readonly redis: CheckResult
@@ -50,7 +55,7 @@ const SURFACE = "#fffefc"
 const MUTED = "#5b5f68"
 const SUBTLE = "#8a8e96"
 const FAINT = "#a3a7ae"
-const ACCENT = "#ff3159"
+const ACCENT = "#ff0073"
 const OK = "#16a34a"
 const WARN = "#d97706"
 const DANGER = "#dc2626"
@@ -235,6 +240,63 @@ function ServiceCard({
   )
 }
 
+/** Minimal IndexedDB store for the granted install-folder handle, so the
+ *  second click writes without re-opening the OS picker. */
+const HANDLE_DB = "nodaro-setup"
+const HANDLE_STORE = "handles"
+const HANDLE_KEY = "install-dir"
+
+function handleDb(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(HANDLE_DB, 1)
+    req.onupgradeneeded = () => req.result.createObjectStore(HANDLE_STORE)
+    req.onsuccess = () => resolve(req.result)
+    req.onerror = () => reject(req.error)
+  })
+}
+
+async function loadStoredHandle(): Promise<FileSystemDirectoryHandle | null> {
+  try {
+    const db = await handleDb()
+    return await new Promise((resolve) => {
+      const tx = db.transaction(HANDLE_STORE, "readonly")
+      const req = tx.objectStore(HANDLE_STORE).get(HANDLE_KEY)
+      req.onsuccess = () => resolve((req.result as FileSystemDirectoryHandle | undefined) ?? null)
+      req.onerror = () => resolve(null)
+    })
+  } catch {
+    return null
+  }
+}
+
+async function storeHandle(handle: FileSystemDirectoryHandle): Promise<void> {
+  try {
+    const db = await handleDb()
+    await new Promise<void>((resolve) => {
+      const tx = db.transaction(HANDLE_STORE, "readwrite")
+      tx.objectStore(HANDLE_STORE).put(handle, HANDLE_KEY)
+      tx.oncomplete = () => resolve()
+      tx.onerror = () => resolve()
+    })
+  } catch {
+    // Best effort — the picker path still works without persistence.
+  }
+}
+
+/** Paste-ready provider-key block for the .env next to
+ *  docker-compose.community.yml. Mirrors the compose passthrough list. */
+const ENV_TEMPLATE = `# Nodaro self-host \u2014 provider keys. Paste into the .env next to
+# docker-compose.community.yml, uncomment what you use, then: docker compose up -d
+# nodaro.ai models need NO key here \u2014 click "Connect nodaro.ai" in the app instead (OAuth).
+
+# KIE_API_KEY=             # kie.ai \u2014 broadest media-model coverage
+# REPLICATE_API_TOKEN=     # replicate.com
+# ANTHROPIC_API_KEY=       # console.anthropic.com \u2014 LLM nodes
+# GEMINI_API_KEY=          # aistudio.google.com \u2014 LLM + video analysis
+# ELEVENLABS_API_KEY=      # elevenlabs.io \u2014 speech + voice
+# FAL_KEY=                 # fal.ai
+`
+
 export default function SetupPage() {
   const [status, setStatus] = useState<SetupStatus | null>(null)
   const [apiDown, setApiDown] = useState(false)
@@ -242,6 +304,10 @@ export default function SetupPage() {
   const [checkedAt, setCheckedAt] = useState<Date | null>(null)
   // Rolling latency history per service, oldest first (see Sparkline).
   const [samples, setSamples] = useState<Record<string, number[]>>({})
+  const [tab, setTab] = useState<"setup" | "health">("setup")
+  const [envCopied, setEnvCopied] = useState(false)
+  const [envHelpOpen, setEnvHelpOpen] = useState(false)
+  const [envWrite, setEnvWrite] = useState<"idle" | "done" | "nocompose" | "error">("idle")
   const spinTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const load = useCallback(async () => {
@@ -314,6 +380,114 @@ export default function SetupPage() {
 
   const liveDotColor = apiDown ? DANGER : anyDown ? WARN : OK
 
+  // Guided-setup derivations (mock 2026-08-13): steps from live state.
+  const step1Done = status?.hasUsers === true
+  const step2Done = status?.checks.providers.ok === true
+  const currentStep = !step1Done ? 1 : !step2Done ? 2 : 3
+  const progressPct = Math.round((((step1Done ? 1 : 0) + (step2Done ? 1 : 0)) / 3) * 100)
+  const steps = [
+    {
+      n: 1,
+      done: step1Done,
+      accent: false,
+      altKeys: false,
+      where: "THIS SERVER",
+      title: "Create your server login",
+      desc: "Your operator account for this server only \u2014 it is NOT a nodaro.ai account (that one comes in step 2, if you want it).",
+      cta: "Create account",
+      href: "/signup?from=setup",
+    },
+    {
+      n: 2,
+      done: step2Done,
+      accent: true,
+      altKeys: true,
+      where: "OPENS NODARO.AI",
+      title: "Connect a model provider",
+      desc: "Connect briefly leaves this server: it opens nodaro.ai, you sign in or create a free account THERE, approve, and you're back here connected (1,500 free credits). Or stay local with your own API keys \u2014 both run side by side.",
+      cta: "Connect nodaro.ai",
+      href: "/integrations",
+    },
+    {
+      n: 3,
+      done: false,
+      accent: false,
+      altKeys: false,
+      where: "THIS SERVER",
+      title: "Create your first workflow",
+      desc: "Open the canvas and generate something.",
+      cta: "Open Nodaro",
+      href: "/projects",
+    },
+  ]
+  const currentStepLabel = `Setup \u00b7 step ${currentStep} of 3`
+  const healthSummaryLine = apiDown
+    ? "API unreachable"
+    : !status
+      ? "Checking\u2026"
+      : anyDown
+        ? "Some services need attention"
+        : avgLatency !== null
+          ? `All services connected \u00b7 ${avgLatency}ms avg latency`
+          : "All services connected"
+
+  // File System Access API (Chrome/Edge): pick the install folder and write
+  // the .env template into it directly — no text editor needed. Hidden where
+  // unsupported; the COPY-template path stays for everyone else.
+  const canPickFolder = typeof window !== "undefined" && "showDirectoryPicker" in window
+  const openInstallFolder = async () => {
+    try {
+      // A previously granted handle skips the OS dialog entirely.
+      let dir: FileSystemDirectoryHandle | null = await loadStoredHandle()
+      if (dir) {
+        type Permissioned = FileSystemDirectoryHandle & {
+          queryPermission: (o: { mode: string }) => Promise<string>
+          requestPermission: (o: { mode: string }) => Promise<string>
+        }
+        const perm = dir as Permissioned
+        let state = await perm.queryPermission({ mode: "readwrite" }).catch(() => "denied")
+        if (state !== "granted") state = await perm.requestPermission({ mode: "readwrite" }).catch(() => "denied")
+        if (state !== "granted") dir = null
+      }
+      if (!dir) {
+        const picker = (window as unknown as { showDirectoryPicker: (o: { mode: string; id?: string }) => Promise<FileSystemDirectoryHandle> }).showDirectoryPicker
+        // id: Chrome remembers the last-picked directory per id, so the second
+        // visit opens straight at the install folder instead of Documents.
+        dir = await picker({ mode: "readwrite", id: "nodaro-install" })
+      }
+      try {
+        await dir.getFileHandle("docker-compose.community.yml")
+      } catch {
+        setEnvWrite("nocompose")
+        return
+      }
+      void storeHandle(dir)
+      let existing = ""
+      try {
+        const fh = await dir.getFileHandle(".env")
+        existing = await (await fh.getFile()).text()
+      } catch {
+        // No .env yet — we'll create it.
+      }
+      const alreadySeeded = existing.includes("KIE_API_KEY")
+      const next = alreadySeeded
+        ? existing
+        : existing
+          ? `${existing.replace(/\s*$/, "")}\n\n${ENV_TEMPLATE}`
+          : ENV_TEMPLATE
+      if (next !== existing) {
+        const out = await dir.getFileHandle(".env", { create: true })
+        const writable = await out.createWritable()
+        await writable.write(next)
+        await writable.close()
+      }
+      setEnvWrite("done")
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return
+      setEnvWrite("error")
+    }
+  }
+
   return (
     <div
       style={{
@@ -369,7 +543,7 @@ export default function SetupPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                 <h1 style={{ margin: 0, fontSize: 30, fontWeight: 700, letterSpacing: "-0.02em" }}>
-                  Install Health
+                  Set up your install
                 </h1>
                 {status && (
                   <span
@@ -388,7 +562,7 @@ export default function SetupPage() {
                   </span>
                 )}
               </div>
-              <p style={{ margin: 0, fontSize: 15, color: MUTED }}>Live status of this Nodaro install.</p>
+              <p style={{ margin: 0, fontSize: 15, color: MUTED }}>Three steps to a working Nodaro server. Health checks are below.</p>
             </div>
           </div>
 
@@ -440,6 +614,209 @@ export default function SetupPage() {
             </button>
           </div>
         </header>
+
+
+        {/* Tab strip: guided setup is the landing; health is one click away. */}
+        <div style={{ display: "inline-flex", gap: 4, background: "rgba(11,13,18,.05)", borderRadius: 14, padding: 5, alignSelf: "flex-start" }}>
+          {([["setup", currentStepLabel], ["health", "Install health"]] as const).map(([id, label]) => (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              style={{
+                border: "none",
+                cursor: "pointer",
+                fontFamily: SANS,
+                fontSize: 14,
+                fontWeight: 600,
+                padding: "10px 18px",
+                borderRadius: 10,
+                background: tab === id ? SURFACE : "transparent",
+                color: tab === id ? INK : MUTED,
+                boxShadow: tab === id ? "0 1px 4px rgba(11,13,18,.08)" : "none",
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {tab === "setup" && status && (
+          <section style={{ background: SURFACE, border: "1px solid rgba(11,13,18,.09)", borderRadius: 16, overflow: "hidden" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 16,
+                flexWrap: "wrap",
+                padding: "20px 26px",
+                borderBottom: "1px solid rgba(11,13,18,.07)",
+              }}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                <span style={{ fontFamily: MONO, fontSize: 11, letterSpacing: ".14em", color: SUBTLE }}>GUIDED SETUP</span>
+                <span style={{ fontSize: 17, fontWeight: 700 }}>Step {currentStep} of 3 · {steps[currentStep - 1]?.title}</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ display: "flex", gap: 5 }}>
+                  {steps.map((st) => (
+                    <span key={st.n} style={{ width: 44, height: 5, borderRadius: 99, background: st.done ? ACCENT : st.n === currentStep ? ACCENT : "rgba(11,13,18,.10)", opacity: st.done ? 1 : st.n === currentStep ? 0.9 : 1 }} />
+                  ))}
+                </div>
+                <span style={{ fontFamily: MONO, fontSize: 12, color: SUBTLE }}>{progressPct}%</span>
+              </div>
+            </div>
+
+            {steps.map((st) => {
+              const active = st.n === currentStep
+              const locked = st.n > currentStep
+              return (
+                <div
+                  key={st.n}
+                  style={{
+                    display: "flex",
+                    alignItems: active ? "flex-start" : "center",
+                    gap: 20,
+                    padding: active ? "26px 26px" : "18px 26px",
+                    borderBottom: st.n < 3 ? "1px solid rgba(11,13,18,.06)" : "none",
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: "50%",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flex: "none",
+                      fontWeight: 700,
+                      fontSize: 15,
+                      background: st.done ? "#dcfce7" : active ? ACCENT : "rgba(11,13,18,.06)",
+                      color: st.done ? "#166534" : active ? "#fff" : FAINT,
+                    }}
+                  >
+                    {st.done ? "\u2713" : st.n}
+                  </span>
+                  <div style={{ flex: 1, minWidth: 220 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: active ? 19 : 16, fontWeight: 700, color: locked ? FAINT : INK }}>{st.title}</span>
+                      <span
+                        style={{
+                          fontFamily: MONO,
+                          fontSize: 9.5,
+                          letterSpacing: ".1em",
+                          color: st.where === "OPENS NODARO.AI" ? "oklch(0.45 0.09 205)" : SUBTLE,
+                          border: `1px solid ${st.where === "OPENS NODARO.AI" ? "#bfe3ea" : "rgba(11,13,18,.14)"}`,
+                          background: st.where === "OPENS NODARO.AI" ? "#f2fafc" : "transparent",
+                          borderRadius: 5,
+                          padding: "3px 7px",
+                          whiteSpace: "nowrap",
+                          opacity: locked ? 0.55 : 1,
+                        }}
+                      >
+                        {st.where}
+                      </span>
+                      {active && (
+                        <span style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: ".1em", color: "#b60a43", background: "#fce4ec", borderRadius: 999, padding: "4px 10px" }}>
+                          DO THIS NOW
+                        </span>
+                      )}
+                    </div>
+                    {active && (
+                      <div style={{ fontSize: 14.5, color: MUTED, marginTop: 7, maxWidth: 640 }}>{st.desc}</div>
+                    )}
+                  </div>
+                  {active ? (
+                    <span
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "flex-end",
+                        gap: 10,
+                        alignSelf: "center",
+                      }}
+                    >
+                      <a
+                        href={st.href}
+                        style={{
+                          background: st.accent ? ACCENT : INK,
+                          color: "#fff",
+                          fontWeight: 700,
+                          fontSize: 14.5,
+                          padding: "12px 22px",
+                          borderRadius: 11,
+                          textDecoration: "none",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {st.cta} &rarr;
+                      </a>
+                      {st.altKeys && (
+                        <button
+                          onClick={() => setTab("health")}
+                          style={{
+                            border: "none",
+                            background: "transparent",
+                            cursor: "pointer",
+                            fontFamily: MONO,
+                            fontSize: 11.5,
+                            letterSpacing: ".08em",
+                            color: INK,
+                            textDecoration: "underline",
+                            textUnderlineOffset: 4,
+                            whiteSpace: "nowrap",
+                            padding: 0,
+                          }}
+                        >
+                          USE MY OWN KEYS &rarr;
+                        </button>
+                      )}
+                    </span>
+                  ) : (
+                    <span style={{ fontFamily: MONO, fontSize: 11, letterSpacing: ".12em", color: FAINT }}>
+                      {st.done ? "DONE" : st.n === currentStep + 1 ? "UP NEXT" : "LOCKED"}
+                    </span>
+                  )}
+                </div>
+              )
+            })}
+          </section>
+        )}
+
+        {tab === "setup" && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 16,
+              flexWrap: "wrap",
+              fontSize: 14.5,
+              color: MUTED,
+            }}
+          >
+            <span>{healthSummaryLine}</span>
+            <button
+              onClick={() => setTab("health")}
+              style={{
+                border: "none",
+                background: "transparent",
+                cursor: "pointer",
+                fontFamily: MONO,
+                fontSize: 12,
+                letterSpacing: ".08em",
+                color: INK,
+                textDecoration: "underline",
+                textUnderlineOffset: 4,
+              }}
+            >
+              VIEW INSTALL HEALTH &rarr;
+            </button>
+          </div>
+        )}
+
+        {tab === "health" && (<>
 
         {/* 2. Summary bar */}
         <div
@@ -543,35 +920,134 @@ export default function SetupPage() {
           >
             <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
               <span style={{ fontSize: 16, fontWeight: 600 }}>Provider keys</span>
-              <span style={{ fontFamily: MONO, fontSize: 11, color: SUBTLE }}>environment variables</span>
+              <span style={{ fontFamily: MONO, fontSize: 11, color: SUBTLE }}>environment variables &middot; relates to step 2</span>
             </div>
-            {status && (
-              <span
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  fontSize: 13,
-                  fontWeight: 500,
-                  color: keysMissing > 0 ? "#92400e" : "#166534",
-                  background: keysMissing > 0 ? "#fef3c7" : "#dcfce7",
-                  borderRadius: 999,
-                  padding: "6px 12px",
-                }}
-              >
+            {status && (() => {
+              // Choosing the cloud path must not read as a warning: with a
+              // live Nodaro connection the grid is green even when every
+              // personal key is missing (founder, 2026-08-13).
+              const viaCloud = status.checks.providers.nodaroCloud === true
+              const warnState = !viaCloud && keysMissing > 0
+              return (
                 <span
                   style={{
-                    width: 7,
-                    height: 7,
-                    borderRadius: "50%",
-                    background: keysMissing > 0 ? WARN : OK,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                    fontSize: 13,
+                    fontWeight: 500,
+                    color: warnState ? "#92400e" : "#166534",
+                    background: warnState ? "#fef3c7" : "#dcfce7",
+                    borderRadius: 999,
+                    padding: "6px 12px",
                   }}
-                />
-                <span>{keysMissing > 0 ? `${keysMissing} missing` : "all set"}</span>
-              </span>
-            )}
+                >
+                  <span
+                    style={{
+                      width: 7,
+                      height: 7,
+                      borderRadius: "50%",
+                      background: warnState ? WARN : OK,
+                    }}
+                  />
+                  <span>
+                    {viaCloud
+                      ? "connected via nodaro.ai"
+                      : keysMissing > 0
+                        ? `${keysMissing} missing`
+                        : "all set"}
+                  </span>
+                </span>
+              )
+            })()}
           </div>
 
+          {/* nodaro.ai featured band — one OAuth connect replaces every key
+              in the grid below (founder mock 2026-08-14). Green when live. */}
+          {(() => {
+            const connected = status?.checks.providers.nodaroCloud === true
+            return (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 18,
+                  flexWrap: "wrap",
+                  padding: "20px 22px",
+                  borderBottom: "1px solid rgba(11,13,18,.05)",
+                  borderLeft: `4px solid ${connected ? OK : ACCENT}`,
+                  background: connected
+                    ? "linear-gradient(90deg,#f0fdf4,rgba(240,253,244,0))"
+                    : "linear-gradient(90deg,#fdf2f6,rgba(253,242,246,0))",
+                }}
+              >
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 260, flex: 1 }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 17, fontWeight: 700 }}>nodaro.ai</span>
+                    <span
+                      style={{
+                        fontFamily: MONO,
+                        fontSize: 10.5,
+                        letterSpacing: ".1em",
+                        color: connected ? "#166534" : "#b60a43",
+                        background: connected ? "#dcfce7" : "#fce4ec",
+                        borderRadius: 999,
+                        padding: "4px 10px",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {connected ? "CONNECTED" : "FASTEST WAY"}
+                    </span>
+                  </span>
+                  <span style={{ fontSize: 14.5, color: MUTED }}>
+                    {connected ? (
+                      <>This install generates through your nodaro.ai account &mdash; every model, none of the keys below required.</>
+                    ) : keysMissing > 0 ? (
+                      <>
+                        <strong style={{ color: INK, fontWeight: 600 }}>One click clears all {keysMissing}</strong>
+                        {" \u2014 OAuth sign-in, no API keys to manage"}
+                      </>
+                    ) : (
+                      <>One account, every model &mdash; OAuth sign-in, runs alongside your keys.</>
+                    )}
+                  </span>
+                </div>
+                {connected ? (
+                  <a
+                    href="/integrations"
+                    style={{
+                      fontFamily: MONO,
+                      fontSize: 12,
+                      letterSpacing: ".08em",
+                      color: INK,
+                      textDecoration: "underline",
+                      textUnderlineOffset: 4,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    MANAGE &rarr;
+                  </a>
+                ) : (
+                  <a
+                    href={status?.hasUsers === false ? "/signup?from=setup" : "/integrations"}
+                    style={{
+                      background: ACCENT,
+                      color: "#fff",
+                      fontWeight: 700,
+                      fontSize: 14.5,
+                      padding: "12px 22px",
+                      borderRadius: 11,
+                      textDecoration: "none",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Connect nodaro.ai &rarr;
+                  </a>
+                )}
+              </div>
+            )
+          })()}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
             {PROVIDERS.map((p) => {
               const present = status?.checks.providers.keys[p.id] === true
@@ -611,6 +1087,151 @@ export default function SetupPage() {
             })}
           </div>
 
+          {/* Answers "where does the key go?" in plain words — expandable
+              numbered steps, because "put it in the .env" assumes terminal
+              fluency the reader may not have (founder, 2026-08-14). */}
+          <div style={{ borderTop: "1px solid rgba(11,13,18,.05)" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 16,
+                flexWrap: "wrap",
+                fontFamily: MONO,
+                fontSize: 11.5,
+                color: SUBTLE,
+                padding: "12px 22px",
+              }}
+            >
+              <span>
+                keys live in a plain-text file named <span style={{ color: INK }}>.env</span> in your install
+                folder{status?.installDir ? <> &mdash; <span style={{ color: INK, userSelect: "all" }}>{status.installDir}</span></> : null} &mdash; this
+                list refreshes on its own
+              </span>
+              <span style={{ display: "inline-flex", gap: 18 }}>
+                {canPickFolder && (
+                  <button
+                    onClick={openInstallFolder}
+                    style={{
+                      border: "none",
+                      background: "transparent",
+                      cursor: "pointer",
+                      fontFamily: MONO,
+                      fontSize: 11.5,
+                      letterSpacing: ".08em",
+                      color: INK,
+                      textDecoration: "underline",
+                      textUnderlineOffset: 4,
+                      whiteSpace: "nowrap",
+                      padding: 0,
+                    }}
+                  >
+                    OPEN INSTALL FOLDER
+                  </button>
+                )}
+                <button
+                  onClick={() => setEnvHelpOpen((v) => !v)}
+                  style={{
+                    border: "none",
+                    background: "transparent",
+                    cursor: "pointer",
+                    fontFamily: MONO,
+                    fontSize: 11.5,
+                    letterSpacing: ".08em",
+                    color: INK,
+                    textDecoration: "underline",
+                    textUnderlineOffset: 4,
+                    padding: 0,
+                  }}
+                >
+                  {envHelpOpen ? "HIDE STEPS" : "HOW? \u2192"}
+                </button>
+                <button
+                  onClick={() => {
+                    navigator.clipboard
+                      .writeText(ENV_TEMPLATE)
+                      .then(() => {
+                        setEnvCopied(true)
+                        setTimeout(() => setEnvCopied(false), 2000)
+                      })
+                      .catch(() => {})
+                  }}
+                  style={{
+                    border: "none",
+                    background: "transparent",
+                    cursor: "pointer",
+                    fontFamily: MONO,
+                    fontSize: 11.5,
+                    letterSpacing: ".08em",
+                    color: envCopied ? "#166534" : INK,
+                    textDecoration: envCopied ? "none" : "underline",
+                    textUnderlineOffset: 4,
+                    whiteSpace: "nowrap",
+                    padding: 0,
+                  }}
+                >
+                  {envCopied ? "COPIED \u2713" : "COPY .ENV TEMPLATE"}
+                </button>
+              </span>
+            </div>
+            {envWrite !== "idle" && (
+              <div
+                style={{
+                  fontFamily: MONO,
+                  fontSize: 11.5,
+                  padding: "0 22px 12px",
+                  color: envWrite === "done" ? "#166534" : "#92400e",
+                }}
+              >
+                {envWrite === "done"
+                  ? ".env is ready in that folder \u2713 \u2014 paste your key into it, then run: docker compose -f docker-compose.community.yml up -d"
+                  : envWrite === "nocompose"
+                    ? "that folder has no docker-compose.community.yml \u2014 pick the folder you installed Nodaro into"
+                    : "couldn't write there \u2014 use COPY .ENV TEMPLATE instead"}
+              </div>
+            )}
+            {envHelpOpen && (
+              <ol
+                style={{
+                  listStyle: "decimal",
+                  margin: 0,
+                  padding: "2px 22px 16px 40px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 7,
+                  fontSize: 13.5,
+                  color: MUTED,
+                  maxWidth: "72ch",
+                }}
+              >
+                <li>
+                  Open the folder where you installed Nodaro &mdash;{" "}
+                  {status?.installDir ? (
+                    <code style={{ fontFamily: MONO, fontSize: 12, color: INK, userSelect: "all" }}>{status.installDir}</code>
+                  ) : (
+                    <>the one that contains{" "}
+                    <code style={{ fontFamily: MONO, fontSize: 12, color: INK }}>docker-compose.community.yml</code></>
+                  )}
+                  .
+                </li>
+                <li>
+                  Create (or open) a file named <code style={{ fontFamily: MONO, fontSize: 12, color: INK }}>.env</code>{" "}
+                  there, in any text editor, and paste the template &mdash; the COPY button above fills your clipboard.
+                </li>
+                <li>
+                  Put your key after the <code style={{ fontFamily: MONO, fontSize: 12, color: INK }}>=</code> and remove
+                  the <code style={{ fontFamily: MONO, fontSize: 12, color: INK }}>#</code> at the start of that line.
+                </li>
+                <li>
+                  In a terminal in that folder, run{" "}
+                  <code style={{ fontFamily: MONO, fontSize: 12, color: INK }}>docker compose -f docker-compose.community.yml up -d</code>{" "}
+                  &mdash; or paste these steps into your AI assistant and it will drive.
+                </li>
+              </ol>
+            )}
+          </div>
+
           {status && !status.checks.providers.ok && (
             <div
               style={{
@@ -638,6 +1259,8 @@ export default function SetupPage() {
         </section>
 
         {/* 5. Footer */}
+        </>)}
+
         <footer
           style={{
             display: "flex",

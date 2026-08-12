@@ -72,12 +72,12 @@ function cloudError(
 ): NodaroCloudError {
   const fallback =
     status === 402
-      ? "Insufficient Nodaro Cloud credits — top up or upgrade your connected account."
+      ? "Insufficient nodaro.ai credits — top up or upgrade your connected account."
       : status === 401 || status === 403
-        ? "The Nodaro Cloud connection was rejected — it may have been revoked. Reconnect from Integrations."
+        ? "The nodaro.ai connection was rejected — it may have been revoked. Reconnect from Integrations."
         : `${operation} failed (${status})`
   const message = err?.message?.trim() ? err.message : fallback
-  return new NodaroCloudError(`Nodaro Cloud: ${message}`, status, err?.code)
+  return new NodaroCloudError(`nodaro.ai: ${message}`, status, err?.code)
 }
 
 function sleep(ms: number): Promise<void> {
@@ -104,7 +104,7 @@ export async function createCloudJob(
   const jobId = typeof json?.jobId === "string" ? json.jobId : undefined
   if (!jobId) {
     throw new NodaroCloudError(
-      `Nodaro Cloud: POST ${path} succeeded but returned no jobId`,
+      `nodaro.ai: POST ${path} succeeded but returned no jobId`,
       res.status,
     )
   }
@@ -158,7 +158,7 @@ export async function waitForCloudJob(
       if (transientFailures > MAX_TRANSIENT_POLL_FAILURES) {
         const message = err instanceof Error ? err.message : String(err)
         throw new NodaroCloudError(
-          `Nodaro Cloud: polling job ${jobId} failed repeatedly (${message})`,
+          `nodaro.ai: polling job ${jobId} failed repeatedly (${message})`,
         )
       }
       continue
@@ -168,7 +168,7 @@ export async function waitForCloudJob(
       transientFailures += 1
       if (transientFailures > MAX_TRANSIENT_POLL_FAILURES) {
         throw new NodaroCloudError(
-          `Nodaro Cloud: job ${jobId} poll returned no data repeatedly`,
+          `nodaro.ai: job ${jobId} poll returned no data repeatedly`,
         )
       }
       continue
@@ -188,15 +188,15 @@ export async function waitForCloudJob(
     if (job.status === "completed") return job
     if (job.status === "cancelled") {
       throw new NodaroCloudError(
-        `Nodaro Cloud: generation was cancelled on the cloud (job ${jobId})`,
+        `nodaro.ai: generation was cancelled on the cloud (job ${jobId})`,
       )
     }
     throw new NodaroCloudError(
-      `Nodaro Cloud: ${job.error_message?.trim() ? job.error_message : `generation failed (job ${jobId})`}`,
+      `nodaro.ai: ${job.error_message?.trim() ? job.error_message : `generation failed (job ${jobId})`}`,
     )
   }
 
   throw new NodaroCloudError(
-    `Nodaro Cloud: job ${jobId} did not finish within ${Math.round(POLL_BUDGET_MS / 60_000)} minutes`,
+    `nodaro.ai: job ${jobId} did not finish within ${Math.round(POLL_BUDGET_MS / 60_000)} minutes`,
   )
 }
