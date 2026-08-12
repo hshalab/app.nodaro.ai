@@ -159,6 +159,7 @@ describe("creditGuard with computeCredits", () => {
       "loop-video",
       undefined,
       7,
+      false,
     )
 
     await app.close()
@@ -182,6 +183,7 @@ describe("creditGuard with computeCredits", () => {
       "loop-video",
       undefined,
       6,
+      false,
     )
 
     await app.close()
@@ -202,6 +204,7 @@ describe("creditGuard with computeCredits", () => {
       "some-model",
       undefined,
       undefined,
+      false,
     )
 
     await app.close()

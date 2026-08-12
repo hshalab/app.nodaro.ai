@@ -71,6 +71,7 @@ import { getModelIdentifier } from "@/components/editor/config-panels/helpers";
 import { useStats } from "@/hooks/queries/use-stats-queries";
 import { InsufficientCreditsModal } from "@/ee/components/credits/InsufficientCreditsModal";
 import { StorageExceededModal } from "@/ee/components/credits/StorageExceededModal";
+import { SubscriptionRequiredModal } from "@/ee/components/credits/SubscriptionRequiredModal";
 import { useRunConfirm } from "./run-confirm-dialog";
 import { PromptQuickEditModal } from "@/components/nodes/prompt-quick-edit-modal";
 import {
@@ -166,6 +167,7 @@ export function WorkflowEditor({ projectId, workflowId }: WorkflowEditorProps) {
     quotaBytes: number;
     tier: string;
   } | null>(null);
+  const [showSubscriptionRequired, setShowSubscriptionRequired] = useState(false);
 
   // ---------------------------------------------------------------------------
   // FreeCut modal (manual-edit node + universal edit from any video node)
@@ -832,6 +834,7 @@ export function WorkflowEditor({ projectId, workflowId }: WorkflowEditorProps) {
     setStorageExceededData,
     setShowInsufficientCredits,
     setInsufficientCreditsData,
+    setShowSubscriptionRequired,
     confirmRun,
   };
 
@@ -1377,6 +1380,11 @@ export function WorkflowEditor({ projectId, workflowId }: WorkflowEditorProps) {
         usedBytes={storageExceededData?.usedBytes ?? 0}
         quotaBytes={storageExceededData?.quotaBytes ?? 0}
         tier={storageExceededData?.tier ?? "free"}
+      />
+
+      <SubscriptionRequiredModal
+        open={showSubscriptionRequired}
+        onClose={() => setShowSubscriptionRequired(false)}
       />
 
       {/* Quick-edit Prompt modal — opens for store.promptEditNodeId. Mounted at

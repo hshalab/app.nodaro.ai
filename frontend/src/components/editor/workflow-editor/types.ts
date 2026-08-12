@@ -1,5 +1,5 @@
 import type { WorkflowNode, WorkflowEdge, GenerateVideoProNodeData, EditVideoProNodeData } from "@/types/nodes";
-import { StorageExceededError } from "@/lib/api";
+import { StorageExceededError, SubscriptionRequiredError } from "@/lib/api";
 import { useWorkflowStore } from "@/hooks/use-workflow-store";
 import { buildMotionCreditModelIdentifier, isDefaultSelectorConfig, selectListItems, type SelectorFields, getEffectiveRepeatCount, buildScraperCreditId, isScraperActor, SCRAPER_CREDIT_COSTS, buildVideoAnalysisCreditId, resolveVideoAnalysisModel, bucketSecondsFromCreditId, VIDEO_ANALYSIS_BUCKET_CREDITS, buildVideoAuditCreditId, VIDEO_AUDIT_BUCKET_CREDITS, FAN_OUT_EACH_TYPES, buildVideoCreditModelIdentifier, SEEDANCE_2_CONTINUATION_REF_SEC, isSeedance2Provider, isMinimaxH3Provider, maxSegmentSecFor, normalizeMinimaxH3Resolution } from "@nodaro/shared"
 // getCachedCredits reads the live React-Query model-cost cache (an `ee/`
@@ -808,6 +808,10 @@ export interface ExecutionContext {
   setInsufficientCreditsData: (
     data: { required: number; available: number; tier: string } | null,
   ) => void;
+  /** Spend-surface block (payg account in the studio). Optional so existing
+   *  ctx mocks and non-editor callers keep working; absent → the error falls
+   *  through to generic per-node handling. */
+  setShowSubscriptionRequired?: (v: boolean) => void;
   /**
    * Idempotency key for this user-click intent. Set by the click handler
    * (handleRunSingleNode, handleRun, etc.) — one UUID per click. Run*
@@ -840,7 +844,10 @@ export interface ExecutionContext {
 // import it directly from `@/lib/idempotency-key` and tests don't need
 // per-file updates.
 
-/** Check if an error is a StorageExceededError and show the modal. Returns true if handled. */
+/** Check if an error is a blocking-modal error (storage exceeded, or the payg
+ *  spend-surface block) and show the matching modal. Returns true if handled —
+ *  callers skip their generic per-node error handling. Kept under the original
+ *  name so all 18 call sites (and their test mocks) pick this up unchanged. */
 export function checkStorageError(
   err: unknown,
   ctx: ExecutionContext,
@@ -852,6 +859,10 @@ export function checkStorageError(
       tier: err.tier,
     });
     ctx.setShowStorageExceeded(true);
+    return true;
+  }
+  if (err instanceof SubscriptionRequiredError && ctx.setShowSubscriptionRequired) {
+    ctx.setShowSubscriptionRequired(true);
     return true;
   }
   return false;

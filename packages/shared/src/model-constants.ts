@@ -605,6 +605,8 @@ export const IMAGE_I2I_PROVIDERS = [
   "kontext-multi",
   // BFL Flux 2 Pro — runs through Replicate with safety_tolerance=5 (max for Pro)
   "flux-2-pro",
+  // BFL FLUX Fill Pro — dedicated masked inpainting via Replicate (white = edit area)
+  "flux-fill",
   // BFL Flux 2 Max — runs through Replicate with safety_tolerance=5, up to 8 refs
   "flux-2-max",
   // BFL FLUX Fill Pro — dedicated inpainting via Replicate (image + mask + prompt,

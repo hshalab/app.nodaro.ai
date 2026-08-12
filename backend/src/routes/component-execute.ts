@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify"
 import { z } from "zod"
 import { supabase } from "../lib/supabase.js"
+import { paygSurfaceGuard } from "../middleware/credit-guard.js"
 import { insertJob } from "../lib/insert-job.js"
 import { executeAppRun } from "../services/app-execution.js"
 import { buildCreditModelIdentifier } from "@nodaro/shared"
@@ -26,7 +27,7 @@ async function updateWrapperJob(jobId: string, fields: Record<string, unknown>) 
 }
 
 export async function componentExecuteRoutes(app: FastifyInstance) {
-  app.post("/v1/component/execute", async (req: FastifyRequest, reply: FastifyReply) => {
+  app.post("/v1/component/execute", { preHandler: paygSurfaceGuard() }, async (req: FastifyRequest, reply: FastifyReply) => {
     if (!req.userId) {
       return reply.status(401).send({ error: { code: "unauthorized", message: "Authentication required" } })
     }

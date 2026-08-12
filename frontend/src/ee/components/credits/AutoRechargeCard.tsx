@@ -10,9 +10,29 @@ import { creditsForLoadUsd, MIN_LOAD_USD, MAX_LOAD_USD } from "@/lib/pricing-dat
  * The failure state doubles as the in-app notification surface: declined
  * attempts show here, and three failures auto-disable until the user
  * re-saves a card (any manual load does) and re-enables.
+ *
+ * Nothing applies until Save: the toggle and fields edit a draft, and a
+ * highlighted "unsaved changes" bar appears whenever the draft differs from
+ * the server state, so the pending-save step is impossible to miss.
  */
+
+interface FormSnapshot {
+  enabled: boolean
+  threshold: string
+  amount: string
+}
+
+function snapshotFromConfig(c: AutoRechargeConfig): FormSnapshot {
+  return {
+    enabled: c.enabled,
+    threshold: c.thresholdCredits ? String(c.thresholdCredits) : "",
+    amount: c.amountUsd ? String(c.amountUsd) : "",
+  }
+}
+
 export function AutoRechargeCard() {
   const [config, setConfig] = useState<AutoRechargeConfig | null>(null)
+  const [saved, setSaved] = useState<FormSnapshot | null>(null)
   const [threshold, setThreshold] = useState("")
   const [amount, setAmount] = useState("")
   const [enabled, setEnabled] = useState(false)
@@ -21,10 +41,12 @@ export function AutoRechargeCard() {
   useEffect(() => {
     getAutoRecharge()
       .then((c) => {
+        const snap = snapshotFromConfig(c)
         setConfig(c)
-        setEnabled(c.enabled)
-        setThreshold(c.thresholdCredits ? String(c.thresholdCredits) : "")
-        setAmount(c.amountUsd ? String(c.amountUsd) : "")
+        setSaved(snap)
+        setEnabled(snap.enabled)
+        setThreshold(snap.threshold)
+        setAmount(snap.amount)
       })
       .catch(() => setConfig(null))
   }, [])
@@ -37,6 +59,9 @@ export function AutoRechargeCard() {
   const valid =
     !enabled ||
     (parsedThreshold >= 100 && parsedThreshold <= 100000 && previewCredits !== null)
+  const dirty =
+    saved !== null &&
+    (enabled !== saved.enabled || threshold !== saved.threshold || amount !== saved.amount)
 
   async function handleSave() {
     if (!valid) return
@@ -48,6 +73,7 @@ export function AutoRechargeCard() {
         ...(Number.isNaN(parsedAmount) ? {} : { amountUsd: parsedAmount }),
       })
       toast.success(enabled ? "Auto-recharge enabled" : "Auto-recharge disabled")
+      setSaved({ enabled, threshold, amount })
       setConfig((c) => (c ? { ...c, enabled, failureCount: 0 } : c))
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to save")
@@ -106,17 +132,34 @@ export function AutoRechargeCard() {
         {previewCredits !== null && (
           <span className="text-muted-foreground">= {previewCredits.toLocaleString()} credits</span>
         )}
-        <button
-          onClick={handleSave}
-          disabled={!valid || saving}
-          className={cn(
-            "ml-auto rounded-md bg-[#ff0073] px-3 py-1 text-sm font-medium text-white",
-            (!valid || saving) && "opacity-40 pointer-events-none"
-          )}
-        >
-          Save
-        </button>
       </div>
+
+      {dirty && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[#ff0073]/40 bg-[#ff0073]/5 px-3 py-2">
+          <span className="text-xs font-medium text-[#ff0073]">
+            {valid
+              ? "You have unsaved changes"
+              : `Enter a threshold (100–100,000 credits) and an amount ($${MIN_LOAD_USD}–$${MAX_LOAD_USD})`}
+          </span>
+          <button
+            onClick={handleSave}
+            disabled={!valid || saving}
+            className={cn(
+              "rounded-md bg-[#ff0073] px-4 py-1.5 text-sm font-semibold text-white shadow-sm",
+              (!valid || saving) && "opacity-40 pointer-events-none"
+            )}
+          >
+            {saving ? "Saving…" : "Save changes"}
+          </button>
+        </div>
+      )}
+      {!dirty && saved !== null && (
+        <p className="text-xs text-muted-foreground">
+          {saved.enabled
+            ? "Active — settings saved."
+            : "Off — flip the switch and save to activate."}
+        </p>
+      )}
 
       {!config.hasSavedCard && (
         <p className="text-xs text-amber-600 dark:text-amber-400">

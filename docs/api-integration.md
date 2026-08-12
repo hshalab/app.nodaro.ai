@@ -268,6 +268,7 @@ All errors share the same shape:
 | 403 | `forbidden` | — | Token isn't authorized for this workflow (workflow scoping). |
 | 403 | `insufficient_scope` | `missingScope` (+ `message`) | (OAuth tokens only) The token is missing a scope the route requires. Re-run the OAuth consent with the broader scope. See [OAuth Flow §4](./oauth-flow.md#4-scope-vocabulary). |
 | 403 | `edition_required` | `required_edition: "<edition>"` (+ `message`) | Endpoint needs a higher edition than the caller has. `required_edition` is the minimum: `"cloud"` for pipeline (`POST /v1/pipelines/:id/branch`) + scene-helper routes; `"business"` for API-token management (`POST /v1/api-tokens`, `DELETE /v1/api-tokens/:id`). |
+| 403 | `subscription_required` | — | (Cloud edition only) A pay-as-you-go account tried to spend from a first-party consumer surface (browser session in the studio or another Nodaro app). Payg credits are redeemable via the API/SDK/CLI/MCP — this never fires for token-authenticated calls. Rollout-gated: availability may lag this document. |
 | 404 | `not_found` | — | Workflow, execution, or token not found. |
 | 429 | `rate_limited` | — | You've exceeded the per-minute bucket. Back off. |
 | 500 | `internal_error` | — | Server bug or downstream dependency failure. Retry with backoff. |
@@ -284,8 +285,10 @@ page; larger loads earn a better per-credit rate — activates the
 pay-as-you-go tier: balance responses report
 `effectiveTier: "payg"`, all models are unlocked, outputs are not
 watermarked, and there is no daily spending cap. Credits never expire.
-Subscriptions remain available and always include a lower per-credit
-rate at sustained volume.
+Pay-as-you-go credits are redeemable through the developer surfaces —
+API, SDK, CLI, and MCP; using the web studio requires an active
+subscription. Subscriptions remain available and always include a lower
+per-credit rate at sustained volume.
 
 **Auto-recharge** (optional): in Billing you can set "when my balance drops
 below X credits, load $Y" — the amount is charged off-session to your saved
