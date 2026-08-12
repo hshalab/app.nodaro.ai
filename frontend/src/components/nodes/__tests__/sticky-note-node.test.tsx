@@ -91,6 +91,35 @@ describe("StickyNoteNode", () => {
     expect(textarea).toHaveStyle({ fontSize: "18px" })
   })
 
+  // Each declared size must render a DISTINCT px value. `lg` and `xl` used to
+  // collapse onto 18px (and `sm` onto 14), so a note on a large canvas had no
+  // way to get bigger. base and lg are pinned to their historical values so
+  // existing notes are untouched.
+  it.each([
+    ["sm", "12px"],
+    ["base", "14px"],
+    ["lg", "18px"],
+    ["xl", "26px"],
+  ])("renders %s at %s", (size, px) => {
+    renderNode({ data: { label: "Note", text: "", color: "#2d2d44", fontSize: size } })
+    expect(screen.getByRole("textbox")).toHaveStyle({ fontSize: px })
+  })
+
+  it("falls back to the default size when fontSize is missing or unknown", () => {
+    renderNode({ data: { label: "Note", text: "", color: "#2d2d44" } })
+    expect(screen.getByRole("textbox")).toHaveStyle({ fontSize: "14px" })
+  })
+
+  it("labels the size control by the current size", () => {
+    renderNode({ selected: true, data: { label: "Note", text: "", color: "#2d2d44", fontSize: "xl" } })
+    expect(screen.getByText("Display")).toBeInTheDocument()
+  })
+
+  it("gives 18px and up the heavier heading weight", () => {
+    renderNode({ data: { label: "Note", text: "", color: "#2d2d44", fontSize: "xl" } })
+    expect(screen.getByRole("textbox")).toHaveStyle({ fontWeight: 600 })
+  })
+
   it("applies bold style", () => {
     renderNode({ data: { label: "Note", text: "", color: "#2d2d44", bold: true } })
     const textarea = screen.getByRole("textbox")
