@@ -4,11 +4,13 @@ import { creditsForLoadUsd, MIN_LOAD_USD, MAX_LOAD_USD } from "@/lib/pricing-dat
 
 /**
  * "API / Pay-as-you-go" top-up section, styled per the designer's Pricing
- * mock (sister folder `Pricing/`, 2026-08-12): cyan developer-lane accent,
- * per-credit rate above each pack, live top-up balance, one Load button for
- * both a selected pack and a custom amount. The pack tiles are the rate
- * function's own anchors, so everything checks out through the single
- * arbitrary-amount lane — no pack price ids.
+ * mocks (dark: sister folder `Pricing/`; light: pricing-lite, 2026-08-12):
+ * cyan developer-lane accent, per-credit rate above each pack, live top-up
+ * balance, one Load button for both a selected pack and a custom amount.
+ * Colors resolve through the `--tps-*` tokens in globals.css — light is the
+ * lite mock's cyan-tinted card, dark keeps the founder's neutral zinc
+ * values. The pack tiles are the rate function's own anchors, so everything
+ * checks out through the single arbitrary-amount lane — no pack price ids.
  */
 
 const PACK_USD = [10, 25, 50, 100] as const
@@ -34,7 +36,10 @@ export function TopupSection({ topupBalance, onLoad, loading }: TopupSectionProp
   // the designer's mock) — this component is just the card below it.
   return (
     <div>
-      <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+      <div
+        className="rounded-xl border overflow-hidden"
+        style={{ borderColor: "var(--tps-border)", background: "var(--tps-bg)" }}
+      >
         <div className="flex flex-wrap justify-between gap-4 p-8">
           <div className="max-w-xl">
             <h2 className="text-2xl font-bold">API / Pay-as-you-go</h2>
@@ -49,14 +54,14 @@ export function TopupSection({ topupBalance, onLoad, loading }: TopupSectionProp
               <div className="font-mono text-xs tracking-[0.2em] text-muted-foreground">
                 YOUR TOP-UP BALANCE
               </div>
-              <div className="font-mono text-3xl font-bold text-cyan-500 dark:text-cyan-400">
+              <div className="font-mono text-3xl font-bold text-[var(--tps-cyan)]">
                 {topupBalance.toLocaleString()}
               </div>
             </div>
           )}
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 border-t border-zinc-200 dark:border-zinc-800">
+        <div className="grid grid-cols-2 lg:grid-cols-4 border-t border-[var(--tps-border)]">
           {PACK_USD.map((usd) => {
             // The anchors are always within load bounds — null is unreachable.
             const credits = creditsForLoadUsd(usd) ?? 0
@@ -71,14 +76,14 @@ export function TopupSection({ topupBalance, onLoad, loading }: TopupSectionProp
                 }}
                 aria-pressed={selected}
                 className={cn(
-                  "relative p-6 text-left border-r last:border-r-0 border-zinc-200 dark:border-zinc-800 transition-colors",
+                  "relative p-6 text-left border-r last:border-r-0 border-[var(--tps-border)] transition-colors",
                   selected
-                    ? "bg-cyan-500/5 dark:bg-cyan-400/5"
-                    : "hover:bg-zinc-50 dark:hover:bg-zinc-900/50"
+                    ? "bg-[var(--tps-tile-active)]"
+                    : "hover:bg-[var(--tps-tile-hover)]"
                 )}
               >
                 {selected && (
-                  <span className="absolute inset-x-0 top-0 h-0.5 bg-cyan-500 dark:bg-cyan-400" />
+                  <span className="absolute inset-x-0 top-0 h-0.5 bg-[var(--tps-cyan)]" />
                 )}
                 <div className="font-mono text-xs tracking-widest text-muted-foreground">
                   ${(usd / credits).toFixed(4)} / CR
@@ -93,11 +98,11 @@ export function TopupSection({ topupBalance, onLoad, loading }: TopupSectionProp
           })}
         </div>
 
-        <div className="flex flex-wrap items-center gap-4 border-t border-zinc-200 dark:border-zinc-800 p-6 bg-zinc-50/50 dark:bg-zinc-900/30">
+        <div className="flex flex-wrap items-center gap-4 border-t border-[var(--tps-border)] p-6 bg-[var(--tps-inset)]">
           <label className="text-sm font-medium" htmlFor="topup-custom-usd">
             Or load any whole-dollar amount
           </label>
-          <div className="flex items-center gap-1 rounded-md border border-zinc-300 dark:border-zinc-700 px-3 py-2 font-mono text-sm">
+          <div className="flex items-center gap-1 rounded-md border border-[var(--tps-input-border)] px-3 py-2 font-mono text-sm">
             <span className="text-muted-foreground">$</span>
             <input
               id="topup-custom-usd"
@@ -119,7 +124,7 @@ export function TopupSection({ topupBalance, onLoad, loading }: TopupSectionProp
             disabled={effectiveUsd === null || loading}
             onClick={() => effectiveUsd !== null && onLoad(effectiveUsd)}
             className={cn(
-              "ml-auto rounded-lg bg-cyan-500 dark:bg-cyan-400 px-6 py-2.5 text-sm font-semibold text-zinc-950 shadow-sm transition-opacity",
+              "ml-auto rounded-lg bg-[var(--tps-cyan)] px-6 py-2.5 text-sm font-semibold text-[var(--tps-on-cyan)] shadow-sm transition-opacity",
               (effectiveUsd === null || loading) && "opacity-40 pointer-events-none"
             )}
           >

@@ -15,14 +15,15 @@ import { useUserCredits } from "@/ee/hooks/queries/use-credits-queries"
 import { TopupSection } from "./topup-section"
 
 /**
- * Dark-committed pricing page, ported 1:1 from the designer's Pricing mock
- * (sister folder `Pricing/`, 2026-08-12). All colors/spacing are the mock's
- * inline values; the page forces the `dark` variant on its subtree so the
- * theme-aware TopupSection renders its dark design regardless of app theme.
+ * Theme-aware pricing page, ported 1:1 from the designer's Pricing mocks
+ * (dark: sister folder `Pricing/`; light: pricing-lite, 2026-08-12). Colors
+ * resolve through the `--blg-*` / `--prc-*` tokens in globals.css (`:root` =
+ * light values from the lite mock, `.dark` = the original dark constants),
+ * so the page follows the app theme.
  */
 
-const PINK = "#ff2d6f"
-const CYAN = "oklch(0.75 0.13 205)"
+const PINK = "var(--blg-pink)"
+const CYAN = "var(--blg-cyan)"
 const MONO = "'JetBrains Mono Variable','JetBrains Mono',monospace"
 
 /** Audience lines from the mock's plan data, keyed by tier id. */
@@ -52,8 +53,8 @@ function SectionHeaderRow({ dotColor, labelColor, label, note, margin }: Section
       <span style={{ fontFamily: MONO, fontSize: 11, letterSpacing: "0.16em", color: labelColor }}>
         {label}
       </span>
-      <span style={{ fontSize: 12.5, color: "#66666f" }}>{note}</span>
-      <span style={{ flex: 1, height: 1, background: "#18181d" }} />
+      <span style={{ fontSize: 12.5, color: "var(--blg-t3-note)" }}>{note}</span>
+      <span style={{ flex: 1, height: 1, background: "var(--prc-rule)" }} />
     </div>
   )
 }
@@ -165,7 +166,7 @@ export default function PricingPage() {
     : null
 
   return (
-    <div className="dark min-h-full" style={{ background: "#08080a", color: "#f2f2f4" }}>
+    <div className="min-h-full" style={{ background: "var(--prc-bg)", color: "var(--blg-t1)" }}>
       <div className="px-5 pt-10 pb-16 sm:px-14 sm:pt-14 sm:pb-[90px]">
         <div style={{ maxWidth: 1280, margin: "0 auto" }}>
           {/* Header: title + billing-cycle toggle */}
@@ -183,11 +184,11 @@ export default function PricingPage() {
               <h1 style={{ fontSize: 36, fontWeight: 700, letterSpacing: "-0.03em", margin: 0 }}>
                 Pricing
               </h1>
-              <p style={{ fontSize: 15, color: "#85858e", margin: "8px 0 0", maxWidth: 560 }}>
+              <p style={{ fontSize: 15, color: "var(--blg-t2)", margin: "8px 0 0", maxWidth: 560 }}>
                 {currentPlanName && (
                   <>
                     You&apos;re on{" "}
-                    <span style={{ color: "#f2f2f4", fontWeight: 600 }}>{currentPlanName}</span>.{" "}
+                    <span style={{ color: "var(--blg-t1)", fontWeight: 600 }}>{currentPlanName}</span>.{" "}
                   </>
                 )}
                 Subscribe for a monthly credit allocation, or keep loading top-up credits.
@@ -205,7 +206,7 @@ export default function PricingPage() {
                   fontFamily: "inherit",
                   fontSize: 14,
                   fontWeight: 600,
-                  color: annual ? "#7c7c85" : "#f2f2f4",
+                  color: annual ? "var(--blg-t2-dim)" : "var(--blg-t1)",
                 }}
               >
                 Monthly
@@ -225,7 +226,7 @@ export default function PricingPage() {
                   padding: 3,
                   display: "flex",
                   justifyContent: annual ? "flex-end" : "flex-start",
-                  background: annual ? PINK : "#2a2a32",
+                  background: annual ? PINK : "var(--prc-toggle-off)",
                   transition: "background .2s",
                 }}
               >
@@ -242,7 +243,7 @@ export default function PricingPage() {
                   fontFamily: "inherit",
                   fontSize: 14,
                   fontWeight: 600,
-                  color: annual ? "#f2f2f4" : "#7c7c85",
+                  color: annual ? "var(--blg-t1)" : "var(--blg-t2-dim)",
                 }}
               >
                 Annual
@@ -253,8 +254,9 @@ export default function PricingPage() {
                     fontFamily: MONO,
                     fontSize: 10.5,
                     letterSpacing: "0.12em",
-                    color: PINK,
-                    border: "1px solid #46132a",
+                    color: "var(--prc-pink-strong)",
+                    border: "1px solid var(--prc-pink-border)",
+                    background: "var(--prc-pink-chip)",
                     borderRadius: 99,
                     padding: "5px 11px",
                   }}
@@ -268,7 +270,7 @@ export default function PricingPage() {
           {/* SUBSCRIPTION PLANS */}
           <SectionHeaderRow
             dotColor={PINK}
-            labelColor="#ff77a0"
+            labelColor="var(--blg-pink-text)"
             label="SUBSCRIPTION PLANS"
             note="monthly credit allocation · resets each cycle"
             margin="0 0 16px"
@@ -302,12 +304,12 @@ export default function PricingPage() {
                     ...(isPopular
                       ? {
                           border: `1px solid ${PINK}`,
-                          background: "linear-gradient(180deg,#1b0c14,#0b080a)",
-                          boxShadow: "0 0 44px rgba(255,45,111,0.16)",
+                          background: "var(--prc-pop-bg)",
+                          boxShadow: "var(--prc-pop-shadow)",
                         }
                       : {
-                          border: "1px solid #1e1e24",
-                          background: "linear-gradient(180deg,#101013,#0a0a0c)",
+                          border: "1px solid var(--prc-card-border)",
+                          background: "var(--prc-card-bg)",
                         }),
                   }}
                 >
@@ -326,7 +328,7 @@ export default function PricingPage() {
                     </span>
                   )}
                   <div style={{ fontSize: 23, fontWeight: 700, letterSpacing: "-0.02em" }}>{tier.name}</div>
-                  <div style={{ fontSize: 13, color: "#7c7c85", marginTop: 5 }}>
+                  <div style={{ fontSize: 13, color: "var(--blg-t2-dim)", marginTop: 5 }}>
                     {TIER_AUDIENCE[tier.id] ?? ""}
                   </div>
 
@@ -336,7 +338,7 @@ export default function PricingPage() {
                         style={{
                           fontSize: 20,
                           fontWeight: 600,
-                          color: "#5a5a63",
+                          color: "var(--prc-strike)",
                           textDecoration: "line-through",
                         }}
                       >
@@ -346,18 +348,18 @@ export default function PricingPage() {
                     <span style={{ fontSize: 44, fontWeight: 700, letterSpacing: "-0.04em" }}>
                       ${displayPrice}
                     </span>
-                    <span style={{ fontSize: 14, color: "#85858e" }}>/mo</span>
+                    <span style={{ fontSize: 14, color: "var(--blg-t2)" }}>/mo</span>
                   </div>
                   <div style={{ fontFamily: MONO, fontSize: 12.5, letterSpacing: "0.06em", marginTop: 10 }}>
                     <span style={{ color: PINK, fontWeight: 700 }}>{tier.credits.toLocaleString()}</span>
-                    <span style={{ color: "#9a9aa3" }}> CREDITS / MO</span>
+                    <span style={{ color: "var(--blg-t2-mono)" }}> CREDITS / MO</span>
                   </div>
                   <div
                     style={{
                       fontFamily: MONO,
                       fontSize: 11,
                       letterSpacing: "0.06em",
-                      color: "#63636c",
+                      color: "var(--blg-t3)",
                       marginTop: 5,
                     }}
                   >
@@ -366,7 +368,7 @@ export default function PricingPage() {
                       : "BILLED MONTHLY"}
                   </div>
 
-                  <div style={{ height: 1, background: "#1a1a20", margin: "22px 0 20px" }} />
+                  <div style={{ height: 1, background: "var(--prc-divider)", margin: "22px 0 20px" }} />
 
                   <div style={{ display: "flex", flexDirection: "column", gap: 13, flex: 1 }}>
                     {cardFeatures.map((f) => (
@@ -377,7 +379,7 @@ export default function PricingPage() {
                           gap: 10,
                           alignItems: "flex-start",
                           fontSize: 13.5,
-                          color: "#c4c4cc",
+                          color: "var(--blg-t1-body)",
                         }}
                       >
                         <span style={{ color: PINK, fontSize: 13, lineHeight: 1.4 }}>✓</span>
@@ -401,7 +403,11 @@ export default function PricingPage() {
                       cursor: disabled ? "default" : "pointer",
                       ...(isPopular
                         ? { background: PINK, border: "none", color: "#fff" }
-                        : { background: "transparent", border: "1px solid #2a2a32", color: "#eaeaef" }),
+                        : {
+                            background: "transparent",
+                            border: "1px solid var(--prc-border-strong)",
+                            color: "var(--blg-t1-btn)",
+                          }),
                       ...(disabled ? { opacity: 0.55 } : {}),
                     }}
                   >
@@ -417,7 +423,7 @@ export default function PricingPage() {
           {freeTier && !currentTierId && (
             <div
               style={{
-                border: "1px dashed #2a2a32",
+                border: "1px dashed var(--prc-border-strong)",
                 borderRadius: 16,
                 padding: "24px 28px",
                 marginTop: 18,
@@ -433,7 +439,7 @@ export default function PricingPage() {
                     fontFamily: MONO,
                     fontSize: 11,
                     letterSpacing: "0.16em",
-                    color: PINK,
+                    color: "var(--prc-pink-strong)",
                     marginBottom: 9,
                   }}
                 >
@@ -463,7 +469,7 @@ export default function PricingPage() {
                     fontFamily: MONO,
                     fontSize: 11,
                     letterSpacing: "0.08em",
-                    color: "#5f5f68",
+                    color: "var(--blg-t3-dim)",
                     marginTop: 10,
                   }}
                 >
@@ -476,8 +482,9 @@ export default function PricingPage() {
                     fontFamily: MONO,
                     fontSize: 11,
                     letterSpacing: "0.14em",
-                    color: PINK,
-                    border: "1px solid #46132a",
+                    color: "var(--prc-pink-strong)",
+                    border: "1px solid var(--prc-pink-border)",
+                    background: "var(--prc-pink-chip)",
                     borderRadius: 99,
                     padding: "9px 18px",
                     whiteSpace: "nowrap",
@@ -491,7 +498,7 @@ export default function PricingPage() {
                   type="button"
                   disabled={loadingTier === "free" || subLoading}
                   onClick={() => handleSubscribe("free", null)}
-                  className="bg-transparent border border-[#ff2d6f] text-[#ff2d6f] hover:bg-[#ff2d6f] hover:text-white"
+                  className="bg-transparent border border-[var(--blg-pink)] text-[var(--blg-pink)] hover:bg-[var(--blg-pink)] hover:text-white"
                   style={{
                     fontFamily: "inherit",
                     fontSize: 14,
@@ -514,7 +521,7 @@ export default function PricingPage() {
               founder's amended design (TopupSection). */}
           <SectionHeaderRow
             dotColor={CYAN}
-            labelColor="oklch(0.8 0.09 205)"
+            labelColor="var(--prc-cyan-text)"
             label="TOP-UP CREDITS"
             note="no subscription · never expire · used after your monthly allocation"
             margin="46px 0 16px"
@@ -538,14 +545,14 @@ export default function PricingPage() {
               gap: 22,
               marginTop: 44,
               fontSize: 12.5,
-              color: "#5f5f68",
+              color: "var(--blg-t3-dim)",
             }}
           >
             <a
               href="https://nodaro.ai/terms"
               target="_blank"
               rel="noopener noreferrer"
-              style={{ color: "#7c7c85", textDecoration: "none" }}
+              style={{ color: "var(--blg-t2-dim)", textDecoration: "none" }}
             >
               Terms of Service
             </a>
@@ -554,7 +561,7 @@ export default function PricingPage() {
               href="https://nodaro.ai/privacy"
               target="_blank"
               rel="noopener noreferrer"
-              style={{ color: "#7c7c85", textDecoration: "none" }}
+              style={{ color: "var(--blg-t2-dim)", textDecoration: "none" }}
             >
               Privacy Policy
             </a>
@@ -563,7 +570,7 @@ export default function PricingPage() {
               href="https://nodaro.ai/refund"
               target="_blank"
               rel="noopener noreferrer"
-              style={{ color: "#7c7c85", textDecoration: "none" }}
+              style={{ color: "var(--blg-t2-dim)", textDecoration: "none" }}
             >
               Refund Policy
             </a>

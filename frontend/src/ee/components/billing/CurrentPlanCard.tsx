@@ -107,9 +107,9 @@ export function CurrentPlanCard({
           style={{
             fontSize: 12,
             fontWeight: 600,
-            color: "#c9c9d0",
-            background: "#1b1b21",
-            border: "1px solid #26262d",
+            color: "var(--blg-t1-label)",
+            background: "var(--blg-chip)",
+            border: "1px solid var(--blg-border-chip)",
             borderRadius: 99,
             padding: "5px 13px",
           }}
@@ -165,11 +165,11 @@ export function CurrentPlanCard({
           <button
             onClick={onManageSubscription}
             disabled={managePending}
-            className="bg-[#1b1b21] hover:bg-[#23232b] disabled:pointer-events-none disabled:opacity-60"
+            className="bg-[var(--blg-chip)] hover:bg-[var(--blg-chip-hover)] disabled:pointer-events-none disabled:opacity-60"
             style={{
               ...planButton,
-              border: "1px solid #2a2a32",
-              color: "#eaeaef",
+              border: "1px solid var(--blg-border-strong)",
+              color: "var(--blg-t1-btn)",
             }}
           >
             ↗ {subscription && subscription.status !== "canceled" ? "Manage Subscription" : "Manage Billing"}
@@ -177,10 +177,10 @@ export function CurrentPlanCard({
         )}
         <Link to="/pricing">
           <button
-            className="bg-transparent text-[#c9c9d0] hover:bg-[#17171b] hover:text-white"
+            className="bg-transparent text-[var(--blg-t1-label)] hover:bg-[var(--blg-hover)] hover:text-[var(--blg-t1)] dark:hover:text-white"
             style={{
               ...planButton,
-              border: "1px solid #2a2a32",
+              border: "1px solid var(--blg-border-strong)",
             }}
           >
             ⇅ {subscription ? "Change Plan" : "View Plans"}

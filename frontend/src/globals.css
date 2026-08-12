@@ -1554,3 +1554,207 @@ html, body {
   outline: 2px solid #38bdf8;
   outline-offset: 1px;
 }
+
+/* ============================================================================
+   Billing + Pricing theme tokens (--blg-* shared/billing/sidebar, --prc-*
+   pricing-only, --tps-* top-up card). LIGHT values on :root come from the
+   designer's lite mocks (billing-lite / pricing-lite, 2026-08-12); DARK
+   values under .dark are the previously dark-committed inline constants —
+   verbatim, so dark rendering is unchanged. Tokens live here (core) because
+   the core pricing page and sidebar credit block consume them too — ee code
+   must not be the only carrier. Roles, not hexes: one dark hex can map to
+   two different light values depending on the mock role (e.g. #2a2a32 →
+   #e4e4e8 as a billing input border but #d4d4da as pricing borderStrong).
+   ========================================================================== */
+:root {
+  /* surfaces */
+  --blg-bg: #f6f6f7;
+  --blg-panel: #ffffff;
+  --blg-card: linear-gradient(180deg, #fbfbfc, #f4f4f6);
+  --blg-inset: #fafafb;
+  --blg-field: #ffffff;
+  --blg-field-2: #ffffff;
+  --blg-chip: #f2f2f4;
+  --blg-chip-hover: #f1f1f3;
+  --blg-hover: #f1f1f3;
+  /* borders */
+  --blg-border: #e4e4e8;
+  --blg-border-2: #e4e4e8;
+  --blg-border-3: #e4e4e8;
+  --blg-border-soft: #eeeef1;
+  --blg-border-strong: #e4e4e8;
+  --blg-border-input: #e4e4e8;
+  --blg-border-chip: #e4e4e8;
+  --blg-track: #e8e8ec;
+  --blg-toggle-off: #e8e8ec;
+  /* text */
+  --blg-t1: #18181b;
+  --blg-t1-row: #18181b;
+  --blg-t1-btn: #18181b;
+  --blg-t1-label: #18181b;
+  --blg-t1-body: #18181b;
+  --blg-t2: #65656e;
+  --blg-t2-soft: #65656e;
+  --blg-t2-dim: #65656e;
+  --blg-t2-mute: #65656e;
+  --blg-t2-label: #65656e;
+  --blg-t2-mono: #65656e;
+  --blg-t3: #8e8e98;
+  --blg-t3-head: #8e8e98;
+  --blg-t3-pack: #8e8e98;
+  --blg-t3-note: #8e8e98;
+  --blg-t3-dim: #8e8e98;
+  --blg-placeholder: #8e8e98;
+  /* pink lane */
+  --blg-pink: #e30d55;
+  --blg-pink-hover: #c90b4b;
+  --blg-pink-text: #b60a43;
+  --blg-pink-badge-text: #b60a43;
+  --blg-pink-bg: linear-gradient(180deg, #fff7fa, #fff1f5);
+  --blg-pink-border: #f6cfdc;
+  --blg-pink-chip: #fce4ec;
+  --blg-pink-track: #f7dbe5;
+  /* cyan lane */
+  --blg-cyan: oklch(0.58 0.12 205);
+  --blg-cyan-text: oklch(0.48 0.1 205);
+  --blg-cyan-badge-text: oklch(0.48 0.1 205);
+  --blg-cyan-bg: linear-gradient(180deg, #f6fcfd, #eef9fb);
+  --blg-cyan-border: #c9e6ec;
+  --blg-cyan-chip: #ddf1f5;
+  --blg-cyan-track: #d7edf1;
+  /* packs + activity tags + statuses */
+  --blg-pop-bg: linear-gradient(180deg, #fff5f8, #fff9fb);
+  --blg-pack-bg: #ffffff;
+  --blg-pack-border: #e4e4e8;
+  --blg-tag-sub-text: #b60a43;
+  --blg-tag-sub-bg: #fce4ec;
+  --blg-tag-top-text: oklch(0.48 0.1 205);
+  --blg-tag-top-bg: #ddf1f5;
+  --blg-tag-neutral-text: #65656e;
+  --blg-tag-neutral-bg: #f1f1f3;
+  --blg-pos: #1f7a52;
+  --blg-neg: #5d5d66;
+  --blg-good: #1f7a52;
+  --blg-warn: #b45309;
+  /* pricing page */
+  --prc-bg: #f6f6f7;
+  --prc-card-bg: #ffffff;
+  --prc-card-border: #e4e4e8;
+  --prc-pop-bg: linear-gradient(180deg, #fff6f9, #ffffff);
+  --prc-pop-shadow: 0 10px 34px rgba(227, 13, 85, 0.12);
+  --prc-strike: #a0a0a9;
+  --prc-divider: #eeeef1;
+  --prc-rule: #e4e4e8;
+  --prc-border-strong: #d4d4da;
+  --prc-pink-strong: #b60a43;
+  --prc-pink-border: #f2c6d6;
+  --prc-pink-chip: #fdeff4;
+  --prc-cyan-text: oklch(0.46 0.1 205);
+  --prc-toggle-off: #e8e8ec;
+  /* top-up card (founder's amended layout; light palette from the lite
+     mock's cyan-tinted API/Pay-as-you-go card) */
+  --tps-bg: linear-gradient(180deg, #f7fcfd, #eef9fb);
+  --tps-border: #cbe7ed;
+  --tps-cyan: oklch(0.58 0.12 205);
+  --tps-on-cyan: #ffffff;
+  --tps-tile-active: #eff9fb;
+  --tps-tile-hover: rgba(255, 255, 255, 0.55);
+  --tps-inset: #f6fcfd;
+  --tps-input-border: #d4d4da;
+}
+
+.dark {
+  /* surfaces */
+  --blg-bg: #0a0a0b;
+  --blg-panel: #101014;
+  --blg-card: linear-gradient(180deg, #131317, #0e0e11);
+  --blg-inset: #0c0c0f;
+  --blg-field: #141418;
+  --blg-field-2: #101014;
+  --blg-chip: #1b1b21;
+  --blg-chip-hover: #23232b;
+  --blg-hover: #17171b;
+  /* borders */
+  --blg-border: #1e1e24;
+  --blg-border-2: #1c1c22;
+  --blg-border-3: #1f1f25;
+  --blg-border-soft: #16161b;
+  --blg-border-strong: #2a2a32;
+  --blg-border-input: #26262c;
+  --blg-border-chip: #26262d;
+  --blg-track: #1c1c21;
+  --blg-toggle-off: #26262c;
+  /* text */
+  --blg-t1: #f2f2f4;
+  --blg-t1-row: #e4e4e9;
+  --blg-t1-btn: #eaeaef;
+  --blg-t1-label: #c9c9d0;
+  --blg-t1-body: #c4c4cc;
+  --blg-t2: #85858e;
+  --blg-t2-soft: #86868f;
+  --blg-t2-dim: #7c7c85;
+  --blg-t2-mute: #75757e;
+  --blg-t2-label: #8a8a93;
+  --blg-t2-mono: #9a9aa3;
+  --blg-t3: #63636c;
+  --blg-t3-head: #6a6a73;
+  --blg-t3-pack: #6d6d76;
+  --blg-t3-note: #66666f;
+  --blg-t3-dim: #5f5f68;
+  --blg-placeholder: #5a5a60;
+  /* pink lane */
+  --blg-pink: #ff2d6f;
+  --blg-pink-hover: #ff4a83;
+  --blg-pink-text: #ff77a0;
+  --blg-pink-badge-text: #ff9bbb;
+  --blg-pink-bg: linear-gradient(180deg, #18101400, #1a0d14);
+  --blg-pink-border: #2c1522;
+  --blg-pink-chip: #2a0f1b;
+  --blg-pink-track: #241419;
+  /* cyan lane */
+  --blg-cyan: oklch(0.75 0.13 205);
+  --blg-cyan-text: oklch(0.8 0.09 205);
+  --blg-cyan-badge-text: oklch(0.85 0.06 205);
+  --blg-cyan-bg: linear-gradient(180deg, #0d161900, #091518);
+  --blg-cyan-border: #113038;
+  --blg-cyan-chip: #0d2429;
+  --blg-cyan-track: #0f2126;
+  /* packs + activity tags + statuses */
+  --blg-pop-bg: linear-gradient(180deg, #1d0e16, #150b11);
+  --blg-pack-bg: #0c0c0f;
+  --blg-pack-border: #23232a;
+  --blg-tag-sub-text: #ff2d6f;
+  --blg-tag-sub-bg: #26101a;
+  --blg-tag-top-text: oklch(0.75 0.13 205);
+  --blg-tag-top-bg: #0d2429;
+  --blg-tag-neutral-text: #8a8a93;
+  --blg-tag-neutral-bg: #1a1a1f;
+  --blg-pos: #63c79a;
+  --blg-neg: #a8a8b2;
+  --blg-good: #6ee7b7;
+  --blg-warn: #e5b76a;
+  /* pricing page */
+  --prc-bg: #08080a;
+  --prc-card-bg: linear-gradient(180deg, #101013, #0a0a0c);
+  --prc-card-border: #1e1e24;
+  --prc-pop-bg: linear-gradient(180deg, #1b0c14, #0b080a);
+  --prc-pop-shadow: 0 0 44px rgba(255, 45, 111, 0.16);
+  --prc-strike: #5a5a63;
+  --prc-divider: #1a1a20;
+  --prc-rule: #18181d;
+  --prc-border-strong: #2a2a32;
+  --prc-pink-strong: #ff2d6f;
+  --prc-pink-border: #46132a;
+  --prc-pink-chip: transparent;
+  --prc-cyan-text: oklch(0.8 0.09 205);
+  --prc-toggle-off: #2a2a32;
+  /* top-up card (dark keeps the founder's neutral zinc values) */
+  --tps-bg: transparent;
+  --tps-border: #27272a;
+  --tps-cyan: #22d3ee;
+  --tps-on-cyan: #09090b;
+  --tps-tile-active: rgba(34, 211, 238, 0.05);
+  --tps-tile-hover: rgba(24, 24, 27, 0.5);
+  --tps-inset: rgba(24, 24, 27, 0.3);
+  --tps-input-border: #3f3f46;
+}

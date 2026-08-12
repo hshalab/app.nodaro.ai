@@ -2,7 +2,6 @@ import type { CSSProperties } from "react"
 import { Loader2 } from "lucide-react"
 import type { TransactionRecord } from "@/lib/api"
 import {
-  CYAN,
   MONO_FONT,
   PINK,
   formatCredits,
@@ -31,12 +30,14 @@ interface ActivityRow {
   positive: boolean
   /** Stripe hosted receipt link (view/download); null for older rows. */
   receiptUrl: string | null
+  /** Dollar amount of the charge/refund, e.g. "$5.00"; null when 0/absent. */
+  usd: string | null
 }
 
 const TAG_COLORS: Record<ActivitySource, { color: string; background: string }> = {
-  Subscription: { color: PINK, background: "#26101a" },
-  "Top-up": { color: CYAN, background: "#0d2429" },
-  Refund: { color: "#8a8a93", background: "#1a1a1f" },
+  Subscription: { color: "var(--blg-tag-sub-text)", background: "var(--blg-tag-sub-bg)" },
+  "Top-up": { color: "var(--blg-tag-top-text)", background: "var(--blg-tag-top-bg)" },
+  Refund: { color: "var(--blg-tag-neutral-text)", background: "var(--blg-tag-neutral-bg)" },
 }
 
 function capitalize(value: string): string {
@@ -66,6 +67,9 @@ function toActivityRow(tx: TransactionRecord): ActivityRow {
     amount: `${negative ? "−" : "+"}${formatCredits(credits)}`,
     positive: !negative,
     receiptUrl: tx.receipt_url ?? null,
+    usd: tx.amount_usd
+      ? `${negative ? "\u2212" : ""}$${Math.abs(tx.amount_usd).toFixed(2)}`
+      : null,
   }
 }
 
@@ -74,10 +78,10 @@ const headerCell: CSSProperties = {
   gridTemplateColumns: GRID_COLUMNS,
   gap: 12,
   padding: "0 4px 10px",
-  borderBottom: "1px solid #1c1c22",
+  borderBottom: "1px solid var(--blg-border-2)",
   fontSize: 11,
   letterSpacing: "0.1em",
-  color: "#6a6a73",
+  color: "var(--blg-t3-head)",
   fontWeight: 700,
 }
 
@@ -86,7 +90,7 @@ const bodyRow: CSSProperties = {
   gridTemplateColumns: GRID_COLUMNS,
   gap: 12,
   padding: "14px 4px",
-  borderBottom: "1px solid #16161b",
+  borderBottom: "1px solid var(--blg-border-soft)",
   alignItems: "center",
   fontSize: 13.5,
 }
@@ -113,20 +117,20 @@ export function CreditActivity({ transactions, loading }: CreditActivityProps) {
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>
       ) : rows.length === 0 ? (
-        <p style={{ fontSize: 13, color: "#75757e", margin: "14px 4px 0" }}>
+        <p style={{ fontSize: 13, color: "var(--blg-t2-mute)", margin: "14px 4px 0" }}>
           No transactions yet.
         </p>
       ) : (
         rows.map((row) => (
           <div key={row.id} style={bodyRow}>
-            <span style={{ color: "#e4e4e9" }}>
+            <span style={{ color: "var(--blg-t1-row)" }}>
               {row.description}
               {row.receiptUrl && (
                 <a
                   href={row.receiptUrl}
                   target="_blank"
                   rel="noreferrer"
-                  style={{ marginLeft: 10, fontSize: 11.5, color: "#7c7c85", textDecoration: "underline" }}
+                  style={{ marginLeft: 10, fontSize: 12, fontWeight: 600, color: PINK, textDecoration: "underline", textUnderlineOffset: 3 }}
                 >
                   Receipt ↗
                 </a>
@@ -146,20 +150,34 @@ export function CreditActivity({ transactions, loading }: CreditActivityProps) {
               {row.source}
             </span>
             <span
-              style={{ color: "#7c7c85", fontFamily: MONO_FONT, fontSize: 12.5 }}
+              style={{ color: "var(--blg-t2-dim)", fontFamily: MONO_FONT, fontSize: 12.5 }}
             >
               {row.date}
             </span>
-            <span
-              style={{
-                textAlign: "right",
-                fontFamily: MONO_FONT,
-                fontSize: 13,
-                fontWeight: 500,
-                color: row.positive ? "#63c79a" : "#a8a8b2",
-              }}
-            >
-              {row.amount}
+            <span style={{ textAlign: "right" }}>
+              <span
+                style={{
+                  fontFamily: MONO_FONT,
+                  fontSize: 13,
+                  fontWeight: 500,
+                  color: row.positive ? "var(--blg-pos)" : "var(--blg-neg)",
+                }}
+              >
+                {row.amount}
+              </span>
+              {row.usd && (
+                <span
+                  style={{
+                    display: "block",
+                    fontFamily: MONO_FONT,
+                    fontSize: 11,
+                    color: "var(--blg-t2-dim)",
+                    marginTop: 2,
+                  }}
+                >
+                  {row.usd}
+                </span>
+              )}
             </span>
           </div>
         ))

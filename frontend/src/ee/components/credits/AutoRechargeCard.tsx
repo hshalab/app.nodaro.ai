@@ -106,10 +106,10 @@ export function AutoRechargeCard({ frameless = false }: { frameless?: boolean } 
       : "Paused."
 
   const inputStyle: React.CSSProperties = {
-    background: "#101014",
-    border: "1px solid #26262c",
+    background: "var(--blg-field-2)",
+    border: "1px solid var(--blg-border-input)",
     borderRadius: 10,
-    color: "#f2f2f4",
+    color: "var(--blg-t1)",
     fontSize: 15,
     fontWeight: 600,
     padding: "10px 14px",
@@ -120,11 +120,11 @@ export function AutoRechargeCard({ frameless = false }: { frameless?: boolean } 
     <div className={cn("space-y-4", !frameless && "rounded-lg border border-zinc-200 dark:border-zinc-800 p-4")}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h3 style={{ fontSize: 19, fontWeight: 700, color: "#f2f2f4", letterSpacing: "-0.01em" }}>
+          <h3 style={{ fontSize: 19, fontWeight: 700, color: "var(--blg-t1)", letterSpacing: "-0.01em" }}>
             Auto-recharge
           </h3>
-          <p style={{ fontSize: 13.5, color: "#7c7c85", marginTop: 2 }}>
-            Tops up your <span style={{ color: "oklch(0.8 0.09 205)", fontWeight: 600 }}>top-up balance</span> when
+          <p style={{ fontSize: 13.5, color: "var(--blg-t2-dim)", marginTop: 2 }}>
+            Tops up your <span style={{ color: "var(--blg-cyan-text)", fontWeight: 600 }}>top-up balance</span> when
             the total drops low.
           </p>
         </div>
@@ -137,7 +137,7 @@ export function AutoRechargeCard({ frameless = false }: { frameless?: boolean } 
             width: 52,
             height: 28,
             borderRadius: 99,
-            background: enabled ? "#ff2d6f" : "#26262c",
+            background: enabled ? "var(--blg-pink)" : "var(--blg-toggle-off)",
             border: "none",
             cursor: "pointer",
           }}
@@ -157,7 +157,7 @@ export function AutoRechargeCard({ frameless = false }: { frameless?: boolean } 
         </button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3" style={{ fontSize: 15.5, color: "#c4c4cc" }}>
+      <div className="flex flex-wrap items-center gap-3" style={{ fontSize: 15.5, color: "var(--blg-t1-body)" }}>
         <span>When my balance drops below</span>
         <input
           type="text"
@@ -173,7 +173,7 @@ export function AutoRechargeCard({ frameless = false }: { frameless?: boolean } 
           className="flex items-center gap-2"
           style={{ ...inputStyle, width: 110, display: "inline-flex" }}
         >
-          <span style={{ color: "#7c7c85", fontWeight: 500 }}>$</span>
+          <span style={{ color: "var(--blg-t2-dim)", fontWeight: 500 }}>$</span>
           <input
             type="text"
             inputMode="numeric"
@@ -181,15 +181,15 @@ export function AutoRechargeCard({ frameless = false }: { frameless?: boolean } 
             onChange={(e) => setAmount(e.target.value.replace(/[^0-9]/g, ""))}
             placeholder={`${MIN_LOAD_USD}-${MAX_LOAD_USD}`}
             aria-label="Recharge amount in dollars"
-            style={{ background: "transparent", border: "none", outline: "none", color: "#f2f2f4", fontSize: 15, fontWeight: 600, width: "100%" }}
+            style={{ background: "transparent", border: "none", outline: "none", color: "var(--blg-t1)", fontSize: 15, fontWeight: 600, width: "100%" }}
           />
         </span>
         {previewCredits !== null && (
-          <span style={{ color: "#7c7c85" }}>= {previewCredits.toLocaleString()} credits</span>
+          <span style={{ color: "var(--blg-t2-dim)" }}>= {previewCredits.toLocaleString()} credits</span>
         )}
       </div>
 
-      <p style={{ fontSize: 13.5, color: enabled && !valuesValid && !saving ? "#e5b76a" : "#6ee7b7" }}>
+      <p style={{ fontSize: 13.5, color: enabled && !valuesValid && !saving ? "var(--blg-warn)" : "var(--blg-good)" }}>
         {statusText}
       </p>
 

@@ -295,11 +295,11 @@ export function AppSidebar({
                     style={{
                       padding: "10px 6px",
                       borderRadius: 12,
-                      border: "1px solid #1f1f25",
-                      background: "linear-gradient(180deg,#131317,#0e0e11)",
+                      border: "1px solid var(--blg-border-3)",
+                      background: "var(--blg-card)",
                     }}
                   >
-                    <span className="font-mono" style={{ fontSize: 12, fontWeight: 700, color: "#f2f2f4" }}>
+                    <span className="font-mono" style={{ fontSize: 12, fontWeight: 700, color: "var(--blg-t1)" }}>
                       {creditBalance.total >= 1000
                         ? `${(creditBalance.total / 1000).toFixed(1).replace(/\.0$/, "")}K`
                         : creditBalance.total}
@@ -310,7 +310,7 @@ export function AppSidebar({
                           display: "block",
                           height: 4,
                           borderRadius: 99,
-                          background: "#ff2d6f",
+                          background: "var(--blg-pink)",
                           width: `${creditBalance.total > 0 ? Math.max(12, (creditBalance.subscription / creditBalance.total) * 100) : 12}%`,
                         }}
                       />
@@ -319,7 +319,7 @@ export function AppSidebar({
                           display: "block",
                           height: 4,
                           borderRadius: 99,
-                          background: "oklch(0.75 0.13 205)",
+                          background: "var(--blg-cyan)",
                           width: `${creditBalance.total > 0 ? Math.max(12, (creditBalance.topup / creditBalance.total) * 100) : 12}%`,
                         }}
                       />
@@ -363,25 +363,26 @@ export function AppSidebar({
                 ? `renews ${renewal}`
                 : null
 
-            // Credit block from the designer's Pricing mock (2026-08-12):
-            // dark-committed gradient card, identical in both app themes.
+            // Credit block from the designer's Pricing mocks (2026-08-12):
+            // gradient card themed via the --blg-* tokens in globals.css
+            // (light values from the lite mock, dark = original constants).
             return (
               <div
                 className="mx-2 mt-2 cursor-pointer text-left"
                 style={{
-                  border: "1px solid #1f1f25",
+                  border: "1px solid var(--blg-border-3)",
                   borderRadius: 14,
-                  background: "linear-gradient(180deg,#131317,#0e0e11)",
+                  background: "var(--blg-card)",
                   overflow: "hidden",
                 }}
                 onClick={() => navigate("/billing")}
               >
                 <div style={{ padding: "14px 16px 12px" }}>
                   <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: 10, letterSpacing: "0.14em", color: "#7c7c85", fontWeight: 600 }}>
+                    <span style={{ fontSize: 10, letterSpacing: "0.14em", color: "var(--blg-t2-dim)", fontWeight: 600 }}>
                       TOTAL CREDITS
                     </span>
-                    <span style={{ fontSize: 10, color: "#5f5f68", fontFamily: MONO_FONT }}>
+                    <span style={{ fontSize: 10, color: "var(--blg-t3-dim)", fontFamily: MONO_FONT }}>
                       {planLabel}
                     </span>
                   </div>
@@ -392,12 +393,12 @@ export function AppSidebar({
                         fontWeight: 700,
                         letterSpacing: "-0.03em",
                         fontVariantNumeric: "tabular-nums",
-                        color: "#f2f2f4",
+                        color: "var(--blg-t1)",
                       }}
                     >
                       {creditBalance.total.toLocaleString()}
                     </span>
-                    <span style={{ fontSize: 13, color: "#7c7c85" }}>credits</span>
+                    <span style={{ fontSize: 13, color: "var(--blg-t2-dim)" }}>credits</span>
                   </div>
                   <div
                     style={{
@@ -406,18 +407,18 @@ export function AppSidebar({
                       borderRadius: 99,
                       overflow: "hidden",
                       marginTop: 12,
-                      background: "#1c1c21",
+                      background: "var(--blg-track)",
                     }}
                   >
-                    <div style={{ width: `${subPct}%`, background: "#ff2d6f" }} />
-                    <div style={{ width: `${topupPct}%`, background: "oklch(0.75 0.13 205)" }} />
+                    <div style={{ width: `${subPct}%`, background: "var(--blg-pink)" }} />
+                    <div style={{ width: `${topupPct}%`, background: "var(--blg-cyan)" }} />
                   </div>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderTop: "1px solid #1f1f25" }}>
-                  <div style={{ padding: "11px 14px", borderRight: "1px solid #1f1f25" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderTop: "1px solid var(--blg-border-3)" }}>
+                  <div style={{ padding: "11px 14px", borderRight: "1px solid var(--blg-border-3)" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ width: 6, height: 6, borderRadius: 99, background: "#ff2d6f" }} />
-                      <span style={{ fontSize: 10, letterSpacing: "0.08em", color: "#8a8a93", fontWeight: 600, whiteSpace: "nowrap" }}>
+                      <span style={{ width: 6, height: 6, borderRadius: 99, background: "var(--blg-pink)" }} />
+                      <span style={{ fontSize: 10, letterSpacing: "0.08em", color: "var(--blg-t2-label)", fontWeight: 600, whiteSpace: "nowrap" }}>
                         SUBSCRIPTION
                       </span>
                     </div>
@@ -427,21 +428,21 @@ export function AppSidebar({
                         fontWeight: 700,
                         marginTop: 4,
                         fontVariantNumeric: "tabular-nums",
-                        color: "#f2f2f4",
+                        color: "var(--blg-t1)",
                       }}
                     >
                       {creditBalance.subscription.toLocaleString()}
                     </div>
                     {subscriptionSubline && (
-                      <div style={{ fontSize: 10.5, color: "#6a6a73", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      <div style={{ fontSize: 10.5, color: "var(--blg-t3-head)", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                         {subscriptionSubline}
                       </div>
                     )}
                   </div>
                   <div style={{ padding: "11px 14px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ width: 6, height: 6, borderRadius: 99, background: "oklch(0.75 0.13 205)" }} />
-                      <span style={{ fontSize: 10, letterSpacing: "0.08em", color: "#8a8a93", fontWeight: 600, whiteSpace: "nowrap" }}>
+                      <span style={{ width: 6, height: 6, borderRadius: 99, background: "var(--blg-cyan)" }} />
+                      <span style={{ fontSize: 10, letterSpacing: "0.08em", color: "var(--blg-t2-label)", fontWeight: 600, whiteSpace: "nowrap" }}>
                         TOP&#8209;UP
                       </span>
                     </div>
@@ -451,12 +452,12 @@ export function AppSidebar({
                         fontWeight: 700,
                         marginTop: 4,
                         fontVariantNumeric: "tabular-nums",
-                        color: "#f2f2f4",
+                        color: "var(--blg-t1)",
                       }}
                     >
                       {creditBalance.topup.toLocaleString()}
                     </div>
-                    <div style={{ fontSize: 10.5, color: "#6a6a73", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>never expires</div>
+                    <div style={{ fontSize: 10.5, color: "var(--blg-t3-head)", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>never expires</div>
                   </div>
                 </div>
               </div>

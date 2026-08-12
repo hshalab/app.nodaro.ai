@@ -29,7 +29,7 @@ const bucketBottomRow: CSSProperties = {
   justifyContent: "space-between",
   marginTop: 10,
   fontSize: 12,
-  color: "#7c7c85",
+  color: "var(--blg-t2-dim)",
 }
 
 interface BalanceBucketProps {
@@ -128,7 +128,7 @@ function BalanceBucket(props: BalanceBucketProps) {
         >
           {formatCredits(props.amount)}
         </span>
-        <span style={{ fontSize: 13, color: "#86868f" }}>{props.amountSuffix}</span>
+        <span style={{ fontSize: 13, color: "var(--blg-t2-soft)" }}>{props.amountSuffix}</span>
       </div>
       <div
         style={{
@@ -209,7 +209,7 @@ function BalanceSection({
           <h2 style={sectionTitle}>Credit Balance</h2>
         </div>
         <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: 11, color: "#7c7c85", letterSpacing: "0.06em" }}>
+          <div style={{ fontSize: 11, color: "var(--blg-t2-dim)", letterSpacing: "0.06em" }}>
             TOTAL REMAINING
           </div>
           <div
@@ -238,18 +238,18 @@ function BalanceSection({
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             <BalanceBucket
               accent={PINK}
-              borderColor="#2c1522"
-              background="linear-gradient(180deg,#18101400,#1a0d14)"
-              labelColor="#ff77a0"
+              borderColor="var(--blg-pink-border)"
+              background="var(--blg-pink-bg)"
+              labelColor="var(--blg-pink-text)"
               label="SUBSCRIPTION"
               badge={allocation > 0 ? "resets monthly" : "one-time grant"}
-              badgeColor="#ff9bbb"
-              badgeBackground="#2a0f1b"
+              badgeColor="var(--blg-pink-badge-text)"
+              badgeBackground="var(--blg-pink-chip)"
               amount={subscriptionCredits}
               amountSuffix={
                 allocation > 0 ? `of ${formatCredits(allocation)} left` : "credits left"
               }
-              barBackground="#241419"
+              barBackground="var(--blg-pink-track)"
               barPercent={subPercent}
               footerLeft={
                 usedThisCycle !== null
@@ -260,16 +260,16 @@ function BalanceSection({
             />
             <BalanceBucket
               accent={CYAN}
-              borderColor="#113038"
-              background="linear-gradient(180deg,#0d161900,#091518)"
+              borderColor="var(--blg-cyan-border)"
+              background="var(--blg-cyan-bg)"
               labelColor={CYAN_TEXT}
               label="TOP-UP"
               badge="never expires"
               badgeColor={CYAN_BADGE_TEXT}
-              badgeBackground="#0d2429"
+              badgeBackground="var(--blg-cyan-chip)"
               amount={topup}
               amountSuffix="credits banked"
-              barBackground="#0f2126"
+              barBackground="var(--blg-cyan-track)"
               barPercent={topup > 0 ? 100 : 0}
               footerLeft={
                 lastTopupTx
@@ -285,7 +285,7 @@ function BalanceSection({
               display: "grid",
               gridTemplateColumns: "repeat(3,1fr)",
               gap: 24,
-              borderTop: "1px solid #1c1c22",
+              borderTop: "1px solid var(--blg-border-2)",
               marginTop: 24,
               paddingTop: 20,
             }}
