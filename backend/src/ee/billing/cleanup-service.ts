@@ -1118,6 +1118,91 @@ export async function sweepVideoAnalysisTmp(maxAgeHours = 24): Promise<VaTmpSwee
 }
 
 // ============================================================
+// Top-up credit expiry (12-month validity)
+// ============================================================
+
+export interface TopupExpiryResult {
+  readonly usersSwept: number
+  readonly creditsExpired: number
+  readonly errors: number
+}
+
+/**
+ * Expire the unconsumed remainder of top-up grants past their 12-month
+ * expires_at. The FIFO waterfall itself runs atomically per user inside the
+ * expire_topup_credits RPC (migration 314) — it locks the profile row,
+ * attributes lifetime consumption to the oldest grants first, and decrements
+ * ONLY profiles.topup_credits (never lifetime_topup_credits — payg tier is
+ * derived from that, and expiry is not a refund).
+ */
+export async function expireTopupCredits(): Promise<TopupExpiryResult> {
+  let usersSwept = 0
+  let creditsExpired = 0
+  let errors = 0
+
+  // Candidates: users holding a due grant with a live remainder. PostgREST
+  // can't compare two columns, so the remainder filter happens client-side.
+  const { data: due, error: dueError } = await supabase
+    .from("topup_grants")
+    .select("user_id, amount, expired_amount")
+    .lte("expires_at", new Date().toISOString())
+    .limit(5000)
+
+  if (dueError) {
+    console.error("[cleanup] Failed to query due topup grants:", dueError.message)
+    return { usersSwept: 0, creditsExpired: 0, errors: 1 }
+  }
+
+  const userIds = [...new Set(
+    (due ?? [])
+      .filter((g) => ((g.expired_amount as number) ?? 0) < ((g.amount as number) ?? 0))
+      .map((g) => g.user_id as string),
+  )]
+  if (userIds.length === 0) {
+    return { usersSwept: 0, creditsExpired: 0, errors: 0 }
+  }
+
+  for (const userId of userIds) {
+    try {
+      const { data: expired, error: rpcError } = await supabase
+        .rpc("expire_topup_credits", { p_user_id: userId })
+      if (rpcError) {
+        console.error(`[cleanup] expire_topup_credits failed for ${userId}:`, rpcError.message)
+        errors++
+        continue
+      }
+      const amount = (expired as number) ?? 0
+      usersSwept++
+      if (amount > 0) {
+        creditsExpired += amount
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("topup_credits")
+          .eq("id", userId)
+          .single()
+        await CreditsService.logTransaction({
+          userId,
+          amount: -amount,
+          creditType: "topup",
+          source: "expiry",
+          description: "Top-up credits expired (12-month validity)",
+          balanceAfter: (profile?.topup_credits as number) ?? 0,
+        })
+        invalidateBalanceCache(userId)
+      }
+    } catch (err) {
+      console.error(`[cleanup] Topup expiry sweep error for ${userId}:`, err)
+      errors++
+    }
+  }
+
+  console.log(
+    `[cleanup] Topup expiry sweep: users=${usersSwept} expired=${creditsExpired} errors=${errors}`,
+  )
+  return { usersSwept, creditsExpired, errors }
+}
+
+// ============================================================
 // Formatting helper
 // ============================================================
 

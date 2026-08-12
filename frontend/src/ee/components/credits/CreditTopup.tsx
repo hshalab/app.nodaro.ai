@@ -96,7 +96,7 @@ export function CreditTopup() {
             ? `= ${customCredits.toLocaleString()} credits`
             : customUsd
               ? `$${MIN_LOAD_USD}–$${MAX_LOAD_USD}, whole dollars`
-              : "credits never expire"}
+              : "credits valid for 12 months"}
         </span>
         <button
           onClick={handleCustomLoad}

@@ -2,15 +2,17 @@ import type { CSSProperties } from "react"
 
 /**
  * Shared style vocabulary for the billing page, ported 1:1 from the
- * designer's static mock (billing-design.html). Every value here is copied
- * from the mock's inline styles — do not "improve" them, keep them in sync
- * with the design source.
+ * designer's static mocks (billing-design.html dark / billing-lite.html
+ * light). Colors resolve through the `--blg-*` theme tokens declared in
+ * globals.css (`:root` = light values from the lite mock, `.dark` = the
+ * original dark constants), so every consumer follows the app theme.
+ * Do not "improve" values — keep them in sync with the design source.
  */
 
-export const PINK = "#ff2d6f"
-export const CYAN = "oklch(0.75 0.13 205)"
-export const CYAN_TEXT = "oklch(0.8 0.09 205)"
-export const CYAN_BADGE_TEXT = "oklch(0.85 0.06 205)"
+export const PINK = "var(--blg-pink)"
+export const CYAN = "var(--blg-cyan)"
+export const CYAN_TEXT = "var(--blg-cyan-text)"
+export const CYAN_BADGE_TEXT = "var(--blg-cyan-badge-text)"
 
 /**
  * Plus Jakarta Sans is the mock's sans face. The repo deliberately
@@ -27,9 +29,9 @@ export const MONO_FONT =
 
 /** Section card chrome (mock: every <section> on the page). */
 export const sectionCard: CSSProperties = {
-  border: "1px solid #1e1e24",
+  border: "1px solid var(--blg-border)",
   borderRadius: 16,
-  background: "#101014",
+  background: "var(--blg-panel)",
   padding: "26px 28px",
 }
 
@@ -53,22 +55,22 @@ export const sectionIcon: CSSProperties = {
 
 export const statLabel: CSSProperties = {
   fontSize: 12.5,
-  color: "#7c7c85",
+  color: "var(--blg-t2-dim)",
 }
 
 export const mutedParagraph: CSSProperties = {
   fontSize: 13,
-  color: "#75757e",
+  color: "var(--blg-t2-mute)",
   margin: 0,
 }
 
-/** Dark input shell used by the "Or load any amount" row. */
+/** Theme-aware input shell used by the "Or load any amount" row. */
 export const inputShell: CSSProperties = {
   display: "flex",
   alignItems: "center",
   gap: 8,
-  background: "#141418",
-  border: "1px solid #2a2a32",
+  background: "var(--blg-field)",
+  border: "1px solid var(--blg-border-strong)",
   borderRadius: 9,
   padding: "8px 12px",
 }
@@ -77,7 +79,7 @@ export const monoInput: CSSProperties = {
   background: "transparent",
   border: "none",
   outline: "none",
-  color: "#f2f2f4",
+  color: "var(--blg-t1)",
   fontFamily: MONO_FONT,
   fontSize: 14,
 }

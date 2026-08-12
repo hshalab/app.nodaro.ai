@@ -7,6 +7,7 @@ import {
   sendStorageWarnings,
   sweepSoftDeletedLocationAssets,
   sweepVideoAnalysisTmp,
+  expireTopupCredits,
 } from "./cleanup-service.js"
 import { recordKieCreditSnapshot } from "../routes/admin-kie-credits.js"
 
@@ -135,6 +136,25 @@ export function startCleanupCron(): void {
       )
     } catch (err) {
       console.error("[cron] video-analysis tmp sweep failed:", err)
+    }
+  })
+
+  // Top-up credit expiry (12-month validity) -- daily at 04:45 UTC.
+  // Expires the unconsumed remainder of topup_grants past expires_at, FIFO,
+  // via the expire_topup_credits RPC (migration 314). Logs each expiry to
+  // credit_transactions (source 'expiry') and invalidates the balance cache.
+  cron.schedule("45 4 * * *", async () => {
+    console.log("[cron] Starting topup credit expiry sweep...")
+    const start = Date.now()
+    try {
+      const result = await expireTopupCredits()
+      console.log(
+        `[cron] Topup expiry sweep done: users=${result.usersSwept} ` +
+        `expired=${result.creditsExpired} errors=${result.errors} ` +
+        `(${Date.now() - start}ms)`,
+      )
+    } catch (err) {
+      console.error("[cron] Topup expiry sweep failed:", err)
     }
   })
 

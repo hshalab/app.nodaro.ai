@@ -43,10 +43,10 @@ export function ConnectedInstances() {
 
   return (
     <section style={sectionCardSpaced}>
-      <h2 style={{ fontSize: 19, fontWeight: 700, color: "#f2f2f4", letterSpacing: "-0.01em" }}>
+      <h2 style={{ fontSize: 19, fontWeight: 700, color: "var(--blg-t1)", letterSpacing: "-0.01em" }}>
         Connected Instances
       </h2>
-      <p style={{ fontSize: 13.5, color: "#7c7c85", marginTop: 2 }}>
+      <p style={{ fontSize: 13.5, color: "var(--blg-t2-dim)", marginTop: 2 }}>
         Self-hosted Nodaro servers spending from this wallet. Set a monthly cap
         or disconnect any of them.
       </p>
@@ -114,28 +114,28 @@ function InstanceRow({ inst, onChanged }: { inst: ConnectedInstance; onChanged: 
         flexWrap: "wrap",
         alignItems: "center",
         gap: 16,
-        border: "1px solid #1f1f25",
+        border: "1px solid var(--blg-border-3)",
         borderRadius: 12,
         padding: "14px 16px",
       }}
     >
       <div style={{ flex: 1, minWidth: 220 }}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: "#f2f2f4" }}>{inst.name}</div>
-        <div style={{ fontFamily: MONO_FONT, fontSize: 11.5, color: "#7c7c85", marginTop: 2 }}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: "var(--blg-t1)" }}>{inst.name}</div>
+        <div style={{ fontFamily: MONO_FONT, fontSize: 11.5, color: "var(--blg-t2-dim)", marginTop: 2 }}>
           {inst.instanceUrl ?? "unknown host"} · connected{" "}
           {new Date(inst.connectedAt).toLocaleDateString()}
           {inst.lastUsedAt ? ` · last used ${new Date(inst.lastUsedAt).toLocaleDateString()}` : ""}
         </div>
       </div>
       <div style={{ textAlign: "right" }}>
-        <div style={{ fontFamily: MONO_FONT, fontSize: 10, letterSpacing: "0.14em", color: "#7c7c85" }}>
+        <div style={{ fontFamily: MONO_FONT, fontSize: 10, letterSpacing: "0.14em", color: "var(--blg-t2-dim)" }}>
           SPENT THIS MONTH
         </div>
-        <div style={{ fontSize: 17, fontWeight: 700, color: "#f2f2f4" }}>
+        <div style={{ fontSize: 17, fontWeight: 700, color: "var(--blg-t1)" }}>
           {inst.spentThisMonth.toLocaleString()}
         </div>
       </div>
-      <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#c4c4cc" }}>
+      <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--blg-t1-body)" }}>
         cap
         <input
           type="text"
@@ -145,10 +145,10 @@ function InstanceRow({ inst, onChanged }: { inst: ConnectedInstance; onChanged: 
           onChange={(e) => setCap(e.target.value.replace(/[^0-9]/g, ""))}
           style={{
             width: 90,
-            background: "#101014",
-            border: "1px solid #26262c",
+            background: "var(--blg-field-2)",
+            border: "1px solid var(--blg-border-input)",
             borderRadius: 8,
-            color: "#f2f2f4",
+            color: "var(--blg-t1)",
             fontSize: 13.5,
             padding: "7px 10px",
             outline: "none",

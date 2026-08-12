@@ -57,7 +57,7 @@ export function BuyPacksSection() {
       ? `≈ ${formatCredits(customCredits)} credits · added to top-up`
       : customUsd
         ? `$${MIN_LOAD_USD}–$${MAX_LOAD_USD}, whole dollars`
-        : "goes to top-up · never expires"
+        : "goes to top-up · valid for 12 months"
 
   return (
     <section style={sectionCardSpaced}>
@@ -70,7 +70,7 @@ export function BuyPacksSection() {
         </span>
       </div>
       <p style={{ ...mutedParagraph, margin: "0 0 20px" }}>
-        Purchased packs land in your top-up balance and never expire.
+        Purchased packs land in your top-up balance and are valid for 12 months.
       </p>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14 }}>
@@ -83,16 +83,19 @@ export function BuyPacksSection() {
               position: "relative",
               textAlign: "center",
               fontFamily: "inherit",
-              color: "#f2f2f4",
+              color: "var(--blg-t1)",
               cursor: "pointer",
               padding: "22px 14px 18px",
               borderRadius: 14,
               ...(pack.popular
                 ? {
                     border: `1px solid ${PINK}`,
-                    background: "linear-gradient(180deg,#1d0e16,#150b11)",
+                    background: "var(--blg-pop-bg)",
                   }
-                : { border: "1px solid #23232a", background: "#0c0c0f" }),
+                : {
+                    border: "1px solid var(--blg-pack-border)",
+                    background: "var(--blg-pack-bg)",
+                  }),
               ...(loadingId === `pack_${pack.usd}`
                 ? { opacity: 0.6, pointerEvents: "none" }
                 : {}),
@@ -127,14 +130,14 @@ export function BuyPacksSection() {
             >
               {formatCredits(pack.credits)}
             </div>
-            <div style={{ fontSize: 12, color: "#7c7c85", marginTop: 2 }}>credits</div>
+            <div style={{ fontSize: 12, color: "var(--blg-t2-dim)", marginTop: 2 }}>credits</div>
             <div style={{ fontSize: 19, fontWeight: 700, marginTop: 14 }}>
               ${pack.usd}
             </div>
             <div
               style={{
                 fontSize: 11.5,
-                color: "#6d6d76",
+                color: "var(--blg-t3-pack)",
                 marginTop: 3,
                 fontFamily: MONO_FONT,
               }}
@@ -151,34 +154,34 @@ export function BuyPacksSection() {
           alignItems: "center",
           gap: 14,
           flexWrap: "wrap",
-          border: "1px solid #1e1e24",
+          border: "1px solid var(--blg-border)",
           borderRadius: 12,
-          background: "#0c0c0f",
+          background: "var(--blg-inset)",
           padding: "16px 18px",
           marginTop: 16,
         }}
       >
-        <span style={{ fontSize: 14, color: "#c9c9d0", fontWeight: 500 }}>
+        <span style={{ fontSize: 14, color: "var(--blg-t1-label)", fontWeight: 500 }}>
           Or load any amount
         </span>
         <div style={inputShell}>
-          <span style={{ color: "#7c7c85", fontSize: 14 }}>$</span>
+          <span style={{ color: "var(--blg-t2-dim)", fontSize: 14 }}>$</span>
           <input
             type="text"
             inputMode="numeric"
             placeholder={`${MIN_LOAD_USD}–${MAX_LOAD_USD}`}
             value={customUsd}
             onChange={(e) => setCustomUsd(e.target.value.replace(/[^0-9]/g, ""))}
-            className="placeholder:text-[#5a5a60]"
+            className="placeholder:text-[var(--blg-placeholder)]"
             style={{ ...monoInput, width: 90 }}
             aria-label="Load amount in dollars"
           />
         </div>
-        <span style={{ fontSize: 13, color: "#7c7c85" }}>{amountHint}</span>
+        <span style={{ fontSize: 13, color: "var(--blg-t2-dim)" }}>{amountHint}</span>
         <button
           onClick={() => handleLoad("custom", parsedUsd)}
           disabled={customCredits === null || loadingId === "custom"}
-          className="bg-[#ff2d6f] hover:bg-[#ff4a83] disabled:pointer-events-none disabled:opacity-70"
+          className="bg-[var(--blg-pink)] hover:bg-[var(--blg-pink-hover)] disabled:pointer-events-none disabled:opacity-70"
           style={{
             marginLeft: "auto",
             border: "none",

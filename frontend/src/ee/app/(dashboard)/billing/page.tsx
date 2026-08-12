@@ -50,7 +50,7 @@ function EarningsSection() {
     <section style={sectionCardSpaced}>
       <h2 style={{ ...sectionTitle, margin: "0 0 4px" }}>MiniApp Earnings</h2>
       <p style={{ ...mutedParagraph, margin: "0 0 20px" }}>
-        Earnings are added to your top-up balance and never expire.
+        Earnings are added to your top-up balance and are valid for 12 months.
       </p>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 24 }}>
         {stats.map((stat) => (
@@ -72,17 +72,17 @@ function EarningsSection() {
                 alignItems: "center",
                 justifyContent: "space-between",
                 padding: "12px 4px",
-                borderBottom: "1px solid #16161b",
+                borderBottom: "1px solid var(--blg-border-soft)",
                 fontSize: 13.5,
               }}
             >
               <div>
-                <span style={{ color: "#e4e4e9" }}>{item.appName}</span>
-                <span style={{ color: "#7c7c85", fontSize: 12.5, marginLeft: 10 }}>
+                <span style={{ color: "var(--blg-t1-row)" }}>{item.appName}</span>
+                <span style={{ color: "var(--blg-t2-dim)", fontSize: 12.5, marginLeft: 10 }}>
                   {new Date(item.createdAt).toLocaleDateString()}
                 </span>
               </div>
-              <span style={{ color: "#63c79a", fontWeight: 500 }}>
+              <span style={{ color: "var(--blg-pos)", fontWeight: 500 }}>
                 +{formatCredits(item.totalEarned)} CR
               </span>
             </div>
@@ -162,12 +162,11 @@ export default function BillingPage() {
 
   return (
     <div
-      className="dark"
       style={{
-        background: "#0a0a0b",
+        background: "var(--blg-bg)",
         minHeight: "100%",
         fontFamily: SANS_FONT,
-        color: "#f2f2f4",
+        color: "var(--blg-t1)",
       }}
     >
       {/* Mock's <main> block — a div here because the dashboard layout already renders <main>. */}
@@ -188,7 +187,7 @@ export default function BillingPage() {
         <h1 style={{ fontSize: 34, fontWeight: 700, letterSpacing: "-0.03em", margin: 0 }}>
           Billing
         </h1>
-        <p style={{ fontSize: 15, color: "#85858e", margin: "8px 0 36px" }}>
+        <p style={{ fontSize: 15, color: "var(--blg-t2)", margin: "8px 0 36px" }}>
           Manage your subscription, credits, and payment history.
         </p>
 
