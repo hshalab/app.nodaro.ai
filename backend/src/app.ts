@@ -172,6 +172,7 @@ import { presentationRoutes } from "./routes/presentation.js"
 import { apiTokenRoutes } from "./routes/api-tokens.js"
 import { metaCallbackRoutes } from "./routes/meta-callbacks.js"
 import { socialAuthRoutes } from "./routes/social-auth.js"
+import { nodaroConnectRoutes } from "./routes/nodaro-connect.js"
 import { socialPublishRoutes } from "./routes/social-publish.js"
 import { scheduledPostsRoutes } from "./routes/scheduled-posts.js"
 import { telegramWebhookRoutes } from "./routes/telegram-webhook.js"
@@ -503,6 +504,9 @@ export async function buildApp() {
   await app.register(presentationRoutes)
   await app.register(apiTokenRoutes)
   await app.register(socialAuthRoutes)
+  // Community cloud-connect, instance side (Phase 4a): self-hosted editions
+  // connect to Nodaro Cloud as a provider. Meaningless on cloud itself.
+  if (!isCloud()) await app.register(nodaroConnectRoutes)
   await app.register(metaCallbackRoutes)
   await app.register(socialPublishRoutes)
   await app.register(scheduledPostsRoutes)

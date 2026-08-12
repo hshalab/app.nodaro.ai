@@ -124,6 +124,11 @@ const PUBLIC_ROUTES: { method?: string; path: string; prefix?: boolean }[] = [
   // Public BY DESIGN: a broken Supabase config breaks login itself, so the
   // screen that diagnoses it cannot require a session. Booleans only.
   { method: "GET", path: "/v1/setup/status" },
+  // Community cloud-connect OAuth callback (Phase 4a): a browser redirect
+  // from the cloud consent page — carries the one-shot code, no session
+  // header possible. The code + the stored client secret ARE the auth; the
+  // route only ever exchanges and stores server-side.
+  { method: "GET", path: "/v1/nodaro-connect/callback" },
   { method: "GET", path: "/v1/gallery" },
   // Model catalog: public availability info (same stance as MCP list_models).
   { method: "GET", path: "/v1/models" },
