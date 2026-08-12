@@ -159,6 +159,8 @@ export interface WorkflowExecutionJob {
   inputOverrides?: Record<string, Record<string, unknown>>
   /** When running a published app version, load snapshot from published_apps instead of workflows. */
   appVersionId?: string
+  /** Spend-surface flag captured at run creation (see OrchestratorContext.webFreeMode). */
+  webFreeMode?: boolean
   /** Current component nesting depth (limit 5, like sub-workflows) */
   componentDepth?: number
   /** Slugs of ancestor components in the execution chain — used for cycle detection */
@@ -349,6 +351,11 @@ export interface OrchestratorContext {
   adoptableJobs?: Map<string, { jobId: string; usageLogId?: string; creditsReserved?: number }>
   /** Whether this execution is running a published app (affects free-tier app credit allowance) */
   isAppRun?: boolean
+  /** Pool-aware spend-surface mode (D1 v2): true when the run was triggered
+   *  from a first-party consumer surface while the flag is on. Payg-ness
+   *  resolves downstream (credits layer / RPC self-gate); free users and
+   *  subscribers are unaffected, so the flag threads unconditionally. */
+  webFreeMode?: boolean
   /** Current component nesting depth (limit 5, like sub-workflows) */
   componentDepth?: number
   /** Slugs of ancestor components in the execution chain — used for cycle detection */

@@ -293,7 +293,9 @@ per-credit rate at sustained volume.
 **Auto-recharge** (optional): in Billing you can set "when my balance drops
 below X credits, load $Y" — the amount is charged off-session to your saved
 card (any manual load saves it) at the same rate as manual loads. Three
-failed charges disable auto-recharge until you re-enable it. Rollout-gated:
+failed charges disable auto-recharge until you re-enable it. Every charge
+(manual or automatic) emails a Stripe receipt, and receipt links appear in
+the Billing page's Credit Activity. Rollout-gated:
 availability may lag this document.
 
 Two behaviors to know:

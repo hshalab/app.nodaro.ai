@@ -326,6 +326,7 @@ export async function processWorkflowExecution(job: Job<WorkflowExecutionJob>): 
     triggerData,
     cancelled: false,
     isAppRun: !!appVersionId,
+    webFreeMode: job.data.webFreeMode === true,
     componentDepth: job.data.componentDepth ?? 0,
     executingComponentIds: job.data.executingComponentIds ?? [],
   }

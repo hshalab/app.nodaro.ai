@@ -99,7 +99,7 @@ export async function billingRoutes(app: FastifyInstance) {
     const { data, error } = await supabase
       .from("transactions")
       .select(
-        "id, stripe_transaction_id, type, amount_usd, credits_granted, tier, created_at"
+        "id, stripe_transaction_id, type, amount_usd, credits_granted, tier, created_at, receipt_url"
       )
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
@@ -252,6 +252,15 @@ export async function billingRoutes(app: FastifyInstance) {
         await ensureStripeCustomer(customer.id, userId)
       }
 
+      // Receipt destination for this charge (Billing-UX): Stripe emails the
+      // receipt per-PI, independent of the account-level email settings.
+      const { data: emailRow } = await supabase
+        .from("profiles")
+        .select("email")
+        .eq("id", userId)
+        .single()
+      const loadEmail = emailRow?.email ?? null
+
       const baseUrl = getOrigin(req)
       const successUrl = embedded
         ? `${baseUrl}/checkout-complete?status=success`
@@ -277,9 +286,13 @@ export async function billingRoutes(app: FastifyInstance) {
           },
         ],
         metadata: { userId, kind: "load", loadUsd: String(amountUsd) },
-        // Save the card for off-session auto-recharge (design §5.1) — the
-        // ONLY extra field; grant sizing never reads PI metadata from here.
-        payment_intent_data: { setup_future_usage: "off_session" },
+        // Save the card for off-session auto-recharge (design §5.1), and
+        // have Stripe email the charge receipt (Billing-UX, 2026-08-12);
+        // grant sizing never reads PI metadata from here.
+        payment_intent_data: {
+          setup_future_usage: "off_session",
+          ...(loadEmail ? { receipt_email: loadEmail } : {}),
+        },
         success_url: successUrl,
         cancel_url: cancelUrl,
       })

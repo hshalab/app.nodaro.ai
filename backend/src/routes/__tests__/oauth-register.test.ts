@@ -3,7 +3,7 @@ import Fastify from "fastify"
 import rateLimit from "@fastify/rate-limit"
 import { registerOauthRegister } from "../oauth-register.js"
 
-const mockState = vi.hoisted(() => ({ openCount: 0 }))
+const mockState = vi.hoisted(() => ({ openCount: 0, lastInsert: null as Record<string, unknown> | null }))
 
 vi.mock("../../lib/supabase.js", () => {
   const countChain: Record<string, unknown> = {}
@@ -31,7 +31,10 @@ vi.mock("../../lib/supabase.js", () => {
     supabase: {
       from: vi.fn(() => ({
         select: vi.fn(() => countChain),
-        insert: vi.fn(() => insertChain),
+        insert: vi.fn((row: Record<string, unknown>) => {
+          mockState.lastInsert = row
+          return insertChain
+        }),
       })),
     },
   }
@@ -220,5 +223,73 @@ describe("DCR abuse mitigations", () => {
       headers: { "x-forwarded-for": "20.0.0.4" },
     })
     expect(res.statusCode).toBe(201)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Phase 4a: community-instance registrations (software_id = nodaro-community)
+// ---------------------------------------------------------------------------
+
+const { config: communityConfig } = await import("../../lib/config.js")
+
+describe("community cloud-connect DCR branch", () => {
+  const config = communityConfig
+  const communityPayload = {
+    client_name: "Asaf's Studio Server",
+    redirect_uris: ["https://nodaro.my-studio.example/oauth/callback"],
+    client_uri: "https://nodaro.my-studio.example",
+    software_id: "nodaro-community",
+    scope: "assets:write workflows:execute jobs:read credits:read",
+  }
+
+  beforeEach(() => {
+    ;(config as Record<string, unknown>).COMMUNITY_CONNECT_ENABLED = false
+    mockState.lastInsert = null
+  })
+
+  it("403s when COMMUNITY_CONNECT_ENABLED is off", async () => {
+    const app = await makeApp()
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/oauth/register",
+      payload: communityPayload,
+      headers: { "x-forwarded-for": "10.0.1.1" },
+    })
+    expect(res.statusCode).toBe(403)
+    expect(JSON.parse(res.body).error.code).toBe("community_connect_disabled")
+  })
+
+  it("registers with kind=community_instance, bypassing the MCP allowlist", async () => {
+    ;(config as Record<string, unknown>).COMMUNITY_CONNECT_ENABLED = true
+    const app = await makeApp()
+    // client_name is NOT on the MCP allowlist — must not matter for instances.
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/oauth/register",
+      payload: communityPayload,
+      headers: { "x-forwarded-for": "10.0.1.2" },
+    })
+    expect(res.statusCode).toBe(201)
+    expect(mockState.lastInsert?.kind).toBe("community_instance")
+    expect(mockState.lastInsert?.allowed_origins).toEqual(["https://nodaro.my-studio.example"])
+    expect(mockState.lastInsert?.scopes_requested).toEqual([
+      "assets:write",
+      "workflows:execute",
+      "jobs:read",
+      "credits:read",
+    ])
+  })
+
+  it("plain MCP registrations still get kind=dynamic_mcp", async () => {
+    ;(config as Record<string, unknown>).COMMUNITY_CONNECT_ENABLED = true
+    const app = await makeApp()
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/oauth/register",
+      payload: { client_name: "Claude", redirect_uris: ["https://claude.ai/api/mcp/auth_callback"] },
+      headers: { "x-forwarded-for": "10.0.1.3" },
+    })
+    expect(res.statusCode).toBe(201)
+    expect(mockState.lastInsert?.kind).toBe("dynamic_mcp")
   })
 })

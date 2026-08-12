@@ -30,6 +30,8 @@ export interface ExecuteAppRunParams {
   executingComponentIds?: string[]
   /** Mark the created workflow_execution as a component inner execution */
   isComponentExecution?: boolean
+  /** Spend-surface flag captured at the originating route (D1 v2). */
+  webFreeMode?: boolean
 }
 
 export interface ExecuteAppRunResult {
@@ -59,6 +61,7 @@ export async function executeAppRun(
     nodeIds,
     componentDepth,
     executingComponentIds,
+    webFreeMode,
     isComponentExecution,
   } = params
 
@@ -107,6 +110,7 @@ export async function executeAppRun(
     nodeIds,
     componentDepth,
     executingComponentIds,
+    webFreeMode,
   }
 
   await orchestrationQueue.add("workflow-execution", jobData, {

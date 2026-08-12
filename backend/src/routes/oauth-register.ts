@@ -41,7 +41,13 @@ const registerBody = z.object({
   policy_uri: z.string().url().optional(),
   tos_uri: z.string().url().optional(),
   contacts: z.array(z.string().email()).optional(),
+  /** RFC 7591 software identifier. `"nodaro-community"` marks a self-hosted
+   *  community instance registering for cloud-connect (Phase 4a) — routed to
+   *  kind=community_instance behind COMMUNITY_CONNECT_ENABLED. */
+  software_id: z.string().max(100).optional(),
 })
+
+const COMMUNITY_SOFTWARE_ID = "nodaro-community"
 
 function genClientId(): string {
   return CLIENT_ID_PREFIX + randomBytes(16).toString("hex")
@@ -63,15 +69,16 @@ function parseScope(scope?: string): string[] {
   return filtered.length > 0 ? filtered : [...ALL_SCOPES]
 }
 
-async function countOpenRegistrations(clientName: string, redirectUris: string[]): Promise<number> {
+async function countOpenRegistrations(clientName: string, redirectUris: string[], kind: string): Promise<number> {
   const cutoff = new Date(Date.now() - OPEN_REGISTRATION_LOOKBACK_MS).toISOString()
-  // Open = kind=dynamic_mcp + same name + overlapping redirect URIs + no consummated authorization yet.
-  // We approximate "no authorization" by checking owner_user_id IS NULL
-  // (set during the first OAuth consent step, see /v1/oauth/authorize).
+  // Open = same kind + same name + overlapping redirect URIs + no consummated
+  // authorization yet (community instances get the same storage-exhaustion cap
+  // as MCP clients). We approximate "no authorization" by checking
+  // owner_user_id IS NULL (set during the first OAuth consent step).
   const { count, error } = await supabase
     .from("developer_apps")
     .select("id", { count: "exact", head: true })
-    .eq("kind", "dynamic_mcp")
+    .eq("kind", kind)
     .eq("name", clientName)
     .is("owner_user_id", null)
     .gte("created_at", cutoff)
@@ -106,8 +113,21 @@ export async function registerOauthRegister(app: FastifyInstance): Promise<void>
       }
       const meta = parsed.data
 
+      // Community-instance registrations ride their own flag, not the MCP
+      // allowlist — an instance's client_name is its owner-chosen site name,
+      // which an allowlist can never enumerate.
+      const isCommunityInstance = meta.software_id === COMMUNITY_SOFTWARE_ID
+      if (isCommunityInstance && !config.COMMUNITY_CONNECT_ENABLED) {
+        return reply.status(403).send({
+          error: {
+            code: "community_connect_disabled",
+            message: "Community cloud-connect is not enabled on this server.",
+          },
+        })
+      }
+
       // Kill-switch: operator can disable DCR entirely without taking down /mcp.
-      if (config.MCP_DYNAMIC_REGISTRATION === "off") {
+      if (!isCommunityInstance && config.MCP_DYNAMIC_REGISTRATION === "off") {
         return reply.status(403).send({
           error: {
             code: "dcr_disabled",
@@ -116,7 +136,7 @@ export async function registerOauthRegister(app: FastifyInstance): Promise<void>
         })
       }
       // Allowlist gate (operator-controlled set of acceptable client_names).
-      if (config.MCP_DYNAMIC_REGISTRATION === "allowlist") {
+      if (!isCommunityInstance && config.MCP_DYNAMIC_REGISTRATION === "allowlist") {
         const allowed = config.MCP_DCR_ALLOWLIST_PARSED
         if (!allowed.includes(meta.client_name)) {
           return reply.status(403).send({
@@ -130,7 +150,11 @@ export async function registerOauthRegister(app: FastifyInstance): Promise<void>
 
       // Per-(client_name + redirect_uris) cap. Prevents storage exhaustion via
       // repeated registrations from the same caller before any consents.
-      const openCount = await countOpenRegistrations(meta.client_name, meta.redirect_uris)
+      const openCount = await countOpenRegistrations(
+        meta.client_name,
+        meta.redirect_uris,
+        isCommunityInstance ? "community_instance" : "dynamic_mcp",
+      )
       if (openCount >= OPEN_REGISTRATIONS_CAP) {
         return reply.status(429).send({
           error: {
@@ -148,12 +172,18 @@ export async function registerOauthRegister(app: FastifyInstance): Promise<void>
         .from("developer_apps")
         .insert({
           owner_user_id: null,
-          kind: "dynamic_mcp",
+          kind: isCommunityInstance ? "community_instance" : "dynamic_mcp",
           name: meta.client_name,
-          description: `Dynamically registered MCP client (${meta.client_name})`,
+          description: isCommunityInstance
+            ? `Self-hosted Nodaro community instance (${meta.client_name})`
+            : `Dynamically registered MCP client (${meta.client_name})`,
           logo_url: meta.logo_uri ?? null,
           homepage_url: meta.client_uri ?? null,
-          allowed_origins: [],
+          // Instances get CORS for their own origin (dynamic-origins consumes
+          // this) so their browser UI can talk to the cloud during connect.
+          allowed_origins: isCommunityInstance && meta.client_uri
+            ? [new URL(meta.client_uri).origin]
+            : [],
           redirect_uris: meta.redirect_uris,
           client_id: clientId,
           client_secret_hash: await hashSecret(clientSecret),

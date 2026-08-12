@@ -1,0 +1,89 @@
+import { supabase } from "./supabase.js"
+
+/**
+ * Community cloud-connect — instance-side connection store (Phase 4a).
+ *
+ * A self-hosted community instance connects to Nodaro Cloud via the OAuth
+ * flow (design doc 2026-08-12, checkpoint 2 = option B): it self-registers
+ * once through the cloud's DCR endpoint (software_id nodaro-community),
+ * then completes the authorize flow; the resulting `ndr_app_` token is the
+ * instance credential. Everything lives server-side under ONE app_settings
+ * key — the token never reaches a browser (the frontend talks to the
+ * instance's own /v1/nodaro-connect/* routes, which proxy the cloud).
+ *
+ * Community instances are single-operator by design; app_settings is the
+ * same trust domain as the instance's provider API keys.
+ */
+
+export const NODARO_CONNECT_SETTINGS_KEY = "nodaro_cloud_connection"
+
+/** Default cloud host; overridable for staging soaks via env. */
+export function nodaroCloudBase(): string {
+  return process.env.NODARO_CLOUD_URL || "https://app.nodaro.ai"
+}
+
+export interface NodaroConnection {
+  clientId: string
+  clientSecret: string
+  /** Set once the OAuth flow completes; absent = registration started only. */
+  accessToken?: string
+  connectedAt?: string
+}
+
+export async function getNodaroConnection(): Promise<NodaroConnection | null> {
+  const { data, error } = await supabase
+    .from("app_settings")
+    .select("value")
+    .eq("key", NODARO_CONNECT_SETTINGS_KEY)
+    .maybeSingle()
+  if (error || !data?.value) return null
+  const value = typeof data.value === "string" ? safeParse(data.value) : data.value
+  if (!value || typeof value !== "object") return null
+  const conn = value as NodaroConnection
+  return conn.clientId && conn.clientSecret ? conn : null
+}
+
+export async function saveNodaroConnection(conn: NodaroConnection): Promise<void> {
+  const { error } = await supabase
+    .from("app_settings")
+    .upsert({ key: NODARO_CONNECT_SETTINGS_KEY, value: conn }, { onConflict: "key" })
+  if (error) throw new Error(`Failed to save Nodaro connection: ${error.message}`)
+}
+
+export async function clearNodaroConnection(): Promise<void> {
+  await supabase.from("app_settings").delete().eq("key", NODARO_CONNECT_SETTINGS_KEY)
+}
+
+/** True once the instance holds a usable cloud token. */
+export async function isNodaroConnected(): Promise<boolean> {
+  const conn = await getNodaroConnection()
+  return Boolean(conn?.accessToken)
+}
+
+/**
+ * Authenticated fetch against the connected cloud. Throws when not
+ * connected — callers gate on isNodaroConnected() (the provider registers
+ * itself only when connected, so this is a programming-error guard).
+ */
+export async function nodaroCloudFetch(path: string, init?: RequestInit): Promise<Response> {
+  const conn = await getNodaroConnection()
+  if (!conn?.accessToken) {
+    throw new Error("Nodaro Cloud is not connected")
+  }
+  return fetch(`${nodaroCloudBase()}${path}`, {
+    ...init,
+    headers: {
+      ...(init?.headers ?? {}),
+      Authorization: `Bearer ${conn.accessToken}`,
+      "Content-Type": "application/json",
+    },
+  })
+}
+
+function safeParse(s: string): unknown {
+  try {
+    return JSON.parse(s)
+  } catch {
+    return null
+  }
+}

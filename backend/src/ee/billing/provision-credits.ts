@@ -14,6 +14,7 @@ import {
   TIER_STORAGE_LIMITS,
 } from "./stripe-config.js"
 import { tierColumns } from "./tier-columns.js"
+import { getStripe } from "./stripe-client.js"
 import { downgradeToEffectiveFloor, raiseStorageFloorOnActivation, reapplyStorageFloorAfterClawback } from "./downgrade-floor.js"
 import { creditsForLoadUsd } from "./load-rate.js"
 import { CreditsService } from "./credits.js"
@@ -615,7 +616,32 @@ export async function handleTransactionCompleted(
   // subscribers, whose floor is write-managed by the subscription paths).
   await raiseStorageFloorOnActivation(userId)
 
+  // Receipt link for the in-app ledger (Billing-UX) — best-effort, after the
+  // grant so a Stripe hiccup can never block provisioning.
+  void captureReceiptUrl(data.transactionId)
+
   console.log(`[stripe] transaction.completed: user=${userId} topup +${totalCredits} credits`)
+}
+
+/**
+ * Store the charge's hosted receipt_url on the transactions row, keyed by
+ * the PI id the grant used. Post-grant UPDATE by design (migration 313):
+ * the grant RPC stays untouched and a failure here costs only the link.
+ */
+async function captureReceiptUrl(piId: string): Promise<void> {
+  try {
+    const pi = await getStripe().paymentIntents.retrieve(piId, { expand: ["latest_charge"] })
+    const charge = pi.latest_charge
+    const receiptUrl =
+      charge && typeof charge === "object" ? (charge.receipt_url ?? null) : null
+    if (!receiptUrl) return
+    await supabase
+      .from("transactions")
+      .update({ receipt_url: receiptUrl })
+      .eq("stripe_transaction_id", piId)
+  } catch (err) {
+    console.error("[stripe] receipt-url capture failed:", piId, (err as Error).message)
+  }
 }
 
 // ── Shared: Insert Transaction Record ────────────────────────────
@@ -781,6 +807,7 @@ export async function handleAutoRechargeSucceeded(data: {
 
   invalidateBalanceCache(data.userId)
   await raiseStorageFloorOnActivation(data.userId)
+  void captureReceiptUrl(data.piId)
   console.log(`[stripe] auto-recharge granted: user=${data.userId} +${credits} credits (${data.piId})`)
 }
 

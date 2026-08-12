@@ -1,0 +1,76 @@
+/**
+ * Nodaro Cloud Provider Registration (community cloud-connect, Phase 4a).
+ *
+ * "Nodaro is a provider in the community edition's provider list" — the
+ * instance generates through the connected cloud's public /v1 routes with its
+ * stored `ndr_app_` token, billing the connected cloud account's wallet.
+ *
+ * Registered ONLY when the instance holds a usable cloud token at boot
+ * (isNodaroConnected). Routing keeps user-key providers first: config.ts
+ * appends "nodaro" at the END of the capability chains, so local KIE /
+ * Replicate keys win for every model they declare and the cloud connection is
+ * an addition, never a hijack.
+ *
+ * `supportedModels` mirrors the KIE provider's model lists for the three
+ * connected capabilities — the same ids the cloud's own routes accept (the
+ * cloud serves them via its KIE integration). Derived from kie/models.ts so a
+ * new KIE model is claimable through the connection with zero edits here.
+ */
+
+import { providerRegistry } from "../registry.js"
+import type { ProviderInfo } from "../provider.interface.js"
+import { isNodaroConnected } from "../../lib/nodaro-connect.js"
+import { NodaroCloudImageProvider } from "./image.js"
+import { NodaroCloudVideoProvider } from "./video.js"
+import {
+  KIE_IMAGE_MODELS,
+  KIE_VIDEO_MODELS,
+  KIE_TEXT_TO_VIDEO_MODELS,
+} from "../kie/models.js"
+
+export const NODARO_PROVIDER_ID = "nodaro"
+
+const nodaroInfo: ProviderInfo = {
+  id: NODARO_PROVIDER_ID,
+  name: "Nodaro Cloud",
+  capabilities: ["image-generation", "image-to-video", "text-to-video"],
+  supportedModels: {
+    "image-generation": Object.keys(KIE_IMAGE_MODELS),
+    "image-editing": [],
+    "image-to-video": Object.keys(KIE_VIDEO_MODELS),
+    "text-to-video": Object.keys(KIE_TEXT_TO_VIDEO_MODELS),
+    "video-to-video": [],
+    "motion-transfer": [],
+    "video-upscale": [],
+    "lip-sync": [],
+    "music-generation": [],
+    "text-to-speech": [],
+    "sound-effect": [],
+    "audio-isolation": [],
+    "audio-separation": [],
+    "transcription": [],
+    "dialogue": [],
+  },
+}
+
+/** Unconditional registration — callers gate on connection state. */
+export function registerNodaroCloudProvider(): void {
+  providerRegistry.register(nodaroInfo, {
+    image: new NodaroCloudImageProvider(),
+    video: new NodaroCloudVideoProvider(),
+  })
+}
+
+/**
+ * Boot-time registration gate: registers the provider ONLY when the instance
+ * holds a usable cloud token. Returns whether registration happened.
+ *
+ * Connecting from the Integrations page stores the token in the API process;
+ * the worker process (where providers execute) picks it up at its next boot —
+ * "registered at boot" by design, per the Phase 4a plan.
+ */
+export async function registerNodaroCloudProviderIfConnected(): Promise<boolean> {
+  if (!(await isNodaroConnected())) return false
+  registerNodaroCloudProvider()
+  return true
+}

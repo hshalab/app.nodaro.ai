@@ -3,7 +3,7 @@ import { requestLogSerializer } from "./lib/log-redaction.js"
 import { createHash } from "node:crypto"
 import cors from "@fastify/cors"
 import { isOriginAllowedDynamic } from "./lib/dynamic-origins.js"
-import { hasAdmin, hasCredits, isCloud, isMultiUser } from "./lib/config.js"
+import { config, hasAdmin, hasCredits, isCloud, isMultiUser } from "./lib/config.js"
 import { CLIENT_HEADER } from "./lib/job-source.js"
 import { loadPrivatePlugins } from "./lib/private-plugins/load.js"
 import { healthRoutes } from "./routes/health.js"
@@ -108,6 +108,7 @@ import { workflowCostRoutes } from "./routes/workflow-costs.js"
 import { sunoRoutes } from "./routes/suno.js"
 import { stripeWebhookRoutes } from "./ee/routes/stripe-webhook.js"
 import { billingRoutes } from "./ee/routes/billing.js"
+import { connectedInstancesRoutes } from "./ee/routes/connected-instances.js"
 import { galleryRoutes } from "./routes/gallery.js"
 import { userSettingsRoutes } from "./routes/user-settings.js"
 import { meRoutes } from "./routes/me.js"
@@ -171,6 +172,7 @@ import { presentationRoutes } from "./routes/presentation.js"
 import { apiTokenRoutes } from "./routes/api-tokens.js"
 import { metaCallbackRoutes } from "./routes/meta-callbacks.js"
 import { socialAuthRoutes } from "./routes/social-auth.js"
+import { nodaroConnectRoutes } from "./routes/nodaro-connect.js"
 import { socialPublishRoutes } from "./routes/social-publish.js"
 import { scheduledPostsRoutes } from "./routes/scheduled-posts.js"
 import { telegramWebhookRoutes } from "./routes/telegram-webhook.js"
@@ -437,6 +439,9 @@ export async function buildApp() {
   await app.register(sunoRoutes)
   if (hasCredits()) await app.register(stripeWebhookRoutes)
   if (hasCredits()) await app.register(billingRoutes)
+  // Community cloud-connect containment surface (Phase 4a) — flag-gated with
+  // the DCR branch so the whole feature appears/disappears together.
+  if (hasCredits() && config.COMMUNITY_CONNECT_ENABLED) await app.register(connectedInstancesRoutes)
   await app.register(galleryRoutes)
   await app.register(userSettingsRoutes)
   await app.register(meRoutes)
@@ -499,6 +504,9 @@ export async function buildApp() {
   await app.register(presentationRoutes)
   await app.register(apiTokenRoutes)
   await app.register(socialAuthRoutes)
+  // Community cloud-connect, instance side (Phase 4a): self-hosted editions
+  // connect to Nodaro Cloud as a provider. Meaningless on cloud itself.
+  if (!isCloud()) await app.register(nodaroConnectRoutes)
   await app.register(metaCallbackRoutes)
   await app.register(socialPublishRoutes)
   await app.register(scheduledPostsRoutes)

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { Loader2 } from "lucide-react"
 import { PlatformCard } from "@/components/integrations/platform-card"
+import { NodaroCloudCard } from "@/components/integrations/nodaro-cloud-card"
 import { getSocialConnections, getSocialProviders, type SocialProviderInfo } from "@/lib/api"
 import type { SocialConnection } from "@/types/nodes"
 
@@ -44,6 +45,11 @@ export default function IntegrationsPage() {
           Connect your social media accounts to publish directly from workflows.
         </p>
       </div>
+
+      {/* Nodaro Cloud connect (self-hosted editions; renders null on cloud).
+          Deliberately OUTSIDE the social-providers loading gate — it runs its
+          own status fetch cycle. */}
+      <NodaroCloudCard />
 
       {loading ? (
         <div className="flex items-center justify-center py-16">

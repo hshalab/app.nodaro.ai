@@ -12,7 +12,7 @@ import { sendInternalError } from "../lib/http-errors.js"
 import { z } from "zod"
 import { supabase } from "../lib/supabase.js"
 import { orchestrationQueue } from "../lib/orchestration-queue.js"
-import { paygSurfaceGuard } from "../middleware/credit-guard.js"
+import { resolveWebSurfaceFlag } from "../middleware/credit-guard.js"
 import { hasCredits } from "../lib/config.js"
 import { CreditsService } from "../ee/billing/credits.js"
 import { flattenItems } from "@nodaro/shared"
@@ -241,9 +241,8 @@ export async function appRunnerRoutes(app: FastifyInstance) {
   })
 
   // --- Run the app (auth required, runner pays) ---
-  // Spend-surface gate: the run bills the RUNNER via orchestrator-side
-  // reserves, so payg consumer-surface blocking happens at creation.
-  app.post("/v1/app/:slug/run", { preHandler: paygSurfaceGuard() }, async (req, reply) => {
+  // Spend-surface threading (D1 v2): captured at creation, rides the payload.
+  app.post("/v1/app/:slug/run", async (req, reply) => {
     if (!req.userId) {
       return reply.status(401).send({
         error: { code: "unauthorized", message: "Authentication required" },
@@ -417,6 +416,7 @@ export async function appRunnerRoutes(app: FastifyInstance) {
         inputOverrides,
         appVersionId: appRow.id,
         nodeIds,
+        webFreeMode: await resolveWebSurfaceFlag(req),
       }
 
       await orchestrationQueue.add("workflow-execution", jobData, {
@@ -439,6 +439,7 @@ export async function appRunnerRoutes(app: FastifyInstance) {
         appId: appRow.id,
         inputOverrides,
         nodeIds,
+        webFreeMode: await resolveWebSurfaceFlag(req),
       })
 
       return reply.status(202).send({
@@ -452,7 +453,7 @@ export async function appRunnerRoutes(app: FastifyInstance) {
   })
 
   // --- Create a draft run (no execution yet) ---
-  app.post("/v1/app/:slug/runs", { preHandler: paygSurfaceGuard() }, async (req, reply) => {
+  app.post("/v1/app/:slug/runs", async (req, reply) => {
     if (!req.userId) {
       return reply.status(401).send({
         error: { code: "unauthorized", message: "Authentication required" },

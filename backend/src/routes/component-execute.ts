@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify"
 import { z } from "zod"
 import { supabase } from "../lib/supabase.js"
-import { paygSurfaceGuard } from "../middleware/credit-guard.js"
+import { resolveWebSurfaceFlag } from "../middleware/credit-guard.js"
 import { insertJob } from "../lib/insert-job.js"
 import { executeAppRun } from "../services/app-execution.js"
 import { buildCreditModelIdentifier } from "@nodaro/shared"
@@ -27,7 +27,10 @@ async function updateWrapperJob(jobId: string, fields: Record<string, unknown>) 
 }
 
 export async function componentExecuteRoutes(app: FastifyInstance) {
-  app.post("/v1/component/execute", { preHandler: paygSurfaceGuard() }, async (req: FastifyRequest, reply: FastifyReply) => {
+  app.post("/v1/component/execute", async (req: FastifyRequest, reply: FastifyReply) => {
+    // Spend-surface threading (D1 v2): stamped on the request so the
+    // reserve path applies pool-aware payg semantics.
+    req.webFreeMode = await resolveWebSurfaceFlag(req)
     if (!req.userId) {
       return reply.status(401).send({ error: { code: "unauthorized", message: "Authentication required" } })
     }
@@ -107,6 +110,7 @@ export async function componentExecuteRoutes(app: FastifyInstance) {
           isComponentExecution: true,
           componentDepth,
           executingComponentIds,
+          webFreeMode: req.webFreeMode === true,
         })
 
         // Stamp the nested execution id on the wrapper IMMEDIATELY (it was

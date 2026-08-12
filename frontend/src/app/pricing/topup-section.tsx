@@ -30,18 +30,10 @@ export function TopupSection({ topupBalance, onLoad, loading }: TopupSectionProp
     !Number.isNaN(parsedCustom) && parsedCustom >= MIN_LOAD_USD && parsedCustom <= MAX_LOAD_USD
   const effectiveUsd = customUsd ? (customValid ? parsedCustom : null) : selectedUsd
 
+  // The "● TOP-UP CREDITS" section-header row lives in page.tsx (ported from
+  // the designer's mock) — this component is just the card below it.
   return (
-    <div className="mt-16">
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-3">
-        <span className="font-mono text-sm font-semibold tracking-[0.2em] text-cyan-500 dark:text-cyan-400">
-          <span className="mr-2">●</span>TOP-UP CREDITS
-        </span>
-        <span className="text-sm text-muted-foreground">
-          no subscription · never expire · spent after your monthly allocation
-        </span>
-        <div className="hidden sm:block flex-1 border-t border-zinc-200 dark:border-zinc-800 self-center" />
-      </div>
-
+    <div>
       <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
         <div className="flex flex-wrap justify-between gap-4 p-8">
           <div className="max-w-xl">

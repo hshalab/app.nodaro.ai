@@ -150,3 +150,18 @@ describe("blockPaygOnConsumerSurface", () => {
     expect(await blockPaygOnConsumerSurface(makeReq({}), makeReply())).toBe(false)
   })
 })
+
+describe("internal-call flag preservation (D1 v2 threading)", () => {
+  it("isConsumerSurfaceRequest stays false for internal calls (no Origin trust)", () => {
+    expect(
+      isConsumerSurfaceRequest(makeReq({ authKind: "internal", isInternalCall: true } as never))
+    ).toBe(false)
+  })
+
+  it("isWebFreeModeCandidate is a pure surface predicate — flag gates it", async () => {
+    const { isWebFreeModeCandidate } = await import("../payg-surface-guard.js")
+    expect(isWebFreeModeCandidate(makeReq({}))).toBe(true)
+    vi.stubEnv("PAYG_WEB_BLOCK_ENABLED", "false")
+    expect(isWebFreeModeCandidate(makeReq({}))).toBe(false)
+  })
+})
