@@ -1,0 +1,456 @@
+/* Layout for the Social Media Autopilot tutorial body.
+ *
+ * Bespoke to THIS tutorial, and the only one of the five that leads with a
+ * headline instead of a step rail. The template's promise is graspable in a
+ * sentence — paste text, get a published carousel — so the page states it, shows
+ * IN next to OUT, and only then opens the seven steps underneath. */
+
+.ap {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+
+/* --- headline ------------------------------------------------------------- */
+
+.ap-headline {
+  display: flex;
+  align-items: flex-end;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.ap-headline h1 {
+  font-family: var(--nd-display);
+  font-weight: 700;
+  font-size: 38px;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  text-wrap: balance;
+}
+.ap-subline {
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--nd-muted);
+  max-width: 880px;
+  margin-top: 10px;
+}
+.ap-headline-chips {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ap-headline-chips .nd-chip {
+  padding: 7px 12px;
+  border-radius: 7px;
+}
+
+/* --- hero ----------------------------------------------------------------- */
+
+.ap-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 0.52fr) 100px minmax(0, 1fr);
+  align-items: stretch;
+}
+@media (max-width: 1200px) {
+  .ap-hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+}
+
+.ap-card {
+  border-radius: 16px;
+  background: var(--nd-panel);
+  border: 1px solid var(--nd-border);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+/* OUT is the payoff, so it is the card that glows. */
+.ap-card--out {
+  border-color: rgba(255, 45, 120, 0.35);
+  box-shadow: 0 0 0 5px rgba(255, 45, 120, 0.06), 0 18px 44px rgba(0, 0, 0, 0.4);
+}
+.ap-card-head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--nd-border-subtle);
+}
+.ap-io-badge {
+  flex: 0 0 30px;
+  height: 30px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--nd-mono);
+  font-size: 11px;
+  color: var(--nd-muted);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.ap-io-badge--out {
+  color: #fff;
+  background: var(--nd-accent);
+  border-color: rgba(255, 45, 120, 0.5);
+}
+.ap-card-title {
+  font-family: var(--nd-display);
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: -0.015em;
+}
+.ap-card-sub {
+  font-size: 12px;
+  color: var(--nd-faint);
+  margin-top: 1px;
+}
+.ap-live {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(46, 230, 214, 0.1);
+  border: 1px solid rgba(46, 230, 214, 0.3);
+  font-family: var(--nd-mono);
+  font-size: 11px;
+  color: #8fe9e0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 40%;
+}
+.ap-live-dot {
+  flex: 0 0 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--nd-wire);
+}
+
+.ap-card-body {
+  padding: 14px 16px;
+  flex: 1;
+  min-height: 0;
+}
+.ap-input {
+  height: 100%;
+  border-radius: 11px;
+  background: var(--nd-inset);
+  border: 1px solid var(--nd-border);
+  padding: 14px 16px;
+  font-family: var(--nd-mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--nd-text-3);
+  white-space: pre-wrap;
+  overflow: hidden;
+}
+
+.ap-connector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 8px;
+}
+.ap-connector-bar {
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(to right, rgba(46, 230, 214, 0.08), rgba(46, 230, 214, 0.8));
+}
+.ap-connector-text {
+  font-family: var(--nd-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: #4f8f8a;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.ap-out-body {
+  display: flex;
+  gap: 16px;
+  padding: 14px 16px;
+  flex: 1;
+  min-height: 0;
+}
+@media (max-width: 900px) {
+  .ap-out-body {
+    flex-direction: column;
+  }
+}
+.ap-post {
+  flex: 0 0 224px;
+}
+.ap-post-img {
+  width: 100%;
+  padding-top: 100%;
+  border-radius: 12px;
+  background-size: cover;
+  background-position: center;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background-color: var(--nd-inset);
+}
+.ap-post-cap {
+  font-family: var(--nd-mono);
+  font-size: 10px;
+  color: var(--nd-eyebrow);
+  text-align: center;
+  margin-top: 8px;
+}
+.ap-out-right {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+/* One row, never two: a 9:16 two-row grid was the defect in an earlier pass. */
+.ap-thumbs {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 6px;
+}
+.ap-thumb {
+  height: 92px;
+  border-radius: 7px;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--nd-inset);
+  border: 1px solid var(--nd-border-subtle);
+}
+.ap-hook {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--nd-text-3);
+}
+.ap-tags {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--nd-accent-dim);
+  overflow-wrap: anywhere;
+}
+
+/* --- step chain ----------------------------------------------------------- */
+
+.ap-chain-head h2 {
+  font-family: var(--nd-display);
+  font-weight: 600;
+  font-size: 18px;
+  letter-spacing: -0.015em;
+}
+.ap-chain-note {
+  font-size: 13px;
+  color: var(--nd-faint);
+  margin-top: 4px;
+}
+
+.ap-chain {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+}
+@media (max-width: 1500px) {
+  .ap-chain {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+  }
+  .ap-link {
+    display: none;
+  }
+}
+.ap-link {
+  flex: 0 0 22px;
+  align-self: center;
+  height: 2px;
+  background: linear-gradient(to right, rgba(46, 230, 214, 0.15), rgba(46, 230, 214, 0.7));
+}
+.ap-step {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: 13px;
+  background: var(--nd-panel);
+  border: 1px solid var(--nd-border);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.34);
+  padding: 14px 15px;
+}
+.ap-step--last {
+  border-color: rgba(255, 45, 120, 0.35);
+  box-shadow: 0 0 0 4px rgba(255, 45, 120, 0.05), 0 14px 34px rgba(0, 0, 0, 0.34);
+}
+.ap-step-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ap-step-badge {
+  flex: 0 0 24px;
+  height: 24px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--nd-mono);
+  font-size: 11px;
+  color: var(--nd-accent-dim);
+  background: var(--nd-accent-14);
+  border: 1px solid var(--nd-accent-b35);
+}
+.ap-step--last .ap-step-badge {
+  color: #fff;
+  background: var(--nd-accent);
+}
+.ap-step-kind {
+  font-family: var(--nd-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--nd-eyebrow);
+}
+.ap-step-title {
+  font-family: var(--nd-display);
+  font-weight: 600;
+  font-size: 15px;
+  margin-top: 11px;
+}
+.ap-step-line {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--nd-muted);
+  margin-top: 2px;
+}
+.ap-preview {
+  flex: 1;
+  min-height: 90px;
+  margin-top: 12px;
+  padding: 11px 12px;
+  border-radius: 9px;
+  background: var(--nd-inset);
+  border: 1px solid var(--nd-divider);
+  overflow: hidden;
+  font-family: var(--nd-mono);
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--nd-text-3);
+  white-space: pre-wrap;
+}
+.ap-step-node {
+  font-family: var(--nd-mono);
+  font-size: 10px;
+  color: var(--nd-eyebrow);
+  margin-top: 12px;
+}
+.ap-chips-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ap-slide-chip {
+  padding: 7px 9px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 10px;
+  line-height: 1.4;
+}
+.ap-slide-chip--muted {
+  background: transparent;
+  color: var(--nd-eyebrow);
+}
+.ap-mini-row {
+  display: flex;
+  gap: 6px;
+}
+.ap-mini {
+  flex: 1 1 0;
+  height: 58px;
+  border-radius: 6px;
+  background-size: cover;
+  background-position: center;
+  background-color: rgba(255, 255, 255, 0.04);
+}
+.ap-post-mini {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ap-post-mini-img {
+  flex: 0 0 62px;
+  height: 62px;
+  border-radius: 8px;
+  background-size: cover;
+  background-position: center;
+  background-color: rgba(255, 255, 255, 0.04);
+}
+.ap-live-text {
+  font-family: var(--nd-mono);
+  font-size: 10.5px;
+  color: #8fe9e0;
+}
+
+/* --- traced slide ---------------------------------------------------------- */
+/* The strip is an index, so the selected slide has to be unmistakable. */
+
+.ap-thumb {
+  border: 1px solid var(--nd-border-subtle);
+  cursor: pointer;
+  opacity: 0.55;
+  padding: 0;
+  transition: opacity 160ms ease, border-color 160ms ease;
+}
+.ap-thumb[data-active="true"] {
+  opacity: 1;
+  border-color: rgba(255, 45, 120, 0.9);
+}
+.ap-slide-chip {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 1px solid transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+.ap-slide-chip[data-active="true"] {
+  border-color: rgba(255, 45, 120, 0.6);
+  background: rgba(255, 45, 120, 0.1);
+  color: var(--nd-accent-text);
+}
+.ap-chip-n {
+  font-family: var(--nd-mono);
+  color: var(--nd-accent-dim);
+  margin-right: 4px;
+}
+.ap-chips-col {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.ap-step-img {
+  width: 100%;
+  height: 100%;
+  min-height: 70px;
+  border-radius: 7px;
+  background-size: cover;
+  background-position: center;
+}
+.ap-clamp {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 8;
+  line-clamp: 8;
+  overflow: hidden;
+}

@@ -7349,11 +7349,17 @@ export async function browseTemplates(params: {
   )
 }
 
+/**
+ * The route is public, but it ALSO serves a creator their own not-yet-listed
+ * template. Sending the token when there is one is what makes that path
+ * reachable — with `skipAuth` the owner branch was dead code from the client
+ * and an unlisted template 404'd even for the person who made it. Anonymous
+ * callers still work: `getAuthHeaders()` returns `{}` with no session.
+ */
 export async function getTemplateBySlug(slug: string): Promise<WorkflowTemplate> {
   return apiRequest<WorkflowTemplate>(
     `/v1/templates/${encodeURIComponent(slug)}`,
     "Failed to load template",
-    { skipAuth: true },
   )
 }
 

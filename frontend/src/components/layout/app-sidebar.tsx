@@ -22,6 +22,7 @@ import {
   Compass,
   Flag,
   Clapperboard,
+  GraduationCap,
   ExternalLink,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -64,6 +65,14 @@ interface NavItem {
   readonly adminOnly?: boolean
   readonly billingOnly?: boolean
   readonly multiUserOnly?: boolean
+  /** Query string for destinations that are a tab rather than a route, e.g.
+   *  Tutorials lives at /projects?tab=tutorials. Also disambiguates the active
+   *  state from the plain item on the same path. */
+  readonly search?: string
+  /** Kept in the list but not rendered. Hidden rather than deleted so turning
+   *  one back on is a one-word change and the route itself still works for
+   *  anyone holding a direct link. */
+  readonly hidden?: boolean
 }
 
 interface NavSection {
@@ -76,9 +85,10 @@ const NAV_SECTIONS: readonly NavSection[] = [
     label: "WORKSPACE",
     items: [
       { href: "/projects", label: "Projects", icon: FolderOpen },
-      { href: "/apps", label: "MiniApps", icon: Rocket },
-      { href: "/templates", label: "Templates", icon: LayoutTemplate },
-      { href: "/video-director", label: "Video Director", icon: Clapperboard },
+      { href: "/projects", search: "?tab=tutorials", label: "Tutorials", icon: GraduationCap },
+      { href: "/apps", label: "MiniApps", icon: Rocket, hidden: true },
+      { href: "/templates", label: "Templates", icon: LayoutTemplate, hidden: true },
+      { href: "/video-director", label: "Video Director", icon: Clapperboard, hidden: true },
       { href: "/explore", label: "Explore", icon: Compass, multiUserOnly: true },
     ]
   },
@@ -134,21 +144,25 @@ export function AppSidebar({
   isMobileOpen = false,
   className,
 }: AppSidebarProps) {
-  const pathname = useLocation().pathname
+  const { pathname, search } = useLocation()
   const navigate = useNavigate()
 
   // The top-level Admin item points at /admin and would greedily match every
   // /admin/* subpath; treat it as active only when no more-specific nav item
   // (e.g. /admin/community-reports) owns the current path.
-  const isNavItemActive = (href: string): boolean => {
-    if (href === "/admin") {
+  const isNavItemActive = (item: NavItem): boolean => {
+    if (item.href === "/admin") {
       if (pathname === "/admin") return true
       const hasSpecificMatch = NAV_ITEMS.some(
         (i) => i.href !== "/admin" && i.href.startsWith("/admin/") && pathname.startsWith(i.href),
       )
       return pathname.startsWith("/admin/") && !hasSpecificMatch
     }
-    return pathname === href || pathname.startsWith(href + "/")
+    if (!(pathname === item.href || pathname.startsWith(item.href + "/"))) return false
+    // Tabs share a path with the plain item, so exactly one of them lights up:
+    // the tab when its query matches, the plain item when no sibling's does.
+    if (item.search) return search === item.search
+    return !NAV_ITEMS.some((i) => i.search && i.href === item.href && search === i.search)
   }
   const { user, isAdmin, signOut } = useAuth()
   const { isCollapsed, setCollapsed } = useSidebar()
@@ -365,19 +379,20 @@ export function AppSidebar({
           {isCollapsed ? (
             // Collapsed: flat icon list, no labels
             NAV_ITEMS.map((item) => {
+              if (item.hidden) return null
               if (item.adminOnly && (!isFeatureEnabled("adminPanel") || !isAdmin)) return null
               if (item.billingOnly && !isFeatureEnabled("billing")) return null
               if (item.multiUserOnly && !isMultiUser()) return null
 
-              const isActive = isNavItemActive(item.href)
+              const isActive = isNavItemActive(item)
 
               const showBadge = item.href === "/admin" && pendingReportsCount > 0
 
               return (
-                <Tooltip key={item.href}>
+                <Tooltip key={item.href + (item.search ?? "")}>
                   <TooltipTrigger asChild>
                     <Link
-                      to={item.href}
+                      to={item.href + (item.search ?? "")}
                       onClick={handleNavClick}
                       aria-label={item.label}
                       className={cn(
@@ -405,6 +420,7 @@ export function AppSidebar({
             // Expanded: sections with labels
             NAV_SECTIONS.map((section) => {
               const visibleItems = section.items.filter((item) => {
+                if (item.hidden) return false
                 if (item.adminOnly && (!isFeatureEnabled("adminPanel") || !isAdmin)) return false
                 if (item.billingOnly && !isFeatureEnabled("billing")) return false
                 if (item.multiUserOnly && !isMultiUser()) return false
@@ -419,14 +435,14 @@ export function AppSidebar({
                     {section.label}
                   </p>
                   {visibleItems.map((item) => {
-                    const isActive = isNavItemActive(item.href)
+                    const isActive = isNavItemActive(item)
 
                     const showBadge = item.href === "/admin" && pendingReportsCount > 0
 
                     return (
                       <Link
-                        key={item.href}
-                        to={item.href}
+                        key={item.href + (item.search ?? "")}
+                        to={item.href + (item.search ?? "")}
                         onClick={handleNavClick}
                         aria-label={item.label}
                         className={cn(

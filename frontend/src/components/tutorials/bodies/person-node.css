@@ -1,0 +1,245 @@
+/* Layout for the Person Node tutorial body.
+ *
+ * Bespoke to THIS tutorial. Three full-width rows, because the template is three
+ * PARALLEL runs rather than a chain: each row reads inputs → wire → result, left
+ * to right, and comparing the three results down the page is the lesson. */
+
+.pn {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+
+.pn-row {
+  display: flex;
+  align-items: stretch;
+  border-radius: 14px;
+  background: var(--nd-panel);
+  border: 1px solid var(--nd-border);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  box-sizing: border-box;
+  transition: opacity 260ms ease, border-color 260ms ease, box-shadow 260ms ease, filter 260ms ease;
+}
+.pn-row[data-focused="true"] {
+  border-color: var(--nd-accent-b55);
+  box-shadow: 0 0 0 4px var(--nd-accent-10), 0 26px 60px rgba(0, 0, 0, 0.5);
+}
+.pn-row[data-dimmed="true"] {
+  opacity: 0.32;
+  filter: saturate(0.4);
+}
+
+.pn-main {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.pn-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--nd-border-subtle);
+}
+.pn-badge {
+  flex: 0 0 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--nd-mono);
+  font-size: 12px;
+  color: var(--nd-accent-dim);
+  background: var(--nd-accent-14);
+  border: 1px solid var(--nd-accent-b35);
+  transition: background 260ms ease, color 260ms ease;
+}
+.pn-row[data-focused="true"] .pn-badge {
+  color: #fff;
+  background: var(--nd-accent);
+}
+.pn-title {
+  font-family: var(--nd-display);
+  font-weight: 600;
+  font-size: 15px;
+}
+.pn-sub {
+  font-size: 12px;
+  color: var(--nd-faint);
+  margin-top: 1px;
+}
+
+.pn-body {
+  flex: 1;
+  display: flex;
+  gap: 16px;
+  padding: 14px 16px;
+  align-items: flex-start;
+}
+.pn-inputs {
+  flex: 0 0 300px;
+  min-width: 0;
+}
+.pn-explain {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pn-text {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--nd-text-3);
+}
+.pn-closing {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--nd-faint);
+}
+.pn-callout {
+  padding: 11px 13px;
+  border-radius: 10px;
+  background: var(--nd-accent-10);
+  border: 1px solid var(--nd-accent-b28);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--nd-accent-text);
+}
+
+/* --- input cards ---------------------------------------------------------- */
+
+.pn-card {
+  border-radius: 10px;
+  border: 1px solid var(--nd-divider);
+  background: var(--nd-surface-soft);
+  padding: 12px;
+}
+.pn-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.pn-card-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+.pn-card-count {
+  font-family: var(--nd-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--nd-eyebrow);
+}
+.pn-picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pn-pick {
+  font-family: var(--nd-mono);
+  font-size: 11px;
+  color: var(--nd-text-3);
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--nd-surface);
+  border: 1px solid var(--nd-border-subtle);
+}
+
+/* Lesson 3 stacks four small cards instead of one big one. */
+.pn-stack {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.pn-mini {
+  border-radius: 9px;
+  border: 1px solid var(--nd-divider);
+  background: var(--nd-surface-soft);
+  padding: 10px 11px;
+  min-width: 0;
+}
+.pn-mini-kind {
+  font-family: var(--nd-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--nd-eyebrow);
+}
+.pn-mini-value {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--nd-text-2);
+  margin-top: 3px;
+  overflow-wrap: anywhere;
+}
+
+/* --- prompt order strip --------------------------------------------------- */
+
+.pn-order {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.pn-order-chip {
+  font-family: var(--nd-mono);
+  font-size: 12px;
+  color: var(--nd-muted);
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: var(--nd-surface);
+}
+.pn-arrow {
+  color: var(--nd-wire);
+}
+
+/* --- wire + result -------------------------------------------------------- */
+
+/* Stands in for the edge from the input nodes into Generate Image. */
+.pn-wire {
+  flex: 0 0 1px;
+  align-self: stretch;
+  background: linear-gradient(to bottom, transparent, rgba(46, 230, 214, 0.6), transparent);
+}
+.pn-result {
+  flex: 0 0 420px;
+  align-self: stretch;
+  min-height: 260px;
+  background-size: cover;
+  background-position: center 25%;
+  border-left: 1px solid var(--nd-border);
+}
+
+/* Below ~1200px the result stops being a side panel and becomes a banner under
+ * the explanation, so the picks never get squeezed to nothing. */
+@media (max-width: 1200px) {
+  .pn-row {
+    flex-direction: column;
+  }
+  .pn-wire {
+    flex: 0 0 1px;
+    width: 100%;
+    background: linear-gradient(to right, transparent, rgba(46, 230, 214, 0.6), transparent);
+  }
+  .pn-result {
+    flex: 0 0 220px;
+    border-left: 0;
+    border-top: 1px solid var(--nd-border);
+  }
+}
+@media (max-width: 820px) {
+  .pn-body {
+    flex-direction: column;
+  }
+  .pn-inputs {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+}

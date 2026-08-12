@@ -1,0 +1,320 @@
+/* Layout for the Multi-Reference tutorial body.
+ *
+ * Bespoke to THIS tutorial — it reads the shared `--nd-*` tokens from
+ * `.nd-tutorial` but owns its own geometry, so the next tutorial can lay itself
+ * out completely differently without inheriting any of this. */
+
+.mrc {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+
+/* Three columns at full width; two when the prompt gets cramped; stacked when
+ * even two would squeeze the reference thumbnails. Step order is the reading
+ * order, so stacking never scrambles the lesson. */
+.mrc-row {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.05fr) minmax(0, 0.9fr);
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 1500px) {
+  .mrc-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+@media (max-width: 1100px) {
+  .mrc-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.mrc-group {
+  position: relative;
+  border-radius: 14px;
+  background: var(--nd-panel);
+  border: 1px solid var(--nd-border);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  box-sizing: border-box;
+  transition: opacity 260ms ease, border-color 260ms ease, box-shadow 260ms ease, filter 260ms ease;
+}
+.mrc-group[data-focused="true"] {
+  border-color: var(--nd-accent-b55);
+  box-shadow: 0 0 0 4px var(--nd-accent-10), 0 26px 60px rgba(0, 0, 0, 0.5);
+}
+.mrc-group[data-dimmed="true"] {
+  opacity: 0.32;
+  filter: saturate(0.4);
+}
+
+.mrc-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--nd-border-subtle);
+}
+.mrc-badge {
+  flex: 0 0 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--nd-mono);
+  font-size: 12px;
+  color: var(--nd-accent-dim);
+  background: var(--nd-accent-14);
+  border: 1px solid var(--nd-accent-b35);
+  transition: background 260ms ease, color 260ms ease;
+}
+.mrc-group[data-focused="true"] .mrc-badge {
+  color: #fff;
+  background: var(--nd-accent);
+}
+.mrc-title {
+  font-family: var(--nd-display);
+  font-weight: 600;
+  font-size: 15px;
+}
+.mrc-sub {
+  font-size: 12px;
+  color: var(--nd-faint);
+  margin-top: 1px;
+}
+.mrc-panel-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* --- group A: references -------------------------------------------------- */
+
+.mrc-ref {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 10px;
+  background: var(--nd-surface-soft);
+  border: 1px solid var(--nd-border-subtle);
+  transition: background 200ms ease, border-color 200ms ease, transform 200ms ease;
+}
+.mrc-ref[data-lit="true"] {
+  background: rgba(255, 45, 120, 0.08);
+  border-color: rgba(255, 45, 120, 0.45);
+  transform: translateX(3px);
+}
+.mrc-thumb {
+  flex: 0 0 68px;
+  height: 68px;
+  border-radius: 8px;
+  background-size: cover;
+  background-position: center top;
+  background-color: #16161c;
+}
+.mrc-ref-text {
+  min-width: 0;
+  flex: 1;
+}
+.mrc-ref-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.mrc-ref-role {
+  font-size: 12px;
+  color: var(--nd-faint);
+  margin-top: 2px;
+}
+.mrc-dot {
+  flex: 0 0 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--nd-wire);
+}
+
+/* The position number, used inline everywhere a reference is named. */
+.mrc-num {
+  flex: 0 0 auto;
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 5px;
+  font-family: var(--nd-mono);
+  font-size: 11px;
+  text-align: center;
+  color: var(--nd-accent-dim);
+  background: rgba(255, 45, 120, 0.13);
+  border: 1px solid var(--nd-accent-b28);
+}
+
+/* --- group B: prompt ------------------------------------------------------ */
+
+.mrc-prompt {
+  border-radius: 10px;
+  background: var(--nd-inset);
+  border: 1px solid var(--nd-divider);
+  padding: 16px;
+  font-family: var(--nd-mono);
+  font-size: 13px;
+  line-height: 1.85;
+  color: var(--nd-text-3);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+/* Mirrors `.image-ref-pill` in the editor so the prompt reads the same here as
+ * it does in the node the user is about to open. */
+.mrc-token {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 5px 1px 3px;
+  margin: 0 -1px;
+  border-radius: 5px;
+  vertical-align: middle;
+  line-height: 1;
+  color: var(--nd-accent-dim);
+  background: rgba(255, 45, 120, 0.13);
+  border: 0;
+  font: inherit;
+  /* Not `help`: that paints the arrow-plus-question-mark cursor, which reads as
+     a stray "?" following the pointer around the prompt. These are controls you
+     point at, so use the pointer. */
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+.mrc-token-thumb {
+  width: 1.5em;
+  height: 1.5em;
+  border-radius: 4px;
+  object-fit: cover;
+  object-position: center top;
+  flex-shrink: 0;
+  border: 1px solid var(--nd-accent-b35);
+  transition: transform 160ms ease, border-color 160ms ease;
+}
+.mrc-token-label {
+  font-size: 0.9em;
+  letter-spacing: -0.02em;
+}
+.mrc-token[data-lit="true"] {
+  color: #fff;
+  background: var(--nd-accent);
+  box-shadow: 0 0 0 3px rgba(255, 45, 120, 0.18);
+}
+/* The full-size picture already lights up in the references column, so the chip
+ * only needs to confirm which one you are pointing at — a popover here would
+ * cover the prompt you are reading. */
+.mrc-token[data-lit="true"] .mrc-token-thumb {
+  transform: scale(1.25);
+  border-color: #fff;
+}
+.mrc-explain {
+  border-radius: 10px;
+  border: 1px solid var(--nd-divider);
+  background: rgba(255, 255, 255, 0.02);
+  padding: 14px 16px;
+}
+/* Fixed floor so swapping hints never jumps the column height. */
+.mrc-explain-body {
+  min-height: 62px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--nd-text-2);
+  margin-top: 6px;
+}
+
+/* --- group C: result ------------------------------------------------------ */
+
+.mrc-result {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--nd-border);
+  display: block;
+}
+.mrc-contrib {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--nd-text-3);
+  transition: background 200ms ease;
+}
+.mrc-contrib[data-lit="true"] {
+  background: rgba(255, 45, 120, 0.08);
+}
+.mrc-run {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--nd-accent-10);
+  border: 1px solid var(--nd-accent-b28);
+  cursor: pointer;
+  text-align: left;
+}
+.mrc-run:hover {
+  background: var(--nd-accent-14);
+}
+.mrc-run-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--nd-accent-text);
+}
+.mrc-run-cost {
+  font-family: var(--nd-mono);
+  font-size: 12px;
+  color: var(--nd-accent-dim);
+}
+
+/* --- group D: closing ----------------------------------------------------- */
+
+.mrc-closing {
+  display: flex;
+  gap: 36px;
+  padding: 20px 28px;
+  align-items: flex-start;
+}
+.mrc-closing > * {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.mrc-closing-lead {
+  display: flex;
+  gap: 12px;
+}
+.mrc-closing-body {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--nd-muted);
+  margin-top: 6px;
+}
+@media (max-width: 1100px) {
+  .mrc-closing {
+    flex-direction: column;
+    gap: 20px;
+  }
+}
+
+/* --- connections ---------------------------------------------------------- */
+/* Drawn from measured DOM positions, so the fan survives any reflow. */
+
+.mrc-wires {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  overflow: visible;
+}

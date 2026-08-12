@@ -1,0 +1,302 @@
+/* Layout for the Welcome Demo tutorial body.
+ *
+ * Bespoke to THIS tutorial. It reads the shared `--nd-*` tokens but owns its own
+ * geometry: two rows, three columns then two, because the workflow is two
+ * parallel chains converging on Final Cut. Nothing here is shared with the
+ * Multi-Reference tutorial, which lays itself out completely differently. */
+
+.wd {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+
+/* Row 1 is the image chain (01-03); row 2 is the audio chain meeting it (04-05).
+ * The step numbers carry the reading order, so stacking narrower is safe. */
+.wd-row-1 {
+  display: grid;
+  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.wd-row-2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 1500px) {
+  .wd-row-1 {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+@media (max-width: 1300px) {
+  .wd-row-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 1100px) {
+  .wd-row-1 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.wd-group {
+  border-radius: 14px;
+  background: var(--nd-panel);
+  border: 1px solid var(--nd-border);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  box-sizing: border-box;
+  transition: opacity 260ms ease, border-color 260ms ease, box-shadow 260ms ease, filter 260ms ease;
+}
+.wd-group[data-focused="true"] {
+  border-color: var(--nd-accent-b55);
+  box-shadow: 0 0 0 4px var(--nd-accent-10), 0 26px 60px rgba(0, 0, 0, 0.5);
+}
+.wd-group[data-dimmed="true"] {
+  opacity: 0.32;
+  filter: saturate(0.4);
+}
+
+.wd-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--nd-border-subtle);
+}
+.wd-badge {
+  flex: 0 0 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--nd-mono);
+  font-size: 12px;
+  color: var(--nd-accent-dim);
+  background: var(--nd-accent-14);
+  border: 1px solid var(--nd-accent-b35);
+  transition: background 260ms ease, color 260ms ease;
+}
+.wd-group[data-focused="true"] .wd-badge {
+  color: #fff;
+  background: var(--nd-accent);
+}
+.wd-title {
+  font-family: var(--nd-display);
+  font-weight: 600;
+  font-size: 15px;
+}
+.wd-sub {
+  font-size: 12px;
+  color: var(--nd-faint);
+  margin-top: 1px;
+}
+.wd-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* --- prompt + callout ----------------------------------------------------- */
+
+.wd-prompt {
+  border-radius: 10px;
+  background: var(--nd-inset);
+  border: 1px solid var(--nd-divider);
+  padding: 16px;
+  font-family: var(--nd-mono);
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--nd-text-3);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.wd-callout {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  background: var(--nd-accent-10);
+  border: 1px solid var(--nd-accent-b28);
+  font-size: 13px;
+  color: var(--nd-accent-text);
+}
+.wd-dot {
+  flex: 0 0 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--nd-accent);
+}
+.wd-dot--audio {
+  background: var(--nd-wire);
+}
+
+/* --- media ---------------------------------------------------------------- */
+
+.wd-media {
+  position: relative;
+  border-radius: 10px;
+  border: 1px solid var(--nd-border);
+  background: var(--nd-bar);
+  overflow: hidden;
+  line-height: 0;
+}
+.wd-media img,
+.wd-media video {
+  width: 100%;
+  display: block;
+}
+.wd-duration {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border-radius: 999px;
+  background: rgba(11, 11, 15, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-family: var(--nd-mono);
+  font-size: 11px;
+  line-height: 1;
+  color: var(--nd-text);
+}
+.wd-duration--tr {
+  left: auto;
+  right: 12px;
+  bottom: auto;
+  top: 12px;
+}
+/* A play glyph without shipping an icon for it. */
+.wd-play {
+  width: 0;
+  height: 0;
+  border-left: 7px solid currentColor;
+  border-top: 4.5px solid transparent;
+  border-bottom: 4.5px solid transparent;
+}
+
+.wd-note {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--nd-muted);
+}
+
+.wd-run {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--nd-accent-10);
+  border: 1px solid var(--nd-accent-b28);
+  cursor: pointer;
+  text-align: left;
+}
+.wd-run:hover {
+  background: var(--nd-accent-14);
+}
+.wd-run-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--nd-accent-text);
+}
+.wd-run-cost {
+  font-family: var(--nd-mono);
+  font-size: 12px;
+  color: var(--nd-accent-dim);
+}
+
+/* --- 04: two chains side by side ------------------------------------------ */
+
+.wd-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+}
+@media (max-width: 820px) {
+  .wd-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.wd-card {
+  border-radius: 10px;
+  border: 1px solid var(--nd-divider);
+  background: rgba(255, 255, 255, 0.02);
+  padding: 14px 16px;
+  display: flex;
+  /* Top-aligned, not centred: the card carries a player under the name, so the
+     avatar should sit level with the name rather than float mid-height. */
+  align-items: flex-start;
+  gap: 12px;
+}
+.wd-avatar {
+  flex: 0 0 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--nd-mono);
+  font-size: 12px;
+  color: var(--nd-wire);
+  background: rgba(46, 230, 214, 0.14);
+  border: 1px solid rgba(46, 230, 214, 0.35);
+}
+.wd-voice-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+.wd-voice-meta {
+  font-size: 12px;
+  color: var(--nd-faint);
+  margin-top: 1px;
+}
+
+/* --- 05: inputs meeting the result ---------------------------------------- */
+
+.wd-final {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+.wd-final > :first-child {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.wd-final-media {
+  flex: 0 1 300px;
+}
+@media (max-width: 700px) {
+  .wd-final {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .wd-final-media {
+    flex: 1 1 auto;
+  }
+}
+.wd-input {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: var(--nd-surface-soft);
+  border: 1px solid var(--nd-border-subtle);
+  font-size: 13px;
+  color: var(--nd-text-3);
+}
+
+.wd-voice-player {
+  margin-top: 10px;
+}

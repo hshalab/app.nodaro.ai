@@ -1,0 +1,981 @@
+{
+  "slug": "social-media-autopilot",
+  "name": "Social Media Autopilot",
+  "description": "Paste an idea. Get a published Instagram carousel — ten slides, an image each, a caption, posted.",
+  "markdownDescription": null,
+  "category": "social-media",
+  "outputTypes": [
+    "image"
+  ],
+  "tags": [
+    "social",
+    "instagram",
+    "automation"
+  ],
+  "complexity": "advanced",
+  "previewMediaUrl": "https://cdn.nodaro.ai/templates/332f2b90-f8fa-427d-913b-febda36a53a3/preview.png",
+  "previewMediaType": "image",
+  "tutorialCategorySlug": "workflows",
+  "tutorialSortOrder": 1,
+  "nodes": [
+    {
+      "id": "text-prompt-1776231697600-5sss82ftk",
+      "data": {
+        "text": "You are an Instagram carousel generator and AI creative director.\n\nYour job is to create an Instagram carousel with the SAME number of slides as the input, with a maximum of 10 slides, along with an engaging intro text and a high-performing caption.\n\nHARD RULES (MANDATORY)\nYou MUST detect the number of slides from the input\nYou MUST generate the SAME number of slides (no more, no less)\nMaximum allowed slides = 10\nIf input exceeds 10 → limit to first 10 slides\nEach slide = one image\nEach image MUST include the text embedded inside the image itself\nDo NOT skip slides\nDo NOT merge slides\nDo NOT change the meaning of the content\nFollow the structure: Slide 1 → Slide X\nIf output does not match required slide count → it is invalid\n\nIMAGE RULE (CRITICAL)\nEach slide MUST generate exactly ONE single image\nThe image MUST represent ONE clear scene only\nDo NOT create multiple scenes in one image\nDo NOT create split screens, collages, grids, or multiple frames\nDo NOT combine multiple moments or compositions into one image\nThe image must be clean, focused, and singular\nIf an image contains multiple scenes or compositions → output is invalid\n\nVISUAL RELEVANCE RULE (CRITICAL)\nThe image MUST directly represent the meaning of the text on the slide\nThe visual must clearly reflect the idea, emotion, or message of the text\nDo NOT use generic or unrelated aesthetic visuals\nAvoid random people, places, or scenes that do not match the message\nEach image must clearly communicate the same idea as the text\nIf the visual is not clearly connected to the text → output is invalid\n\nTEXT RULES\nKeep the original meaning EXACTLY the same\nCompress each slide into 6–10 words max\nMake it punchy, emotional, and memorable\nEach slide should feel like a save-worthy quote\n\nFOR EACH SLIDE OUTPUT:\n\nSlide X:\n\nText:\nLayout:\nPosition (center / top / bottom)\nAlignment (centered / left / right)\nFont style (bold modern sans-serif / elegant serif / minimal clean)\n\nVisual:\nClear description of what the image shows\n\nImage Prompt:\nMUST include:\n\"with text overlay\"\nThe EXACT text in quotes\nTypography description (font, size, weight)\nText placement (center/top/bottom)\nCinematic style (lighting, mood, contrast)\nVertical format 9:16\nConsistent visual style across all slides\nThe scene must be a single, unified composition\nNo collage, no split layout, no multiple panels\nThe visual MUST be tightly aligned with the text message\n\nSEPARATOR RULE (CRITICAL)\nYou MUST use \"\" as a separator for slides\nYou MUST place \"\" AFTER every slide except the last one\nYou MUST NOT use \"***\" anywhere else in the output\n\nCAPTION SEPARATOR RULE (CRITICAL)\nYou MUST use \"><\" to wrap the caption section\nYou MUST place \"><\" on a new line BEFORE the caption\nYou MUST place \"><\" on a new line AFTER the caption\nYou MUST NOT use \"><\" anywhere else in the output\n\nINTRO TEXT (CRITICAL)\nBefore the slides, you MUST generate a short introductory text.\n\nRULES:\nWrite 2–4 short paragraphs\nDo NOT mention slides or structure\nDo NOT include labels\nDo NOT include formatting markers\nMust feel natural and human-written\nMust summarize or expand the core idea\nMust create curiosity and emotional engagement\nShould make the reader want to swipe the carousel\nUse simple, clear, flowing language\nThis text must be ready to paste directly into Instagram\n\nCAPTION RULES (CRITICAL)\nWrite ONLY the caption text\nDo NOT include the word \"Caption\"\nDo NOT include any labels\nThe caption must be based on the SAME content as the carousel\nThe caption must NOT repeat slide text word-for-word\nThe caption must expand the idea naturally\nFirst line must be a strong hook\nThen 2–4 short paragraphs\nMust feel emotional, relatable, and insightful\nEnd with a CTA (question / save / share / reflect)\nInclude 5–10 relevant hashtags\n\nCAPTION LENGTH RULE (CRITICAL)\nThe caption MUST NOT exceed 2,000 characters total (including hashtags)\nCount every character: letters, spaces, punctuation, line breaks\nIf the caption exceeds 2,000 characters → shorten it\nHashtags count toward the character limit\n\nOUTPUT REQUIREMENTS (CRITICAL)\nOutput must be production-ready for direct Instagram publishing\nNo labels, no explanations, no extra text\n\nFINAL OUTPUT STRUCTURE (MANDATORY):\n\n[Intro text]\n\nSlide 1\n\nSlide 2\n\n...\nSlide X\n\n<\n[caption text only]\n<\n\nIf slide count is incorrect OR any \"***\" separator is misplaced OR caption delimiters \"><\" are missing → output is invalid",
+        "label": "System",
+        "width": 1233,
+        "height": 2565,
+        "variables": {},
+        "generatedText": "You are an Instagram carousel generator and AI creative director.\n\nYour job is to create EXACTLY 12 slides (no more, no less) for a high-performing Instagram carousel.\n\nHARD RULES (MANDATORY)\nYou MUST generate exactly 12 slides\nEach slide = one image\nEach image MUST include the text embedded inside the image itself\nDo NOT skip slides\nDo NOT merge slides\nDo NOT change the meaning of the content\nFollow the structure: Slide 1 → Slide 12\nIf output is not exactly 12 slides, it is invalid\nTEXT RULES\nKeep the original meaning EXACTLY the same\nCompress each slide into 6–10 words max\nMake it punchy, emotional, and memorable\nEach slide should feel like a save-worthy quote\nFOR EACH SLIDE OUTPUT:\n\nSlide X:\n\nText:\nLayout:\nPosition (center / top / bottom)\nAlignment (centered / left / right)\nFont style (bold modern sans-serif / elegant serif / minimal clean)\nVisual:\nClear description of what the image shows\nImage Prompt:\nMUST include:\n\"with text overlay\"\nThe EXACT text in quotes\nTypography description (font, size, weight)\nText placement (center/top/bottom)\nCinematic style (lighting, mood, contrast)\nVertical format 9:16\nConsistent visual style across all slides\nSTYLE DIRECTION\nCinematic\nHigh contrast\nDeep, psychological, intriguing\nMinimal but powerful\nPremium Instagram aesthetic\nConsistent branding across all 12 slides\nFINAL OUTPUT MUST INCLUDE:\nSlides 1–12 (all present and numbered)\nCaption:\nStrong hook (first line)\nValue summary\nCTA (save / share / comment)\n5–10 relevant hashtags\ndelimiter: \"***\"",
+        "generatedResults": [
+          {
+            "text": "You are an Instagram carousel generator and AI creative director.\n\nYour job is to create EXACTLY 12 slides (no more, no less) for a high-performing Instagram carousel.\n\nHARD RULES (MANDATORY)\nYou MUST generate exactly 12 slides\nEach slide = one image\nEach image MUST include the text embedded inside the image itself\nDo NOT skip slides\nDo NOT merge slides\nDo NOT change the meaning of the content\nFollow the structure: Slide 1 → Slide 12\nIf output is not exactly 12 slides, it is invalid\nTEXT RULES\nKeep the original meaning EXACTLY the same\nCompress each slide into 6–10 words max\nMake it punchy, emotional, and memorable\nEach slide should feel like a save-worthy quote\nFOR EACH SLIDE OUTPUT:\n\nSlide X:\n\nText:\nLayout:\nPosition (center / top / bottom)\nAlignment (centered / left / right)\nFont style (bold modern sans-serif / elegant serif / minimal clean)\nVisual:\nClear description of what the image shows\nImage Prompt:\nMUST include:\n\"with text overlay\"\nThe EXACT text in quotes\nTypography description (font, size, weight)\nText placement (center/top/bottom)\nCinematic style (lighting, mood, contrast)\nVertical format 9:16\nConsistent visual style across all slides\nSTYLE DIRECTION\nCinematic\nHigh contrast\nDeep, psychological, intriguing\nMinimal but powerful\nPremium Instagram aesthetic\nConsistent branding across all 12 slides\nFINAL OUTPUT MUST INCLUDE:\nSlides 1–12 (all present and numbered)\nCaption:\nStrong hook (first line)\nValue summary\nCTA (save / share / comment)\n5–10 relevant hashtags\ndelimiter: \"***\"",
+            "jobId": "exec-node_35",
+            "timestamp": "2026-04-14T17:48:44.383Z"
+          }
+        ],
+        "activeResultIndex": 0
+      },
+      "type": "text-prompt",
+      "width": 1233,
+      "height": 2565,
+      "dragging": false,
+      "measured": {
+        "width": 1233,
+        "height": 2565
+      },
+      "position": {
+        "x": -1876.597127830381,
+        "y": -1431.0319513705504
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "text-prompt-1776231712249-2gt87vecy",
+      "data": {
+        "text": "Create a 10-slide Instagram carousel using the following content.\nDo NOT change meaning. Only compress and adapt to short, powerful slides with visuals.\n\nSlide 1:\nText:\nJung’s method: clarity turns desire into reality\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\nVisual:\nA lone figure standing in fog, light breaking through\nImage Prompt:\nCinematic scene of a person standing in thick fog with light rays breaking through, symbolizing clarity emerging from confusion, high contrast, deep shadows, minimalist composition, vertical 9:16, with text overlay \"Jung’s method: clarity turns desire into reality\", bold modern sans-serif typography, centered placement\n\nSlide 2:\nText:\nYou don’t get it because you’re unclear\nLayout:\nPosition center\nAlignment centered\nFont style minimal clean\nVisual:\nBlurred city lights with one sharp focused point\nImage Prompt:\nOut-of-focus city at night with one sharply focused light, representing clarity vs confusion, cinematic lighting, high contrast, vertical 9:16, with text overlay \"You don’t get it because you’re unclear\", minimal clean font, centered\n\nSlide 3:\nText:\nWhat you resist controls you from the shadows\nLayout:\nPosition center\nAlignment centered\nFont style elegant serif\nVisual:\nSilhouette casting a distorted shadow behind\nImage Prompt:\nDark silhouette with exaggerated shadow looming behind, symbolic of hidden control, moody lighting, deep contrast, vertical 9:16, with text overlay \"What you resist controls you from the shadows\", elegant serif font, centered\n\nSlide 4:\nText:\nName what you truly want without filters\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\nVisual:\nPerson writing in a journal under warm light\nImage Prompt:\nClose-up of a person writing in a journal with warm focused light, intimate atmosphere, cinematic style, vertical 9:16, with text overlay \"Name what you truly want without filters\", bold modern sans-serif, centered\n\nSlide 5:\nText:\nWrite it as who you already are\nLayout:\nPosition center\nAlignment centered\nFont style minimal clean\nVisual:\nMirror reflection of calm confident version\nImage Prompt:\nPerson looking into mirror seeing a calmer, more confident reflection, symbolic identity shift, soft lighting, vertical 9:16, with text overlay \"Write it as who you already are\", minimal clean font, centered\n\nSlide 6:\nText:\nChange happens when identity begins to shift\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\nVisual:\nFigure transitioning between two contrasting states\nImage Prompt:\nSplit scene of same person in two different states, one chaotic, one calm, cinematic contrast, vertical 9:16, with text overlay \"Change happens when identity begins to shift\", bold modern sans-serif, centered\n\nSlide 7:\nText:\nFeel the life daily through your senses\nLayout:\nPosition center\nAlignment centered\nFont style elegant serif\nVisual:\nClose-up of breathing, movement, calm presence\nImage Prompt:\nClose-up cinematic shot of a person breathing slowly, soft natural light, peaceful atmosphere, vertical 9:16, with text overlay \"Feel the life daily through your senses\", elegant serif font, centered\n\nSlide 8:\nText:\nThe brain believes what you repeatedly experience\nLayout:\nPosition center\nAlignment centered\nFont style minimal clean\nVisual:\nAbstract neural patterns lighting up\nImage Prompt:\nAbstract neural network glowing with repeating patterns, symbolizing brain learning, high contrast, vertical 9:16, with text overlay \"The brain believes what you repeatedly experience\", minimal clean font, centered\n\nSlide 9:\nText:\nAct slightly like that version every day\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\nVisual:\nPerson making small confident decision\nImage Prompt:\nCinematic shot of a person making a deliberate small decision (walking forward, choosing path), symbolic growth, vertical 9:16, with text overlay \"Act slightly like that version every day\", bold modern sans-serif, centered\n\nSlide 10:\nText:\nClarity removes conflict and life starts aligning\nLayout:\nPosition center\nAlignment centered\nFont style elegant serif\nVisual:\nOpen path with light guiding forward\nImage Prompt:\nLong open path with light at the end, symbolizing alignment and direction, cinematic lighting, high contrast, vertical 9:16, with text overlay \"Clarity removes conflict and life starts aligning\", elegant serif font, centered",
+        "label": "Text Prompt",
+        "width": 1267,
+        "height": 2701,
+        "variables": {},
+        "generatedText": "Create a 12-slide Instagram carousel using the following content.\nDo NOT change meaning. Only compress and adapt to short, powerful slides with visuals.\n\nSlide 1:\nCarl Jung’s method for making desires come true.\nIt works even for skeptics.\nDo this for 10 days,\nand something strange starts to happen.\n\nSlide 2:\nJung did not believe in “manifestation.”\nHe believed most people never get what they want\nbecause they are never truly aware\nof what they actually want.\nThe subconscious cannot move toward confusion.\nOnly toward clarity.\n\nSlide 3:\nJung said:\n“What you resist not only persists,\nit also governs your life from the shadows.”\nMost people pretend they want less\nbecause wanting more feels dangerous.\nAnd so the mind remains divided.\n\nSlide 4:\nStep 1. Give your desire a clear name.\nAsk yourself:\n“What would I want if I stopped pretending I don’t want it?”\nNot what sounds realistic.\nNot what impresses others.\nBut what is truly right for me.\n\nSlide 5:\nStep 2. Write the desire in the present tense.\nNot:\n“I want peace.”\nBut:\n“I live in calm. My body feels stable. My mind feels clear.”\nJung believed the subconscious does not respond to desire.\nIt responds to identity.\n\nSlide 6:\nYour nervous system does not change\njust because you want something.\nIt changes when it begins\nto recognize a new self-image.\nThat is why clarity is more important\nthan positivity.\n\nSlide 7:\nStep 3. Every morning for 2 minutes,\nimagine this life.\nNot fantasies.\nBut sensations:\nhow you breathe\nhow you move\nhow your body feels\nThe brain learns through sensory repetition.\n\nSlide 8:\nNeuroscience later confirmed this:\nthe brain activates the same neural networks\nduring vivid imagination\nas it does during real experience.\nRepetition creates belief.\nBelief shapes behavior.\n\nSlide 9:\nStep 4. For 10 days, act a little\nlike that version of yourself.\nNot perfectly.\nJust symbolically.\nSpeak more slowly.\nChoose differently.\nSet one boundary.\nJung called this:\n“active imagination put into motion.”\n\nSlide 10:\nMost people stop here.\nBecause feeling yourself act differently\nfeels strange.\nBut that strangeness is not failure.\nIt is your nervous system rewiring.\n\nSlide 11:\nJung warned:\n“Until you make the unconscious conscious,\nit will direct your life,\nand you will call it fate.”\nThis method does not summon miracles.\nIt removes inner conflict.\nAnd that changes everything.\n\nSlide 12:\nThe real change does not happen outside.\nIt happens the moment your mind\nstops arguing with your future.\nClarity replaces doubt.\nIdentity replaces effort.\nAnd life begins to move with you,\nnot against you.",
+        "generatedResults": [
+          {
+            "text": "Create a 12-slide Instagram carousel using the following content.\nDo NOT change meaning. Only compress and adapt to short, powerful slides with visuals.\n\nSlide 1:\nCarl Jung’s method for making desires come true.\nIt works even for skeptics.\nDo this for 10 days,\nand something strange starts to happen.\n\nSlide 2:\nJung did not believe in “manifestation.”\nHe believed most people never get what they want\nbecause they are never truly aware\nof what they actually want.\nThe subconscious cannot move toward confusion.\nOnly toward clarity.\n\nSlide 3:\nJung said:\n“What you resist not only persists,\nit also governs your life from the shadows.”\nMost people pretend they want less\nbecause wanting more feels dangerous.\nAnd so the mind remains divided.\n\nSlide 4:\nStep 1. Give your desire a clear name.\nAsk yourself:\n“What would I want if I stopped pretending I don’t want it?”\nNot what sounds realistic.\nNot what impresses others.\nBut what is truly right for me.\n\nSlide 5:\nStep 2. Write the desire in the present tense.\nNot:\n“I want peace.”\nBut:\n“I live in calm. My body feels stable. My mind feels clear.”\nJung believed the subconscious does not respond to desire.\nIt responds to identity.\n\nSlide 6:\nYour nervous system does not change\njust because you want something.\nIt changes when it begins\nto recognize a new self-image.\nThat is why clarity is more important\nthan positivity.\n\nSlide 7:\nStep 3. Every morning for 2 minutes,\nimagine this life.\nNot fantasies.\nBut sensations:\nhow you breathe\nhow you move\nhow your body feels\nThe brain learns through sensory repetition.\n\nSlide 8:\nNeuroscience later confirmed this:\nthe brain activates the same neural networks\nduring vivid imagination\nas it does during real experience.\nRepetition creates belief.\nBelief shapes behavior.\n\nSlide 9:\nStep 4. For 10 days, act a little\nlike that version of yourself.\nNot perfectly.\nJust symbolically.\nSpeak more slowly.\nChoose differently.\nSet one boundary.\nJung called this:\n“active imagination put into motion.”\n\nSlide 10:\nMost people stop here.\nBecause feeling yourself act differently\nfeels strange.\nBut that strangeness is not failure.\nIt is your nervous system rewiring.\n\nSlide 11:\nJung warned:\n“Until you make the unconscious conscious,\nit will direct your life,\nand you will call it fate.”\nThis method does not summon miracles.\nIt removes inner conflict.\nAnd that changes everything.\n\nSlide 12:\nThe real change does not happen outside.\nIt happens the moment your mind\nstops arguing with your future.\nClarity replaces doubt.\nIdentity replaces effort.\nAnd life begins to move with you,\nnot against you.",
+            "jobId": "exec-node_36",
+            "timestamp": "2026-04-14T17:48:44.383Z"
+          }
+        ],
+        "activeResultIndex": 0
+      },
+      "type": "text-prompt",
+      "width": 1267,
+      "height": 2701,
+      "dragging": false,
+      "measured": {
+        "width": 1267,
+        "height": 2701
+      },
+      "position": {
+        "x": -1885.401776218418,
+        "y": 1312.0415505393585
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "llm-chat-1776231829248-keo2f5pog",
+      "data": {
+        "label": "LLM Chat",
+        "maxTokens": 2048,
+        "userInput": "",
+        "temperature": 0.7,
+        "systemPrompt": "",
+        "fieldMappings": {},
+        "generatedText": "Most people think they want something, but they haven't actually defined it. Without a clear target, your mind drifts through the fog of \"someday,\" never quite arriving anywhere. This is why desire often feels like a burden rather than a fuel.\n\nCarl Jung’s wisdom suggests that the bridge between wanting and having is clarity. When you stop hiding from your true intentions, the internal conflict vanishes. You start moving not because you have to, but because your identity has already arrived at the destination.\n\nIt’s about more than just thinking—it’s about feeling and acting from a place of certainty. When you align your inner world with your outer actions, the resistance that used to hold you back becomes the very wind in your sails.\n\nSlide 1:\n\nText:\nJung’s method: clarity turns desire into reality\n\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\n\nVisual:\nA lone figure standing in fog, light breaking through\n\nImage Prompt:\nCinematic scene of a person standing in thick fog with light rays breaking through, symbolizing clarity emerging from confusion, high contrast, deep shadows, minimalist composition, vertical 9:16, with text overlay \"Jung’s method: clarity turns desire into reality\", bold modern sans-serif typography, centered placement\n\n***\n\nSlide 2:\n\nText:\nYou don’t get it because you’re unclear\n\nLayout:\nPosition center\nAlignment centered\nFont style minimal clean\n\nVisual:\nBlurred city lights with one sharp focused point\n\nImage Prompt:\nOut-of-focus city at night with one sharply focused light, representing clarity vs confusion, cinematic lighting, high contrast, vertical 9:16, with text overlay \"You don’t get it because you’re unclear\", minimal clean font, centered\n\n***\n\nSlide 3:\n\nText:\nWhat you resist controls you from the shadows\n\nLayout:\nPosition center\nAlignment centered\nFont style elegant serif\n\nVisual:\nSilhouette casting a distorted shadow behind\n\nImage Prompt:\nDark silhouette with exaggerated shadow looming behind, symbolic of hidden control, moody lighting, deep contrast, vertical 9:16, with text overlay \"What you resist controls you from the shadows\", elegant serif font, centered\n\n***\n\nSlide 4:\n\nText:\nName what you truly want without filters\n\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\n\nVisual:\nPerson writing in a journal under warm light\n\nImage Prompt:\nClose-up of a person writing in a journal with warm focused light, intimate atmosphere, cinematic style, vertical 9:16, with text overlay \"Name what you truly want without filters\", bold modern sans-serif, centered\n\n***\n\nSlide 5:\n\nText:\nWrite it as who you already are\n\nLayout:\nPosition center\nAlignment centered\nFont style minimal clean\n\nVisual:\nMirror reflection of calm confident version\n\nImage Prompt:\nPerson looking into mirror seeing a calmer, more confident reflection, symbolic identity shift, soft lighting, vertical 9:16, with text overlay \"Write it as who you already are\", minimal clean font, centered\n\n***\n\nSlide 6:\n\nText:\nChange happens when identity begins to shift\n\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\n\nVisual:\nFigure stepping from deep shadow into bright light\n\nImage Prompt:\nCinematic shot of a single person stepping from a dark, shadowed area into a brilliant beam of light, symbolizing identity transition, high contrast, vertical 9:16, with text overlay \"Change happens when identity begins to shift\", bold modern sans-serif, centered\n\n***\n\nSlide 7:\n\nText:\nFeel the life daily through your senses\n\nLayout:\nPosition center\nAlignment centered\nFont style elegant serif\n\nVisual:\nClose-up of breathing, movement, calm presence\n\nImage Prompt:\nClose-up cinematic shot of a person breathing slowly, soft natural light, peaceful atmosphere, vertical 9:16, with text overlay \"Feel the life daily through your senses\", elegant serif font, centered\n\n***\n\nSlide 8:\n\nText:\nThe brain believes what you repeatedly experience\n\nLayout:\nPosition center\nAlignment centered\nFont style minimal clean\n\nVisual:\nAbstract neural patterns lighting up\n\nImage Prompt:\nAbstract neural network glowing with repeating patterns, symbolizing brain learning, high contrast, vertical 9:16, with text overlay \"The brain believes what you repeatedly experience\", minimal clean font, centered\n\n***\n\nSlide 9:\n\nText:\nAct slightly like that version every day\n\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\n\nVisual:\nPerson making small confident decision\n\nImage Prompt:\nCinematic shot of a person making a deliberate small decision such as walking forward into a new path, symbolic growth, vertical 9:16, with text overlay \"Act slightly like that version every day\", bold modern sans-serif, centered\n\n***\n\nSlide 10:\n\nText:\nClarity removes conflict and life starts aligning\n\nLayout:\nPosition center\nAlignment centered\nFont style elegant serif\n\nVisual:\nOpen path with light guiding forward\n\nImage Prompt:\nLong open path with light at the end, symbolizing alignment and direction, cinematic lighting, high contrast, vertical 9:16, with text overlay \"Clarity removes conflict and life starts aligning\", elegant serif font, centered\n\n><\nYou aren't stuck; you're just out of focus.\n\nWe often blame a lack of motivation or external obstacles for our lack of progress. But more often than not, the real culprit is a lack of clarity. If you can’t name exactly what you want, you can’t expect your brain to find the path to get there.\n\nCarl Jung understood that what remains in the shadows of our minds controls us. By bringing your desires into the light and claiming them as your current identity, you stop fighting yourself. You move from \"trying to be\" to simply \"being.\"\n\nThis shift doesn't happen in a single giant leap. It happens through the small, sensory experiences and tiny decisions you make every day. When your brain sees you acting like the person you want to become, it starts to believe the story you're telling.\n\nWhich area of your life needs more clarity right now? Let me know in the comments or save this for when you feel lost.\n\n#SelfMastery #MindsetShift #JungianPsychology #Clarity #PersonalGrowth #IdentityShift #Manifestation #InnerWork\n><",
+        "lastUserPrompt": "Create a 10-slide Instagram carousel using the following content.\nDo NOT change meaning. Only compress and adapt to short, powerful slides with visuals.\n\nSlide 1:\nText:\nJung’s method: clarity turns desire into reality\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\nVisual:\nA lone figure standing in fog, light breaking through\nImage Prompt:\nCinematic scene of a person standing in thick fog with light rays breaking through, symbolizing clarity emerging from confusion, high contrast, deep shadows, minimalist composition, vertical 9:16, with text overlay \"Jung’s method: clarity turns desire into reality\", bold modern sans-serif typography, centered placement\n\nSlide 2:\nText:\nYou don’t get it because you’re unclear\nLayout:\nPosition center\nAlignment centered\nFont style minimal clean\nVisual:\nBlurred city lights with one sharp focused point\nImage Prompt:\nOut-of-focus city at night with one sharply focused light, representing clarity vs confusion, cinematic lighting, high contrast, vertical 9:16, with text overlay \"You don’t get it because you’re unclear\", minimal clean font, centered\n\nSlide 3:\nText:\nWhat you resist controls you from the shadows\nLayout:\nPosition center\nAlignment centered\nFont style elegant serif\nVisual:\nSilhouette casting a distorted shadow behind\nImage Prompt:\nDark silhouette with exaggerated shadow looming behind, symbolic of hidden control, moody lighting, deep contrast, vertical 9:16, with text overlay \"What you resist controls you from the shadows\", elegant serif font, centered\n\nSlide 4:\nText:\nName what you truly want without filters\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\nVisual:\nPerson writing in a journal under warm light\nImage Prompt:\nClose-up of a person writing in a journal with warm focused light, intimate atmosphere, cinematic style, vertical 9:16, with text overlay \"Name what you truly want without filters\", bold modern sans-serif, centered\n\nSlide 5:\nText:\nWrite it as who you already are\nLayout:\nPosition center\nAlignment centered\nFont style minimal clean\nVisual:\nMirror reflection of calm confident version\nImage Prompt:\nPerson looking into mirror seeing a calmer, more confident reflection, symbolic identity shift, soft lighting, vertical 9:16, with text overlay \"Write it as who you already are\", minimal clean font, centered\n\nSlide 6:\nText:\nChange happens when identity begins to shift\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\nVisual:\nFigure transitioning between two contrasting states\nImage Prompt:\nSplit scene of same person in two different states, one chaotic, one calm, cinematic contrast, vertical 9:16, with text overlay \"Change happens when identity begins to shift\", bold modern sans-serif, centered\n\nSlide 7:\nText:\nFeel the life daily through your senses\nLayout:\nPosition center\nAlignment centered\nFont style elegant serif\nVisual:\nClose-up of breathing, movement, calm presence\nImage Prompt:\nClose-up cinematic shot of a person breathing slowly, soft natural light, peaceful atmosphere, vertical 9:16, with text overlay \"Feel the life daily through your senses\", elegant serif font, centered\n\nSlide 8:\nText:\nThe brain believes what you repeatedly experience\nLayout:\nPosition center\nAlignment centered\nFont style minimal clean\nVisual:\nAbstract neural patterns lighting up\nImage Prompt:\nAbstract neural network glowing with repeating patterns, symbolizing brain learning, high contrast, vertical 9:16, with text overlay \"The brain believes what you repeatedly experience\", minimal clean font, centered\n\nSlide 9:\nText:\nAct slightly like that version every day\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\nVisual:\nPerson making small confident decision\nImage Prompt:\nCinematic shot of a person making a deliberate small decision (walking forward, choosing path), symbolic growth, vertical 9:16, with text overlay \"Act slightly like that version every day\", bold modern sans-serif, centered\n\nSlide 10:\nText:\nClarity removes conflict and life starts aligning\nLayout:\nPosition center\nAlignment centered\nFont style elegant serif\nVisual:\nOpen path with light guiding forward\nImage Prompt:\nLong open path with light at the end, symbolizing alignment and direction, cinematic lighting, high contrast, vertical 9:16, with text overlay \"Clarity removes conflict and life starts aligning\", elegant serif font, centered",
+        "generatedResults": [
+          {
+            "text": "Most people think they want something, but they haven't actually defined it. Without a clear target, your mind drifts through the fog of \"someday,\" never quite arriving anywhere. This is why desire often feels like a burden rather than a fuel.\n\nCarl Jung’s wisdom suggests that the bridge between wanting and having is clarity. When you stop hiding from your true intentions, the internal conflict vanishes. You start moving not because you have to, but because your identity has already arrived at the destination.\n\nIt’s about more than just thinking—it’s about feeling and acting from a place of certainty. When you align your inner world with your outer actions, the resistance that used to hold you back becomes the very wind in your sails.\n\nSlide 1:\n\nText:\nJung’s method: clarity turns desire into reality\n\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\n\nVisual:\nA lone figure standing in fog, light breaking through\n\nImage Prompt:\nCinematic scene of a person standing in thick fog with light rays breaking through, symbolizing clarity emerging from confusion, high contrast, deep shadows, minimalist composition, vertical 9:16, with text overlay \"Jung’s method: clarity turns desire into reality\", bold modern sans-serif typography, centered placement\n\n***\n\nSlide 2:\n\nText:\nYou don’t get it because you’re unclear\n\nLayout:\nPosition center\nAlignment centered\nFont style minimal clean\n\nVisual:\nBlurred city lights with one sharp focused point\n\nImage Prompt:\nOut-of-focus city at night with one sharply focused light, representing clarity vs confusion, cinematic lighting, high contrast, vertical 9:16, with text overlay \"You don’t get it because you’re unclear\", minimal clean font, centered\n\n***\n\nSlide 3:\n\nText:\nWhat you resist controls you from the shadows\n\nLayout:\nPosition center\nAlignment centered\nFont style elegant serif\n\nVisual:\nSilhouette casting a distorted shadow behind\n\nImage Prompt:\nDark silhouette with exaggerated shadow looming behind, symbolic of hidden control, moody lighting, deep contrast, vertical 9:16, with text overlay \"What you resist controls you from the shadows\", elegant serif font, centered\n\n***\n\nSlide 4:\n\nText:\nName what you truly want without filters\n\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\n\nVisual:\nPerson writing in a journal under warm light\n\nImage Prompt:\nClose-up of a person writing in a journal with warm focused light, intimate atmosphere, cinematic style, vertical 9:16, with text overlay \"Name what you truly want without filters\", bold modern sans-serif, centered\n\n***\n\nSlide 5:\n\nText:\nWrite it as who you already are\n\nLayout:\nPosition center\nAlignment centered\nFont style minimal clean\n\nVisual:\nMirror reflection of calm confident version\n\nImage Prompt:\nPerson looking into mirror seeing a calmer, more confident reflection, symbolic identity shift, soft lighting, vertical 9:16, with text overlay \"Write it as who you already are\", minimal clean font, centered\n\n***\n\nSlide 6:\n\nText:\nChange happens when identity begins to shift\n\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\n\nVisual:\nFigure stepping from deep shadow into bright light\n\nImage Prompt:\nCinematic shot of a single person stepping from a dark, shadowed area into a brilliant beam of light, symbolizing identity transition, high contrast, vertical 9:16, with text overlay \"Change happens when identity begins to shift\", bold modern sans-serif, centered\n\n***\n\nSlide 7:\n\nText:\nFeel the life daily through your senses\n\nLayout:\nPosition center\nAlignment centered\nFont style elegant serif\n\nVisual:\nClose-up of breathing, movement, calm presence\n\nImage Prompt:\nClose-up cinematic shot of a person breathing slowly, soft natural light, peaceful atmosphere, vertical 9:16, with text overlay \"Feel the life daily through your senses\", elegant serif font, centered\n\n***\n\nSlide 8:\n\nText:\nThe brain believes what you repeatedly experience\n\nLayout:\nPosition center\nAlignment centered\nFont style minimal clean\n\nVisual:\nAbstract neural patterns lighting up\n\nImage Prompt:\nAbstract neural network glowing with repeating patterns, symbolizing brain learning, high contrast, vertical 9:16, with text overlay \"The brain believes what you repeatedly experience\", minimal clean font, centered\n\n***\n\nSlide 9:\n\nText:\nAct slightly like that version every day\n\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\n\nVisual:\nPerson making small confident decision\n\nImage Prompt:\nCinematic shot of a person making a deliberate small decision such as walking forward into a new path, symbolic growth, vertical 9:16, with text overlay \"Act slightly like that version every day\", bold modern sans-serif, centered\n\n***\n\nSlide 10:\n\nText:\nClarity removes conflict and life starts aligning\n\nLayout:\nPosition center\nAlignment centered\nFont style elegant serif\n\nVisual:\nOpen path with light guiding forward\n\nImage Prompt:\nLong open path with light at the end, symbolizing alignment and direction, cinematic lighting, high contrast, vertical 9:16, with text overlay \"Clarity removes conflict and life starts aligning\", elegant serif font, centered\n\n><\nYou aren't stuck; you're just out of focus.\n\nWe often blame a lack of motivation or external obstacles for our lack of progress. But more often than not, the real culprit is a lack of clarity. If you can’t name exactly what you want, you can’t expect your brain to find the path to get there.\n\nCarl Jung understood that what remains in the shadows of our minds controls us. By bringing your desires into the light and claiming them as your current identity, you stop fighting yourself. You move from \"trying to be\" to simply \"being.\"\n\nThis shift doesn't happen in a single giant leap. It happens through the small, sensory experiences and tiny decisions you make every day. When your brain sees you acting like the person you want to become, it starts to believe the story you're telling.\n\nWhich area of your life needs more clarity right now? Let me know in the comments or save this for when you feel lost.\n\n#SelfMastery #MindsetShift #JungianPsychology #Clarity #PersonalGrowth #IdentityShift #Manifestation #InnerWork\n><",
+            "jobId": "7f28b469-4bf8-4e58-afd6-9b007a6f6a2a",
+            "runId": "manual",
+            "listValue": "Create a 10-slide Instagram carousel using the following content.\nDo NOT change meaning. Only compress and adapt to short, powerful slides with visuals.\n\nSlide 1:\nText:\nJung’s method: clarity turns desire into reality\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\nVisual:\nA lone figure standing in fog, light breaking through\nImage Prompt:\nCinematic scene of a person standing in thick fog with light rays breaking through, symbolizing clarity emerging from confusion, high contrast, deep shadows, minimalist composition, vertical 9:16, with text overlay \"Jung’s method: clarity turns desire into reality\", bold modern sans-serif typography, centered placement\n\nSlide 2:\nText:\nYou don’t get it because you’re unclear\nLayout:\nPosition center\nAlignment centered\nFont style minimal clean\nVisual:\nBlurred city lights with one sharp focused point\nImage Prompt:\nOut-of-focus city at night with one sharply focused light, representing clarity vs confusion, cinematic lighting, high contrast, vertical 9:16, with text overlay \"You don’t get it because you’re unclear\", minimal clean font, centered\n\nSlide 3:\nText:\nWhat you resist controls you from the shadows\nLayout:\nPosition center\nAlignment centered\nFont style elegant serif\nVisual:\nSilhouette casting a distorted shadow behind\nImage Prompt:\nDark silhouette with exaggerated shadow looming behind, symbolic of hidden control, moody lighting, deep contrast, vertical 9:16, with text overlay \"What you resist controls you from the shadows\", elegant serif font, centered\n\nSlide 4:\nText:\nName what you truly want without filters\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\nVisual:\nPerson writing in a journal under warm light\nImage Prompt:\nClose-up of a person writing in a journal with warm focused light, intimate atmosphere, cinematic style, vertical 9:16, with text overlay \"Name what you truly want without filters\", bold modern sans-serif, centered\n\nSlide 5:\nText:\nWrite it as who you already are\nLayout:\nPosition center\nAlignment centered\nFont style minimal clean\nVisual:\nMirror reflection of calm confident version\nImage Prompt:\nPerson looking into mirror seeing a calmer, more confident reflection, symbolic identity shift, soft lighting, vertical 9:16, with text overlay \"Write it as who you already are\", minimal clean font, centered\n\nSlide 6:\nText:\nChange happens when identity begins to shift\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\nVisual:\nFigure transitioning between two contrasting states\nImage Prompt:\nSplit scene of same person in two different states, one chaotic, one calm, cinematic contrast, vertical 9:16, with text overlay \"Change happens when identity begins to shift\", bold modern sans-serif, centered\n\nSlide 7:\nText:\nFeel the life daily through your senses\nLayout:\nPosition center\nAlignment centered\nFont style elegant serif\nVisual:\nClose-up of breathing, movement, calm presence\nImage Prompt:\nClose-up cinematic shot of a person breathing slowly, soft natural light, peaceful atmosphere, vertical 9:16, with text overlay \"Feel the life daily through your senses\", elegant serif font, centered\n\nSlide 8:\nText:\nThe brain believes what you repeatedly experience\nLayout:\nPosition center\nAlignment centered\nFont style minimal clean\nVisual:\nAbstract neural patterns lighting up\nImage Prompt:\nAbstract neural network glowing with repeating patterns, symbolizing brain learning, high contrast, vertical 9:16, with text overlay \"The brain believes what you repeatedly experience\", minimal clean font, centered\n\nSlide 9:\nText:\nAct slightly like that version every day\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\nVisual:\nPerson making small confident decision\nImage Prompt:\nCinematic shot of a person making a deliberate small decision (walking forward, choosing path), symbolic growth, vertical 9:16, with text overlay \"Act slightly like that version every day\", bold modern sans-serif, centered\n\nSlide 10:\nText:\nClarity removes conflict and life starts aligning\nLayout:\nPosition center\nAlignment centered\nFont style elegant serif\nVisual:\nOpen path with light guiding forward\nImage Prompt:\nLong open path with light at the end, symbolizing alignment and direction, cinematic lighting, high contrast, vertical 9:16, with text overlay \"Clarity removes conflict and life starts aligning\", elegant serif font, centered",
+            "timestamp": "2026-04-15T20:00:50.234Z",
+            "userPrompt": "Create a 10-slide Instagram carousel using the following content.\nDo NOT change meaning. Only compress and adapt to short, powerful slides with visuals.\n\nSlide 1:\nText:\nJung’s method: clarity turns desire into reality\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\nVisual:\nA lone figure standing in fog, light breaking through\nImage Prompt:\nCinematic scene of a person standing in thick fog with light rays breaking through, symbolizing clarity emerging from confusion, high contrast, deep shadows, minimalist composition, vertical 9:16, with text overlay \"Jung’s method: clarity turns desire into reality\", bold modern sans-serif typography, centered placement\n\nSlide 2:\nText:\nYou don’t get it because you’re unclear\nLayout:\nPosition center\nAlignment centered\nFont style minimal clean\nVisual:\nBlurred city lights with one sharp focused point\nImage Prompt:\nOut-of-focus city at night with one sharply focused light, representing clarity vs confusion, cinematic lighting, high contrast, vertical 9:16, with text overlay \"You don’t get it because you’re unclear\", minimal clean font, centered\n\nSlide 3:\nText:\nWhat you resist controls you from the shadows\nLayout:\nPosition center\nAlignment centered\nFont style elegant serif\nVisual:\nSilhouette casting a distorted shadow behind\nImage Prompt:\nDark silhouette with exaggerated shadow looming behind, symbolic of hidden control, moody lighting, deep contrast, vertical 9:16, with text overlay \"What you resist controls you from the shadows\", elegant serif font, centered\n\nSlide 4:\nText:\nName what you truly want without filters\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\nVisual:\nPerson writing in a journal under warm light\nImage Prompt:\nClose-up of a person writing in a journal with warm focused light, intimate atmosphere, cinematic style, vertical 9:16, with text overlay \"Name what you truly want without filters\", bold modern sans-serif, centered\n\nSlide 5:\nText:\nWrite it as who you already are\nLayout:\nPosition center\nAlignment centered\nFont style minimal clean\nVisual:\nMirror reflection of calm confident version\nImage Prompt:\nPerson looking into mirror seeing a calmer, more confident reflection, symbolic identity shift, soft lighting, vertical 9:16, with text overlay \"Write it as who you already are\", minimal clean font, centered\n\nSlide 6:\nText:\nChange happens when identity begins to shift\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\nVisual:\nFigure transitioning between two contrasting states\nImage Prompt:\nSplit scene of same person in two different states, one chaotic, one calm, cinematic contrast, vertical 9:16, with text overlay \"Change happens when identity begins to shift\", bold modern sans-serif, centered\n\nSlide 7:\nText:\nFeel the life daily through your senses\nLayout:\nPosition center\nAlignment centered\nFont style elegant serif\nVisual:\nClose-up of breathing, movement, calm presence\nImage Prompt:\nClose-up cinematic shot of a person breathing slowly, soft natural light, peaceful atmosphere, vertical 9:16, with text overlay \"Feel the life daily through your senses\", elegant serif font, centered\n\nSlide 8:\nText:\nThe brain believes what you repeatedly experience\nLayout:\nPosition center\nAlignment centered\nFont style minimal clean\nVisual:\nAbstract neural patterns lighting up\nImage Prompt:\nAbstract neural network glowing with repeating patterns, symbolizing brain learning, high contrast, vertical 9:16, with text overlay \"The brain believes what you repeatedly experience\", minimal clean font, centered\n\nSlide 9:\nText:\nAct slightly like that version every day\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\nVisual:\nPerson making small confident decision\nImage Prompt:\nCinematic shot of a person making a deliberate small decision (walking forward, choosing path), symbolic growth, vertical 9:16, with text overlay \"Act slightly like that version every day\", bold modern sans-serif, centered\n\nSlide 10:\nText:\nClarity removes conflict and life starts aligning\nLayout:\nPosition center\nAlignment centered\nFont style elegant serif\nVisual:\nOpen path with light guiding forward\nImage Prompt:\nLong open path with light at the end, symbolizing alignment and direction, cinematic lighting, high contrast, vertical 9:16, with text overlay \"Clarity removes conflict and life starts aligning\", elegant serif font, centered",
+            "systemPrompt": "You are an Instagram carousel generator and AI creative director.\n\nYour job is to create an Instagram carousel with the SAME number of slides as the input, with a maximum of 10 slides, along with an engaging intro text and a high-performing caption.\n\nHARD RULES (MANDATORY)\nYou MUST detect the number of slides from the input\nYou MUST generate the SAME number of slides (no more, no less)\nMaximum allowed slides = 10\nIf input exceeds 10 → limit to first 10 slides\nEach slide = one image\nEach image MUST include the text embedded inside the image itself\nDo NOT skip slides\nDo NOT merge slides\nDo NOT change the meaning of the content\nFollow the structure: Slide 1 → Slide X\nIf output does not match required slide count → it is invalid\n\nIMAGE RULE (CRITICAL)\nEach slide MUST generate exactly ONE single image\nThe image MUST represent ONE clear scene only\nDo NOT create multiple scenes in one image\nDo NOT create split screens, collages, grids, or multiple frames\nDo NOT combine multiple moments or compositions into one image\nThe image must be clean, focused, and singular\nIf an image contains multiple scenes or compositions → output is invalid\n\nVISUAL RELEVANCE RULE (CRITICAL)\nThe image MUST directly represent the meaning of the text on the slide\nThe visual must clearly reflect the idea, emotion, or message of the text\nDo NOT use generic or unrelated aesthetic visuals\nAvoid random people, places, or scenes that do not match the message\nEach image must clearly communicate the same idea as the text\nIf the visual is not clearly connected to the text → output is invalid\n\nTEXT RULES\nKeep the original meaning EXACTLY the same\nCompress each slide into 6–10 words max\nMake it punchy, emotional, and memorable\nEach slide should feel like a save-worthy quote\n\nFOR EACH SLIDE OUTPUT:\n\nSlide X:\n\nText:\nLayout:\nPosition (center / top / bottom)\nAlignment (centered / left / right)\nFont style (bold modern sans-serif / elegant serif / minimal clean)\n\nVisual:\nClear description of what the image shows\n\nImage Prompt:\nMUST include:\n\"with text overlay\"\nThe EXACT text in quotes\nTypography description (font, size, weight)\nText placement (center/top/bottom)\nCinematic style (lighting, mood, contrast)\nVertical format 9:16\nConsistent visual style across all slides\nThe scene must be a single, unified composition\nNo collage, no split layout, no multiple panels\nThe visual MUST be tightly aligned with the text message\n\nSEPARATOR RULE (CRITICAL)\nYou MUST use \"\" as a separator for slides\nYou MUST place \"\" AFTER every slide except the last one\nYou MUST NOT use \"***\" anywhere else in the output\n\nCAPTION SEPARATOR RULE (CRITICAL)\nYou MUST use \"><\" to wrap the caption section\nYou MUST place \"><\" on a new line BEFORE the caption\nYou MUST place \"><\" on a new line AFTER the caption\nYou MUST NOT use \"><\" anywhere else in the output\n\nINTRO TEXT (CRITICAL)\nBefore the slides, you MUST generate a short introductory text.\n\nRULES:\nWrite 2–4 short paragraphs\nDo NOT mention slides or structure\nDo NOT include labels\nDo NOT include formatting markers\nMust feel natural and human-written\nMust summarize or expand the core idea\nMust create curiosity and emotional engagement\nShould make the reader want to swipe the carousel\nUse simple, clear, flowing language\nThis text must be ready to paste directly into Instagram\n\nCAPTION RULES (CRITICAL)\nWrite ONLY the caption text\nDo NOT include the word \"Caption\"\nDo NOT include any labels\nThe caption must be based on the SAME content as the carousel\nThe caption must NOT repeat slide text word-for-word\nThe caption must expand the idea naturally\nFirst line must be a strong hook\nThen 2–4 short paragraphs\nMust feel emotional, relatable, and insightful\nEnd with a CTA (question / save / share / reflect)\nInclude 5–10 relevant hashtags\n\nCAPTION LENGTH RULE (CRITICAL)\nThe caption MUST NOT exceed 2,000 characters total (including hashtags)\nCount every character: letters, spaces, punctuation, line breaks\nIf the caption exceeds 2,000 characters → shorten it\nHashtags count toward the character limit\n\nOUTPUT REQUIREMENTS (CRITICAL)\nOutput must be production-ready for direct Instagram publishing\nNo labels, no explanations, no extra text\n\nFINAL OUTPUT STRUCTURE (MANDATORY):\n\n[Intro text]\n\nSlide 1\n\nSlide 2\n\n...\nSlide X\n\n<\n[caption text only]\n<\n\nIf slide count is incorrect OR any \"***\" separator is misplaced OR caption delimiters \"><\" are missing → output is invalid"
+          }
+        ],
+        "lastSystemPrompt": "You are an Instagram carousel generator and AI creative director.\n\nYour job is to create an Instagram carousel with the SAME number of slides as the input, with a maximum of 10 slides, along with an engaging intro text and a high-performing caption.\n\nHARD RULES (MANDATORY)\nYou MUST detect the number of slides from the input\nYou MUST generate the SAME number of slides (no more, no less)\nMaximum allowed slides = 10\nIf input exceeds 10 → limit to first 10 slides\nEach slide = one image\nEach image MUST include the text embedded inside the image itself\nDo NOT skip slides\nDo NOT merge slides\nDo NOT change the meaning of the content\nFollow the structure: Slide 1 → Slide X\nIf output does not match required slide count → it is invalid\n\nIMAGE RULE (CRITICAL)\nEach slide MUST generate exactly ONE single image\nThe image MUST represent ONE clear scene only\nDo NOT create multiple scenes in one image\nDo NOT create split screens, collages, grids, or multiple frames\nDo NOT combine multiple moments or compositions into one image\nThe image must be clean, focused, and singular\nIf an image contains multiple scenes or compositions → output is invalid\n\nVISUAL RELEVANCE RULE (CRITICAL)\nThe image MUST directly represent the meaning of the text on the slide\nThe visual must clearly reflect the idea, emotion, or message of the text\nDo NOT use generic or unrelated aesthetic visuals\nAvoid random people, places, or scenes that do not match the message\nEach image must clearly communicate the same idea as the text\nIf the visual is not clearly connected to the text → output is invalid\n\nTEXT RULES\nKeep the original meaning EXACTLY the same\nCompress each slide into 6–10 words max\nMake it punchy, emotional, and memorable\nEach slide should feel like a save-worthy quote\n\nFOR EACH SLIDE OUTPUT:\n\nSlide X:\n\nText:\nLayout:\nPosition (center / top / bottom)\nAlignment (centered / left / right)\nFont style (bold modern sans-serif / elegant serif / minimal clean)\n\nVisual:\nClear description of what the image shows\n\nImage Prompt:\nMUST include:\n\"with text overlay\"\nThe EXACT text in quotes\nTypography description (font, size, weight)\nText placement (center/top/bottom)\nCinematic style (lighting, mood, contrast)\nVertical format 9:16\nConsistent visual style across all slides\nThe scene must be a single, unified composition\nNo collage, no split layout, no multiple panels\nThe visual MUST be tightly aligned with the text message\n\nSEPARATOR RULE (CRITICAL)\nYou MUST use \"\" as a separator for slides\nYou MUST place \"\" AFTER every slide except the last one\nYou MUST NOT use \"***\" anywhere else in the output\n\nCAPTION SEPARATOR RULE (CRITICAL)\nYou MUST use \"><\" to wrap the caption section\nYou MUST place \"><\" on a new line BEFORE the caption\nYou MUST place \"><\" on a new line AFTER the caption\nYou MUST NOT use \"><\" anywhere else in the output\n\nINTRO TEXT (CRITICAL)\nBefore the slides, you MUST generate a short introductory text.\n\nRULES:\nWrite 2–4 short paragraphs\nDo NOT mention slides or structure\nDo NOT include labels\nDo NOT include formatting markers\nMust feel natural and human-written\nMust summarize or expand the core idea\nMust create curiosity and emotional engagement\nShould make the reader want to swipe the carousel\nUse simple, clear, flowing language\nThis text must be ready to paste directly into Instagram\n\nCAPTION RULES (CRITICAL)\nWrite ONLY the caption text\nDo NOT include the word \"Caption\"\nDo NOT include any labels\nThe caption must be based on the SAME content as the carousel\nThe caption must NOT repeat slide text word-for-word\nThe caption must expand the idea naturally\nFirst line must be a strong hook\nThen 2–4 short paragraphs\nMust feel emotional, relatable, and insightful\nEnd with a CTA (question / save / share / reflect)\nInclude 5–10 relevant hashtags\n\nCAPTION LENGTH RULE (CRITICAL)\nThe caption MUST NOT exceed 2,000 characters total (including hashtags)\nCount every character: letters, spaces, punctuation, line breaks\nIf the caption exceeds 2,000 characters → shorten it\nHashtags count toward the character limit\n\nOUTPUT REQUIREMENTS (CRITICAL)\nOutput must be production-ready for direct Instagram publishing\nNo labels, no explanations, no extra text\n\nFINAL OUTPUT STRUCTURE (MANDATORY):\n\n[Intro text]\n\nSlide 1\n\nSlide 2\n\n...\nSlide X\n\n<\n[caption text only]\n<\n\nIf slide count is incorrect OR any \"***\" separator is misplaced OR caption delimiters \"><\" are missing → output is invalid",
+        "activeResultIndex": 0
+      },
+      "type": "llm-chat",
+      "width": 450,
+      "height": 389,
+      "dragging": false,
+      "measured": {
+        "width": 450,
+        "height": 389
+      },
+      "position": {
+        "x": -105.44738251816358,
+        "y": 890.3712995650177
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_9",
+      "data": {
+        "rows": [
+          [
+            ""
+          ]
+        ],
+        "label": "List",
+        "columns": [
+          {
+            "id": "default",
+            "name": "LLM Chat",
+            "type": "text",
+            "handleId": "col_default",
+            "splitDelimiter": "***",
+            "connectedSourceId": "llm-chat-1776231829248-keo2f5pog",
+            "connectedSourceHandle": "text"
+          }
+        ],
+        "showData": true,
+        "viewMode": "gallery",
+        "textMaxLines": 7,
+        "fieldMappings": {}
+      },
+      "type": "list",
+      "width": 1381,
+      "height": 615,
+      "dragging": false,
+      "measured": {
+        "width": 1381,
+        "height": 615
+      },
+      "position": {
+        "x": 1029.8878116097155,
+        "y": 559.9038453296647
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_11",
+      "data": {
+        "rows": [
+          [
+            ""
+          ]
+        ],
+        "label": "Table",
+        "columns": [
+          {
+            "id": "4b926e19-f61f-4ffc-9c65-11a083e4590b",
+            "name": "Generate Image",
+            "type": "image-url",
+            "handleId": "col_4b926e19-f61f-4ffc-9c65-11a083e4590b",
+            "connectedSourceId": "node_12",
+            "connectedSourceHandle": "image"
+          }
+        ],
+        "maxItems": 20,
+        "showData": true,
+        "galleryCols": 4,
+        "fieldMappings": {}
+      },
+      "type": "list",
+      "width": 1474,
+      "height": 1946,
+      "dragging": false,
+      "measured": {
+        "width": 1474,
+        "height": 1946
+      },
+      "position": {
+        "x": 3457.972506857695,
+        "y": -1110.2529725010936
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_12",
+      "data": {
+        "label": "Generate Image",
+        "model": "gemini-2.5-flash-image",
+        "style": "",
+        "prompt": "",
+        "provider": "nano-banana-pro",
+        "aspectRatio": "9:16",
+        "__listInputs": [
+          "Most people think they want something, but they haven't actually defined it. Without a clear target, your mind drifts through the fog of \"someday,\" never quite arriving anywhere. This is why desire often feels like a burden rather than a fuel.\n\nCarl Jung’s wisdom suggests that the bridge between wanting and having is clarity. When you stop hiding from your true intentions, the internal conflict vanishes. You start moving not because you have to, but because your identity has already arrived at the destination.\n\nIt’s about more than just thinking—it’s about feeling and acting from a place of certainty. When you align your inner world with your outer actions, the resistance that used to hold you back becomes the very wind in your sails.\n\nSlide 1:\n\nText:\nJung’s method: clarity turns desire into reality\n\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\n\nVisual:\nA lone figure standing in fog, light breaking through\n\nImage Prompt:\nCinematic scene of a person standing in thick fog with light rays breaking through, symbolizing clarity emerging from confusion, high contrast, deep shadows, minimalist composition, vertical 9:16, with text overlay \"Jung’s method: clarity turns desire into reality\", bold modern sans-serif typography, centered placement",
+          "Slide 2:\n\nText:\nYou don’t get it because you’re unclear\n\nLayout:\nPosition center\nAlignment centered\nFont style minimal clean\n\nVisual:\nBlurred city lights with one sharp focused point\n\nImage Prompt:\nOut-of-focus city at night with one sharply focused light, representing clarity vs confusion, cinematic lighting, high contrast, vertical 9:16, with text overlay \"You don’t get it because you’re unclear\", minimal clean font, centered",
+          "Slide 3:\n\nText:\nWhat you resist controls you from the shadows\n\nLayout:\nPosition center\nAlignment centered\nFont style elegant serif\n\nVisual:\nSilhouette casting a distorted shadow behind\n\nImage Prompt:\nDark silhouette with exaggerated shadow looming behind, symbolic of hidden control, moody lighting, deep contrast, vertical 9:16, with text overlay \"What you resist controls you from the shadows\", elegant serif font, centered",
+          "Slide 4:\n\nText:\nName what you truly want without filters\n\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\n\nVisual:\nPerson writing in a journal under warm light\n\nImage Prompt:\nClose-up of a person writing in a journal with warm focused light, intimate atmosphere, cinematic style, vertical 9:16, with text overlay \"Name what you truly want without filters\", bold modern sans-serif, centered",
+          "Slide 5:\n\nText:\nWrite it as who you already are\n\nLayout:\nPosition center\nAlignment centered\nFont style minimal clean\n\nVisual:\nMirror reflection of calm confident version\n\nImage Prompt:\nPerson looking into mirror seeing a calmer, more confident reflection, symbolic identity shift, soft lighting, vertical 9:16, with text overlay \"Write it as who you already are\", minimal clean font, centered",
+          "Slide 6:\n\nText:\nChange happens when identity begins to shift\n\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\n\nVisual:\nFigure stepping from deep shadow into bright light\n\nImage Prompt:\nCinematic shot of a single person stepping from a dark, shadowed area into a brilliant beam of light, symbolizing identity transition, high contrast, vertical 9:16, with text overlay \"Change happens when identity begins to shift\", bold modern sans-serif, centered",
+          "Slide 7:\n\nText:\nFeel the life daily through your senses\n\nLayout:\nPosition center\nAlignment centered\nFont style elegant serif\n\nVisual:\nClose-up of breathing, movement, calm presence\n\nImage Prompt:\nClose-up cinematic shot of a person breathing slowly, soft natural light, peaceful atmosphere, vertical 9:16, with text overlay \"Feel the life daily through your senses\", elegant serif font, centered",
+          "Slide 8:\n\nText:\nThe brain believes what you repeatedly experience\n\nLayout:\nPosition center\nAlignment centered\nFont style minimal clean\n\nVisual:\nAbstract neural patterns lighting up\n\nImage Prompt:\nAbstract neural network glowing with repeating patterns, symbolizing brain learning, high contrast, vertical 9:16, with text overlay \"The brain believes what you repeatedly experience\", minimal clean font, centered",
+          "Slide 9:\n\nText:\nAct slightly like that version every day\n\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\n\nVisual:\nPerson making small confident decision\n\nImage Prompt:\nCinematic shot of a person making a deliberate small decision such as walking forward into a new path, symbolic growth, vertical 9:16, with text overlay \"Act slightly like that version every day\", bold modern sans-serif, centered",
+          "Slide 10:\n\nText:\nClarity removes conflict and life starts aligning\n\nLayout:\nPosition center\nAlignment centered\nFont style elegant serif\n\nVisual:\nOpen path with light guiding forward\n\nImage Prompt:\nLong open path with light at the end, symbolizing alignment and direction, cinematic lighting, high contrast, vertical 9:16, with text overlay \"Clarity removes conflict and life starts aligning\", elegant serif font, centered\n\n><\nYou aren't stuck; you're just out of focus.\n\nWe often blame a lack of motivation or external obstacles for our lack of progress. But more often than not, the real culprit is a lack of clarity. If you can’t name exactly what you want, you can’t expect your brain to find the path to get there.\n\nCarl Jung understood that what remains in the shadows of our minds controls us. By bringing your desires into the light and claiming them as your current identity, you stop fighting yourself. You move from \"trying to be\" to simply \"being.\"\n\nThis shift doesn't happen in a single giant leap. It happens through the small, sensory experiences and tiny decisions you make every day. When your brain sees you acting like the person you want to become, it starts to believe the story you're telling.\n\nWhich area of your life needs more clarity right now? Let me know in the comments or save this for when you feel lost.\n\n#SelfMastery #MindsetShift #JungianPsychology #Clarity #PersonalGrowth #IdentityShift #Manifestation #InnerWork\n><"
+        ],
+        "errorMessage": "9/10 succeeded, 1 failed",
+        "__listResults": [
+          "https://cdn.nodaro.ai/images/87d3ab5d-2281-45cf-844a-bccf5be30611.png",
+          "https://cdn.nodaro.ai/images/fe3e7ca1-d6d7-4239-bd66-61be7764880f.png",
+          "https://cdn.nodaro.ai/images/310ac3c3-6861-450c-8144-9531827fb175.png",
+          "https://cdn.nodaro.ai/images/a1f3b478-e8c7-4a9b-81c0-89b443225209.png",
+          "https://cdn.nodaro.ai/images/80e2fc7d-8f61-483a-ac5e-a3c937834157.png",
+          "https://cdn.nodaro.ai/images/1591d58d-60bc-4260-87bb-0d0cdcacf5d9.png",
+          "https://cdn.nodaro.ai/images/142cbee3-2bb0-4f75-90a1-8380c904ae38.png",
+          "https://cdn.nodaro.ai/images/3c7a64ea-1baf-44dd-b106-34a90f6a0b87.png",
+          "",
+          "https://cdn.nodaro.ai/images/3e769c64-195b-4b27-ba7c-4689b771f79a.png"
+        ],
+        "fieldMappings": {},
+        "__currentRunId": "9e9c09d0-8e28-4b9e-aba2-62cb2c50c9ca",
+        "negativePrompt": "",
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/images/1591d58d-60bc-4260-87bb-0d0cdcacf5d9.png",
+            "jobId": "1591d58d-60bc-4260-87bb-0d0cdcacf5d9",
+            "width": 768,
+            "height": 1376,
+            "timestamp": "2026-04-15T20:04:04.027Z"
+          },
+          {
+            "url": "https://cdn.nodaro.ai/images/87d3ab5d-2281-45cf-844a-bccf5be30611.png",
+            "jobId": "iter-9e9c09d0-8e28-4b9e-aba2-62cb2c50c9ca-0",
+            "timestamp": "2026-04-15T20:04:01.434Z"
+          },
+          {
+            "url": "https://cdn.nodaro.ai/images/fe3e7ca1-d6d7-4239-bd66-61be7764880f.png",
+            "jobId": "iter-9e9c09d0-8e28-4b9e-aba2-62cb2c50c9ca-1",
+            "timestamp": "2026-04-15T20:04:01.434Z"
+          },
+          {
+            "url": "https://cdn.nodaro.ai/images/310ac3c3-6861-450c-8144-9531827fb175.png",
+            "jobId": "iter-9e9c09d0-8e28-4b9e-aba2-62cb2c50c9ca-2",
+            "timestamp": "2026-04-15T20:04:01.434Z"
+          },
+          {
+            "url": "https://cdn.nodaro.ai/images/a1f3b478-e8c7-4a9b-81c0-89b443225209.png",
+            "jobId": "iter-9e9c09d0-8e28-4b9e-aba2-62cb2c50c9ca-3",
+            "timestamp": "2026-04-15T20:04:01.434Z"
+          },
+          {
+            "url": "https://cdn.nodaro.ai/images/80e2fc7d-8f61-483a-ac5e-a3c937834157.png",
+            "jobId": "iter-9e9c09d0-8e28-4b9e-aba2-62cb2c50c9ca-4",
+            "timestamp": "2026-04-15T20:04:01.434Z"
+          },
+          {
+            "url": "https://cdn.nodaro.ai/images/1591d58d-60bc-4260-87bb-0d0cdcacf5d9.png",
+            "jobId": "iter-9e9c09d0-8e28-4b9e-aba2-62cb2c50c9ca-5",
+            "timestamp": "2026-04-15T20:04:01.434Z"
+          },
+          {
+            "url": "https://cdn.nodaro.ai/images/142cbee3-2bb0-4f75-90a1-8380c904ae38.png",
+            "jobId": "iter-9e9c09d0-8e28-4b9e-aba2-62cb2c50c9ca-6",
+            "timestamp": "2026-04-15T20:04:01.434Z"
+          },
+          {
+            "url": "https://cdn.nodaro.ai/images/3c7a64ea-1baf-44dd-b106-34a90f6a0b87.png",
+            "jobId": "iter-9e9c09d0-8e28-4b9e-aba2-62cb2c50c9ca-7",
+            "timestamp": "2026-04-15T20:04:01.434Z"
+          },
+          {
+            "url": "https://cdn.nodaro.ai/images/3e769c64-195b-4b27-ba7c-4689b771f79a.png",
+            "jobId": "iter-9e9c09d0-8e28-4b9e-aba2-62cb2c50c9ca-9",
+            "timestamp": "2026-04-15T20:04:01.434Z"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedImageUrl": "https://cdn.nodaro.ai/images/1591d58d-60bc-4260-87bb-0d0cdcacf5d9.png"
+      },
+      "type": "generate-image",
+      "width": 535.9725430934943,
+      "height": 960.2841397091773,
+      "dragging": false,
+      "measured": {
+        "width": 536,
+        "height": 960
+      },
+      "position": {
+        "x": 2615.849477633427,
+        "y": -638.4849807604471
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_16",
+      "data": {
+        "label": "Instagram Post",
+        "action": "post-carousel",
+        "caption": "",
+        "platform": "instagram",
+        "connectionId": "23d27eab-a87a-4970-b138-949d4043787b",
+        "fieldMappings": {},
+        "platformPostId": "18118140532724127",
+        "platformPostUrl": "https://www.instagram.com/p/DXKoaqRlxLW/",
+        "generatedResults": [
+          {
+            "url": "https://www.instagram.com/p/DXKoaqRlxLW/",
+            "jobId": "643859b6-cbea-4650-8ef4-14b68bdc5c54",
+            "timestamp": "2026-04-15T20:42:29.637Z"
+          },
+          {
+            "url": "https://www.instagram.com/p/DXKiABdl40-/",
+            "jobId": "edc3f629-2640-465c-9941-d1230dbd80a9",
+            "timestamp": "2026-04-15T19:46:24.160Z"
+          },
+          {
+            "url": "https://www.instagram.com/p/DXKh4bnF82C/",
+            "jobId": "f0769630-b88f-435a-a7fc-55c12758b95e",
+            "timestamp": "2026-04-15T19:45:22.127Z"
+          },
+          {
+            "url": "https://www.instagram.com/p/DXKhig2F87b/",
+            "jobId": "3ce1b4d6-ab1e-4da8-b08f-c8fd445c828c",
+            "timestamp": "2026-04-15T19:42:24.004Z"
+          },
+          {
+            "url": "https://www.instagram.com/p/DXKen83ipAz/",
+            "jobId": "00fc63d9-4152-4f27-a7d6-5bbc54beaf0e",
+            "timestamp": "2026-04-15T19:17:01.154Z"
+          },
+          {
+            "url": "https://www.instagram.com/p/DXKdz2ACg7Q/",
+            "jobId": "7528afe5-2884-4049-a3ed-1033aa08aaf6",
+            "timestamp": "2026-04-15T19:09:54.610Z"
+          },
+          {
+            "url": "https://www.instagram.com/p/DXKAoG-jbcf/",
+            "jobId": "e32a04da-37ed-4e7f-8191-50be9066cba3",
+            "timestamp": "2026-04-15T14:54:44.273Z"
+          }
+        ]
+      },
+      "type": "instagram-post",
+      "dragging": false,
+      "measured": {
+        "width": 200,
+        "height": 104
+      },
+      "position": {
+        "x": 7235.423598652271,
+        "y": 795.7972531895723
+      },
+      "selected": false
+    },
+    {
+      "id": "node_18",
+      "data": {
+        "label": "Social Media Format",
+        "method": "pad",
+        "specKey": "instagram:feed-square",
+        "padColor": "#000000",
+        "platform": "instagram",
+        "contentType": "feed-square",
+        "__listInputs": [
+          "https://cdn.nodaro.ai/images/1591d58d-60bc-4260-87bb-0d0cdcacf5d9.png",
+          "https://cdn.nodaro.ai/images/87d3ab5d-2281-45cf-844a-bccf5be30611.png",
+          "https://cdn.nodaro.ai/images/fe3e7ca1-d6d7-4239-bd66-61be7764880f.png",
+          "https://cdn.nodaro.ai/images/310ac3c3-6861-450c-8144-9531827fb175.png",
+          "https://cdn.nodaro.ai/images/a1f3b478-e8c7-4a9b-81c0-89b443225209.png",
+          "https://cdn.nodaro.ai/images/80e2fc7d-8f61-483a-ac5e-a3c937834157.png",
+          "https://cdn.nodaro.ai/images/1591d58d-60bc-4260-87bb-0d0cdcacf5d9.png",
+          "https://cdn.nodaro.ai/images/142cbee3-2bb0-4f75-90a1-8380c904ae38.png",
+          "https://cdn.nodaro.ai/images/3c7a64ea-1baf-44dd-b106-34a90f6a0b87.png",
+          "https://cdn.nodaro.ai/images/3e769c64-195b-4b27-ba7c-4689b771f79a.png"
+        ],
+        "__listResults": [
+          "https://cdn.nodaro.ai/images/d43574e5-d0e3-4198-8aa4-44bbe7cf09d8.png",
+          "https://cdn.nodaro.ai/images/2a87fc9c-0ce1-4ccf-b8b6-4e117e6a2a66.png",
+          "https://cdn.nodaro.ai/images/591b1243-3665-46b1-a059-0b0aa07944c5.png",
+          "https://cdn.nodaro.ai/images/9ba2cd96-5d68-4d40-98f5-2161d0d640dc.png",
+          "https://cdn.nodaro.ai/images/cf10a4d3-36f4-4461-95f3-c32ab58842f3.png",
+          "https://cdn.nodaro.ai/images/a95560b2-d24d-40dc-9482-5e02d9960a14.png",
+          "https://cdn.nodaro.ai/images/6e1e1708-cd1d-4aee-bcdd-5e4199477274.png",
+          "https://cdn.nodaro.ai/images/14e3703c-7544-487f-b678-312202b932f7.png",
+          "https://cdn.nodaro.ai/images/e4cc45c1-2ad5-405f-95a5-7c18cfc87d84.png",
+          "https://cdn.nodaro.ai/images/0140fe45-6abc-4e7f-ba03-a514e7fe16a4.png"
+        ],
+        "fieldMappings": {},
+        "formattedText": "",
+        "__currentRunId": "921a88bb-6497-43c1-8320-7f98e20c9a6b",
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/images/9ba2cd96-5d68-4d40-98f5-2161d0d640dc.png",
+            "jobId": "9ba2cd96-5d68-4d40-98f5-2161d0d640dc",
+            "timestamp": "2026-04-15T20:07:29.907Z"
+          },
+          {
+            "url": "https://cdn.nodaro.ai/images/e4cc45c1-2ad5-405f-95a5-7c18cfc87d84.png",
+            "jobId": "e4cc45c1-2ad5-405f-95a5-7c18cfc87d84",
+            "timestamp": "2026-04-15T20:07:29.881Z"
+          },
+          {
+            "url": "https://cdn.nodaro.ai/images/591b1243-3665-46b1-a059-0b0aa07944c5.png",
+            "jobId": "591b1243-3665-46b1-a059-0b0aa07944c5",
+            "timestamp": "2026-04-15T20:07:29.863Z"
+          },
+          {
+            "url": "https://cdn.nodaro.ai/images/d43574e5-d0e3-4198-8aa4-44bbe7cf09d8.png",
+            "jobId": "iter-921a88bb-6497-43c1-8320-7f98e20c9a6b-0",
+            "timestamp": "2026-04-15T20:07:29.569Z"
+          },
+          {
+            "url": "https://cdn.nodaro.ai/images/2a87fc9c-0ce1-4ccf-b8b6-4e117e6a2a66.png",
+            "jobId": "iter-921a88bb-6497-43c1-8320-7f98e20c9a6b-1",
+            "timestamp": "2026-04-15T20:07:29.569Z"
+          },
+          {
+            "url": "https://cdn.nodaro.ai/images/591b1243-3665-46b1-a059-0b0aa07944c5.png",
+            "jobId": "iter-921a88bb-6497-43c1-8320-7f98e20c9a6b-2",
+            "timestamp": "2026-04-15T20:07:29.569Z"
+          },
+          {
+            "url": "https://cdn.nodaro.ai/images/9ba2cd96-5d68-4d40-98f5-2161d0d640dc.png",
+            "jobId": "iter-921a88bb-6497-43c1-8320-7f98e20c9a6b-3",
+            "timestamp": "2026-04-15T20:07:29.569Z"
+          },
+          {
+            "url": "https://cdn.nodaro.ai/images/cf10a4d3-36f4-4461-95f3-c32ab58842f3.png",
+            "jobId": "iter-921a88bb-6497-43c1-8320-7f98e20c9a6b-4",
+            "timestamp": "2026-04-15T20:07:29.569Z"
+          },
+          {
+            "url": "https://cdn.nodaro.ai/images/a95560b2-d24d-40dc-9482-5e02d9960a14.png",
+            "jobId": "iter-921a88bb-6497-43c1-8320-7f98e20c9a6b-5",
+            "timestamp": "2026-04-15T20:07:29.569Z"
+          },
+          {
+            "url": "https://cdn.nodaro.ai/images/6e1e1708-cd1d-4aee-bcdd-5e4199477274.png",
+            "jobId": "iter-921a88bb-6497-43c1-8320-7f98e20c9a6b-6",
+            "timestamp": "2026-04-15T20:07:29.569Z"
+          },
+          {
+            "url": "https://cdn.nodaro.ai/images/14e3703c-7544-487f-b678-312202b932f7.png",
+            "jobId": "iter-921a88bb-6497-43c1-8320-7f98e20c9a6b-7",
+            "timestamp": "2026-04-15T20:07:29.569Z"
+          },
+          {
+            "url": "https://cdn.nodaro.ai/images/e4cc45c1-2ad5-405f-95a5-7c18cfc87d84.png",
+            "jobId": "iter-921a88bb-6497-43c1-8320-7f98e20c9a6b-8",
+            "timestamp": "2026-04-15T20:07:29.569Z"
+          },
+          {
+            "url": "https://cdn.nodaro.ai/images/0140fe45-6abc-4e7f-ba03-a514e7fe16a4.png",
+            "jobId": "iter-921a88bb-6497-43c1-8320-7f98e20c9a6b-9",
+            "timestamp": "2026-04-15T20:07:29.569Z"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedVideoUrl": "https://cdn.nodaro.ai/images/9ba2cd96-5d68-4d40-98f5-2161d0d640dc.png"
+      },
+      "type": "social-media-format",
+      "width": 220,
+      "height": 261,
+      "dragging": false,
+      "measured": {
+        "width": 220,
+        "height": 261
+      },
+      "position": {
+        "x": 6108.595707599242,
+        "y": 104.01316222998722
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_30",
+      "data": {
+        "rows": [
+          [
+            ""
+          ]
+        ],
+        "label": "Carousel Script",
+        "columns": [
+          {
+            "id": "default",
+            "name": "LLM Chat",
+            "type": "text",
+            "handleId": "col_default",
+            "splitDelimiter": "\"><\"",
+            "connectedSourceId": "llm-chat-1776231829248-keo2f5pog",
+            "connectedSourceHandle": "text"
+          }
+        ],
+        "showData": true,
+        "viewMode": "list",
+        "textFontSize": "large",
+        "textMaxLines": 20,
+        "fieldMappings": {}
+      },
+      "type": "list",
+      "width": 855,
+      "height": 526,
+      "dragging": false,
+      "measured": {
+        "width": 855,
+        "height": 526
+      },
+      "position": {
+        "x": 2520.3471808869895,
+        "y": 2474.3262875670443
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_32",
+      "data": {
+        "label": "LLM Chat-Hook Generator",
+        "maxTokens": 2048,
+        "userInput": "",
+        "temperature": 0.7,
+        "systemPrompt": "",
+        "fieldMappings": {},
+        "generatedText": "You aren’t lacking motivation; you’re just hiding from your true intentions.\n\nWe often mistake a lack of clarity for a lack of discipline. If you can’t name exactly what you want, your brain has no reason to bridge the gap between where you are and where you want to be.\n\nReal change happens when you stop \"trying\" to achieve a goal and start acting from a place of certainty. Once your identity aligns with your intention, the resistance that held you back becomes the wind in your sails.\n\nWhich part of your future self are you still afraid to name out loud?\n\n#SelfMastery #MindsetShift #JungianPsychology #Clarity #IdentityShift #PersonalGrowth #InnerWork",
+        "lastUserPrompt": "Most people think they want something, but they haven't actually defined it. Without a clear target, your mind drifts through the fog of \"someday,\" never quite arriving anywhere. This is why desire often feels like a burden rather than a fuel.\n\nCarl Jung’s wisdom suggests that the bridge between wanting and having is clarity. When you stop hiding from your true intentions, the internal conflict vanishes. You start moving not because you have to, but because your identity has already arrived at the destination.\n\nIt’s about more than just thinking—it’s about feeling and acting from a place of certainty. When you align your inner world with your outer actions, the resistance that used to hold you back becomes the very wind in your sails.\n\nSlide 1:\n\nText:\nJung’s method: clarity turns desire into reality\n\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\n\nVisual:\nA lone figure standing in fog, light breaking through\n\nImage Prompt:\nCinematic scene of a person standing in thick fog with light rays breaking through, symbolizing clarity emerging from confusion, high contrast, deep shadows, minimalist composition, vertical 9:16, with text overlay \"Jung’s method: clarity turns desire into reality\", bold modern sans-serif typography, centered placement\n\n***\n\nSlide 2:\n\nText:\nYou don’t get it because you’re unclear\n\nLayout:\nPosition center\nAlignment centered\nFont style minimal clean\n\nVisual:\nBlurred city lights with one sharp focused point\n\nImage Prompt:\nOut-of-focus city at night with one sharply focused light, representing clarity vs confusion, cinematic lighting, high contrast, vertical 9:16, with text overlay \"You don’t get it because you’re unclear\", minimal clean font, centered\n\n***\n\nSlide 3:\n\nText:\nWhat you resist controls you from the shadows\n\nLayout:\nPosition center\nAlignment centered\nFont style elegant serif\n\nVisual:\nSilhouette casting a distorted shadow behind\n\nImage Prompt:\nDark silhouette with exaggerated shadow looming behind, symbolic of hidden control, moody lighting, deep contrast, vertical 9:16, with text overlay \"What you resist controls you from the shadows\", elegant serif font, centered\n\n***\n\nSlide 4:\n\nText:\nName what you truly want without filters\n\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\n\nVisual:\nPerson writing in a journal under warm light\n\nImage Prompt:\nClose-up of a person writing in a journal with warm focused light, intimate atmosphere, cinematic style, vertical 9:16, with text overlay \"Name what you truly want without filters\", bold modern sans-serif, centered\n\n***\n\nSlide 5:\n\nText:\nWrite it as who you already are\n\nLayout:\nPosition center\nAlignment centered\nFont style minimal clean\n\nVisual:\nMirror reflection of calm confident version\n\nImage Prompt:\nPerson looking into mirror seeing a calmer, more confident reflection, symbolic identity shift, soft lighting, vertical 9:16, with text overlay \"Write it as who you already are\", minimal clean font, centered\n\n***\n\nSlide 6:\n\nText:\nChange happens when identity begins to shift\n\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\n\nVisual:\nFigure stepping from deep shadow into bright light\n\nImage Prompt:\nCinematic shot of a single person stepping from a dark, shadowed area into a brilliant beam of light, symbolizing identity transition, high contrast, vertical 9:16, with text overlay \"Change happens when identity begins to shift\", bold modern sans-serif, centered\n\n***\n\nSlide 7:\n\nText:\nFeel the life daily through your senses\n\nLayout:\nPosition center\nAlignment centered\nFont style elegant serif\n\nVisual:\nClose-up of breathing, movement, calm presence\n\nImage Prompt:\nClose-up cinematic shot of a person breathing slowly, soft natural light, peaceful atmosphere, vertical 9:16, with text overlay \"Feel the life daily through your senses\", elegant serif font, centered\n\n***\n\nSlide 8:\n\nText:\nThe brain believes what you repeatedly experience\n\nLayout:\nPosition center\nAlignment centered\nFont style minimal clean\n\nVisual:\nAbstract neural patterns lighting up\n\nImage Prompt:\nAbstract neural network glowing with repeating patterns, symbolizing brain learning, high contrast, vertical 9:16, with text overlay \"The brain believes what you repeatedly experience\", minimal clean font, centered\n\n***\n\nSlide 9:\n\nText:\nAct slightly like that version every day\n\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\n\nVisual:\nPerson making small confident decision\n\nImage Prompt:\nCinematic shot of a person making a deliberate small decision such as walking forward into a new path, symbolic growth, vertical 9:16, with text overlay \"Act slightly like that version every day\", bold modern sans-serif, centered\n\n***\n\nSlide 10:\n\nText:\nClarity removes conflict and life starts aligning\n\nLayout:\nPosition center\nAlignment centered\nFont style elegant serif\n\nVisual:\nOpen path with light guiding forward\n\nImage Prompt:\nLong open path with light at the end, symbolizing alignment and direction, cinematic lighting, high contrast, vertical 9:16, with text overlay \"Clarity removes conflict and life starts aligning\", elegant serif font, centered\n\n><\nYou aren't stuck; you're just out of focus.\n\nWe often blame a lack of motivation or external obstacles for our lack of progress. But more often than not, the real culprit is a lack of clarity. If you can’t name exactly what you want, you can’t expect your brain to find the path to get there.\n\nCarl Jung understood that what remains in the shadows of our minds controls us. By bringing your desires into the light and claiming them as your current identity, you stop fighting yourself. You move from \"trying to be\" to simply \"being.\"\n\nThis shift doesn't happen in a single giant leap. It happens through the small, sensory experiences and tiny decisions you make every day. When your brain sees you acting like the person you want to become, it starts to believe the story you're telling.\n\nWhich area of your life needs more clarity right now? Let me know in the comments or save this for when you feel lost.\n\n#SelfMastery #MindsetShift #JungianPsychology #Clarity #PersonalGrowth #IdentityShift #Manifestation #InnerWork\n><",
+        "generatedResults": [
+          {
+            "text": "You aren’t lacking motivation; you’re just hiding from your true intentions.\n\nWe often mistake a lack of clarity for a lack of discipline. If you can’t name exactly what you want, your brain has no reason to bridge the gap between where you are and where you want to be.\n\nReal change happens when you stop \"trying\" to achieve a goal and start acting from a place of certainty. Once your identity aligns with your intention, the resistance that held you back becomes the wind in your sails.\n\nWhich part of your future self are you still afraid to name out loud?\n\n#SelfMastery #MindsetShift #JungianPsychology #Clarity #IdentityShift #PersonalGrowth #InnerWork",
+            "jobId": "c09de334-7a12-43ea-aa76-d94c1389912c",
+            "runId": "manual",
+            "listValue": "Most people think they want something, but they haven't actually defined it. Without a clear target, your mind drifts through the fog of \"someday,\" never quite arriving anywhere. This is why desire often feels like a burden rather than a fuel.\n\nCarl Jung’s wisdom suggests that the bridge between wanting and having is clarity. When you stop hiding from your true intentions, the internal conflict vanishes. You start moving not because you have to, but because your identity has already arrived at the destination.\n\nIt’s about more than just thinking—it’s about feeling and acting from a place of certainty. When you align your inner world with your outer actions, the resistance that used to hold you back becomes the very wind in your sails.\n\nSlide 1:\n\nText:\nJung’s method: clarity turns desire into reality\n\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\n\nVisual:\nA lone figure standing in fog, light breaking through\n\nImage Prompt:\nCinematic scene of a person standing in thick fog with light rays breaking through, symbolizing clarity emerging from confusion, high contrast, deep shadows, minimalist composition, vertical 9:16, with text overlay \"Jung’s method: clarity turns desire into reality\", bold modern sans-serif typography, centered placement\n\n***\n\nSlide 2:\n\nText:\nYou don’t get it because you’re unclear\n\nLayout:\nPosition center\nAlignment centered\nFont style minimal clean\n\nVisual:\nBlurred city lights with one sharp focused point\n\nImage Prompt:\nOut-of-focus city at night with one sharply focused light, representing clarity vs confusion, cinematic lighting, high contrast, vertical 9:16, with text overlay \"You don’t get it because you’re unclear\", minimal clean font, centered\n\n***\n\nSlide 3:\n\nText:\nWhat you resist controls you from the shadows\n\nLayout:\nPosition center\nAlignment centered\nFont style elegant serif\n\nVisual:\nSilhouette casting a distorted shadow behind\n\nImage Prompt:\nDark silhouette with exaggerated shadow looming behind, symbolic of hidden control, moody lighting, deep contrast, vertical 9:16, with text overlay \"What you resist controls you from the shadows\", elegant serif font, centered\n\n***\n\nSlide 4:\n\nText:\nName what you truly want without filters\n\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\n\nVisual:\nPerson writing in a journal under warm light\n\nImage Prompt:\nClose-up of a person writing in a journal with warm focused light, intimate atmosphere, cinematic style, vertical 9:16, with text overlay \"Name what you truly want without filters\", bold modern sans-serif, centered\n\n***\n\nSlide 5:\n\nText:\nWrite it as who you already are\n\nLayout:\nPosition center\nAlignment centered\nFont style minimal clean\n\nVisual:\nMirror reflection of calm confident version\n\nImage Prompt:\nPerson looking into mirror seeing a calmer, more confident reflection, symbolic identity shift, soft lighting, vertical 9:16, with text overlay \"Write it as who you already are\", minimal clean font, centered\n\n***\n\nSlide 6:\n\nText:\nChange happens when identity begins to shift\n\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\n\nVisual:\nFigure stepping from deep shadow into bright light\n\nImage Prompt:\nCinematic shot of a single person stepping from a dark, shadowed area into a brilliant beam of light, symbolizing identity transition, high contrast, vertical 9:16, with text overlay \"Change happens when identity begins to shift\", bold modern sans-serif, centered\n\n***\n\nSlide 7:\n\nText:\nFeel the life daily through your senses\n\nLayout:\nPosition center\nAlignment centered\nFont style elegant serif\n\nVisual:\nClose-up of breathing, movement, calm presence\n\nImage Prompt:\nClose-up cinematic shot of a person breathing slowly, soft natural light, peaceful atmosphere, vertical 9:16, with text overlay \"Feel the life daily through your senses\", elegant serif font, centered\n\n***\n\nSlide 8:\n\nText:\nThe brain believes what you repeatedly experience\n\nLayout:\nPosition center\nAlignment centered\nFont style minimal clean\n\nVisual:\nAbstract neural patterns lighting up\n\nImage Prompt:\nAbstract neural network glowing with repeating patterns, symbolizing brain learning, high contrast, vertical 9:16, with text overlay \"The brain believes what you repeatedly experience\", minimal clean font, centered\n\n***\n\nSlide 9:\n\nText:\nAct slightly like that version every day\n\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\n\nVisual:\nPerson making small confident decision\n\nImage Prompt:\nCinematic shot of a person making a deliberate small decision such as walking forward into a new path, symbolic growth, vertical 9:16, with text overlay \"Act slightly like that version every day\", bold modern sans-serif, centered\n\n***\n\nSlide 10:\n\nText:\nClarity removes conflict and life starts aligning\n\nLayout:\nPosition center\nAlignment centered\nFont style elegant serif\n\nVisual:\nOpen path with light guiding forward\n\nImage Prompt:\nLong open path with light at the end, symbolizing alignment and direction, cinematic lighting, high contrast, vertical 9:16, with text overlay \"Clarity removes conflict and life starts aligning\", elegant serif font, centered\n\n><\nYou aren't stuck; you're just out of focus.\n\nWe often blame a lack of motivation or external obstacles for our lack of progress. But more often than not, the real culprit is a lack of clarity. If you can’t name exactly what you want, you can’t expect your brain to find the path to get there.\n\nCarl Jung understood that what remains in the shadows of our minds controls us. By bringing your desires into the light and claiming them as your current identity, you stop fighting yourself. You move from \"trying to be\" to simply \"being.\"\n\nThis shift doesn't happen in a single giant leap. It happens through the small, sensory experiences and tiny decisions you make every day. When your brain sees you acting like the person you want to become, it starts to believe the story you're telling.\n\nWhich area of your life needs more clarity right now? Let me know in the comments or save this for when you feel lost.\n\n#SelfMastery #MindsetShift #JungianPsychology #Clarity #PersonalGrowth #IdentityShift #Manifestation #InnerWork\n><",
+            "timestamp": "2026-04-15T20:41:29.287Z",
+            "userPrompt": "Most people think they want something, but they haven't actually defined it. Without a clear target, your mind drifts through the fog of \"someday,\" never quite arriving anywhere. This is why desire often feels like a burden rather than a fuel.\n\nCarl Jung’s wisdom suggests that the bridge between wanting and having is clarity. When you stop hiding from your true intentions, the internal conflict vanishes. You start moving not because you have to, but because your identity has already arrived at the destination.\n\nIt’s about more than just thinking—it’s about feeling and acting from a place of certainty. When you align your inner world with your outer actions, the resistance that used to hold you back becomes the very wind in your sails.\n\nSlide 1:\n\nText:\nJung’s method: clarity turns desire into reality\n\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\n\nVisual:\nA lone figure standing in fog, light breaking through\n\nImage Prompt:\nCinematic scene of a person standing in thick fog with light rays breaking through, symbolizing clarity emerging from confusion, high contrast, deep shadows, minimalist composition, vertical 9:16, with text overlay \"Jung’s method: clarity turns desire into reality\", bold modern sans-serif typography, centered placement\n\n***\n\nSlide 2:\n\nText:\nYou don’t get it because you’re unclear\n\nLayout:\nPosition center\nAlignment centered\nFont style minimal clean\n\nVisual:\nBlurred city lights with one sharp focused point\n\nImage Prompt:\nOut-of-focus city at night with one sharply focused light, representing clarity vs confusion, cinematic lighting, high contrast, vertical 9:16, with text overlay \"You don’t get it because you’re unclear\", minimal clean font, centered\n\n***\n\nSlide 3:\n\nText:\nWhat you resist controls you from the shadows\n\nLayout:\nPosition center\nAlignment centered\nFont style elegant serif\n\nVisual:\nSilhouette casting a distorted shadow behind\n\nImage Prompt:\nDark silhouette with exaggerated shadow looming behind, symbolic of hidden control, moody lighting, deep contrast, vertical 9:16, with text overlay \"What you resist controls you from the shadows\", elegant serif font, centered\n\n***\n\nSlide 4:\n\nText:\nName what you truly want without filters\n\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\n\nVisual:\nPerson writing in a journal under warm light\n\nImage Prompt:\nClose-up of a person writing in a journal with warm focused light, intimate atmosphere, cinematic style, vertical 9:16, with text overlay \"Name what you truly want without filters\", bold modern sans-serif, centered\n\n***\n\nSlide 5:\n\nText:\nWrite it as who you already are\n\nLayout:\nPosition center\nAlignment centered\nFont style minimal clean\n\nVisual:\nMirror reflection of calm confident version\n\nImage Prompt:\nPerson looking into mirror seeing a calmer, more confident reflection, symbolic identity shift, soft lighting, vertical 9:16, with text overlay \"Write it as who you already are\", minimal clean font, centered\n\n***\n\nSlide 6:\n\nText:\nChange happens when identity begins to shift\n\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\n\nVisual:\nFigure stepping from deep shadow into bright light\n\nImage Prompt:\nCinematic shot of a single person stepping from a dark, shadowed area into a brilliant beam of light, symbolizing identity transition, high contrast, vertical 9:16, with text overlay \"Change happens when identity begins to shift\", bold modern sans-serif, centered\n\n***\n\nSlide 7:\n\nText:\nFeel the life daily through your senses\n\nLayout:\nPosition center\nAlignment centered\nFont style elegant serif\n\nVisual:\nClose-up of breathing, movement, calm presence\n\nImage Prompt:\nClose-up cinematic shot of a person breathing slowly, soft natural light, peaceful atmosphere, vertical 9:16, with text overlay \"Feel the life daily through your senses\", elegant serif font, centered\n\n***\n\nSlide 8:\n\nText:\nThe brain believes what you repeatedly experience\n\nLayout:\nPosition center\nAlignment centered\nFont style minimal clean\n\nVisual:\nAbstract neural patterns lighting up\n\nImage Prompt:\nAbstract neural network glowing with repeating patterns, symbolizing brain learning, high contrast, vertical 9:16, with text overlay \"The brain believes what you repeatedly experience\", minimal clean font, centered\n\n***\n\nSlide 9:\n\nText:\nAct slightly like that version every day\n\nLayout:\nPosition center\nAlignment centered\nFont style bold modern sans-serif\n\nVisual:\nPerson making small confident decision\n\nImage Prompt:\nCinematic shot of a person making a deliberate small decision such as walking forward into a new path, symbolic growth, vertical 9:16, with text overlay \"Act slightly like that version every day\", bold modern sans-serif, centered\n\n***\n\nSlide 10:\n\nText:\nClarity removes conflict and life starts aligning\n\nLayout:\nPosition center\nAlignment centered\nFont style elegant serif\n\nVisual:\nOpen path with light guiding forward\n\nImage Prompt:\nLong open path with light at the end, symbolizing alignment and direction, cinematic lighting, high contrast, vertical 9:16, with text overlay \"Clarity removes conflict and life starts aligning\", elegant serif font, centered\n\n><\nYou aren't stuck; you're just out of focus.\n\nWe often blame a lack of motivation or external obstacles for our lack of progress. But more often than not, the real culprit is a lack of clarity. If you can’t name exactly what you want, you can’t expect your brain to find the path to get there.\n\nCarl Jung understood that what remains in the shadows of our minds controls us. By bringing your desires into the light and claiming them as your current identity, you stop fighting yourself. You move from \"trying to be\" to simply \"being.\"\n\nThis shift doesn't happen in a single giant leap. It happens through the small, sensory experiences and tiny decisions you make every day. When your brain sees you acting like the person you want to become, it starts to believe the story you're telling.\n\nWhich area of your life needs more clarity right now? Let me know in the comments or save this for when you feel lost.\n\n#SelfMastery #MindsetShift #JungianPsychology #Clarity #PersonalGrowth #IdentityShift #Manifestation #InnerWork\n><",
+            "systemPrompt": "You are an expert Instagram caption writer specializing in high-performing hooks for carousel posts.\nYou are NOT an analyst. You are NOT a coach. You do NOT give feedback.\nYou have ONE job: write the Instagram caption. Nothing else.\nDo not analyze the content. Do not suggest improvements. Do not add headers or bullet points.\nOutput ONLY the caption text. If you write anything else, you have failed.\n\nYou receive a full carousel script and your ONLY job is to write a single caption for the Instagram post.\n\nHOOK RULES (CRITICAL):\nWrite ONE opening line that uses one of these patterns:\n- Self-identification: makes the reader feel \"this is about me\" instantly\n- Uncomfortable truth: something people think but never say out loud\n- Open loop: partial information that creates an urge to swipe\n- Perspective flip: takes something familiar and turns it upside down\n\nFORBIDDEN hooks:\n- \"X things that...\"\n- \"You won't believe...\"\n- \"Most people don't know...\"\n- Any listicle-style opener\n- Generic motivational openers\n\nCAPTION STRUCTURE:\nLine 1: Hook (1 sentence, max 15 words, written as if speaking to ONE person)\n[blank line]\n2-3 short paragraphs expanding the idea naturally\n[blank line]\nOne CTA question that feels personal, not generic\n[blank line]\n5-8 relevant hashtags\n\nHARD LIMITS:\n- Total caption MUST be under 1,800 characters\n- No labels, no explanations, no \"Caption:\" prefix\n- Output ONLY the caption text, nothing else\n- Write in the same language as the input content"
+          }
+        ],
+        "lastSystemPrompt": "You are an expert Instagram caption writer specializing in high-performing hooks for carousel posts.\nYou are NOT an analyst. You are NOT a coach. You do NOT give feedback.\nYou have ONE job: write the Instagram caption. Nothing else.\nDo not analyze the content. Do not suggest improvements. Do not add headers or bullet points.\nOutput ONLY the caption text. If you write anything else, you have failed.\n\nYou receive a full carousel script and your ONLY job is to write a single caption for the Instagram post.\n\nHOOK RULES (CRITICAL):\nWrite ONE opening line that uses one of these patterns:\n- Self-identification: makes the reader feel \"this is about me\" instantly\n- Uncomfortable truth: something people think but never say out loud\n- Open loop: partial information that creates an urge to swipe\n- Perspective flip: takes something familiar and turns it upside down\n\nFORBIDDEN hooks:\n- \"X things that...\"\n- \"You won't believe...\"\n- \"Most people don't know...\"\n- Any listicle-style opener\n- Generic motivational openers\n\nCAPTION STRUCTURE:\nLine 1: Hook (1 sentence, max 15 words, written as if speaking to ONE person)\n[blank line]\n2-3 short paragraphs expanding the idea naturally\n[blank line]\nOne CTA question that feels personal, not generic\n[blank line]\n5-8 relevant hashtags\n\nHARD LIMITS:\n- Total caption MUST be under 1,800 characters\n- No labels, no explanations, no \"Caption:\" prefix\n- Output ONLY the caption text, nothing else\n- Write in the same language as the input content",
+        "activeResultIndex": 0
+      },
+      "type": "llm-chat",
+      "width": 312,
+      "height": 322,
+      "dragging": false,
+      "measured": {
+        "width": 312,
+        "height": 322
+      },
+      "position": {
+        "x": 4208.487984439982,
+        "y": 1963.1264005755174
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_33",
+      "data": {
+        "text": "You are an expert Instagram caption writer specializing in high-performing hooks for carousel posts.\nYou are NOT an analyst. You are NOT a coach. You do NOT give feedback.\nYou have ONE job: write the Instagram caption. Nothing else.\nDo not analyze the content. Do not suggest improvements. Do not add headers or bullet points.\nOutput ONLY the caption text. If you write anything else, you have failed.\n\nYou receive a full carousel script and your ONLY job is to write a single caption for the Instagram post.\n\nHOOK RULES (CRITICAL):\nWrite ONE opening line that uses one of these patterns:\n- Self-identification: makes the reader feel \"this is about me\" instantly\n- Uncomfortable truth: something people think but never say out loud\n- Open loop: partial information that creates an urge to swipe\n- Perspective flip: takes something familiar and turns it upside down\n\nFORBIDDEN hooks:\n- \"X things that...\"\n- \"You won't believe...\"\n- \"Most people don't know...\"\n- Any listicle-style opener\n- Generic motivational openers\n\nCAPTION STRUCTURE:\nLine 1: Hook (1 sentence, max 15 words, written as if speaking to ONE person)\n[blank line]\n2-3 short paragraphs expanding the idea naturally\n[blank line]\nOne CTA question that feels personal, not generic\n[blank line]\n5-8 relevant hashtags\n\nHARD LIMITS:\n- Total caption MUST be under 1,800 characters\n- No labels, no explanations, no \"Caption:\" prefix\n- Output ONLY the caption text, nothing else\n- Write in the same language as the input content",
+        "label": "Caption Writer",
+        "width": 822,
+        "height": 792,
+        "variables": {}
+      },
+      "type": "text-prompt",
+      "width": 822,
+      "height": 792,
+      "dragging": false,
+      "measured": {
+        "width": 822,
+        "height": 792
+      },
+      "position": {
+        "x": 2547.068866539369,
+        "y": 1291.9132042458423
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_34",
+      "data": {
+        "bold": true,
+        "text": "Generates a full Instagram carousel:\n• Creates structured slides (text + visuals)\n• Splits slides automatically\n• Generates matching images\n• Outputs ready-to-publish content\n\nIdea → Slides → Images → Instagram Post",
+        "color": "#1e3a5f",
+        "label": "1- 🎯 What this flow does",
+        "width": 473,
+        "height": 245,
+        "italic": false,
+        "fontSize": "lg",
+        "alignment": "left",
+        "textColor": "#ffffff"
+      },
+      "type": "sticky-note",
+      "width": 473,
+      "height": 245,
+      "zIndex": -1,
+      "dragging": false,
+      "measured": {
+        "width": 473,
+        "height": 245
+      },
+      "position": {
+        "x": -1876.0320288622936,
+        "y": -2061.2095104745813
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_35",
+      "data": {
+        "bold": true,
+        "text": "Defines strict rules for carousel generation:\n• Number of slides must match input\n• Each slide = 1 image\n• Text is embedded in the image\n• Output must be production-ready",
+        "color": "#1a2d2d",
+        "label": "2- 🧠 Brain of the flow",
+        "width": 448,
+        "height": 195,
+        "italic": false,
+        "fontSize": "lg",
+        "alignment": "left",
+        "textColor": "#ffffff"
+      },
+      "type": "sticky-note",
+      "width": 448,
+      "height": 195,
+      "zIndex": -1,
+      "dragging": false,
+      "measured": {
+        "width": 448,
+        "height": 195
+      },
+      "position": {
+        "x": -1877.2215738395041,
+        "y": -1710.0003263838464
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_36",
+      "data": {
+        "bold": false,
+        "text": "Takes the input idea and:\n• Converts it into slides\n• Writes image prompts\n• Generates intro + caption",
+        "color": "#2d1a2d",
+        "label": "3. ⚙️ Content Generation",
+        "width": 332,
+        "height": 161,
+        "italic": false,
+        "fontSize": "lg",
+        "alignment": "left",
+        "textColor": "#ffffff"
+      },
+      "type": "sticky-note",
+      "width": 332,
+      "height": 161,
+      "zIndex": -1,
+      "dragging": false,
+      "measured": {
+        "width": 332,
+        "height": 161
+      },
+      "position": {
+        "x": -107.26165811294476,
+        "y": 628.9207037675664
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_37",
+      "data": {
+        "bold": true,
+        "text": "Splits LLM output into individual slides\n(using \"***\" separator)\n\nEach item = 1 slide",
+        "color": "#2d1a1a",
+        "label": "4.🔀 Slide Splitter",
+        "width": 428,
+        "height": 157,
+        "italic": false,
+        "fontSize": "lg",
+        "alignment": "left",
+        "textColor": "#ffffff"
+      },
+      "type": "sticky-note",
+      "width": 428,
+      "height": 157,
+      "zIndex": -1,
+      "dragging": false,
+      "measured": {
+        "width": 428,
+        "height": 157
+      },
+      "position": {
+        "x": 1090.2200856574577,
+        "y": 59.71718267288297
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_38",
+      "data": {
+        "bold": false,
+        "text": "Loops over each slide\nGenerates 1 image per slide\nMaintains consistent style",
+        "color": "#1a2d2d",
+        "label": "5. 🎨 Image Engine",
+        "width": 330,
+        "height": 121,
+        "italic": false,
+        "fontSize": "lg",
+        "alignment": "left",
+        "textColor": "#ffffff"
+      },
+      "type": "sticky-note",
+      "width": 330,
+      "height": 121,
+      "zIndex": -1,
+      "dragging": false,
+      "measured": {
+        "width": 330,
+        "height": 121
+      },
+      "position": {
+        "x": 2321.518668408746,
+        "y": -1063.2574374351714
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_39",
+      "data": {
+        "bold": true,
+        "text": "• 10 images (carousel)\n• Intro text\n• Caption with CTA\nReady for Instagram",
+        "color": "#1e3a5f",
+        "label": "6. 📦 Final Output",
+        "width": 256,
+        "height": 171,
+        "italic": false,
+        "fontSize": "lg",
+        "alignment": "left",
+        "textColor": "#ffffff"
+      },
+      "type": "sticky-note",
+      "width": 256,
+      "height": 171,
+      "zIndex": -1,
+      "dragging": false,
+      "measured": {
+        "width": 256,
+        "height": 171
+      },
+      "position": {
+        "x": 6090.566673233488,
+        "y": -233.41455309400664
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_40",
+      "data": {
+        "bold": false,
+        "text": "• No multi-scene images\n• No missing slides\n• Max 10 slides\n• Visual must match text exactly",
+        "color": "#2d1a2d",
+        "label": "7. ⚠️ Important constraints",
+        "width": 362,
+        "height": 154,
+        "italic": false,
+        "fontSize": "lg",
+        "alignment": "left",
+        "textColor": "#ffffff"
+      },
+      "type": "sticky-note",
+      "width": 362,
+      "height": 154,
+      "zIndex": -1,
+      "dragging": false,
+      "measured": {
+        "width": 362,
+        "height": 154
+      },
+      "position": {
+        "x": 7166.437496972762,
+        "y": 362.7954353654448
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_41",
+      "data": {
+        "bold": false,
+        "text": "It takes your input and automatically:\n• Breaks it into structured slides\n• Generates short, punchy text for each slide\n• Creates a matching visual concept for every slide\n• Produces a consistent set of images (one per slide)\n• Writes an intro and a high-performing caption\n\nThe result:\nA ready-to-publish carousel — no editing needed.",
+        "color": "#1a2d2d",
+        "label": "This flow turns a simple idea into a complete Instagram carousel.",
+        "width": 500,
+        "height": 299,
+        "italic": false,
+        "fontSize": "lg",
+        "alignment": "left",
+        "textColor": "#ffffff"
+      },
+      "type": "sticky-note",
+      "width": 500,
+      "height": 299,
+      "zIndex": -1,
+      "dragging": false,
+      "measured": {
+        "width": 500,
+        "height": 299
+      },
+      "position": {
+        "x": -1874.3561495245397,
+        "y": -2550.8914048493016
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_1776231842204",
+      "type": "default",
+      "source": "text-prompt-1776231697600-5sss82ftk",
+      "target": "llm-chat-1776231829248-keo2f5pog",
+      "sourceHandle": "prompt",
+      "targetHandle": "system-prompt"
+    },
+    {
+      "id": "edge_1776231845420",
+      "type": "default",
+      "source": "text-prompt-1776231712249-2gt87vecy",
+      "target": "llm-chat-1776231829248-keo2f5pog",
+      "sourceHandle": "prompt",
+      "targetHandle": "prompt"
+    },
+    {
+      "id": "edge_1776241326141",
+      "data": {
+        "itemIndex": "1",
+        "outputMode": "all"
+      },
+      "type": "default",
+      "source": "llm-chat-1776231829248-keo2f5pog",
+      "target": "node_9",
+      "selected": false,
+      "sourceHandle": "text",
+      "targetHandle": "col_default_in"
+    },
+    {
+      "id": "edge_1776258307751",
+      "source": "node_9",
+      "target": "node_12",
+      "sourceHandle": "col_default",
+      "targetHandle": "prompt"
+    },
+    {
+      "id": "edge_1776258313953",
+      "type": "default",
+      "source": "node_12",
+      "target": "node_11",
+      "sourceHandle": "image",
+      "targetHandle": "col_4b926e19-f61f-4ffc-9c65-11a083e4590b_in"
+    },
+    {
+      "id": "edge_1776265318783",
+      "data": {
+        "rangeTo": "LAST",
+        "rangeFrom": "1"
+      },
+      "type": "default",
+      "source": "node_11",
+      "target": "node_18",
+      "selected": false,
+      "sourceHandle": "col_4b926e19-f61f-4ffc-9c65-11a083e4590b",
+      "targetHandle": "media"
+    },
+    {
+      "id": "edge_1776270999670",
+      "data": {
+        "outputMode": "all"
+      },
+      "type": "default",
+      "source": "node_18",
+      "target": "node_16",
+      "selected": false,
+      "sourceHandle": "media",
+      "targetHandle": "in"
+    },
+    {
+      "id": "edge_1776278943694",
+      "type": "default",
+      "source": "llm-chat-1776231829248-keo2f5pog",
+      "target": "node_30",
+      "sourceHandle": "text",
+      "targetHandle": "col_default_in"
+    },
+    {
+      "id": "edge_1776285074137",
+      "data": {
+        "itemIndex": "1",
+        "outputMode": "item"
+      },
+      "type": "default",
+      "source": "node_30",
+      "target": "node_32",
+      "selected": false,
+      "sourceHandle": "col_default",
+      "targetHandle": "prompt"
+    },
+    {
+      "id": "edge_1776285673835",
+      "type": "default",
+      "source": "node_33",
+      "target": "node_32",
+      "sourceHandle": "prompt",
+      "targetHandle": "system-prompt"
+    },
+    {
+      "id": "edge_1776285707358",
+      "type": "default",
+      "source": "node_32",
+      "target": "node_16",
+      "sourceHandle": "text",
+      "targetHandle": "in"
+    }
+  ],
+  "settings": {
+    "viewport": {
+      "x": 1308.6520184169824,
+      "y": 1417.5045829289513,
+      "zoom": 0.5018557382385025
+    },
+    "flowPromptTemplates": {},
+    "characterDefinitions": [],
+    "presentationSettings": {
+      "runTarget": "workflow"
+    }
+  }
+}

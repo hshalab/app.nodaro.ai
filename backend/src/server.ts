@@ -5,6 +5,7 @@ import { startCleanupCron } from "./ee/billing/cleanup-cron.js"
 import { startReconcileCron } from "./lib/reconcile/start.js"
 import { startAppReportSweepCron } from "./lib/app-report-sweep.js"
 import { startScheduleCron, stopScheduleCron } from "./lib/schedule-cron.js"
+import { seedTutorialTemplates } from "./lib/tutorial-seed/index.js"
 import { startScheduledPostsCron, stopScheduledPostsCron } from "./lib/scheduled-posts-cron.js"
 import { startRecastDriverCron, stopRecastDriverCron } from "./lib/recast-driver-cron.js"
 import { createSocialPublishWorker } from "./workers/social-publish-worker.js"
@@ -67,6 +68,12 @@ async function main() {
   // Classify recent failed jobs into app_reports (model rejections) — a
   // sweep, because job failure has no single write choke point.
   startAppReportSweepCron()
+
+  // Built-in guided tutorials. Self-host only — Cloud already has these rows,
+  // and staging/production share one Supabase project, so this must never run
+  // there. Fire-and-forget: tutorials are not worth delaying boot for, and the
+  // seeder swallows its own failures.
+  void seedTutorialTemplates()
 
   // Start schedule cron for workflow triggers
   startScheduleCron()

@@ -1,0 +1,51 @@
+/* Compact audio control. Uses the tutorial's cyan wire colour, which is what
+ * marks audio everywhere else on these pages. */
+
+.ta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ta-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 30px;
+  height: 30px;
+  border-radius: 999px;
+  cursor: pointer;
+  color: var(--nd-wire);
+  background: rgba(46, 230, 214, 0.14);
+  border: 1px solid rgba(46, 230, 214, 0.35);
+  transition: background 160ms ease;
+}
+.ta-button:hover {
+  background: rgba(46, 230, 214, 0.24);
+}
+.ta-icon {
+  width: 13px;
+  height: 13px;
+}
+.ta-track {
+  flex: 1 1 auto;
+  min-width: 40px;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+.ta-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--nd-wire);
+  transform-origin: left center;
+  /* Scale rather than width so the bar advances without laying out each tick. */
+  transform: scaleX(0);
+}
+.ta-time {
+  font-family: var(--nd-mono);
+  font-size: 11px;
+  color: var(--nd-faint);
+  font-variant-numeric: tabular-nums;
+  flex: 0 0 auto;
+}

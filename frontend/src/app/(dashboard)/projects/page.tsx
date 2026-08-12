@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback, lazy, Suspense } from "react"
-import { useNavigate, Link } from "react-router-dom"
+import { useNavigate, Link, useSearchParams } from "react-router-dom"
 import { Plus, Search, Loader2, BarChart3, BookOpen, LayoutTemplate, ArrowRight, Sparkles, ChevronLeft, ChevronRight, LayoutGrid, List, ChevronDown, ChevronUp, FolderPlus } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 import { cn } from "@/lib/utils"
@@ -362,7 +362,30 @@ export default function ProjectsPage() {
   }, [filteredProjects, sortBy, sortDir])
 
   type Tab = "apps" | "miniapps" | "templates" | "tutorials" | "statistics"
-  const [activeTab, setActiveTab] = useState<Tab>("apps")
+  const TABS: readonly Tab[] = ["apps", "miniapps", "templates", "tutorials", "statistics"]
+
+  // The URL is the single source of truth for which tab is open, NOT a piece of
+  // local state seeded from it. Seeding once looked simpler but broke the moment
+  // the sidebar started linking to a tab: going from ?tab=tutorials back to a
+  // plain /projects does not remount this page, so the old tab just stayed open
+  // and Projects appeared not to do anything. Deriving it means every route into
+  // this page — sidebar, breadcrumb, back button, a pasted link — agrees.
+  // An unknown value falls back to Apps.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const requestedTab = searchParams.get("tab") as Tab | null
+  const activeTab: Tab = requestedTab && TABS.includes(requestedTab) ? requestedTab : "apps"
+
+  // Tab clicks replace rather than push: a tab is a view of one page, so the
+  // back button should leave the page rather than walk the tabs.
+  const setActiveTab = useCallback(
+    (tab: Tab) => {
+      const next = new URLSearchParams(searchParams)
+      if (tab === "apps") next.delete("tab")
+      else next.set("tab", tab)
+      setSearchParams(next, { replace: true })
+    },
+    [searchParams, setSearchParams],
+  )
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: "apps", label: "Apps", icon: <LayoutGrid className="h-3.5 w-3.5" /> },

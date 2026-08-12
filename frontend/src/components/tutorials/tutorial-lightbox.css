@@ -1,0 +1,81 @@
+/* Full-screen image viewer for tutorials. */
+
+.tl {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 4, 6, 0.92);
+  backdrop-filter: blur(6px);
+  overflow: hidden;
+  animation: tl-in 160ms ease;
+}
+@keyframes tl-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.tl-img {
+  max-width: 92vw;
+  max-height: 88vh;
+  border-radius: 10px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  transform-origin: center center;
+  transition: transform 120ms ease-out;
+  user-select: none;
+  touch-action: none;
+}
+
+.tl-bar {
+  position: absolute;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px;
+  border-radius: 12px;
+  background: var(--nd-panel-float, rgba(18, 18, 23, 0.92));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.5);
+}
+.tl-bar button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #ececf1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: background 160ms ease;
+}
+.tl-bar button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.14);
+}
+.tl-bar button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.tl-icon {
+  width: 15px;
+  height: 15px;
+}
+.tl-level {
+  min-width: 46px;
+  text-align: center;
+  font-family: var(--nd-mono, ui-monospace, monospace);
+  font-size: 11px;
+  color: #9a9aa8;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Anything openable should say so. */
+.tl-openable {
+  cursor: zoom-in;
+}
