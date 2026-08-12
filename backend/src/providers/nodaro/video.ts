@@ -16,7 +16,7 @@ import type {
   ProviderResult,
   ReconcileOpts,
 } from "../provider.interface.js"
-import { createCloudJob, waitForCloudJob, NodaroCloudError } from "./client.js"
+import { createCloudJob, waitForCloudJob, NodaroCloudError, ensureCloudReachableImageUrl, ensureCloudReachableImageUrls } from "./client.js"
 
 /**
  * Invert the worker's ProviderOptions.klingElements (KIE wire shape with
@@ -111,14 +111,23 @@ export class NodaroCloudVideoProvider
     options?: ProviderOptions,
     _reconcileOpts?: ReconcileOpts,
   ): Promise<ProviderResult> {
+    // Instance-local media can't be fetched by the cloud — re-host first.
+    const [cloudImageUrl, cloudEndFrameUrl, cloudRefUrls] = await Promise.all([
+      ensureCloudReachableImageUrl(imageUrl),
+      ensureCloudReachableImageUrl(endFrameUrl),
+      ensureCloudReachableImageUrls(options?.referenceImageUrls),
+    ])
+    const cloudOptions = options
+      ? { ...options, referenceImageUrls: cloudRefUrls }
+      : options
     const body: Record<string, unknown> = {
-      ...(imageUrl !== undefined ? { imageUrl } : {}),
+      ...(cloudImageUrl !== undefined ? { imageUrl: cloudImageUrl } : {}),
       ...(prompt !== undefined ? { prompt } : {}),
       ...(model !== undefined ? { provider: model } : {}),
       ...(duration !== undefined ? { duration } : {}),
-      ...(endFrameUrl !== undefined ? { endFrameUrl } : {}),
-      ...sharedVideoBody(options),
-      ...i2vOnlyBody(options),
+      ...(cloudEndFrameUrl !== undefined ? { endFrameUrl: cloudEndFrameUrl } : {}),
+      ...sharedVideoBody(cloudOptions),
+      ...i2vOnlyBody(cloudOptions),
     }
 
     const jobId = await createCloudJob("/v1/generate-video", body)
@@ -134,12 +143,16 @@ export class NodaroCloudVideoProvider
     options?: ProviderOptions,
     _reconcileOpts?: ReconcileOpts,
   ): Promise<ProviderResult> {
+    const cloudRefUrls = await ensureCloudReachableImageUrls(options?.referenceImageUrls)
+    const cloudOptions = options
+      ? { ...options, referenceImageUrls: cloudRefUrls }
+      : options
     const body: Record<string, unknown> = {
       prompt,
       ...(model !== undefined ? { provider: model } : {}),
       ...(duration !== undefined ? { duration } : {}),
       ...(aspectRatio !== undefined ? { aspectRatio } : {}),
-      ...sharedVideoBody(options),
+      ...sharedVideoBody(cloudOptions),
     }
 
     const jobId = await createCloudJob("/v1/text-to-video", body)

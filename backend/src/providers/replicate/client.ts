@@ -125,6 +125,15 @@ export async function runReplicatePrediction(opts: {
   /** Forwarded to `extractCost` so the correct hardware $/sec is used. */
   costModelKey?: string
 }): Promise<{ output: unknown; cost: number | null; predictionId: string }> {
+  // Keyless self-hosts reach this through DIRECT handlers (face-swap,
+  // lip-sync, ...) that bypass the registry, so key-aware registration can't
+  // protect them — without this guard the call dies as a raw Replicate 401
+  // (founder hit it live on face-swap, 2026-08-15).
+  if (!config.REPLICATE_API_TOKEN) {
+    throw new Error(
+      `${opts.label} needs a Replicate API key on this install \u2014 set REPLICATE_API_TOKEN in the .env next to docker-compose.community.yml (see Install health \u2192 Provider keys). This node isn't covered by the nodaro.ai connection yet.`,
+    )
+  }
   const createOptions =
     opts.version !== undefined
       ? { version: opts.version, input: opts.input }

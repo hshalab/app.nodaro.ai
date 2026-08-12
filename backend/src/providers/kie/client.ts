@@ -38,6 +38,17 @@ export const MAX_POLL_ATTEMPTS_LIP_SYNC_LONG = 360
  * Custom error class that carries both sanitized message (for UI) and internal details (for logs/debugging).
  * The `message` property is user-friendly, while `internalDetails` contains the raw KIE.ai error.
  */
+/** Friendly fail-fast for keyless self-hosts hitting KIE-direct handlers
+ *  (suno, special models, ...) that bypass the registry — a raw KIE 401 told
+ *  the operator nothing about WHERE the key goes. */
+export function requireKieKey(label: string): void {
+  if (!config.KIE_API_KEY) {
+    throw new Error(
+      `${label} needs a KIE.ai API key on this install \u2014 set KIE_API_KEY in the .env next to docker-compose.community.yml (see Install health \u2192 Provider keys). This node isn't covered by the nodaro.ai connection yet.`,
+    )
+  }
+}
+
 export class KieError extends Error {
   public readonly internalDetails: string
   public readonly context: string
@@ -387,6 +398,7 @@ export async function createKieTask(
   // abort here so we never spend the upstream call.
   await throwIfJobCancelled()
 
+  requireKieKey("This node")
   const apiKey = config.KIE_API_KEY
 
   if (!apiKey) {
@@ -492,6 +504,7 @@ export async function pollKieTask(
   rawRecordInfo?: Record<string, unknown>
   taskId: string
 }> {
+  requireKieKey("This node")
   const apiKey = config.KIE_API_KEY
   if (!apiKey) {
     throw createSanitizedError("KIE_API_KEY is not configured", "Image generation")
@@ -676,6 +689,7 @@ export async function runVeoTask(
   // Pre-call cancellation guard (see createKieTask) — VEO has its own endpoint.
   await throwIfJobCancelled()
 
+  requireKieKey("This node")
   const apiKey = config.KIE_API_KEY
 
   if (!apiKey) {
@@ -951,6 +965,7 @@ export async function runVeoExtendTask(
   // Pre-call cancellation guard (see createKieTask).
   await throwIfJobCancelled()
 
+  requireKieKey("This node")
   const apiKey = config.KIE_API_KEY
   if (!apiKey) {
     throw createSanitizedError("KIE_API_KEY is not configured", "Video extend")
@@ -1036,6 +1051,7 @@ export async function runVeo1080pTask(
   index: number = 0,
   reconcileOpts?: ReconcileOpts,
 ): Promise<{ url: string }> {
+  requireKieKey("This node")
   const apiKey = config.KIE_API_KEY
   if (!apiKey) {
     throw createSanitizedError("KIE_API_KEY is not configured", "Video upscale")
@@ -1091,6 +1107,7 @@ export async function runVeo4kTask(
   index: number = 0,
   reconcileOpts?: ReconcileOpts,
 ): Promise<{ resultJson: KieResultJson; taskId: string }> {
+  requireKieKey("This node")
   const apiKey = config.KIE_API_KEY
   if (!apiKey) {
     throw createSanitizedError("KIE_API_KEY is not configured", "Video upscale")
