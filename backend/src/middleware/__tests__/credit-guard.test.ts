@@ -544,7 +544,7 @@ describe("reserveCreditsForJob", () => {
       creditsReserved: 1,
       watermark: false,
     })
-    expect(mockReserveCredits).toHaveBeenCalledWith("user-1", "job-1", "ffmpeg", 0, 0, { watermarkOverride: undefined, isAppRun: undefined })
+    expect(mockReserveCredits).toHaveBeenCalledWith("user-1", "job-1", "ffmpeg", 0, 0, { watermarkOverride: undefined, isAppRun: undefined, skipAutoRecharge: false })
   })
 
   it("forwards req.isAppRun=true to reserveCredits (app-run pool accounting)", async () => {
@@ -578,7 +578,7 @@ describe("reserveCreditsForJob", () => {
       "ai-writer",
       0,
       0,
-      { watermarkOverride: undefined, isAppRun: true },
+      { watermarkOverride: undefined, isAppRun: true, skipAutoRecharge: false },
     )
   })
 })

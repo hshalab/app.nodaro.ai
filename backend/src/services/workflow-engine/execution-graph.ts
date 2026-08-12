@@ -206,6 +206,10 @@ const SOURCE_NODE_TYPES = new Set([
   // buildPayload throws "Unknown node type" and the whole workflow fails on any
   // full server-side run. (Surfaced by node-registry-sync.test.ts hardening.)
   "preview",
+  // paint-mask — the hand-painted maskUrl on node data IS the output (see
+  // output-extractor.ts `case "paint-mask"`). Painting happens in the editor;
+  // at workflow runtime the node only serves its stored value.
+  "paint-mask",
 ])
 
 export function isSourceNode(nodeType: string): boolean {

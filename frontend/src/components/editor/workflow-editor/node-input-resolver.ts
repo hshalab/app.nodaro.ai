@@ -757,7 +757,7 @@ const SUNO_TRACK_NODE_TYPES = new Set([
  *  llm-chat reference arrays. Names must match SceneNodeType in types/nodes.ts. */
 const LLM_REF_IMAGE_NODE_TYPES = new Set<string>([
   "generate-image", "reference-board", "modify-image", "upscale-image", "remove-background",
-  "upload-image", "extract-frame", "generate-mask",
+  "upload-image", "extract-frame", "generate-mask", "paint-mask",
 ]);
 /** Node types whose primary output is a video URL. (Disjoint from
  *  VIDEO_OUTPUT_NODE_TYPES above, which is also used for kieTaskId routing —
@@ -1879,6 +1879,28 @@ export function resolveNodeInputs(
       // downstream "mask" target handle (routed earlier via
       // srcEdge.targetHandle === "mask" → inputs.maskUrl). The "image" handle
       // is a regular image source — route same as generate-image.
+      if (
+        node.type === "generate-image" ||
+        node.type === "reference-board" ||
+        (node.type as string) === "edit-image" ||
+        (node.type as string) === "image-to-image" ||
+        node.type === "modify-image" ||
+        node.type === "video-to-video"
+      ) {
+        inputs.referenceImageUrls = [
+          ...(inputs.referenceImageUrls ?? []),
+          output,
+        ];
+      } else if (node.type === "manual-edit") {
+        appendManualEditAsset(inputs, src.id, output, "image");
+      } else {
+        inputs.imageUrl = output;
+      }
+    } else if (src.type === "paint-mask") {
+      // paint-mask emits the hand-painted mask PNG. A "mask" target handle was
+      // already routed earlier (srcEdge.targetHandle === "mask" → inputs.maskUrl);
+      // reaching here means the mask is wired into a generic image input, where
+      // it is just an image URL — route same as generate-mask's image handle.
       if (
         node.type === "generate-image" ||
         node.type === "reference-board" ||

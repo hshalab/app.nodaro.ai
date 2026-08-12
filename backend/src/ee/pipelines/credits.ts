@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
+import { attemptAutoRecharge } from "../billing/auto-recharge.js"
 import { CHAT_STAGES, CHAT_TURN_CAPS, TIER_MAX_PIPELINE_COST_CREDITS, ShowrunnerPlanSchema, buildVideoCreditModelIdentifier, creditsToUsd, usdToCredits, type PipelineFormat, type PipelineMode, type VideoCriticFrameMode } from "@nodaro/shared"
 // ee-to-ee static import — allowed (only core/backend/src/lib/** is barred from
 // statically importing ee/**). Direct precedent: scene-helper-credits.ts
@@ -231,6 +232,10 @@ export async function reservePipelineCredits(
   if (!usageLogId) {
     return { ok: false, reason: "insufficient_credits" }
   }
+  // Reserve succeeded — balance dropped; auto-recharge check (fire-and-
+  // forget, never blocks the pipeline). Covers the direct-RPC reserve lane
+  // the CreditsService hook can't see (audit F2.2).
+  void attemptAutoRecharge(args.userId)
   // Persist for later refund.
   const { error: updateError } = await args.supabase
     .from("pipelines")

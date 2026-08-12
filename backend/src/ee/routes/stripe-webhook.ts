@@ -17,6 +17,8 @@ import {
   handleSubscriptionCanceled,
   handleTransactionCompleted,
   handleTopupClawback,
+  handleAutoRechargeSucceeded,
+  handleAutoRechargeFailed,
   handleInvoicePaid,
   resolveUserId,
 } from "../billing/provision-credits.js"
@@ -168,9 +170,20 @@ export async function stripeWebhookRoutes(app: FastifyInstance) {
           // redeliveries and multiple partial refunds all converge to
           // exactly-once per refund.
           const charge = event.data.object as Stripe.Charge
-          const refunds = (charge.refunds?.data ?? [])
+          let refunds = (charge.refunds?.data ?? [])
             .filter((r) => typeof r.id === "string" && (r.amount ?? 0) > 0)
             .map((r) => ({ refundId: r.id, amountCents: r.amount }))
+          // Modern Stripe API versions (2022-11-15+, incl. clover) omit the
+          // embedded refunds list from charge payloads — the first live
+          // refund arrived with refunds: null and the clawback silently
+          // no-oped (soak catch, 2026-08-12). Fetch the real refund rows so
+          // each claims idempotently by its own id.
+          if (refunds.length === 0 && (charge.amount_refunded ?? 0) > 0) {
+            const listed = await getStripe().refunds.list({ charge: charge.id, limit: 100 })
+            refunds = listed.data
+              .filter((r) => (r.amount ?? 0) > 0 && r.status !== "failed")
+              .map((r) => ({ refundId: r.id, amountCents: r.amount }))
+          }
           await handleTopupClawback({
             paymentIntentId: (charge.payment_intent as string) ?? null,
             refunds,
@@ -186,6 +199,29 @@ export async function stripeWebhookRoutes(app: FastifyInstance) {
             paymentIntentId: (dispute.payment_intent as string) ?? null,
             refunds: [{ refundId: dispute.id, amountCents: dispute.amount ?? 0 }],
           })
+          break
+        }
+
+        case "payment_intent.succeeded": {
+          // Auto-recharge grants ONLY (kind gate) — checkout-created PIs are
+          // granted by checkout.session.completed; entering here would
+          // double-grant (regression-tested).
+          const pi = event.data.object as Stripe.PaymentIntent
+          if (pi.metadata?.kind === "auto_recharge") {
+            await handleAutoRechargeSucceeded({
+              piId: pi.id,
+              userId: pi.metadata.userId ?? null,
+              amountReceivedCents: pi.amount_received ?? 0,
+            })
+          }
+          break
+        }
+
+        case "payment_intent.payment_failed": {
+          const pi = event.data.object as Stripe.PaymentIntent
+          if (pi.metadata?.kind === "auto_recharge") {
+            await handleAutoRechargeFailed({ userId: pi.metadata.userId ?? null })
+          }
           break
         }
 

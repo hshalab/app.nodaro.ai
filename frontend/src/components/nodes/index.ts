@@ -56,6 +56,7 @@ import { ReferenceAudioNode } from "./reference-audio-node";
 import { GenerateScriptNode } from "./generate-script-node";
 import { GenerateImageNode } from "./generate-image-node";
 import { GenerateMaskNode } from "./generate-mask-node";
+import { PaintMaskNode } from "./paint-mask-node";
 import { ModifyImageNode } from "./modify-image-node";
 import { UpscaleImageNode } from "./upscale-image-node";
 import { RemoveBackgroundNode } from "./remove-background-node";
@@ -243,6 +244,7 @@ export const nodeTypes: Record<SceneNodeType, React.ComponentType<any>> = {
   "generate-script": GenerateScriptNode,
   "generate-image": GenerateImageNode,
   "generate-mask": GenerateMaskNode,
+  "paint-mask": PaintMaskNode,
   "modify-image": ModifyImageNode,
   "upscale-image": UpscaleImageNode,
   "remove-background": RemoveBackgroundNode,

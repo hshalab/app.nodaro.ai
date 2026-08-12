@@ -271,6 +271,12 @@ export function extractNodeOutput(node: WorkflowNode, sourceHandle?: string): st
   // "mask" (the generated PNG). The bespoke per-result shape is
   // { imageUrl, maskUrl } (not GeneratedResult.url) so this case must come
   // BEFORE any generic image-node fallthrough that reads `results[i].url`.
+  // paint-mask is a source node: the hand-painted maskUrl IS its output
+  // (durable user config, not a generated result). Single `mask` handle.
+  if (type === "paint-mask") {
+    return data.maskUrl as string | undefined;
+  }
+
   if (type === "generate-mask") {
     const results =
       (data.generatedResults as Array<{ imageUrl: string; maskUrl: string }> | undefined) ?? [];

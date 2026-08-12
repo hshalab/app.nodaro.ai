@@ -109,6 +109,23 @@ export function isValidGenerateMaskConnection(
   }
 }
 
+// ─── paint-mask ────────────────────────────────────────────────────────
+// Source node (never executes): `image` is the painting substrate, `mask`
+// seeds the painter with an existing mask (generate-mask → hand-refine).
+// Both accept any image producer — mask is not a gated type today.
+export function isValidPaintMaskConnection(
+  targetHandleId: string,
+  sourceType: string,
+): boolean {
+  switch (targetHandleId) {
+    case "image":
+    case "mask":
+      return ACCEPTS_IMAGE_OR_DYN(sourceType)
+    default:
+      return false
+  }
+}
+
 // ─── image-collage ─────────────────────────────────────────────────────
 // Multi-image input on the `in` handle → one composited image out. Accepts
 // image producers (and dynamic sources — a list of image URLs is the primary
@@ -206,6 +223,7 @@ export const IMAGE_PRODUCER_HANDLE_LABELS: Record<string, Record<string, string>
   "modify-image":      { image: "Image", mask: "Mask", cinematography: "Cinematography" },
   "image-to-image":    { image: "Image", mask: "Mask", cinematography: "Cinematography" },
   "generate-mask":     { image: "Image" },
+  "paint-mask":        { image: "Image", mask: "Mask seed" },
   "image-collage":     { in: "Image" },
   "upscale-image":     { image: "Image" },
   "remove-background": { image: "Image" },

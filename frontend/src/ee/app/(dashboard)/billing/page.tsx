@@ -21,6 +21,7 @@ import { hasCredits } from "@/lib/edition"
 import { useUserCredits } from "@/ee/hooks/queries/use-credits-queries"
 import { useSubscription, useTransactions, useStorageProfile, useManageSubscriptionMutation } from "@/ee/hooks/queries/use-billing-queries"
 import { CreditTopup } from "@/ee/components/credits/CreditTopup"
+import { AutoRechargeCard } from "@/ee/components/credits/AutoRechargeCard"
 import { getScheduledCancelDate } from "@/ee/lib/subscription"
 import { PRICING_TIERS, FREE_TIER_CREDITS, getBillingCycleFromPriceId } from "@/lib/pricing-data"
 import { toast } from "sonner"
@@ -198,7 +199,7 @@ export default function BillingPage() {
               subscription?.status === "canceled" && "bg-red-500/10 text-red-600 dark:text-red-400",
             )}
           >
-            {subLoading ? "..." : (subscription?.status ?? "free")}
+            {subLoading ? "..." : (subscription?.status ?? (balance?.effectiveTier === "payg" ? "pay as you go" : "free"))}
           </Badge>
         </div>
 
@@ -314,12 +315,23 @@ export default function BillingPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Total Used</p>
-              <p className="text-2xl font-bold font-mono">
-                {(currentTier?.credits ?? FREE_TIER_CREDITS) - balance.subscription}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                of {currentTier?.credits ?? FREE_TIER_CREDITS} {balance.effectiveTier === "free" ? "one-time" : "/ month"}
-              </p>
+              {balance.effectiveTier === "payg" ? (
+                <>
+                  <p className="text-2xl font-bold font-mono">&mdash;</p>
+                  <p className="text-xs text-muted-foreground">
+                    no monthly allocation &middot; credits never expire
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-2xl font-bold font-mono">
+                    {(currentTier?.credits ?? FREE_TIER_CREDITS) - balance.subscription}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    of {currentTier?.credits ?? FREE_TIER_CREDITS} {balance.effectiveTier === "free" ? "one-time" : "/ month"}
+                  </p>
+                </>
+              )}
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Today</p>
@@ -340,6 +352,7 @@ export default function BillingPage() {
         <Separator />
 
         {user && <CreditTopup />}
+        {user && <AutoRechargeCard />}
       </section>
 
       {/* App Earnings */}

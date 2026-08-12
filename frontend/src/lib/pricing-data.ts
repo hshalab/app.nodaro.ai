@@ -158,6 +158,7 @@ export const PRICING_TIERS: readonly PricingTier[] = [
  */
 export const TIER_STORAGE_BYTES: Record<string, number> = {
   free: 1 * 1024 * 1024 * 1024,          // 1 GB
+  payg: 10 * 1024 * 1024 * 1024,         // 10 GB — derived tier, = basic
   basic: 10 * 1024 * 1024 * 1024,        // 10 GB
   standard: 25 * 1024 * 1024 * 1024,     // 25 GB
   pro: 50 * 1024 * 1024 * 1024,          // 50 GB
@@ -168,6 +169,7 @@ export const TIER_STORAGE_BYTES: Record<string, number> = {
 /** Max concurrent nodes per workflow execution, by tier. Must match backend TIER_PARALLELISM in stripe-config.ts. */
 export const TIER_PARALLELISM: Record<string, number> = {
   free: 2,
+  payg: 4, // derived tier, = basic
   basic: 4,
   standard: 6,
   pro: 10,
@@ -266,3 +268,38 @@ export const TOPUP_PACKAGES: readonly TopupPackage[] = [
     perCredit: "$0.0028",
   },
 ] as const
+
+/**
+ * Pay-as-you-go load rate — DISPLAY MIRROR of the canonical function in
+ * backend/src/ee/billing/load-rate.ts (sync-pinned by its test). Piecewise
+ * linear between the live pack anchors; $10 rate extended down to the $5
+ * minimum; flat ceiling above $100.
+ */
+export const LOAD_RATE_ANCHORS: ReadonlyArray<{ usd: number; credits: number }> = [
+  { usd: 10, credits: 3300 },
+  { usd: 25, credits: 8500 },
+  { usd: 50, credits: 17500 },
+  { usd: 100, credits: 36000 },
+]
+export const MIN_LOAD_USD = 5
+export const MAX_LOAD_USD = 1000
+export const MAX_LOAD_RATE_PER_USD = 360
+
+export function creditsForLoadUsd(amountUsd: number): number | null {
+  if (!Number.isInteger(amountUsd) || amountUsd < MIN_LOAD_USD || amountUsd > MAX_LOAD_USD) {
+    return null
+  }
+  const first = LOAD_RATE_ANCHORS[0]
+  const last = LOAD_RATE_ANCHORS[LOAD_RATE_ANCHORS.length - 1]
+  if (amountUsd <= first.usd) return Math.round((amountUsd * first.credits) / first.usd)
+  if (amountUsd >= last.usd) return Math.round((amountUsd * last.credits) / last.usd)
+  for (let i = 0; i < LOAD_RATE_ANCHORS.length - 1; i++) {
+    const a = LOAD_RATE_ANCHORS[i]
+    const b = LOAD_RATE_ANCHORS[i + 1]
+    if (amountUsd >= a.usd && amountUsd <= b.usd) {
+      const t = (amountUsd - a.usd) / (b.usd - a.usd)
+      return Math.round(a.credits + t * (b.credits - a.credits))
+    }
+  }
+  return null
+}

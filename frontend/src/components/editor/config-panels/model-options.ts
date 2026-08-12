@@ -56,6 +56,7 @@ export const IMAGE_I2I_MODELS: readonly { value: ImageI2IProvider; label: string
   { value: "kontext-multi", label: "Kontext Multi (Open)", desc: "Multi-image Flux Kontext via Replicate — up to 4 refs, no safety filter" },
   { value: "flux-2-pro", label: "Flux 2 Pro (Safety Tolerance)", desc: "BFL Flux 2 Pro via Replicate — flagship quality, safety_tolerance=5" },
   { value: "flux-2-max", label: "Flux 2 Max (Safety Tolerance)", desc: "BFL Flux 2 Max via Replicate — up to 8 refs, safety_tolerance=5 (variable pricing: 2-62 cr)" },
+  { value: "flux-fill", label: "Flux Fill (Inpaint)", desc: "BFL FLUX Fill Pro via Replicate — dedicated masked inpainting (white = edit area)" },
 ]
 
 export const IMAGE_EDIT_MODELS = [

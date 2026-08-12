@@ -250,6 +250,13 @@ export function extractSourceNodeOutput(
       return url ? { imageUrl: url } : undefined
     }
 
+    case "paint-mask": {
+      // Hand-painted mask — durable user config on node data (never a job
+      // output). Exposed as maskUrl so the `mask` source handle resolves it.
+      const url = (data.maskUrl as string | undefined)?.trim()
+      return url ? { maskUrl: url } : undefined
+    }
+
     case "upload-video": {
       const url = (data.url as string | undefined)?.trim()
       return url ? { videoUrl: url } : undefined
@@ -775,6 +782,12 @@ export function getPrimaryOutput(
   if (sourceType === "generate-mask") {
     if (sourceHandle === "mask") return output.maskUrl
     return output.imageUrl
+  }
+
+  // Paint-mask: single `mask` source handle — the hand-painted mask PNG is the
+  // node's only output regardless of handle. Mirrors frontend execution-graph.ts.
+  if (sourceType === "paint-mask") {
+    return output.maskUrl
   }
 
   if (IMAGE_SOURCE_TYPES.has(sourceType)) return output.imageUrl

@@ -1,4 +1,5 @@
 import { supabase } from "../../lib/supabase.js"
+import { attemptAutoRecharge } from "./auto-recharge.js"
 import { hasCredits } from "../../lib/config.js"
 import { getAppSettings } from "../../lib/app-settings.js"
 import { FREE_TIER_RESTRICTIONS, TIER_STORAGE_LIMITS } from "./stripe-config.js"
@@ -295,6 +296,7 @@ export const STATIC_CREDIT_COSTS: Record<string, number> = {
   // defaults. Deriving keeps the fallback honest through any future reprice.
   "flux-2-klein": flux2BaseCredits("flux-2-klein", 1, 0),  // default 1MP 0ref — BFL Flux 2 9B Klein via Replicate
   "kontext-multi": 30,            // multi-image-kontext-pro via Replicate
+  "flux-fill": 30,                // FLUX Fill Pro (masked inpainting) via Replicate
   "flux-2-pro": flux2BaseCredits("flux-2-pro", 2, 0),      // default 2MP 0ref — BFL Flux 2 Pro via Replicate, safety_tolerance=5
   "flux-2-max": flux2BaseCredits("flux-2-max", 2, 0),      // default 2MP 0ref — BFL Flux 2 Max via Replicate, safety_tolerance=5
   // Full per-MP×ref grid for Flux 2 family (108 entries, see flux2BaseCredits formula).
@@ -1926,7 +1928,7 @@ export class CreditsService {
     modelIdentifier: string,
     providerCostUsd: number,
     displayCostUsd: number,
-    options?: { watermarkOverride?: boolean; isAppRun?: boolean; creditOverride?: number },
+    options?: { watermarkOverride?: boolean; isAppRun?: boolean; creditOverride?: number; skipAutoRecharge?: boolean },
   ): Promise<ReserveResult> {
     // Self-hosted: skip reservation
     if (creditsDisabled()) {
@@ -2047,6 +2049,12 @@ export class CreditsService {
       balanceAfter,
     })
 
+    // Successful reserve = the only place balances DECREASE — fire the
+    // auto-recharge check (best-effort, never blocks). Third-party-app
+    // attributed operations are excluded via skipAutoRecharge.
+    if (!options?.skipAutoRecharge) {
+      void attemptAutoRecharge(userId)
+    }
     return { usageLogId: usageLogId as string, creditsReserved: pricing.creditCost, watermark }
   }
 

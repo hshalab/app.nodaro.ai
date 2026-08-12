@@ -3417,11 +3417,11 @@ export function getImageProxyUrl(url: string): string {
   return `${API_BASE_URL}/v1/image-proxy?url=${encodeURIComponent(url)}`
 }
 
-export async function uploadImage(file: File | Blob, userId?: string): Promise<{ url: string }> {
+export async function uploadImage(file: File | Blob, userId?: string, filename?: string): Promise<{ url: string }> {
   const resolvedUserId = userId ?? await getCurrentUserId()
   const asFile = file instanceof File
     ? file
-    : new File([file], "crop.png", { type: file.type || "image/png" })
+    : new File([file], filename ?? "crop.png", { type: file.type || "image/png" })
   const result = await uploadFile(asFile, resolvedUserId)
   return { url: result.url }
 }
@@ -5544,6 +5544,57 @@ export async function createCheckoutSession(params: {
   return (json as Record<string, unknown>).data
     ? ((json as Record<string, unknown>).data as { url: string }).url
     : (json as { url: string }).url
+}
+
+export async function createLoadSession(params: {
+  amountUsd: number
+  /** Opened from an embedded iframe → return to the no-auth /checkout-complete page. */
+  embedded?: boolean
+}): Promise<{ url: string; credits: number }> {
+  const res = await fetch(`${API_BASE_URL}/v1/billing/create-load-session`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...await getAuthHeaders() },
+    body: JSON.stringify(params),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error((err as Record<string, string>).error ?? "Failed to create load session")
+  }
+  const json = await res.json()
+  return (json as { data: { url: string; credits: number } }).data
+}
+
+export interface AutoRechargeConfig {
+  enabled: boolean
+  thresholdCredits: number | null
+  amountUsd: number | null
+  failureCount: number
+  lastAttemptAt: string | null
+  hasSavedCard: boolean
+}
+
+export async function getAutoRecharge(): Promise<AutoRechargeConfig> {
+  const res = await fetch(`${API_BASE_URL}/v1/billing/auto-recharge`, {
+    headers: await getAuthHeaders(),
+  })
+  if (!res.ok) throw new Error("Failed to load auto-recharge settings")
+  return ((await res.json()) as { data: AutoRechargeConfig }).data
+}
+
+export async function updateAutoRecharge(params: {
+  enabled: boolean
+  thresholdCredits?: number
+  amountUsd?: number
+}): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/v1/billing/auto-recharge`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...await getAuthHeaders() },
+    body: JSON.stringify(params),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error((err as Record<string, string>).error ?? "Failed to update auto-recharge settings")
+  }
 }
 
 // ============================================================

@@ -1,4 +1,4 @@
-import { createCheckoutSession } from "@/lib/api"
+import { createCheckoutSession, createLoadSession } from "@/lib/api"
 import { isEmbedded } from "@/hooks/use-embed-session-handoff"
 
 /**
@@ -49,5 +49,20 @@ export async function startCheckout(params: {
     window.open(url, "_blank", "noopener,noreferrer")
   } else {
     window.location.href = url
+  }
+}
+
+/**
+ * Start a pay-as-you-go load Checkout for an arbitrary whole-dollar amount.
+ * Same embed handling and URL guard as startCheckout.
+ */
+export async function startLoadCheckout(amountUsd: number): Promise<void> {
+  const embedded = isEmbedded()
+  const { url } = await createLoadSession({ amountUsd, embedded })
+  const trusted = assertTrustedCheckoutUrl(url)
+  if (embedded) {
+    window.open(trusted, "_blank", "noopener,noreferrer")
+  } else {
+    window.location.href = trusted
   }
 }

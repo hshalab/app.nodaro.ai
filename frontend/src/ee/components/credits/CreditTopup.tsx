@@ -2,11 +2,27 @@ import { useState } from "react"
 import { Coins, Plus } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
-import { startCheckout } from "@/lib/checkout"
-import { TOPUP_PACKAGES, type TopupPackage } from "@/lib/pricing-data"
+import { startCheckout, startLoadCheckout } from "@/lib/checkout"
+import { TOPUP_PACKAGES, type TopupPackage, creditsForLoadUsd, MIN_LOAD_USD, MAX_LOAD_USD } from "@/lib/pricing-data"
 
 export function CreditTopup() {
   const [loadingId, setLoadingId] = useState<string | null>(null)
+  const [customUsd, setCustomUsd] = useState<string>("")
+
+  const parsedUsd = /^\d+$/.test(customUsd) ? parseInt(customUsd, 10) : NaN
+  const customCredits = Number.isNaN(parsedUsd) ? null : creditsForLoadUsd(parsedUsd)
+
+  async function handleCustomLoad() {
+    if (customCredits === null) return
+    setLoadingId("custom")
+    try {
+      await startLoadCheckout(parsedUsd)
+    } catch {
+      toast.error("Failed to open checkout")
+    } finally {
+      setLoadingId(null)
+    }
+  }
 
   async function handlePurchase(pkg: TopupPackage) {
     setLoadingId(pkg.id)
@@ -55,6 +71,43 @@ export function CreditTopup() {
             </span>
           </button>
         ))}
+      </div>
+
+      {/* Pay-as-you-go: load any whole-dollar amount. Preview mirrors the
+          backend rate function (pricing-data.ts, sync-pinned). */}
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-zinc-200 dark:border-zinc-800 p-4">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">Or load any amount:</span>
+          <div className="flex items-center gap-1">
+            <span className="text-sm text-muted-foreground">$</span>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={customUsd}
+              onChange={(e) => setCustomUsd(e.target.value.replace(/[^0-9]/g, ""))}
+              placeholder={`${MIN_LOAD_USD}-${MAX_LOAD_USD}`}
+              className="w-24 rounded-md border border-zinc-200 dark:border-zinc-800 bg-transparent px-2 py-1.5 text-sm focus:border-[#ff0073]/60 focus:outline-none"
+              aria-label="Load amount in dollars"
+            />
+          </div>
+        </div>
+        <span className="text-sm text-muted-foreground min-w-32">
+          {customCredits !== null
+            ? `= ${customCredits.toLocaleString()} credits`
+            : customUsd
+              ? `$${MIN_LOAD_USD}–$${MAX_LOAD_USD}, whole dollars`
+              : "credits never expire"}
+        </span>
+        <button
+          onClick={handleCustomLoad}
+          disabled={customCredits === null || loadingId === "custom"}
+          className={cn(
+            "ml-auto rounded-md bg-[#ff0073] px-4 py-1.5 text-sm font-medium text-white transition-opacity",
+            (customCredits === null || loadingId === "custom") && "opacity-40 pointer-events-none",
+          )}
+        >
+          Load credits
+        </button>
       </div>
     </div>
   )

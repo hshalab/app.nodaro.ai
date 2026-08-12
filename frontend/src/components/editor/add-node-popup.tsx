@@ -111,6 +111,7 @@ import {
   MessageCircle,
   ScanFace,
   VenetianMask,
+  Paintbrush,
   TrendingUp,
   Star,
   LayoutGrid,
@@ -685,6 +686,14 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     icon: <VenetianMask className="h-4 w-4" />,
     category: "AI",
     group: "Image",
+  },
+  {
+    type: "paint-mask",
+    label: "Paint Mask",
+    icon: <Paintbrush className="h-4 w-4" />,
+    category: "Processing",
+    group: "Image",
+    keywords: ["mask", "paint", "brush", "inpaint", "matte", "hand", "draw"],
   },
   {
     type: "reference-sheet",

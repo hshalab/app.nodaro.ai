@@ -1,5 +1,9 @@
 # SDK Quickstart
 
+> **No subscription required.** Load any amount of credits (pay-as-you-go)
+> and the full API/SDK/MCP surface is available — all models, no watermark,
+> credits never expire.
+
 `@nodaro/sdk` is a typed REST client for Nodaro. It works in Node, browsers,
 and React Native — anywhere `fetch` exists. This walkthrough goes from "install"
 to running a workflow end-to-end.

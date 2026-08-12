@@ -9,6 +9,36 @@ import { EditableNodeLabel } from "./editable-node-label"
 import { NODE_COLORS, adjustColor, getEffectiveColor } from "@/lib/node-colors"
 import type { StickyNoteData } from "@/types/nodes"
 
+type StickyFontSize = StickyNoteData["fontSize"]
+
+/**
+ * The four declared sizes now render four distinct sizes. Previously `lg` and
+ * `xl` both rendered 18px and `sm` rendered 14px, so a note on a large canvas
+ * had no way to get bigger. `base` (the default) and `lg` keep their existing
+ * px values, so every existing note is unchanged; `sm` and `xl` become real.
+ */
+const FONT_SIZE_PX: Record<StickyFontSize, number> = {
+  sm: 12,
+  base: 14,
+  lg: 18,
+  xl: 26,
+}
+
+const FONT_SIZE_LABEL: Record<StickyFontSize, string> = {
+  sm: "Small",
+  base: "Paragraph",
+  lg: "Heading",
+  xl: "Display",
+}
+
+/** The toolbar control cycles the sizes; `sm` is reachable after `xl`. */
+const FONT_SIZE_CYCLE: readonly StickyFontSize[] = ["base", "lg", "xl", "sm"]
+
+function nextFontSize(current: StickyFontSize): StickyFontSize {
+  const i = FONT_SIZE_CYCLE.indexOf(current)
+  return FONT_SIZE_CYCLE[(i + 1) % FONT_SIZE_CYCLE.length]
+}
+
 function StickyNoteNodeComponent({ id, data, selected }: NodeProps) {
   const nodeData = data as StickyNoteData
   const updateNodeData = useWorkflowStore((s) => s.updateNodeData)
@@ -25,7 +55,9 @@ function StickyNoteNodeComponent({ id, data, selected }: NodeProps) {
 
   const color = nodeData.color ?? "#0f172a"
   const effectiveColor = getEffectiveColor(color, isDark)
-  const textStyle = nodeData.fontSize === "lg" || nodeData.fontSize === "xl" ? "heading" : "paragraph"
+  const currentSize: StickyFontSize = FONT_SIZE_PX[nodeData.fontSize as StickyFontSize]
+    ? (nodeData.fontSize as StickyFontSize)
+    : "base"
   const bold = nodeData.bold ?? false
   const italic = nodeData.italic ?? false
   const alignment = nodeData.alignment ?? "left"
@@ -39,8 +71,10 @@ function StickyNoteNodeComponent({ id, data, selected }: NodeProps) {
     [id, updateNodeData],
   )
 
-  const fontSize = textStyle === "heading" ? 18 : 14
-  const fontWeight = bold ? 700 : textStyle === "heading" ? 600 : 400
+  const fontSize = FONT_SIZE_PX[currentSize]
+  // 18px and up reads as a heading, and carries the heavier weight the
+  // two-state control used to imply.
+  const fontWeight = bold ? 700 : fontSize >= 18 ? 600 : 400
   const fontStyle = italic ? ("italic" as const) : ("normal" as const)
   const textAlign = alignment as "left" | "center" | "right"
 
@@ -104,10 +138,10 @@ function StickyNoteNodeComponent({ id, data, selected }: NodeProps) {
             className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] text-foreground/70 hover:bg-black/5 dark:text-white/70 dark:hover:bg-white/10 transition-colors"
             onClick={(e) => {
               e.stopPropagation()
-              updateNodeData(id, { fontSize: textStyle === "paragraph" ? "lg" : "base" })
+              updateNodeData(id, { fontSize: nextFontSize(currentSize) })
             }}
           >
-            <span>{textStyle === "heading" ? "Heading" : "Paragraph"}</span>
+            <span>{FONT_SIZE_LABEL[currentSize]}</span>
             <ChevronDown className="w-3 h-3" />
           </button>
 

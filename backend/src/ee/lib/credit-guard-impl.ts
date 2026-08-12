@@ -188,6 +188,10 @@ export async function reserveCreditsForJobImpl(
       {
         watermarkOverride: req.creditReservation?.watermark,
         isAppRun: req.isAppRun,
+        // Third-party OAuth-app operations must never pump the owner's card
+        // (design §5.2 step 1); Phase 4 instance credentials join this same
+        // exclusion predicate.
+        skipAutoRecharge: Boolean(req.appAuthorization),
         creditOverride: req.creditReservation?.creditOverride,
       },
     )

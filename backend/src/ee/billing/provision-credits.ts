@@ -15,6 +15,7 @@ import {
 } from "./stripe-config.js"
 import { tierColumns } from "./tier-columns.js"
 import { downgradeToEffectiveFloor, raiseStorageFloorOnActivation, reapplyStorageFloorAfterClawback } from "./downgrade-floor.js"
+import { creditsForLoadUsd } from "./load-rate.js"
 import { CreditsService } from "./credits.js"
 import { invalidateBalanceCache } from "../routes/credits.js"
 
@@ -535,6 +536,29 @@ export async function handleTransactionCompleted(
     totalCredits = getTopupCredits(data.metadata.topupPriceId) ?? 0
   }
 
+  // Arbitrary-amount load (metadata kind="load"): size the grant from the
+  // SETTLED amount through the rate function — metadata never sizes a grant,
+  // and a tampered/mismatched amount fails loudly instead of granting.
+  if (totalCredits === 0 && data.metadata?.kind === "load") {
+    if (data.totalAmount > 0 && data.totalAmount % 100 === 0) {
+      try {
+        totalCredits = creditsForLoadUsd(data.totalAmount / 100)
+      } catch (err) {
+        console.error(
+          "[stripe] transaction.completed: load amount rejected by rate function:",
+          data.transactionId,
+          err instanceof Error ? err.message : err
+        )
+      }
+    } else {
+      console.error(
+        "[stripe] transaction.completed: load session with non-whole-dollar amount:",
+        data.transactionId,
+        data.totalAmount
+      )
+    }
+  }
+
   if (totalCredits === 0) {
     console.log("[stripe] transaction.completed: no top-up items found", data.transactionId)
     return
@@ -700,4 +724,79 @@ export async function handleTopupClawback(data: TopupClawbackData): Promise<void
     // NET lifetime may have hit zero — collapse the payg storage floor.
     await reapplyStorageFloorAfterClawback(claim.user_id as string)
   }
+}
+
+// ── Auto-Recharge PaymentIntent Handlers (design §5.2 step 4) ────
+
+/**
+ * payment_intent.succeeded for kind="auto_recharge" ONLY (checkout-created
+ * PIs carry no such metadata and are granted by checkout.session.completed —
+ * letting them in here would double-grant). The grant is sized from
+ * `amount_received` through the load rate function — metadata never sizes a
+ * grant — and claims idempotently by the PI id.
+ */
+export async function handleAutoRechargeSucceeded(data: {
+  readonly piId: string
+  readonly userId: string | null
+  readonly amountReceivedCents: number
+}): Promise<void> {
+  if (!data.userId) {
+    console.error("[stripe] auto-recharge succeeded without userId metadata:", data.piId)
+    return
+  }
+  if (data.amountReceivedCents <= 0 || data.amountReceivedCents % 100 !== 0) {
+    console.error("[stripe] auto-recharge with non-whole-dollar amount:", data.piId, data.amountReceivedCents)
+    return
+  }
+  let credits: number
+  try {
+    credits = creditsForLoadUsd(data.amountReceivedCents / 100)
+  } catch (err) {
+    console.error("[stripe] auto-recharge amount rejected by rate function:", data.piId, (err as Error).message)
+    return
+  }
+
+  const { data: granted, error } = await supabase.rpc("grant_topup_credits_idempotent", {
+    p_user_id: data.userId,
+    p_credits: credits,
+    p_stripe_transaction_id: data.piId,
+    p_amount_usd: data.amountReceivedCents / 100,
+  })
+  if (error) {
+    console.error("[stripe] auto-recharge grant failed:", data.piId, error.message)
+    return
+  }
+  if (granted === false) {
+    console.log("[stripe] auto-recharge already granted (idempotent):", data.piId)
+    return
+  }
+
+  // A successful charge proves the card works again — clear the failure
+  // streak so one old transient decline can't push a healthy config to the
+  // auto-disable threshold.
+  await supabase
+    .from("profiles")
+    .update({ auto_recharge_failure_count: 0 })
+    .eq("id", data.userId)
+
+  invalidateBalanceCache(data.userId)
+  await raiseStorageFloorOnActivation(data.userId)
+  console.log(`[stripe] auto-recharge granted: user=${data.userId} +${credits} credits (${data.piId})`)
+}
+
+/** payment_intent.payment_failed for kind="auto_recharge": count the failure
+ *  (auto-disables at 3 inside the RPC). The user-facing signal is the
+ *  failure state on the billing page's auto-recharge card. */
+export async function handleAutoRechargeFailed(data: {
+  readonly userId: string | null
+}): Promise<void> {
+  if (!data.userId) return
+  const { data: count, error } = await supabase.rpc("record_auto_recharge_failure", {
+    p_user_id: data.userId,
+  })
+  if (error) {
+    console.error("[stripe] auto-recharge failure recording failed:", data.userId, error.message)
+    return
+  }
+  console.warn(`[stripe] auto-recharge payment failed: user=${data.userId} (failure #${count})`)
 }

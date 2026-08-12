@@ -93,6 +93,7 @@ import {
   UpscaleImageConfig,
   RemoveBackgroundConfig,
   GenerateMaskConfig,
+  PaintMaskConfig,
   ImageToVideoConfig,
   VideoToVideoConfig,
   SwitchXConfig,
@@ -288,6 +289,7 @@ const NODE_TYPE_DISPLAY_NAMES: Record<string, string> = {
   "upscale-image": "Upscale Image",
   "remove-background": "Remove Background",
   "generate-mask": "Generate Mask",
+  "paint-mask": "Paint Mask",
   "image-to-video": "Image to Video",
   "video-to-video": "Video to Video",
   "switchx": "Relight & Switch",
@@ -541,6 +543,7 @@ function NodeTypeConfig({ nodeType, nodeData, configProps, updateNodeData, onExp
     case "upscale-image": return <UpscaleImageConfig {...configProps} />
     case "remove-background": return <RemoveBackgroundConfig {...configProps} />
     case "generate-mask": return <GenerateMaskConfig {...configProps} nodeId={selectedNodeId} />
+    case "paint-mask": return <PaintMaskConfig {...configProps} nodeId={selectedNodeId} />
     // ImageToVideoConfig dispatches the kling-3.0 provider to the
     // (lazy-loaded) Kling3StudioConfig internally — no separate branch needed
     // here, which keeps the studio panel in a single on-demand chunk.

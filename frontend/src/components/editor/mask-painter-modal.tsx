@@ -1,18 +1,16 @@
 "use client"
 
-import { useEffect, useLayoutEffect, useCallback, useState, useRef } from "react"
+import { useEffect, useCallback, useState, useRef } from "react"
 import { createPortal } from "react-dom"
-import {
-  X, Paintbrush, Eraser, Triangle, RotateCcw, ArrowRightLeft,
-  Undo2, Redo2, Loader2,
-} from "lucide-react"
+import { Paintbrush, Eraser, Triangle, Undo2, Redo2, X, Loader2 } from "lucide-react"
 import { uploadImage, getImageProxyUrl } from "@/lib/api"
-import { generateMaskBlob, paintStrokeOnCtx } from "@/lib/mask-utils"
-import type { MaskStroke } from "@/lib/mask-utils"
 import { useBackToClose } from "@/hooks/use-back-to-close"
 
 type Tool = "brush" | "eraser" | "lasso"
 type ViewMode = "overlay" | "mask" | "source"
+
+const PINK = "#ff0073"
+const UNDO_CAP = 20
 
 interface MaskPainterModalProps {
   readonly isOpen: boolean
@@ -20,101 +18,421 @@ interface MaskPainterModalProps {
   readonly imageUrl: string
   readonly initialMaskUrl?: string
   readonly onSave: (maskUrl: string) => void
+  /** Painter defaults (node settings). */
+  readonly initialBrushSize?: number
+  readonly initialBrushHardness?: number
+}
+
+/** Basename of a URL for the header subtitle — decoded, query stripped. */
+function urlBasename(url: string): string {
+  try {
+    const path = new URL(url, window.location.origin).pathname
+    return decodeURIComponent(path.split("/").pop() || "image")
+  } catch {
+    return "image"
+  }
 }
 
 export function MaskPainterModal({
   isOpen, onClose, imageUrl, initialMaskUrl, onSave,
+  initialBrushSize, initialBrushHardness,
 }: MaskPainterModalProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const imgElRef = useRef<HTMLImageElement>(null)
-  const activeStrokeRef = useRef<MaskStroke | null>(null)
-  const rafIdRef = useRef<number | null>(null)
-  const redrawRef = useRef<() => void>(() => {})
-  // Cache canvas bounding rect for the duration of a stroke (pointerdown → pointerup)
-  // to avoid a layout read on every pointermove event.
-  const canvasRectRef = useRef<DOMRect | null>(null)
-  const scaleRef = useRef({ scaleX: 1, scaleY: 1 })
-  const maskBaseCanvasRef = useRef<HTMLCanvasElement | null>(null)
+  const stageRef = useRef<HTMLDivElement>(null)
+  const cursorRef = useRef<HTMLDivElement>(null)
+  // Offscreen truth: the mask itself, at full source resolution (black=keep, white=edit).
+  const maskCanvasRef = useRef<HTMLCanvasElement | null>(null)
+  const tmpCanvasRef = useRef<HTMLCanvasElement | null>(null)
+  const imgRef = useRef<HTMLImageElement | null>(null)
+  const undoStackRef = useRef<HTMLCanvasElement[]>([])
+  const redoStackRef = useRef<HTMLCanvasElement[]>([])
+  const drawingRef = useRef(false)
+  const lastPtRef = useRef<{ x: number; y: number } | null>(null)
+  const dirtyRef = useRef(false)
 
   const [imgSize, setImgSize] = useState<{ w: number; h: number } | null>(null)
-  const imageLoaded = imgSize !== null
   const [tool, setTool] = useState<Tool>("brush")
-  const [brushSize, setBrushSize] = useState(30)
-  const [opacity, setOpacity] = useState(100)
   const [viewMode, setViewMode] = useState<ViewMode>("overlay")
-  const [strokes, setStrokes] = useState<MaskStroke[]>([])
-  const [redoStack, setRedoStack] = useState<MaskStroke[]>([])
+  const [brushSize, setBrushSize] = useState(initialBrushSize ?? 48)
+  const [hardness, setHardness] = useState(initialBrushHardness ?? 70)
+  const [flow, setFlow] = useState(100)
+  const [zoom, setZoom] = useState(100)
+  const [fitScale, setFitScale] = useState(1)
+  const [coverage, setCoverage] = useState(0)
   const [lassoPoints, setLassoPoints] = useState<Array<{ x: number; y: number }>>([])
-  const [baseImageData, setBaseImageData] = useState<ImageData | null>(null)
+  const [canUndo, setCanUndo] = useState(false)
+  const [canRedo, setCanRedo] = useState(false)
   const [saving, setSaving] = useState(false)
 
   useBackToClose(isOpen, onClose)
 
-  const scheduleRedraw = useCallback(() => {
-    if (rafIdRef.current !== null) return
-    rafIdRef.current = requestAnimationFrame(() => {
-      rafIdRef.current = null
-      redrawRef.current()
-    })
-  }, [])
+  // ── Mask ops ─────────────────────────────────────────────────────────
 
-  useEffect(() => () => {
-    if (rafIdRef.current !== null) {
-      cancelAnimationFrame(rafIdRef.current)
-      rafIdRef.current = null
+  const maskCtx = () => maskCanvasRef.current?.getContext("2d") ?? null
+
+  const measureCoverage = useCallback(() => {
+    const mask = maskCanvasRef.current
+    const ctx = maskCtx()
+    if (!mask || !ctx) return
+    const step = 12
+    const d = ctx.getImageData(0, 0, mask.width, mask.height).data
+    let on = 0
+    let total = 0
+    for (let y = 0; y < mask.height; y += step) {
+      for (let x = 0; x < mask.width; x += step) {
+        total++
+        if (d[(y * mask.width + x) * 4]! > 127) on++
+      }
     }
+    setCoverage(total ? Math.round((on / total) * 100) : 0)
   }, [])
 
-  // Reset on open
+  const compose = useCallback(() => {
+    const cv = canvasRef.current
+    const mask = maskCanvasRef.current
+    const tmp = tmpCanvasRef.current
+    const img = imgRef.current
+    if (!cv || !mask || !tmp) return
+    const ctx = cv.getContext("2d")
+    if (!ctx) return
+    const { width: W, height: H } = mask
+    ctx.clearRect(0, 0, W, H)
+
+    if (viewMode === "mask") {
+      ctx.drawImage(mask, 0, 0)
+    } else if (img) {
+      ctx.drawImage(img, 0, 0, W, H)
+      if (viewMode === "overlay") {
+        // Tint the mask's white region brand-pink and lay it over the source.
+        const t = tmp.getContext("2d")!
+        t.globalCompositeOperation = "source-over"
+        t.clearRect(0, 0, W, H)
+        t.drawImage(mask, 0, 0)
+        t.globalCompositeOperation = "multiply"
+        t.fillStyle = PINK
+        t.fillRect(0, 0, W, H)
+        t.globalCompositeOperation = "destination-in"
+        t.drawImage(mask, 0, 0)
+        ctx.save()
+        ctx.globalAlpha = 0.5
+        ctx.drawImage(tmp, 0, 0)
+        ctx.restore()
+      }
+    }
+
+    // Active lasso outline (dashed) in any view.
+    if (lassoPoints.length > 0) {
+      ctx.save()
+      ctx.strokeStyle = viewMode === "mask" ? "#ffffff" : PINK
+      ctx.lineWidth = Math.max(1.5, W / 500)
+      ctx.setLineDash([6, 6])
+      ctx.beginPath()
+      ctx.moveTo(lassoPoints[0]!.x, lassoPoints[0]!.y)
+      for (const p of lassoPoints.slice(1)) ctx.lineTo(p.x, p.y)
+      ctx.stroke()
+      ctx.restore()
+    }
+  }, [viewMode, lassoPoints])
+
+  const snapshot = useCallback(() => {
+    const mask = maskCanvasRef.current
+    if (!mask) return
+    const c = document.createElement("canvas")
+    c.width = mask.width
+    c.height = mask.height
+    c.getContext("2d")!.drawImage(mask, 0, 0)
+    undoStackRef.current.push(c)
+    if (undoStackRef.current.length > UNDO_CAP) undoStackRef.current.shift()
+    redoStackRef.current = []
+    setCanUndo(true)
+    setCanRedo(false)
+  }, [])
+
+  const restore = useCallback((c: HTMLCanvasElement) => {
+    const ctx = maskCtx()
+    const mask = maskCanvasRef.current
+    if (!ctx || !mask) return
+    ctx.globalCompositeOperation = "source-over"
+    ctx.fillStyle = "#000000"
+    ctx.fillRect(0, 0, mask.width, mask.height)
+    ctx.drawImage(c, 0, 0)
+    compose()
+    measureCoverage()
+  }, [compose, measureCoverage])
+
+  const handleUndo = useCallback(() => {
+    const c = undoStackRef.current.pop()
+    if (!c) return
+    const mask = maskCanvasRef.current!
+    const cur = document.createElement("canvas")
+    cur.width = mask.width
+    cur.height = mask.height
+    cur.getContext("2d")!.drawImage(mask, 0, 0)
+    redoStackRef.current.push(cur)
+    restore(c)
+    setCanUndo(undoStackRef.current.length > 0)
+    setCanRedo(true)
+  }, [restore])
+
+  const handleRedo = useCallback(() => {
+    const c = redoStackRef.current.pop()
+    if (!c) return
+    const mask = maskCanvasRef.current!
+    const cur = document.createElement("canvas")
+    cur.width = mask.width
+    cur.height = mask.height
+    cur.getContext("2d")!.drawImage(mask, 0, 0)
+    undoStackRef.current.push(cur)
+    restore(c)
+    setCanRedo(redoStackRef.current.length > 0)
+    setCanUndo(true)
+  }, [restore])
+
+  const fillAll = useCallback((color: "#ffffff" | "#000000") => {
+    const ctx = maskCtx()
+    const mask = maskCanvasRef.current
+    if (!ctx || !mask) return
+    snapshot()
+    ctx.globalCompositeOperation = "source-over"
+    ctx.fillStyle = color
+    ctx.fillRect(0, 0, mask.width, mask.height)
+    dirtyRef.current = true
+    compose()
+    measureCoverage()
+  }, [snapshot, compose, measureCoverage])
+
+  const handleInvert = useCallback(() => {
+    const ctx = maskCtx()
+    const mask = maskCanvasRef.current
+    if (!ctx || !mask) return
+    snapshot()
+    ctx.globalCompositeOperation = "difference"
+    ctx.fillStyle = "#ffffff"
+    ctx.fillRect(0, 0, mask.width, mask.height)
+    ctx.globalCompositeOperation = "source-over"
+    dirtyRef.current = true
+    compose()
+    measureCoverage()
+  }, [snapshot, compose, measureCoverage])
+
+  const handleFeather = useCallback(() => {
+    const ctx = maskCtx()
+    const mask = maskCanvasRef.current
+    const tmp = tmpCanvasRef.current
+    if (!ctx || !mask || !tmp) return
+    snapshot()
+    const t = tmp.getContext("2d")!
+    t.globalCompositeOperation = "source-over"
+    t.clearRect(0, 0, mask.width, mask.height)
+    t.drawImage(mask, 0, 0)
+    ctx.filter = "blur(10px)"
+    ctx.drawImage(tmp, 0, 0)
+    ctx.filter = "none"
+    dirtyRef.current = true
+    compose()
+    measureCoverage()
+  }, [snapshot, compose, measureCoverage])
+
+  // ── Open/reset + image/seed loading ──────────────────────────────────
+
   useEffect(() => {
     if (!isOpen) return
-    setStrokes([])
-    setRedoStack([])
-    setLassoPoints([])
-    setBaseImageData(null)
-    activeStrokeRef.current = null
     setImgSize(null)
     setTool("brush")
-    setBrushSize(30)
-    setOpacity(100)
     setViewMode("overlay")
+    setBrushSize(initialBrushSize ?? 48)
+    setHardness(initialBrushHardness ?? 70)
+    setFlow(100)
+    setZoom(100)
+    setCoverage(0)
+    setLassoPoints([])
+    setCanUndo(false)
+    setCanRedo(false)
     setSaving(false)
-  }, [isOpen])
+    undoStackRef.current = []
+    redoStackRef.current = []
+    dirtyRef.current = false
+    imgRef.current = null
+    maskCanvasRef.current = null
 
-  useEffect(() => {
-    if (!isOpen || !initialMaskUrl || !imgSize) return
     const img = new Image()
     img.crossOrigin = "anonymous"
     img.onload = () => {
-      const offscreen = document.createElement("canvas")
-      offscreen.width = imgSize.w
-      offscreen.height = imgSize.h
-      const ctx = offscreen.getContext("2d")!
-      ctx.drawImage(img, 0, 0, imgSize.w, imgSize.h)
-      setBaseImageData(ctx.getImageData(0, 0, imgSize.w, imgSize.h))
+      imgRef.current = img
+      const w = img.naturalWidth
+      const h = img.naturalHeight
+      const mask = document.createElement("canvas")
+      mask.width = w
+      mask.height = h
+      const mc = mask.getContext("2d")!
+      mc.fillStyle = "#000000"
+      mc.fillRect(0, 0, w, h)
+      maskCanvasRef.current = mask
+      const tmp = document.createElement("canvas")
+      tmp.width = w
+      tmp.height = h
+      tmpCanvasRef.current = tmp
+      setImgSize({ w, h })
+
+      if (initialMaskUrl) {
+        const seed = new Image()
+        seed.crossOrigin = "anonymous"
+        seed.onload = () => {
+          mc.drawImage(seed, 0, 0, w, h)
+          setImgSize({ w, h }) // retrigger compose effect
+        }
+        seed.src = getImageProxyUrl(initialMaskUrl)
+      }
     }
-    img.src = getImageProxyUrl(initialMaskUrl)
-  }, [isOpen, initialMaskUrl, imgSize])
+    img.src = getImageProxyUrl(imageUrl)
+  }, [isOpen, imageUrl, initialMaskUrl, initialBrushSize, initialBrushHardness])
 
-  const handleUndo = useCallback(() => {
-    if (strokes.length === 0) return
-    const popped = strokes[strokes.length - 1]
-    setStrokes(strokes.slice(0, -1))
-    setRedoStack((r) => [...r, popped])
-  }, [strokes])
+  // Fit scale: size the displayed canvas to the stage.
+  const computeFit = useCallback(() => {
+    const stage = stageRef.current
+    if (!stage || !imgSize) return
+    const pad = 48
+    const availW = stage.clientWidth - pad
+    const availH = stage.clientHeight - pad
+    if (availW <= 0 || availH <= 0) return
+    setFitScale(Math.min(availW / imgSize.w, availH / imgSize.h, 1))
+  }, [imgSize])
 
-  const handleRedo = useCallback(() => {
-    if (redoStack.length === 0) return
-    const top = redoStack[redoStack.length - 1]
-    setStrokes((s) => [...s, top])
-    setRedoStack(redoStack.slice(0, -1))
-  }, [redoStack])
+  useEffect(() => {
+    if (!isOpen || !imgSize) return
+    computeFit()
+    window.addEventListener("resize", computeFit)
+    return () => window.removeEventListener("resize", computeFit)
+  }, [isOpen, imgSize, computeFit])
+
+  useEffect(() => {
+    if (imgSize) compose()
+  }, [imgSize, viewMode, lassoPoints, fitScale, zoom, compose])
+
+  // ── Painting ─────────────────────────────────────────────────────────
+
+  function canvasPoint(e: React.PointerEvent): { x: number; y: number } | null {
+    const cv = canvasRef.current
+    const mask = maskCanvasRef.current
+    if (!cv || !mask) return null
+    const r = cv.getBoundingClientRect()
+    return {
+      x: (e.clientX - r.left) * (mask.width / r.width),
+      y: (e.clientY - r.top) * (mask.height / r.height),
+    }
+  }
+
+  const strokeSegment = useCallback((a: { x: number; y: number }, b: { x: number; y: number }) => {
+    const ctx = maskCtx()
+    const cv = canvasRef.current
+    const mask = maskCanvasRef.current
+    if (!ctx || !cv || !mask) return
+    const r = cv.getBoundingClientRect()
+    const scale = mask.width / r.width
+    const rad = (brushSize * scale) / 2
+    const soft = 1 - hardness / 100
+    ctx.globalCompositeOperation = "source-over"
+    ctx.globalAlpha = flow / 100
+    ctx.lineCap = "round"
+    ctx.lineJoin = "round"
+    ctx.lineWidth = rad * 2
+    if (soft > 0.02) ctx.filter = `blur(${(rad * soft * 0.5).toFixed(1)}px)`
+    ctx.strokeStyle = tool === "eraser" ? "#000000" : "#ffffff"
+    ctx.beginPath()
+    ctx.moveTo(a.x, a.y)
+    ctx.lineTo(b.x, b.y)
+    ctx.stroke()
+    ctx.filter = "none"
+    ctx.globalAlpha = 1
+  }, [brushSize, hardness, flow, tool])
+
+  function closeLasso(pts: Array<{ x: number; y: number }>) {
+    setLassoPoints([])
+    if (pts.length < 3) return
+    const ctx = maskCtx()
+    if (!ctx) return
+    snapshot()
+    ctx.globalCompositeOperation = "source-over"
+    ctx.fillStyle = "#ffffff"
+    ctx.beginPath()
+    ctx.moveTo(pts[0]!.x, pts[0]!.y)
+    for (const p of pts.slice(1)) ctx.lineTo(p.x, p.y)
+    ctx.closePath()
+    ctx.fill()
+    dirtyRef.current = true
+    compose()
+    measureCoverage()
+  }
+
+  function handlePointerDown(e: React.PointerEvent) {
+    e.preventDefault()
+    const pt = canvasPoint(e)
+    if (!pt) return
+    if (tool === "lasso") {
+      const first = lassoPoints[0]
+      const mask = maskCanvasRef.current
+      const nearFirst = first && mask
+        ? Math.hypot(pt.x - first.x, pt.y - first.y) < mask.width / 40
+        : false
+      if (lassoPoints.length > 2 && nearFirst) closeLasso(lassoPoints)
+      else setLassoPoints((prev) => [...prev, pt])
+      return
+    }
+    ;(e.currentTarget as HTMLCanvasElement).setPointerCapture(e.pointerId)
+    snapshot()
+    dirtyRef.current = true
+    drawingRef.current = true
+    lastPtRef.current = pt
+    strokeSegment(pt, pt)
+    compose()
+  }
+
+  function handlePointerMove(e: React.PointerEvent) {
+    // Ring cursor follows the pointer over the stage.
+    const cur = cursorRef.current
+    const stage = stageRef.current
+    if (cur && stage) {
+      const wrap = stage.getBoundingClientRect()
+      cur.style.opacity = "1"
+      cur.style.width = cur.style.height = `${brushSize}px`
+      cur.style.left = `${e.clientX - wrap.left}px`
+      cur.style.top = `${e.clientY - wrap.top}px`
+      cur.style.borderColor = tool === "eraser" ? "rgba(255,255,255,.55)" : "rgba(255,0,115,.95)"
+    }
+    if (!drawingRef.current) return
+    const pt = canvasPoint(e)
+    if (!pt || !lastPtRef.current) return
+    strokeSegment(lastPtRef.current, pt)
+    lastPtRef.current = pt
+    compose()
+  }
+
+  function handlePointerUp() {
+    if (drawingRef.current) {
+      drawingRef.current = false
+      lastPtRef.current = null
+      measureCoverage()
+    }
+  }
+
+  function handleStageLeave() {
+    handlePointerUp()
+    if (cursorRef.current) cursorRef.current.style.opacity = "0"
+  }
+
+  function handleDoubleClick() {
+    if (tool === "lasso" && lassoPoints.length >= 3) closeLasso(lassoPoints)
+  }
+
+  // ── Keyboard ─────────────────────────────────────────────────────────
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === "Escape") onClose()
     if (e.key === "b") setTool("brush")
     if (e.key === "e") setTool("eraser")
     if (e.key === "l") setTool("lasso")
+    if (e.key === "[") setBrushSize((s) => Math.max(4, s - 8))
+    if (e.key === "]") setBrushSize((s) => Math.min(200, s + 8))
     if ((e.ctrlKey || e.metaKey) && e.key === "z") { e.preventDefault(); handleUndo() }
     if ((e.ctrlKey || e.metaKey) && e.key === "y") { e.preventDefault(); handleRedo() }
   }, [onClose, handleUndo, handleRedo])
@@ -125,217 +443,24 @@ export function MaskPainterModal({
     return () => document.removeEventListener("keydown", handleKeyDown)
   }, [isOpen, handleKeyDown])
 
-  function handleImageLoad() {
-    const img = imgElRef.current
-    if (!img) return
-    setImgSize({ w: img.naturalWidth, h: img.naturalHeight })
-  }
+  // ── Save ─────────────────────────────────────────────────────────────
 
-  useEffect(() => {
-    if (!imageLoaded) return
-    const raf = requestAnimationFrame(() => syncCanvasSize())
-    return () => cancelAnimationFrame(raf)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [imageLoaded, imgSize])
-
-  function syncCanvasSize() {
-    const img = imgElRef.current
-    const canvas = canvasRef.current
-    if (!img || !canvas) return
-    const { width, height } = img.getBoundingClientRect()
-    canvas.width = width
-    canvas.height = height
-    canvas.style.width = `${width}px`
-    canvas.style.height = `${height}px`
-    scaleRef.current = {
-      scaleX: img.naturalWidth / width,
-      scaleY: img.naturalHeight / height,
-    }
-    scheduleRedraw()
-  }
-
-  function getScale() {
-    return scaleRef.current
-  }
-
-  function drawLassoOutline(ctx: CanvasRenderingContext2D, color: string, scaleX: number, scaleY: number) {
-    if (lassoPoints.length === 0) return
-    ctx.globalCompositeOperation = "source-over"
-    ctx.strokeStyle = color
-    ctx.lineWidth = 1.5
-    ctx.setLineDash([4, 4])
-    ctx.beginPath()
-    ctx.moveTo(lassoPoints[0].x / scaleX, lassoPoints[0].y / scaleY)
-    for (const p of lassoPoints.slice(1)) ctx.lineTo(p.x / scaleX, p.y / scaleY)
-    ctx.stroke()
-    ctx.setLineDash([])
-  }
-
-  function redrawOverlay() {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
-    const { scaleX, scaleY } = getScale()
-
-    if (viewMode === "source") return
-
-    const active = activeStrokeRef.current
-
-    if (viewMode === "mask") {
-      ctx.fillStyle = "#000000"
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
-      if (maskBaseCanvasRef.current) {
-        ctx.drawImage(maskBaseCanvasRef.current, 0, 0, canvas.width, canvas.height)
-      }
-      ctx.globalCompositeOperation = "source-over"
-      const paintMask = (s: MaskStroke) => {
-        ctx.fillStyle = s.isEraser ? "#000000" : "#ffffff"
-        paintStrokeOnCtx(ctx, s, scaleX, scaleY)
-      }
-      for (const s of strokes) paintMask(s)
-      if (active) paintMask(active)
-      drawLassoOutline(ctx, "#ffffff", scaleX, scaleY)
-      return
-    }
-
-    const paintOverlay = (s: MaskStroke) => {
-      ctx.fillStyle = `rgba(239, 68, 68, ${0.4 * (s.opacity ?? 1)})`
-      ctx.globalCompositeOperation = s.isEraser ? "destination-out" : "source-over"
-      paintStrokeOnCtx(ctx, s, scaleX, scaleY)
-    }
-    for (const s of strokes) paintOverlay(s)
-    if (active) paintOverlay(active)
-    drawLassoOutline(ctx, "rgba(239, 68, 68, 0.9)", scaleX, scaleY)
-    ctx.globalCompositeOperation = "source-over"
-  }
-
-  useLayoutEffect(() => {
-    redrawRef.current = redrawOverlay
-  })
-
-  useEffect(() => {
-    if (!baseImageData || !imgSize) {
-      maskBaseCanvasRef.current = null
-      return
-    }
-    const offscreen = document.createElement("canvas")
-    offscreen.width = imgSize.w
-    offscreen.height = imgSize.h
-    const offCtx = offscreen.getContext("2d")!
-    offCtx.putImageData(baseImageData, 0, 0)
-    maskBaseCanvasRef.current = offscreen
-  }, [baseImageData, imgSize])
-
-  useEffect(() => {
-    if (imageLoaded) scheduleRedraw()
-  }, [strokes, imageLoaded, viewMode, lassoPoints, baseImageData, scheduleRedraw])
-
-  function getCanvasPoint(e: React.MouseEvent) {
-    if (!canvasRef.current) return null
-    // Use cached rect during an active stroke to avoid layout reads on every move.
-    const rect = canvasRectRef.current ?? canvasRef.current.getBoundingClientRect()
-    const { scaleX, scaleY } = getScale()
-    return {
-      x: (e.clientX - rect.left) * scaleX,
-      y: (e.clientY - rect.top) * scaleY,
-    }
-  }
-
-  function isNearFirst(pt: { x: number; y: number }) {
-    if (lassoPoints.length === 0) return false
-    const first = lassoPoints[0]
-    const { scaleX } = getScale()
-    return Math.hypot(pt.x - first.x, pt.y - first.y) < 12 * scaleX
-  }
-
-  function closeLasso(pts: Array<{ x: number; y: number }>) {
-    if (pts.length < 3) { setLassoPoints([]); return }
-    const stroke: MaskStroke = {
-      points: pts,
-      radius: 0,
-      isEraser: tool === "eraser",
-      isLasso: true,
-      opacity: opacity / 100,
-    }
-    setStrokes((prev) => [...prev, stroke])
-    setRedoStack([])
-    setLassoPoints([])
-  }
-
-  function handlePointerDown(e: React.MouseEvent) {
-    e.preventDefault()
-    // Cache the canvas rect for this stroke — canvas won't move while drawing.
-    canvasRectRef.current = canvasRef.current?.getBoundingClientRect() ?? null
-    const pt = getCanvasPoint(e)
-    if (!pt) return
-
-    if (tool === "lasso") {
-      if (lassoPoints.length > 0 && isNearFirst(pt)) {
-        closeLasso(lassoPoints)
-      } else {
-        setLassoPoints((prev) => [...prev, pt])
-      }
-      return
-    }
-
-    activeStrokeRef.current = {
-      points: [pt],
-      radius: brushSize,
-      isEraser: tool === "eraser",
-      opacity: opacity / 100,
-    }
-    scheduleRedraw()
-  }
-
-  function handlePointerMove(e: React.MouseEvent) {
-    if (!activeStrokeRef.current) return
-    const pt = getCanvasPoint(e)
-    if (!pt) return
-    activeStrokeRef.current.points.push(pt)
-    scheduleRedraw()
-  }
-
-  function handlePointerUp() {
-    const stroke = activeStrokeRef.current
-    canvasRectRef.current = null
-    if (!stroke) return
-    activeStrokeRef.current = null
-    setStrokes((prev) => [...prev, stroke])
-    setRedoStack([])
-  }
-
-  function handleDoubleClick(e: React.MouseEvent) {
-    if (tool !== "lasso" || lassoPoints.length < 3) return
-    e.preventDefault()
-    closeLasso(lassoPoints)
-  }
-
-  function handleClear() {
-    setStrokes([])
-    setRedoStack([])
-    setLassoPoints([])
-    activeStrokeRef.current = null
-  }
-
-  function handleInvert() {
-    const fullFill: MaskStroke = { points: [], radius: 0, isEraser: false, fill: true }
-    setStrokes((prev) => [fullFill, ...prev.map((s) => ({ ...s, isEraser: !s.isEraser }))])
-    setRedoStack([])
-  }
+  const hasContent = coverage > 0 || dirtyRef.current || !!initialMaskUrl
 
   async function handleSave() {
-    if (!imgSize) return
-    if (strokes.length === 0 && !baseImageData) return
+    const mask = maskCanvasRef.current
+    if (!mask || saving) return
     setSaving(true)
     try {
-      const blob = await generateMaskBlob(imgSize.w, imgSize.h, strokes, baseImageData ?? undefined)
-      const { url } = await uploadImage(blob)
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        mask.toBlob((b) => (b ? resolve(b) : reject(new Error("Failed to create mask blob"))), "image/png")
+      })
+      // "mask.png" keeps painted masks identifiable in the asset library.
+      const { url } = await uploadImage(blob, undefined, "mask.png")
       onSave(url)
       onClose()
     } catch {
-      // uploadImage already shows errors via toast
+      // uploadImage already surfaces errors via toast
     } finally {
       setSaving(false)
     }
@@ -343,123 +468,215 @@ export function MaskPainterModal({
 
   if (!isOpen) return null
 
-  const hasContent = strokes.length > 0 || !!baseImageData
+  const displayW = imgSize ? imgSize.w * fitScale * (zoom / 100) : 0
+  const baseName = urlBasename(imageUrl)
+
+  const toolBtn = (t: Tool, icon: React.ReactNode, label: string) => (
+    <button
+      key={t}
+      type="button"
+      onClick={() => { setTool(t); if (t !== "lasso") setLassoPoints([]) }}
+      className="w-[52px] h-[50px] flex flex-col items-center justify-center gap-1 rounded-[11px] border transition-colors"
+      style={tool === t
+        ? { borderColor: PINK, background: "rgba(255,0,115,.14)", color: "#ff5c94" }
+        : { borderColor: "#26262b", background: "#1c1c20", color: "#a1a1a8" }}
+      title={label}
+    >
+      {icon}
+      <span className="text-[9.5px] tracking-wide">{label}</span>
+    </button>
+  )
+
+  const panelBtn = "h-[34px] rounded-[9px] border border-[#26262b] bg-[#1c1c20] text-[#c9c9d0] text-xs hover:bg-[#26262b] transition-colors"
 
   return createPortal(
-    <div role="dialog" className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm">
-      <div className="relative flex flex-col bg-[#1E1E1E] rounded-2xl border border-[#2D2D2D] shadow-2xl max-w-[90vw] max-h-[90vh] overflow-hidden">
+    <div role="dialog" className="fixed inset-0 z-[9999] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm">
+      <div className="flex flex-col w-full max-w-[1180px] h-[min(760px,92vh)] bg-[#131316] border border-[#232327] rounded-[18px] overflow-hidden shadow-[0_40px_120px_rgba(0,0,0,.65)]">
 
-        {/* Toolbar (layout B: single horizontal row) */}
-        <div className="flex items-center gap-1 px-3 py-2 border-b border-[#2D2D2D] flex-wrap">
-          {/* Tools */}
-          {(["brush", "eraser", "lasso"] as Tool[]).map((t) => (
-            <button
-              key={t}
-              type="button"
-              title={t === "brush" ? "Brush (B)" : t === "eraser" ? "Eraser (E)" : "Lasso (L)"}
-              className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${tool === t ? "bg-[#ff0073] text-white" : "bg-[#2D2D2D] text-white/60 hover:text-white"}`}
-              onClick={() => setTool(t)}
-            >
-              {t === "brush" && <Paintbrush className="w-4 h-4" />}
-              {t === "eraser" && <Eraser className="w-4 h-4" />}
-              {t === "lasso" && <Triangle className="w-4 h-4" />}
-            </button>
-          ))}
-
-          <div className="w-px h-5 bg-[#2D2D2D] mx-1" />
-
-          {/* Size */}
-          <label className="text-[11px] text-white/40">Size</label>
-          <input type="range" min={5} max={80} value={brushSize}
-            onChange={(e) => setBrushSize(Number(e.target.value))}
-            className="w-20 accent-[#ff0073]" disabled={tool === "lasso"} />
-          <span className="text-[11px] text-white/40 w-6">{brushSize}</span>
-
-          {/* Opacity */}
-          <label className="text-[11px] text-white/40 ml-1">Opacity</label>
-          <input type="range" min={10} max={100} step={10} value={opacity}
-            onChange={(e) => setOpacity(Number(e.target.value))}
-            className="w-20 accent-[#ff0073]" />
-          <span className="text-[11px] text-white/40 w-8">{opacity}%</span>
-
-          <div className="w-px h-5 bg-[#2D2D2D] mx-1" />
-
-          {/* Undo / Redo */}
-          <button type="button" title="Undo (Ctrl+Z)" onClick={handleUndo}
-            disabled={strokes.length === 0}
-            className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#2D2D2D] text-white/60 hover:text-white disabled:opacity-30 transition-colors">
-            <Undo2 className="w-4 h-4" />
-          </button>
-          <button type="button" title="Redo (Ctrl+Y)" onClick={handleRedo}
-            disabled={redoStack.length === 0}
-            className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#2D2D2D] text-white/60 hover:text-white disabled:opacity-30 transition-colors">
-            <Redo2 className="w-4 h-4" />
-          </button>
-          <button type="button" title="Invert mask" onClick={handleInvert}
-            className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#2D2D2D] text-white/60 hover:text-white transition-colors">
-            <ArrowRightLeft className="w-4 h-4" />
-          </button>
-          <button type="button" title="Clear mask" onClick={handleClear}
-            className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#2D2D2D] text-white/60 hover:text-white transition-colors">
-            <RotateCcw className="w-4 h-4" />
-          </button>
-
-          {/* View toggle */}
-          <div className="ml-auto flex items-center rounded-lg overflow-hidden border border-[#2D2D2D]">
-            {(["overlay", "mask", "source"] as ViewMode[]).map((v) => (
-              <button key={v} type="button"
-                className={`px-2.5 py-1 text-[11px] capitalize transition-colors ${viewMode === v ? "bg-[#2D2D2D] text-white" : "text-white/40 hover:text-white"}`}
-                onClick={() => setViewMode(v)}>
-                {v}
-              </button>
-            ))}
+        {/* Header */}
+        <div className="flex items-center justify-between gap-6 px-[18px] py-[14px] border-b border-[#232327] bg-[#151518]">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-[30px] h-[30px] rounded-lg flex items-center justify-center text-white" style={{ background: PINK }}>
+              <Paintbrush className="w-4 h-4" />
+            </div>
+            <div className="flex flex-col gap-0.5 min-w-0">
+              <div className="text-[#f4f4f5] text-sm font-medium leading-none">Mask editor</div>
+              <div className="text-[#75757c] text-[11px] font-mono leading-none whitespace-nowrap overflow-hidden text-ellipsis">
+                {baseName}{imgSize ? ` · ${imgSize.w} × ${imgSize.h}` : ""}
+              </div>
+            </div>
           </div>
-
-          <button type="button" onClick={onClose} className="ml-2 text-white/40 hover:text-white">
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2.5">
+            <div className="flex bg-[#1c1c20] border border-[#26262b] rounded-[9px] p-[3px] gap-0.5">
+              {(["overlay", "mask", "source"] as ViewMode[]).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setViewMode(v)}
+                  className={`px-3.5 h-7 rounded-[7px] text-xs capitalize transition-colors ${viewMode === v ? "bg-[#2e2e34] text-[#f4f4f5]" : "text-[#8a8a92] hover:text-[#c9c9d0]"}`}
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-8 h-8 rounded-[9px] border border-[#26262b] bg-[#1c1c20] text-[#a1a1a8] hover:bg-[#26262b] hover:text-[#f4f4f5] flex items-center justify-center transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
-        {/* Canvas area */}
-        <div className="relative flex-1 overflow-auto p-4">
-          <div className="relative inline-block">
-            <img
-              ref={imgElRef}
-              src={getImageProxyUrl(imageUrl)}
-              alt="Source"
-              crossOrigin="anonymous"
-              onLoad={handleImageLoad}
-              className={`max-w-full max-h-[70vh] rounded-lg select-none ${viewMode === "mask" ? "opacity-0" : ""}`}
-              draggable={false}
-            />
-            {imageLoaded && (
-              <canvas
-                ref={canvasRef}
-                className="absolute top-0 left-0 cursor-crosshair"
-                style={{ touchAction: "none" }}
-                onMouseDown={handlePointerDown}
-                onMouseMove={handlePointerMove}
-                onMouseUp={handlePointerUp}
-                onMouseLeave={handlePointerUp}
-                onDoubleClick={handleDoubleClick}
-              />
+        <div className="flex flex-1 min-h-0">
+
+          {/* Tool rail */}
+          <div className="w-[76px] shrink-0 border-r border-[#232327] bg-[#151518] flex flex-col items-center gap-1.5 py-3.5">
+            {toolBtn("brush", <Paintbrush className="w-[17px] h-[17px]" />, "Brush")}
+            {toolBtn("eraser", <Eraser className="w-[17px] h-[17px]" />, "Erase")}
+            {toolBtn("lasso", <Triangle className="w-[17px] h-[17px]" />, "Shape")}
+            <div className="w-9 h-px bg-[#26262b] my-2" />
+            <button type="button" onClick={handleUndo} disabled={!canUndo}
+              className="w-[52px] h-11 flex flex-col items-center justify-center gap-1 rounded-[11px] text-[#75757c] hover:text-[#c9c9d0] disabled:opacity-30 transition-colors">
+              <Undo2 className="w-4 h-4" /><span className="text-[9.5px]">Undo</span>
+            </button>
+            <button type="button" onClick={handleRedo} disabled={!canRedo}
+              className="w-[52px] h-11 flex flex-col items-center justify-center gap-1 rounded-[11px] text-[#75757c] hover:text-[#c9c9d0] disabled:opacity-30 transition-colors">
+              <Redo2 className="w-4 h-4" /><span className="text-[9.5px]">Redo</span>
+            </button>
+            <div className="flex-1" />
+            <div className="text-[#4d4d54] text-[9px] font-mono text-center leading-relaxed px-2">B / E<br />[ ]</div>
+          </div>
+
+          {/* Stage */}
+          <div
+            ref={stageRef}
+            className="relative flex-1 min-w-0 overflow-auto flex items-center justify-center bg-[#101012]"
+            style={{ backgroundImage: "radial-gradient(#1d1d21 1px, transparent 1px)", backgroundSize: "22px 22px" }}
+            onPointerLeave={handleStageLeave}
+          >
+            {imgSize ? (
+              <div className="rounded-[10px] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,.55),0_0_0_1px_#2a2a30] m-6">
+                <canvas
+                  ref={canvasRef}
+                  width={imgSize.w}
+                  height={imgSize.h}
+                  onPointerDown={handlePointerDown}
+                  onPointerMove={handlePointerMove}
+                  onPointerUp={handlePointerUp}
+                  onDoubleClick={handleDoubleClick}
+                  className="block touch-none"
+                  style={{ width: `${displayW}px`, height: "auto", cursor: tool === "lasso" ? "crosshair" : "none" }}
+                />
+              </div>
+            ) : (
+              <Loader2 className="w-8 h-8 animate-spin text-[#4f4f57]" />
             )}
+
+            {/* Ring cursor */}
+            <div
+              ref={cursorRef}
+              className="absolute left-0 top-0 rounded-full pointer-events-none opacity-0 -translate-x-1/2 -translate-y-1/2"
+              style={{ border: "1.5px solid rgba(255,255,255,.9)", boxShadow: "0 0 0 1px rgba(0,0,0,.5) inset, 0 0 0 1px rgba(0,0,0,.4)" }}
+            />
+
+            {/* Coverage pill */}
+            <div className="absolute left-4 top-3.5 flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[rgba(19,19,22,.82)] border border-[#26262b] backdrop-blur-md">
+              <div className="w-2 h-2 rounded-[2px]" style={{ background: PINK }} />
+              <div className="text-[#c9c9d0] text-[11px] font-mono whitespace-nowrap">{coverage}% will be regenerated</div>
+            </div>
+
+            {/* Zoom pill */}
+            <div className="absolute bottom-3.5 left-1/2 -translate-x-1/2 flex items-center gap-0.5 p-1 rounded-[9px] bg-[rgba(19,19,22,.82)] border border-[#26262b] backdrop-blur-md">
+              <button type="button" onClick={() => setZoom((z) => Math.max(25, z - 25))} className="min-w-7 h-6 px-2 rounded-md text-[#c9c9d0] text-xs hover:bg-white/5">−</button>
+              <div className="min-w-[52px] text-center text-[#c9c9d0] text-[11px] font-mono">{zoom}%</div>
+              <button type="button" onClick={() => setZoom((z) => Math.min(400, z + 25))} className="min-w-7 h-6 px-2 rounded-md text-[#c9c9d0] text-xs hover:bg-white/5">+</button>
+              <div className="w-px h-4 bg-[#2c2c32] mx-1" />
+              <button type="button" onClick={() => setZoom(100)} className="min-w-7 h-6 px-2 rounded-md text-[#c9c9d0] text-xs hover:bg-white/5">Fit</button>
+            </div>
+          </div>
+
+          {/* Right panel */}
+          <div className="w-[264px] shrink-0 border-l border-[#232327] bg-[#151518] flex flex-col gap-[22px] px-[18px] pt-[18px] pb-5 overflow-y-auto">
+            <div className="flex flex-col gap-3.5">
+              <div className="text-[#75757c] text-[10px] font-medium tracking-[.12em] uppercase">Brush</div>
+              {([
+                { label: "Size", value: brushSize, suffix: " px", min: 4, max: 200, set: setBrushSize },
+                { label: "Hardness", value: hardness, suffix: "%", min: 0, max: 100, set: setHardness },
+                { label: "Flow", value: flow, suffix: "%", min: 10, max: 100, set: setFlow },
+              ] as const).map((s) => (
+                <div key={s.label} className="flex flex-col gap-[7px]">
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-[#c9c9d0] text-xs">{s.label}</span>
+                    <span className="text-[#f4f4f5] text-xs font-mono">{s.value}{s.suffix}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={s.min}
+                    max={s.max}
+                    value={s.value}
+                    onChange={(e) => s.set(Number(e.target.value))}
+                    className="w-full accent-[#ff0073]"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="h-px bg-[#232327]" />
+
+            <div className="flex flex-col gap-3">
+              <div className="text-[#75757c] text-[10px] font-medium tracking-[.12em] uppercase">Selection</div>
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => fillAll("#ffffff")} className={panelBtn}>Select all</button>
+                <button type="button" onClick={handleInvert} className={panelBtn}>Invert</button>
+                <button type="button" onClick={() => fillAll("#000000")} className={panelBtn}>Clear</button>
+                <button type="button" onClick={handleFeather} className={panelBtn}>Feather</button>
+              </div>
+            </div>
+
+            <div className="h-px bg-[#232327]" />
+
+            <div className="flex flex-col gap-3">
+              <div className="text-[#75757c] text-[10px] font-medium tracking-[.12em] uppercase">Legend</div>
+              <div className="flex items-center gap-2.5">
+                <div className="w-[26px] h-[26px] rounded-md bg-white shrink-0" />
+                <div className="flex flex-col gap-px">
+                  <span className="text-[#f4f4f5] text-xs">White — edit area</span>
+                  <span className="text-[#75757c] text-[11px]">Repainted by the model</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <div className="w-[26px] h-[26px] rounded-md bg-black border border-[#2c2c32] shrink-0" />
+                <div className="flex flex-col gap-px">
+                  <span className="text-[#f4f4f5] text-xs">Black — preserve</span>
+                  <span className="text-[#75757c] text-[11px]">Kept pixel-for-pixel</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between gap-2 px-4 py-3 border-t border-[#2D2D2D]">
-          <p className="text-[11px] text-white/30">White = edit area · Black = preserve</p>
-          <div className="flex gap-2">
-            <button type="button" onClick={onClose}
-              className="px-4 py-2 text-sm text-white/60 hover:text-white transition-colors">
+        <div className="flex items-center justify-between gap-4 px-[18px] py-3.5 border-t border-[#232327] bg-[#151518]">
+          <div className="text-[#75757c] text-[11.5px]">Paint over what you want the model to change. Everything else stays untouched.</div>
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-[18px] h-[38px] rounded-[10px] border border-[#2c2c32] bg-transparent text-[#c9c9d0] text-[13px] hover:bg-[#1f1f24] hover:text-[#f4f4f5] transition-colors"
+            >
               Cancel
             </button>
-            <button type="button" onClick={handleSave}
-              disabled={saving || !hasContent}
-              className="px-4 py-2 text-sm bg-[#ff0073] text-white rounded-lg hover:bg-[#ff0073]/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving || !hasContent || !imgSize}
+              className="px-[22px] h-[38px] rounded-[10px] text-white text-[13px] font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors hover:opacity-90"
+              style={{ background: PINK }}
+            >
               {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              Save Mask
+              Save mask
             </button>
           </div>
         </div>

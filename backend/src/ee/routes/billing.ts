@@ -14,6 +14,7 @@ import { z } from "zod"
 import { supabase } from "../../lib/supabase.js"
 import { getStripe } from "../billing/stripe-client.js"
 import { PRICE_TO_PLAN, getTierFromPriceId, TIER_CREDITS, TIER_STORAGE_LIMITS, TOP_UPS } from "../billing/stripe-config.js"
+import { creditsForLoadUsd, MIN_LOAD_USD, MAX_LOAD_USD } from "../billing/load-rate.js"
 import { ensureStripeCustomer } from "../billing/provision-credits.js"
 import { rejectProgrammaticAuth } from "../../lib/api-auth-mode.js"
 import { tierColumns } from "../billing/tier-columns.js"
@@ -199,6 +200,181 @@ export async function billingRoutes(app: FastifyInstance) {
       console.error("[billing] Failed to create checkout session:", (err as Error).message)
       return reply.status(500).send({ error: "Failed to create checkout session" })
     }
+  })
+
+  // Pay-as-you-go: load an ARBITRARY whole-dollar amount of credits.
+  // The rate function (ee/billing/load-rate.ts) is the single pricing
+  // source — this route only quotes it for the Checkout line item; the
+  // webhook re-derives the grant from the settled amount through the same
+  // function, so a mismatch fails loudly instead of granting.
+  app.post("/v1/billing/create-load-session", async (req, reply) => {
+    const userId = req.userId
+    if (!userId) {
+      return reply.status(401).send({ error: "Authentication required" })
+    }
+    if (rejectProgrammaticAuth(req, reply, BILLING_JWT_ONLY_MSG)) return
+
+    const parsed = z
+      .object({
+        amountUsd: z.number().int().min(MIN_LOAD_USD).max(MAX_LOAD_USD),
+        embedded: z.boolean().optional(),
+      })
+      .safeParse(req.body)
+    if (!parsed.success) {
+      return reply.status(400).send({
+        error: `amountUsd must be a whole dollar amount between ${MIN_LOAD_USD} and ${MAX_LOAD_USD}`,
+      })
+    }
+    const { amountUsd, embedded } = parsed.data
+    const credits = creditsForLoadUsd(amountUsd)
+
+    try {
+      let stripeCustomerId: string | null = null
+      const { data: existingCustomer } = await supabase
+        .from("stripe_customers")
+        .select("stripe_customer_id")
+        .eq("user_id", userId)
+        .single()
+
+      if (existingCustomer) {
+        stripeCustomerId = existingCustomer.stripe_customer_id
+      } else {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("email")
+          .eq("id", userId)
+          .single()
+        const customer = await getStripe().customers.create({
+          email: profile?.email ?? undefined,
+          metadata: { userId },
+        })
+        stripeCustomerId = customer.id
+        await ensureStripeCustomer(customer.id, userId)
+      }
+
+      const baseUrl = getOrigin(req)
+      const successUrl = embedded
+        ? `${baseUrl}/checkout-complete?status=success`
+        : `${baseUrl}/billing?topup=true`
+      const cancelUrl = embedded
+        ? `${baseUrl}/checkout-complete?status=cancelled`
+        : `${baseUrl}/billing`
+
+      const session = await getStripe().checkout.sessions.create({
+        customer: stripeCustomerId ?? undefined,
+        mode: "payment",
+        line_items: [
+          {
+            price_data: {
+              currency: "usd",
+              unit_amount: amountUsd * 100,
+              product_data: {
+                name: `${credits.toLocaleString()} Nodaro credits`,
+                description: "Pay-as-you-go credit load — credits never expire",
+              },
+            },
+            quantity: 1,
+          },
+        ],
+        metadata: { userId, kind: "load", loadUsd: String(amountUsd) },
+        // Save the card for off-session auto-recharge (design §5.1) — the
+        // ONLY extra field; grant sizing never reads PI metadata from here.
+        payment_intent_data: { setup_future_usage: "off_session" },
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+      })
+
+      return reply.send({ data: { url: session.url, credits } })
+    } catch (err) {
+      console.error("[billing] Failed to create load session:", (err as Error).message)
+      return reply.status(500).send({ error: "Failed to create load session" })
+    }
+  })
+
+  // Auto-recharge configuration — "when balance < X credits, load $Y".
+  // JWT-only like every billing surface. The columns are RLS-guarded against
+  // client writes; this service-role route is the ONLY writer.
+  app.get("/v1/billing/auto-recharge", async (req, reply) => {
+    const userId = req.userId
+    if (!userId) return reply.status(401).send({ error: "Authentication required" })
+    if (rejectProgrammaticAuth(req, reply, BILLING_JWT_ONLY_MSG)) return
+
+    const { data: p } = await supabase
+      .from("profiles")
+      .select(
+        "auto_recharge_enabled, auto_recharge_threshold_credits, auto_recharge_amount_usd, auto_recharge_failure_count, auto_recharge_last_attempt_at"
+      )
+      .eq("id", userId)
+      .single()
+    if (!p) return reply.status(404).send({ error: "Profile not found" })
+
+    // Saved-card presence drives the needs_setup UI state.
+    let hasSavedCard = false
+    try {
+      const { data: cust } = await supabase
+        .from("stripe_customers")
+        .select("stripe_customer_id")
+        .eq("user_id", userId)
+        .maybeSingle()
+      const custId = cust?.stripe_customer_id
+      if (custId) {
+        const pms = await getStripe().paymentMethods.list({ customer: custId, type: "card", limit: 1 })
+        hasSavedCard = pms.data.length > 0
+      }
+    } catch {
+      // Card lookup is best-effort — the config itself still loads.
+    }
+
+    return reply.send({
+      data: {
+        enabled: p.auto_recharge_enabled ?? false,
+        thresholdCredits: p.auto_recharge_threshold_credits ?? null,
+        amountUsd: p.auto_recharge_amount_usd ?? null,
+        failureCount: p.auto_recharge_failure_count ?? 0,
+        lastAttemptAt: p.auto_recharge_last_attempt_at ?? null,
+        hasSavedCard,
+      },
+    })
+  })
+
+  app.put("/v1/billing/auto-recharge", async (req, reply) => {
+    const userId = req.userId
+    if (!userId) return reply.status(401).send({ error: "Authentication required" })
+    if (rejectProgrammaticAuth(req, reply, BILLING_JWT_ONLY_MSG)) return
+
+    const parsed = z
+      .object({
+        enabled: z.boolean(),
+        thresholdCredits: z.number().int().min(100).max(100000).optional(),
+        amountUsd: z.number().int().min(MIN_LOAD_USD).max(MAX_LOAD_USD).optional(),
+      })
+      .safeParse(req.body)
+    if (!parsed.success) {
+      return reply.status(400).send({
+        error: parsed.error.issues[0]?.message ?? "Invalid auto-recharge config",
+      })
+    }
+    const { enabled, thresholdCredits, amountUsd } = parsed.data
+    if (enabled && (!thresholdCredits || !amountUsd)) {
+      return reply.status(400).send({ error: "Enabling requires thresholdCredits and amountUsd" })
+    }
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        auto_recharge_enabled: enabled,
+        ...(thresholdCredits !== undefined ? { auto_recharge_threshold_credits: thresholdCredits } : {}),
+        ...(amountUsd !== undefined ? { auto_recharge_amount_usd: amountUsd } : {}),
+        // A deliberate config change is the user vouching for their card
+        // again — clear the failure streak so re-enabling actually works.
+        auto_recharge_failure_count: 0,
+      })
+      .eq("id", userId)
+    if (error) {
+      console.error("[billing] auto-recharge config update failed:", error.message)
+      return reply.status(500).send({ error: "Failed to update auto-recharge settings" })
+    }
+    return reply.send({ data: { enabled, thresholdCredits: thresholdCredits ?? null, amountUsd: amountUsd ?? null } })
   })
 
   // Create a Stripe Customer Portal session for subscription management

@@ -2492,6 +2492,23 @@ export type GenerateMaskData = {
   currentJobProgress?: number
 }
 
+// Paint Mask: hand-painted mask as a first-class canvas value. A source node —
+// it never executes; the painted `maskUrl` IS its output (mirrors upload-image's
+// "output from data" model). `sourceImageUrl` records which image the mask was
+// painted over (the design-time substrate), for provenance and re-editing only.
+export type PaintMaskData = {
+  [key: string]: unknown
+  label: string
+  maskUrl?: string
+  sourceImageUrl?: string
+  /** Epoch ms of the last painter save — drives the node's "edited Nm ago". */
+  maskUpdatedAt?: number
+  /** Painter defaults applied when the editor opens (Settings panel). */
+  defaultBrushSize?: number
+  defaultBrushHardness?: number
+  fieldMappings: FieldMappings
+}
+
 export type QACheckData = {
   [key: string]: unknown
   label: string
@@ -5445,6 +5462,7 @@ export type SceneNodeData =
   | ExtendVideoData
   | FaceSwapData
   | GenerateMaskData
+  | PaintMaskData
   | SaveToStorageData
   | WebhookOutputData
   | SceneNodeDataType
@@ -5629,6 +5647,7 @@ export type SceneNodeType =
   | "extend-video"
   | "face-swap"
   | "generate-mask"
+  | "paint-mask"
   | "save-to-storage"
   | "webhook-output"
   | "scene"
@@ -7723,6 +7742,22 @@ export const NODE_DEFINITIONS: ReadonlyArray<NodeTypeDefinition> = [
       { key: "image", label: "Image", outputType: "image" as const },
       { key: "mask", label: "Mask", outputType: "image" as const },
     ],
+  },
+  {
+    // Source node (never executes): the hand-painted maskUrl IS the output.
+    // "mask" input seeds the painter with an existing mask (generate → refine).
+    type: "paint-mask",
+    label: "Paint Mask",
+    category: "processing",
+    creditCost: 0,
+    inputs: ["image", "mask"],
+    outputs: ["mask"],
+    width: 288,
+    defaultData: {
+      label: "Paint Mask",
+      fieldMappings: {},
+    } as PaintMaskData,
+    exposableOutputs: [{ key: "mask", label: "Mask", outputType: "image" as const }],
   },
   // Output
   {

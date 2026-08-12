@@ -80,6 +80,7 @@ export const HANDLE_OUTPUT_TYPES: Record<string, Partial<Record<string, HandleCo
   "motion-graphics": { composition: "control", lottie: "control" },
   "motion-transfer": { video: "video" },
   "object": { objectRef: "imageRef", image: "image" },
+  "paint-mask": { mask: "mask" },
   "creature": { creatureRef: "imageRef", image: "image" },
   "preview": { out: "control" },
   "qa-check": { approved: "approve", rejected: "negative" },

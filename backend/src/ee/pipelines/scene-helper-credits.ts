@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
+import { attemptAutoRecharge } from "../billing/auto-recharge.js"
 import { creditsToUsd } from "@nodaro/shared"
 import type { SceneHelperName } from "@nodaro/shared"
 import {
@@ -85,6 +86,10 @@ export async function reserveHelperCredits(
   if (!usageLogId) {
     return { ok: false, reason: "insufficient_credits" }
   }
+  // Reserve succeeded — balance dropped; auto-recharge check (fire-and-
+  // forget, never blocks the pipeline). Covers the direct-RPC reserve lane
+  // the CreditsService hook can't see (audit F2.2).
+  void attemptAutoRecharge(args.userId)
   return { ok: true, usageLogId: usageLogId as string }
 }
 

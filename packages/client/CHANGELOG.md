@@ -1,5 +1,16 @@
 # @nodaro/sdk
 
+## 1.16.0
+
+### Minor Changes
+
+- bbea01b: `UserBalance` gains `effectiveTier` — the derived entitlement tier ("payg" for pay-as-you-go users: no subscription, purchased credits, full model access). `tier` keeps the stored billing tier for back-compat.
+
+### Patch Changes
+
+- Updated dependencies [bbea01b]
+  - @nodaro/shared@2.4.0
+
 ## 1.15.0
 
 ### Minor Changes

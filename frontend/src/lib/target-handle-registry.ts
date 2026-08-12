@@ -25,6 +25,7 @@ import {
   isValidModifyImageConnection,
   isValidImageToImageConnection,
   isValidGenerateMaskConnection,
+  isValidPaintMaskConnection,
   isValidImageCollageConnection,
   isValidUpscaleImageConnection,
   isValidRemoveBackgroundConnection,
@@ -573,6 +574,10 @@ const BASE_TARGET_HANDLE_ACCEPTS: Record<string, ReadonlyArray<TargetHandleEntry
   ],
   "generate-mask": [
     { handleId: "image", label: IMAGE_PRODUCER_HANDLE_LABELS["generate-mask"].image, accepts: (s) => isValidGenerateMaskConnection("image", s) },
+  ],
+  "paint-mask": [
+    { handleId: "image", label: IMAGE_PRODUCER_HANDLE_LABELS["paint-mask"].image, accepts: (s) => isValidPaintMaskConnection("image", s) },
+    { handleId: "mask",  label: IMAGE_PRODUCER_HANDLE_LABELS["paint-mask"].mask,  accepts: (s) => isValidPaintMaskConnection("mask", s) },
   ],
   "image-collage": [
     { handleId: "in", label: IMAGE_PRODUCER_HANDLE_LABELS["image-collage"].in, accepts: (s) => isValidImageCollageConnection("in", s) },
