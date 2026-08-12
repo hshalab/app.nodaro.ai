@@ -5546,6 +5546,24 @@ export async function createCheckoutSession(params: {
     : (json as { url: string }).url
 }
 
+export async function createLoadSession(params: {
+  amountUsd: number
+  /** Opened from an embedded iframe → return to the no-auth /checkout-complete page. */
+  embedded?: boolean
+}): Promise<{ url: string; credits: number }> {
+  const res = await fetch(`${API_BASE_URL}/v1/billing/create-load-session`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...await getAuthHeaders() },
+    body: JSON.stringify(params),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error((err as Record<string, string>).error ?? "Failed to create load session")
+  }
+  const json = await res.json()
+  return (json as { data: { url: string; credits: number } }).data
+}
+
 // ============================================================
 // Voices (ElevenLabs)
 // ============================================================

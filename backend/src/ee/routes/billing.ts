@@ -14,6 +14,7 @@ import { z } from "zod"
 import { supabase } from "../../lib/supabase.js"
 import { getStripe } from "../billing/stripe-client.js"
 import { PRICE_TO_PLAN, getTierFromPriceId, TIER_CREDITS, TIER_STORAGE_LIMITS, TOP_UPS } from "../billing/stripe-config.js"
+import { creditsForLoadUsd, MIN_LOAD_USD, MAX_LOAD_USD } from "../billing/load-rate.js"
 import { ensureStripeCustomer } from "../billing/provision-credits.js"
 import { rejectProgrammaticAuth } from "../../lib/api-auth-mode.js"
 import { tierColumns } from "../billing/tier-columns.js"
@@ -198,6 +199,92 @@ export async function billingRoutes(app: FastifyInstance) {
     } catch (err) {
       console.error("[billing] Failed to create checkout session:", (err as Error).message)
       return reply.status(500).send({ error: "Failed to create checkout session" })
+    }
+  })
+
+  // Pay-as-you-go: load an ARBITRARY whole-dollar amount of credits.
+  // The rate function (ee/billing/load-rate.ts) is the single pricing
+  // source — this route only quotes it for the Checkout line item; the
+  // webhook re-derives the grant from the settled amount through the same
+  // function, so a mismatch fails loudly instead of granting.
+  app.post("/v1/billing/create-load-session", async (req, reply) => {
+    const userId = req.userId
+    if (!userId) {
+      return reply.status(401).send({ error: "Authentication required" })
+    }
+    if (rejectProgrammaticAuth(req, reply, BILLING_JWT_ONLY_MSG)) return
+
+    const parsed = z
+      .object({
+        amountUsd: z.number().int().min(MIN_LOAD_USD).max(MAX_LOAD_USD),
+        embedded: z.boolean().optional(),
+      })
+      .safeParse(req.body)
+    if (!parsed.success) {
+      return reply.status(400).send({
+        error: `amountUsd must be a whole dollar amount between ${MIN_LOAD_USD} and ${MAX_LOAD_USD}`,
+      })
+    }
+    const { amountUsd, embedded } = parsed.data
+    const credits = creditsForLoadUsd(amountUsd)
+
+    try {
+      let stripeCustomerId: string | null = null
+      const { data: existingCustomer } = await supabase
+        .from("stripe_customers")
+        .select("stripe_customer_id")
+        .eq("user_id", userId)
+        .single()
+
+      if (existingCustomer) {
+        stripeCustomerId = existingCustomer.stripe_customer_id
+      } else {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("email")
+          .eq("id", userId)
+          .single()
+        const customer = await getStripe().customers.create({
+          email: profile?.email ?? undefined,
+          metadata: { userId },
+        })
+        stripeCustomerId = customer.id
+        await ensureStripeCustomer(customer.id, userId)
+      }
+
+      const baseUrl = getOrigin(req)
+      const successUrl = embedded
+        ? `${baseUrl}/checkout-complete?status=success`
+        : `${baseUrl}/billing?topup=true`
+      const cancelUrl = embedded
+        ? `${baseUrl}/checkout-complete?status=cancelled`
+        : `${baseUrl}/billing`
+
+      const session = await getStripe().checkout.sessions.create({
+        customer: stripeCustomerId ?? undefined,
+        mode: "payment",
+        line_items: [
+          {
+            price_data: {
+              currency: "usd",
+              unit_amount: amountUsd * 100,
+              product_data: {
+                name: `${credits.toLocaleString()} Nodaro credits`,
+                description: "Pay-as-you-go credit load — credits never expire",
+              },
+            },
+            quantity: 1,
+          },
+        ],
+        metadata: { userId, kind: "load", loadUsd: String(amountUsd) },
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+      })
+
+      return reply.send({ data: { url: session.url, credits } })
+    } catch (err) {
+      console.error("[billing] Failed to create load session:", (err as Error).message)
+      return reply.status(500).send({ error: "Failed to create load session" })
     }
   })
 

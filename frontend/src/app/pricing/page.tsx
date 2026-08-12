@@ -235,6 +235,27 @@ export default function PricingPage() {
           })}
         </div>
 
+        {/* API / Pay-as-you-go */}
+        <div className="mt-16 mx-auto max-w-3xl rounded-xl border border-zinc-200 dark:border-zinc-800 p-8 text-center">
+          <h2 className="text-2xl font-bold">API / Pay-as-you-go</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            No subscription required. Load any amount of credits and use the full
+            platform — web, API, SDK, and MCP — on your own terms.
+          </p>
+          <ul className="mt-6 grid gap-2 text-sm text-left mx-auto max-w-md">
+            <li>✓ Credits never expire</li>
+            <li>✓ All models unlocked from your first load — no watermark, no daily cap</li>
+            <li>✓ Load any whole-dollar amount ($5–$1,000); bigger loads earn a better rate</li>
+            <li>✓ Outputs are public — private mode is a subscription feature (Standard and up)</li>
+          </ul>
+          <Link
+            to="/billing"
+            className="mt-6 inline-block rounded-md bg-[#ff0073] px-6 py-2 text-sm font-medium text-white"
+          >
+            Load credits
+          </Link>
+        </div>
+
         {/* FAQ / Extra info */}
         <div className="mt-16 text-center">
           <p className="text-sm text-muted-foreground">

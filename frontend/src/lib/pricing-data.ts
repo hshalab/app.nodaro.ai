@@ -268,3 +268,38 @@ export const TOPUP_PACKAGES: readonly TopupPackage[] = [
     perCredit: "$0.0028",
   },
 ] as const
+
+/**
+ * Pay-as-you-go load rate — DISPLAY MIRROR of the canonical function in
+ * backend/src/ee/billing/load-rate.ts (sync-pinned by its test). Piecewise
+ * linear between the live pack anchors; $10 rate extended down to the $5
+ * minimum; flat ceiling above $100.
+ */
+export const LOAD_RATE_ANCHORS: ReadonlyArray<{ usd: number; credits: number }> = [
+  { usd: 10, credits: 3300 },
+  { usd: 25, credits: 8500 },
+  { usd: 50, credits: 17500 },
+  { usd: 100, credits: 36000 },
+]
+export const MIN_LOAD_USD = 5
+export const MAX_LOAD_USD = 1000
+export const MAX_LOAD_RATE_PER_USD = 360
+
+export function creditsForLoadUsd(amountUsd: number): number | null {
+  if (!Number.isInteger(amountUsd) || amountUsd < MIN_LOAD_USD || amountUsd > MAX_LOAD_USD) {
+    return null
+  }
+  const first = LOAD_RATE_ANCHORS[0]
+  const last = LOAD_RATE_ANCHORS[LOAD_RATE_ANCHORS.length - 1]
+  if (amountUsd <= first.usd) return Math.round((amountUsd * first.credits) / first.usd)
+  if (amountUsd >= last.usd) return Math.round((amountUsd * last.credits) / last.usd)
+  for (let i = 0; i < LOAD_RATE_ANCHORS.length - 1; i++) {
+    const a = LOAD_RATE_ANCHORS[i]
+    const b = LOAD_RATE_ANCHORS[i + 1]
+    if (amountUsd >= a.usd && amountUsd <= b.usd) {
+      const t = (amountUsd - a.usd) / (b.usd - a.usd)
+      return Math.round(a.credits + t * (b.credits - a.credits))
+    }
+  }
+  return null
+}

@@ -15,6 +15,7 @@ import {
 } from "./stripe-config.js"
 import { tierColumns } from "./tier-columns.js"
 import { downgradeToEffectiveFloor, raiseStorageFloorOnActivation, reapplyStorageFloorAfterClawback } from "./downgrade-floor.js"
+import { creditsForLoadUsd } from "./load-rate.js"
 import { CreditsService } from "./credits.js"
 import { invalidateBalanceCache } from "../routes/credits.js"
 
@@ -533,6 +534,29 @@ export async function handleTransactionCompleted(
   // The idempotency claim below still prevents any double-grant.
   if (totalCredits === 0 && data.metadata?.topupPriceId) {
     totalCredits = getTopupCredits(data.metadata.topupPriceId) ?? 0
+  }
+
+  // Arbitrary-amount load (metadata kind="load"): size the grant from the
+  // SETTLED amount through the rate function — metadata never sizes a grant,
+  // and a tampered/mismatched amount fails loudly instead of granting.
+  if (totalCredits === 0 && data.metadata?.kind === "load") {
+    if (data.totalAmount > 0 && data.totalAmount % 100 === 0) {
+      try {
+        totalCredits = creditsForLoadUsd(data.totalAmount / 100)
+      } catch (err) {
+        console.error(
+          "[stripe] transaction.completed: load amount rejected by rate function:",
+          data.transactionId,
+          err instanceof Error ? err.message : err
+        )
+      }
+    } else {
+      console.error(
+        "[stripe] transaction.completed: load session with non-whole-dollar amount:",
+        data.transactionId,
+        data.totalAmount
+      )
+    }
   }
 
   if (totalCredits === 0) {

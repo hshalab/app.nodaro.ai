@@ -645,6 +645,47 @@ describe("provision-credits", () => {
       expect(mockInvalidateBalanceCache).toHaveBeenCalledWith("user-001")
     })
 
+    it("sizes a load-session grant from the settled amount via the rate function", async () => {
+      mockSelect("stripe_customers", { user_id: "user-001" })
+      mockRpc.mockResolvedValueOnce({ data: true, error: null })
+
+      await handleTransactionCompleted({
+        ...baseTransactionData,
+        lineItems: [], // ad-hoc price_data line items carry no known priceId
+        totalAmount: 3700, // $37 — between the $25 and $50 anchors
+        metadata: { userId: "user-001", kind: "load", loadUsd: "37" },
+      })
+
+      // 8500 + ((37-25)/25) * (17500-8500) = 12,820 — recomputed from the
+      // settled amount, never from metadata.
+      expect(mockRpc).toHaveBeenCalledWith("grant_topup_credits_idempotent", {
+        p_user_id: "user-001",
+        p_credits: 12820,
+        p_stripe_transaction_id: "txn_001",
+        p_amount_usd: 37,
+      })
+    })
+
+    it("rejects a load session with a non-whole-dollar settled amount", async () => {
+      await handleTransactionCompleted({
+        ...baseTransactionData,
+        lineItems: [],
+        totalAmount: 3750, // $37.50 — not a whole dollar
+        metadata: { userId: "user-001", kind: "load" },
+      })
+      expect(mockRpc).not.toHaveBeenCalled()
+    })
+
+    it("rejects a load session whose amount is outside the rate bounds", async () => {
+      await handleTransactionCompleted({
+        ...baseTransactionData,
+        lineItems: [],
+        totalAmount: 200000, // $2,000 > MAX_LOAD_USD
+        metadata: { userId: "user-001", kind: "load" },
+      })
+      expect(mockRpc).not.toHaveBeenCalled()
+    })
+
     it("skips if subscriptionId is present (handled by subscription events)", async () => {
       const subTransaction = {
         ...baseTransactionData,
