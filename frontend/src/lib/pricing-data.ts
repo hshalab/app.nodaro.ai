@@ -61,7 +61,7 @@ export const PRICING_TIERS: readonly PricingTier[] = [
     storage: "10 GB",
     features: [
       "No subscription — buy credit packs",
-      "Credits never expire",
+      "Credits valid for 12 months",
       "All models unlocked",
       "No watermark",
       "No daily cap",

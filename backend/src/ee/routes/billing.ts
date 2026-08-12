@@ -279,7 +279,7 @@ export async function billingRoutes(app: FastifyInstance) {
               unit_amount: amountUsd * 100,
               product_data: {
                 name: `${credits.toLocaleString()} Nodaro credits`,
-                description: "Pay-as-you-go credit load — credits never expire",
+                description: "Pay-as-you-go credit load — credits valid for 12 months",
               },
             },
             quantity: 1,

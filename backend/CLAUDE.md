@@ -294,7 +294,7 @@ All use **lowercase with hyphens** except VEO which uses **dot notation**: `veo3
 
 ### Dual-Pool Architecture
 - `subscription_credits` — reset monthly at billing period
-- `topup_credits` — never expire
+- `topup_credits` — valid for 12 months from grant (expiry sweep, migration 314)
 - **Deduction order:** subscription first -> then topup
 - `deduct_credits` RPC handles atomic deduction with FOR UPDATE lock
 - Free tier: **1,500** credits, 500/day cap, veo3/sora2-pro blocked, outputs watermarked
@@ -302,7 +302,7 @@ All use **lowercase with hyphens** except VEO which uses **dot notation**: `veo3
 ### Pricing
 - Credits are the Cloud-edition billing unit; the USD-per-credit conversion is an admin-configurable runtime setting, not a fixed rate in code
 - Tiers: Free ($0/1,500cr), Basic ($12mo/$10yr/4,500cr), Standard ($29mo/$24yr/11,000cr), Pro ($59mo/$49yr/23,000cr), Business ($129mo/$109yr/52,000cr)
-- Top-ups: $10/3,300cr, $25/8,500cr, $50/17,500cr, $100/36,000cr (never expire)
+- Top-ups: $10/3,300cr, $25/8,500cr, $50/17,500cr, $100/36,000cr (valid 12 months)
 - **Authority is `ee/billing/stripe-config.ts`** (`TIER_CREDITS`, `TOP_UPS`) and the
   `tier_config` table — the figures above are a convenience copy. The 2026-07-30
   ×10 re-denomination left this section reading the old grants for a day, so

@@ -264,7 +264,7 @@ function BalanceSection({
               background="var(--blg-cyan-bg)"
               labelColor={CYAN_TEXT}
               label="TOP-UP"
-              badge="never expires"
+              badge="valid 12 months"
               badgeColor={CYAN_BADGE_TEXT}
               badgeBackground="var(--blg-cyan-chip)"
               amount={topup}

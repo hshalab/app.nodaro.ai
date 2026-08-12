@@ -523,7 +523,7 @@ export default function PricingPage() {
             dotColor={CYAN}
             labelColor="var(--prc-cyan-text)"
             label="TOP-UP CREDITS"
-            note="no subscription · never expire · used after your monthly allocation"
+            note="no subscription · valid for 12 months · used after your monthly allocation"
             margin="46px 0 16px"
           />
           <TopupSection

@@ -117,7 +117,7 @@ export function TopupSection({ topupBalance, onLoad, loading }: TopupSectionProp
           <span className="text-sm text-muted-foreground">
             {customUsd && customValid
               ? `= ${(creditsForLoadUsd(parsedCustom) ?? 0).toLocaleString()} credits`
-              : "credits never expire"}
+              : "credits valid for 12 months"}
           </span>
           <button
             type="button"
