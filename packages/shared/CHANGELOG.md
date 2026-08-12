@@ -1,5 +1,11 @@
 # @nodaro/shared
 
+## 2.4.0
+
+### Minor Changes
+
+- bbea01b: New `effective-tier` module: `resolveStoredTier`, `resolveEffectiveTier` (a stored-free profile with net lifetime top-up credits derives the `payg` tier), `isPaygRetentionActive` + `PAYG_RETENTION_DAYS`. Pipeline tier maps gain `payg` keys.
+
 ## 2.3.0
 
 ### Minor Changes
