@@ -1,5 +1,15 @@
 # @nodaro/shared
 
+## 2.5.0
+
+### Minor Changes
+
+- 5a48d4c: Add `flux-fill` (BFL FLUX Fill Pro via Replicate) to the image-to-image provider catalog and to `I2I_MASK_SUPPORT` — a second mask-capable inpainting provider alongside `ideogram-edit`. White = edit area, matching the painter / generate-mask polarity.
+
+### Patch Changes
+
+- 32664fe: Complete the `flux-fill` rollout: the provider is now actually listed in `IMAGE_I2I_PROVIDERS` (the paint-mask release declared it but the enum entry was missing, so route validation rejected the model and frontend type-check failed).
+
 ## 2.4.0
 
 ### Minor Changes
