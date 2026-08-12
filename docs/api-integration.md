@@ -284,8 +284,10 @@ page; larger loads earn a better per-credit rate — activates the
 pay-as-you-go tier: balance responses report
 `effectiveTier: "payg"`, all models are unlocked, outputs are not
 watermarked, and there is no daily spending cap. Credits never expire.
-Subscriptions remain available and always include a lower per-credit
-rate at sustained volume.
+Pay-as-you-go credits are redeemable through the developer surfaces —
+API, SDK, CLI, and MCP; using the web studio requires an active
+subscription. Subscriptions remain available and always include a lower
+per-credit rate at sustained volume.
 
 **Auto-recharge** (optional): in Billing you can set "when my balance drops
 below X credits, load $Y" — the amount is charged off-session to your saved
