@@ -7,6 +7,7 @@
 // keeps the page tight when a category has only one or two tutorials.
 
 import { useState, useMemo, useCallback, lazy, Suspense } from "react"
+import { useNavigate } from "react-router-dom"
 import {
   Play,
   BookOpen,
@@ -34,6 +35,9 @@ import {
   type TemplateBrowseCard,
 } from "@/lib/api"
 import { COMPLEXITY_CONFIG, type Complexity } from "@/lib/template-utils"
+// Registry lookup only — a tiny map of slugs. The tutorial bodies themselves are
+// lazy, so this does not pull any tutorial into the dashboard chunk.
+import { hasTutorial } from "@/components/tutorials/tutorial-registry"
 
 // Lazy: pulls in the React Flow node registry + markdown — keep it out of the
 // initial dashboard chunk so it loads only when a flow preview opens.
@@ -323,6 +327,7 @@ function VideoPlayerDialog({
 type FilterValue = "all" | "videos" | "flows"
 
 export function TutorialsTab() {
+  const navigate = useNavigate()
   const [filter, setFilter] = useState<FilterValue>("all")
   const [openVideo, setOpenVideo] = useState<VideoTutorialItem | null>(null)
   const [selectedFlow, setSelectedFlow] = useState<FlowTutorialItem | null>(null)
@@ -356,7 +361,21 @@ export function TutorialsTab() {
   }, [data])
 
   const handleWatch = useCallback((v: VideoTutorialItem) => setOpenVideo(v), [])
-  const handleSelectFlow = useCallback((f: FlowTutorialItem) => setSelectedFlow(f), [])
+
+  // A flow tutorial with a guided view opens that view; everything else keeps
+  // the snapshot preview it has always had. Deciding here rather than on the
+  // card means a tutorial gains the guided route the moment it is registered,
+  // with no per-card flag to remember to set.
+  const handleSelectFlow = useCallback(
+    (f: FlowTutorialItem) => {
+      if (hasTutorial(f.slug)) {
+        navigate(`/tutorials/${f.slug}`)
+        return
+      }
+      setSelectedFlow(f)
+    },
+    [navigate],
+  )
 
   if (isLoading) {
     return (

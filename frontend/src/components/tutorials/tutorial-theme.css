@@ -1,0 +1,461 @@
+/* Tutorial mode's own visual world.
+ *
+ * Every token is scoped under `.nd-tutorial` and every colour is a literal, NOT
+ * a global theme var. That is deliberate: tutorials are a showcase surface that
+ * commits to one dark palette, and each tutorial is allowed to look a little
+ * different from the next. Nothing here may leak into the app's tokens, and the
+ * app's light/dark switch must not repaint this page.
+ *
+ * Faces map onto the three the app already self-hosts, so no new family ships:
+ *   Space Grotesk -> display, Geist -> UI, JetBrains Mono -> mono.
+ */
+
+.nd-tutorial {
+  --nd-page: #08080b;
+  --nd-canvas: #0b0b0f;
+  --nd-dot: rgba(255, 255, 255, 0.055);
+  --nd-bar: #101015;
+  --nd-panel: rgba(20, 20, 25, 0.94);
+  --nd-panel-float: rgba(18, 18, 23, 0.92);
+  --nd-inset: #0d0d11;
+
+  --nd-border: rgba(255, 255, 255, 0.08);
+  --nd-border-subtle: rgba(255, 255, 255, 0.06);
+  --nd-divider: rgba(255, 255, 255, 0.07);
+  --nd-surface: rgba(255, 255, 255, 0.05);
+  --nd-surface-soft: rgba(255, 255, 255, 0.03);
+
+  --nd-text: #ececf1;
+  --nd-text-2: #d5d5df;
+  --nd-text-3: #c8c8d4;
+  --nd-muted: #9a9aa8;
+  --nd-faint: #83838f;
+  --nd-eyebrow: #6f6f7d;
+
+  --nd-accent: #ff2d78;
+  --nd-accent-text: #ffd7e5;
+  --nd-accent-dim: #ff9dc0;
+  --nd-accent-09: rgba(255, 45, 120, 0.09);
+  --nd-accent-10: rgba(255, 45, 120, 0.1);
+  --nd-accent-14: rgba(255, 45, 120, 0.14);
+  --nd-accent-b28: rgba(255, 45, 120, 0.28);
+  --nd-accent-b35: rgba(255, 45, 120, 0.35);
+  --nd-accent-b55: rgba(255, 45, 120, 0.55);
+  --nd-wire: #2ee6d6;
+
+  --nd-display: "Space Grotesk Variable", "Space Grotesk", system-ui, sans-serif;
+  --nd-ui: "Geist Variable", "Inter", system-ui, sans-serif;
+  --nd-mono: "JetBrains Mono Variable", ui-monospace, monospace;
+
+  --nd-rail-w: 300px;
+  --nd-bar-h: 56px;
+
+  position: fixed;
+  inset: 0;
+  background: var(--nd-page);
+  color: var(--nd-text);
+  font-family: var(--nd-ui);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- app bar -------------------------------------------------------------- */
+
+.nd-bar {
+  flex: 0 0 var(--nd-bar-h);
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 0 20px;
+  background: var(--nd-bar);
+  border-bottom: 1px solid var(--nd-divider);
+  z-index: 40;
+}
+.nd-wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--nd-display);
+  font-weight: 700;
+  font-size: 22px;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: var(--nd-text);
+  text-decoration: none;
+}
+.nd-logo {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+}
+.nd-bar-divider {
+  width: 1px;
+  height: 22px;
+  background: rgba(255, 255, 255, 0.1);
+}
+.nd-crumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  min-width: 0;
+}
+.nd-crumb a,
+.nd-crumb span.nd-crumb-root {
+  color: var(--nd-faint);
+  text-decoration: none;
+}
+.nd-crumb a:hover {
+  color: var(--nd-text-2);
+}
+.nd-crumb-sep {
+  opacity: 0.4;
+}
+.nd-crumb-leaf {
+  color: var(--nd-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nd-pill {
+  font-family: var(--nd-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--nd-accent-text);
+  background: var(--nd-accent-14);
+  border: 1px solid rgba(255, 45, 120, 0.3);
+  border-radius: 999px;
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+.nd-spacer {
+  flex: 1;
+}
+
+.nd-switch {
+  display: flex;
+  padding: 3px;
+  border-radius: 9px;
+  background: var(--nd-surface);
+  border: 1px solid var(--nd-border);
+}
+.nd-switch button {
+  padding: 6px 14px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--nd-faint);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: background 180ms ease, color 180ms ease;
+  white-space: nowrap;
+}
+.nd-switch button[data-active="true"] {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+.nd-cta {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--nd-accent);
+  border: 0;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 6px 20px var(--nd-accent-b28);
+}
+.nd-cta:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.nd-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  border-radius: 8px;
+  color: var(--nd-faint);
+  border: 1px solid var(--nd-border);
+  background: var(--nd-surface);
+  transition: color 180ms ease, background 180ms ease;
+}
+.nd-close:hover {
+  color: var(--nd-text);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* --- stage ---------------------------------------------------------------- */
+
+.nd-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  background-color: var(--nd-canvas);
+  background-image: radial-gradient(var(--nd-dot) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+.nd-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(1100px 700px at 62% 40%, rgba(255, 45, 120, 0.07), transparent 70%);
+}
+.nd-scroll {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  display: flex;
+  gap: 24px;
+  padding: 24px;
+  z-index: 10;
+}
+
+/* --- step rail ------------------------------------------------------------ */
+
+.nd-rail {
+  flex: 0 0 var(--nd-rail-w);
+  align-self: flex-start;
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  background: var(--nd-panel-float);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+}
+.nd-rail-head {
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--nd-divider);
+}
+.nd-eyebrow {
+  font-family: var(--nd-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--nd-eyebrow);
+}
+.nd-rail-title {
+  font-family: var(--nd-display);
+  font-weight: 600;
+  font-size: 24px;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  margin: 8px 0 10px;
+}
+.nd-rail-desc {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--nd-muted);
+}
+.nd-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.nd-chip {
+  font-family: var(--nd-mono);
+  font-size: 11px;
+  color: var(--nd-faint);
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: var(--nd-surface);
+}
+.nd-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px;
+  flex: 1;
+}
+.nd-step {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  background: transparent;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  transition: background 200ms ease, box-shadow 200ms ease;
+}
+.nd-step[data-active="true"] {
+  background: var(--nd-accent-09);
+  box-shadow: inset 0 0 0 1px var(--nd-accent-b28);
+}
+.nd-badge {
+  flex: 0 0 26px;
+  height: 26px;
+  border-radius: 7px;
+  font-family: var(--nd-mono);
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--nd-muted);
+  background: rgba(255, 255, 255, 0.06);
+}
+.nd-step[data-active="true"] .nd-badge {
+  color: #fff;
+  background: var(--nd-accent);
+}
+.nd-step-title {
+  display: block;
+  font-family: var(--nd-display);
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: -0.01em;
+  color: var(--nd-text-2);
+}
+.nd-step[data-active="true"] .nd-step-title {
+  color: #fff;
+}
+.nd-step-sub {
+  display: block;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--nd-faint);
+  margin-top: 2px;
+}
+.nd-rail-note {
+  padding: 16px 20px;
+  border-top: 1px solid var(--nd-divider);
+}
+.nd-rail-note p {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--nd-muted);
+}
+.nd-rail-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--nd-divider);
+  font-size: 12px;
+  color: var(--nd-eyebrow);
+}
+.nd-rail-count {
+  font-family: var(--nd-mono);
+  font-size: 11px;
+  color: var(--nd-faint);
+}
+
+.nd-body {
+  flex: 1;
+  min-width: 0;
+}
+
+/* --- canvas mode ---------------------------------------------------------- */
+
+.nd-canvas-mode {
+  position: absolute;
+  inset: 0;
+  z-index: 35;
+  animation: nd-fade 220ms ease;
+}
+@keyframes nd-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.nd-canvas-note {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  background: var(--nd-panel-float);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 12px;
+  color: var(--nd-muted);
+  pointer-events: none;
+  max-width: calc(100% - 32px);
+  text-align: center;
+}
+.nd-canvas-stats {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  z-index: 2;
+  font-family: var(--nd-mono);
+  font-size: 11px;
+  color: var(--nd-faint);
+  pointer-events: none;
+}
+
+.nd-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--nd-muted);
+  font-size: 14px;
+  text-align: center;
+  padding: 24px;
+}
+
+/* --- responsive ----------------------------------------------------------- */
+/* The rail keeps its width and the body reflows around it. Under 1100px the
+ * rail stops being a sidebar and rides above the content — step order carries
+ * the reading order, so stacking stays truthful. */
+
+@media (max-width: 1100px) {
+  .nd-scroll {
+    flex-direction: column;
+  }
+  .nd-rail {
+    position: static;
+    flex: 0 0 auto;
+    width: 100%;
+  }
+  .nd-steps {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .nd-step {
+    flex: 1 1 220px;
+  }
+}
+
+@media (max-width: 640px) {
+  .nd-bar {
+    gap: 10px;
+    padding: 0 12px;
+  }
+  .nd-crumb {
+    display: none;
+  }
+}
+
+/* The canvas stays hidden until the nodes have measured and the fit has run.
+ * Half-painted, it reads as broken edges running off to nowhere. */
+.nd-canvas-mode .react-flow {
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+.nd-canvas-mode[data-ready="true"] .react-flow {
+  opacity: 1;
+}
+.nd-canvas-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--nd-muted);
+  pointer-events: none;
+}

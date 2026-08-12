@@ -1,0 +1,1626 @@
+{
+  "slug": "suno-music-basics",
+  "name": "Getting Started with Suno Music Nodes",
+  "description": "You do not write a song description. You pick options, and the nodes write it for you.",
+  "markdownDescription": null,
+  "category": "audio-music",
+  "outputTypes": [
+    "audio"
+  ],
+  "tags": [
+    "getting-started",
+    "music",
+    "suno"
+  ],
+  "complexity": "advanced",
+  "previewMediaUrl": "https://cdn.nodaro.ai/templates/6760a6e0-9e99-438b-8d30-01eebcc0f46d/preview.png",
+  "previewMediaType": "image",
+  "tutorialCategorySlug": "getting-started",
+  "tutorialSortOrder": 2,
+  "nodes": [
+    {
+      "id": "suno-generate-1778418551551-uwym4p0l6",
+      "data": {
+        "label": "Suno Generate",
+        "model": "V5",
+        "style": "",
+        "title": "",
+        "lyrics": "",
+        "prompt": "",
+        "sunoTaskId": "b928db911619df40fcedfeb6c4b7651f",
+        "sunoTrackId": "de4903c7-e7bc-45ea-820c-f75dab4f452b",
+        "fieldMappings": {},
+        "negativeStyle": "",
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/audios/6f421997-ca27-4fa1-a0c0-4b1fc134c1df.wav",
+            "jobId": "6f421997-ca27-4fa1-a0c0-4b1fc134c1df",
+            "timestamp": "2026-05-10T09:16:39.551Z",
+            "sunoTaskId": "b928db911619df40fcedfeb6c4b7651f",
+            "sunoTrackId": "de4903c7-e7bc-45ea-820c-f75dab4f452b"
+          },
+          {
+            "url": "https://cdn.nodaro.ai/audios/c8e23afb-6bf0-4395-86ad-70016d78d465.wav",
+            "jobId": "c8e23afb-6bf0-4395-86ad-70016d78d465",
+            "timestamp": "2026-05-10T09:09:35.811Z",
+            "sunoTaskId": "71ac5d9994f86e5c9f1d6971ce574013",
+            "sunoTrackId": "463090f2-b055-48a6-b6b2-2d8cc4555d83"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedAudioUrl": "https://cdn.nodaro.ai/audios/6f421997-ca27-4fa1-a0c0-4b1fc134c1df.wav"
+      },
+      "type": "suno-generate",
+      "width": 488,
+      "height": 275,
+      "dragging": false,
+      "measured": {
+        "width": 488,
+        "height": 275
+      },
+      "position": {
+        "x": 1138.3224688040727,
+        "y": -70.18647823324011
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "music-genre-1778418551551-j12a8t9k4",
+      "data": {
+        "genre": "electronic",
+        "label": "Music Genre",
+        "subgenre": "psytrance",
+        "displayMode": "picks"
+      },
+      "type": "music-genre",
+      "dragging": false,
+      "measured": {
+        "width": 200,
+        "height": 100
+      },
+      "position": {
+        "x": 97.43833918258647,
+        "y": -252.58826353572465
+      },
+      "selected": false
+    },
+    {
+      "id": "music-mood-1778418551551-umbjnofua",
+      "data": {
+        "vibe": "futuristic",
+        "label": "Music Mood",
+        "energy": "building",
+        "emotion": "triumphant",
+        "displayMode": "picks"
+      },
+      "type": "music-mood",
+      "dragging": false,
+      "measured": {
+        "width": 243,
+        "height": 100
+      },
+      "position": {
+        "x": 59.73497775704455,
+        "y": -77.61938919704717
+      },
+      "selected": false
+    },
+    {
+      "id": "instrumentation-1778418551551-epu4hscg5",
+      "data": {
+        "label": "Instrumentation",
+        "production": "modern",
+        "displayMode": "picks",
+        "instruments": [
+          "saxophone",
+          "bass-guitar"
+        ]
+      },
+      "type": "instrumentation",
+      "dragging": false,
+      "measured": {
+        "width": 221,
+        "height": 100
+      },
+      "position": {
+        "x": 87.07241131287512,
+        "y": 101.34119408424235
+      },
+      "selected": false
+    },
+    {
+      "id": "voice-character-1778418551551-nfhd32wgl",
+      "data": {
+        "label": "Voice Character",
+        "timbre": "deep",
+        "language": "english",
+        "displayMode": "picks"
+      },
+      "type": "voice-character",
+      "dragging": false,
+      "measured": {
+        "width": 200,
+        "height": 100
+      },
+      "position": {
+        "x": 119.7614787708396,
+        "y": 305.11517286910424
+      },
+      "selected": false
+    },
+    {
+      "id": "music-genre-1778418551551-k1f0ei01c",
+      "data": {
+        "era": "modern",
+        "genre": "pop",
+        "label": "Music Genre",
+        "subgenre": "electro-pop",
+        "displayMode": "picks"
+      },
+      "type": "music-genre",
+      "dragging": false,
+      "measured": {
+        "width": 200,
+        "height": 100
+      },
+      "position": {
+        "x": 147.3901948941235,
+        "y": 741.9877242932888
+      },
+      "selected": false
+    },
+    {
+      "id": "music-mood-1778418551551-0u991sw2h",
+      "data": {
+        "vibe": "uplifting",
+        "label": "Music Mood",
+        "energy": "building",
+        "emotion": "triumphant",
+        "displayMode": "picks"
+      },
+      "type": "music-mood",
+      "dragging": false,
+      "measured": {
+        "width": 237,
+        "height": 100
+      },
+      "position": {
+        "x": 135.59608394769617,
+        "y": 932.0777391416024
+      },
+      "selected": false
+    },
+    {
+      "id": "instrumentation-1778418551551-2kwwxvzvk",
+      "data": {
+        "label": "Instrumentation",
+        "production": "studio-pristine",
+        "displayMode": "picks",
+        "instruments": [
+          "piano",
+          "electric-guitar",
+          "saxophone",
+          "harmonica"
+        ],
+        "singingStyle": "pop-singing",
+        "vocalPresence": "female-lead"
+      },
+      "type": "instrumentation",
+      "width": 264,
+      "height": 178,
+      "dragging": false,
+      "measured": {
+        "width": 264,
+        "height": 178
+      },
+      "position": {
+        "x": 124.86948436652267,
+        "y": 1087.9091772925076
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "voice-character-1778418551551-o6fdupeh8",
+      "data": {
+        "age": "young-adult",
+        "label": "Voice Character",
+        "accent": "general-american",
+        "gender": "female",
+        "timbre": "sultry",
+        "language": "english",
+        "displayMode": "picks"
+      },
+      "type": "voice-character",
+      "width": 232,
+      "height": 117,
+      "dragging": false,
+      "measured": {
+        "width": 232,
+        "height": 117
+      },
+      "position": {
+        "x": 127.72197848862416,
+        "y": 1354.65705064593
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "voice-delivery-1778418551551-859t0bruk",
+      "data": {
+        "label": "Voice Delivery",
+        "emotion": "flirty",
+        "displayMode": "picks"
+      },
+      "type": "voice-delivery",
+      "dragging": false,
+      "measured": {
+        "width": 200,
+        "height": 100
+      },
+      "position": {
+        "x": 125.1633526437495,
+        "y": 1530.8215660297612
+      },
+      "selected": false
+    },
+    {
+      "id": "suno-generate-1778418551551-r65lfwqqc",
+      "data": {
+        "label": "Suno Generate",
+        "model": "V5",
+        "style": "",
+        "title": "",
+        "lyrics": "",
+        "prompt": "",
+        "sunoTaskId": "177c60ee188930cc174f1f46271371de",
+        "sunoTrackId": "f5298ab0-f307-488b-a92f-a269a97d7866",
+        "fieldMappings": {},
+        "negativeStyle": "",
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/audios/1350fd01-21a4-45ac-bce9-d77e250ab66d.wav",
+            "jobId": "1350fd01-21a4-45ac-bce9-d77e250ab66d",
+            "timestamp": "2026-05-10T09:30:38.659Z",
+            "sunoTaskId": "177c60ee188930cc174f1f46271371de",
+            "sunoTrackId": "f5298ab0-f307-488b-a92f-a269a97d7866"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedAudioUrl": "https://cdn.nodaro.ai/audios/1350fd01-21a4-45ac-bce9-d77e250ab66d.wav"
+      },
+      "type": "suno-generate",
+      "width": 508,
+      "height": 158,
+      "dragging": false,
+      "measured": {
+        "width": 508,
+        "height": 158
+      },
+      "position": {
+        "x": 1135.4004878461258,
+        "y": 1165.2374279627472
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "suno-generate-1778418551551-m6kronudj",
+      "data": {
+        "label": "Suno Generate",
+        "model": "V5",
+        "style": "",
+        "title": "",
+        "lyrics": "",
+        "prompt": "with subtle Middle Eastern musical influences\n",
+        "sunoTaskId": "4d2145efe008acf4ef441bebd15912b5",
+        "sunoTrackId": "459dba7e-c0e1-45d1-925d-0cf10da313c5",
+        "fieldMappings": {},
+        "negativeStyle": "",
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/audios/a1b428b8-ec86-46c8-9388-47fbb0c8d178.wav",
+            "jobId": "a1b428b8-ec86-46c8-9388-47fbb0c8d178",
+            "timestamp": "2026-05-10T09:36:10.314Z",
+            "sunoTaskId": "4d2145efe008acf4ef441bebd15912b5",
+            "sunoTrackId": "459dba7e-c0e1-45d1-925d-0cf10da313c5"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedAudioUrl": "https://cdn.nodaro.ai/audios/a1b428b8-ec86-46c8-9388-47fbb0c8d178.wav"
+      },
+      "type": "suno-generate",
+      "width": 542,
+      "height": 213,
+      "dragging": false,
+      "measured": {
+        "width": 542,
+        "height": 213
+      },
+      "position": {
+        "x": 696.640398087147,
+        "y": 2074.4023368008993
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "suno-generate-1778418551551-7zc5y07la",
+      "data": {
+        "label": "Suno Generate",
+        "model": "V5",
+        "style": "",
+        "title": "",
+        "lyrics": "",
+        "prompt": "with touches of Arabic music",
+        "sunoTaskId": "98075a6d675737af7488be03a17bce7a",
+        "sunoTrackId": "c789360e-30d0-42e3-81b2-b557e6bd367c",
+        "fieldMappings": {},
+        "negativeStyle": "",
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/audios/165b02e8-4f90-473e-b1eb-605094b192f6.wav",
+            "jobId": "165b02e8-4f90-473e-b1eb-605094b192f6",
+            "timestamp": "2026-05-10T09:40:22.965Z",
+            "sunoTaskId": "98075a6d675737af7488be03a17bce7a",
+            "sunoTrackId": "c789360e-30d0-42e3-81b2-b557e6bd367c"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedAudioUrl": "https://cdn.nodaro.ai/audios/165b02e8-4f90-473e-b1eb-605094b192f6.wav"
+      },
+      "type": "suno-generate",
+      "width": 539,
+      "height": 155,
+      "dragging": false,
+      "measured": {
+        "width": 539,
+        "height": 155
+      },
+      "position": {
+        "x": 923.355486056276,
+        "y": 2824.3710464557967
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "voice-delivery-1778418551551-9ltgitw94",
+      "data": {
+        "label": "Voice Delivery",
+        "emotion": "flirty",
+        "displayMode": "picks"
+      },
+      "type": "voice-delivery",
+      "dragging": false,
+      "measured": {
+        "width": 200,
+        "height": 100
+      },
+      "position": {
+        "x": 273.6921690040473,
+        "y": 3742.381766159117
+      },
+      "selected": false
+    },
+    {
+      "id": "voice-character-1778418551551-ez3gfj4t9",
+      "data": {
+        "age": "young-adult",
+        "label": "Voice Character",
+        "accent": "general-american",
+        "gender": "female",
+        "timbre": "sultry",
+        "language": "english",
+        "displayMode": "picks"
+      },
+      "type": "voice-character",
+      "width": 232,
+      "height": 117,
+      "dragging": false,
+      "measured": {
+        "width": 232,
+        "height": 117
+      },
+      "position": {
+        "x": 258.4953905910572,
+        "y": 3533.895249214837
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "instrumentation-1778418551551-lblm5lxtv",
+      "data": {
+        "label": "Instrumentation",
+        "production": "studio-pristine",
+        "displayMode": "picks",
+        "instruments": [
+          "piano",
+          "electric-guitar",
+          "saxophone",
+          "harmonica"
+        ],
+        "singingStyle": "pop-singing",
+        "vocalPresence": "female-lead"
+      },
+      "type": "instrumentation",
+      "width": 264,
+      "height": 178,
+      "dragging": false,
+      "measured": {
+        "width": 264,
+        "height": 178
+      },
+      "position": {
+        "x": 240.4735057782625,
+        "y": 3210.039594687233
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "music-mood-1778418551551-ed9bmvb5b",
+      "data": {
+        "vibe": "uplifting",
+        "label": "Music Mood",
+        "energy": "building",
+        "emotion": "triumphant",
+        "displayMode": "picks"
+      },
+      "type": "music-mood",
+      "dragging": false,
+      "measured": {
+        "width": 237,
+        "height": 100
+      },
+      "position": {
+        "x": 268.6440871140133,
+        "y": 3033.8195759884075
+      },
+      "selected": false
+    },
+    {
+      "id": "music-genre-1778418551551-8y4mybo8s",
+      "data": {
+        "era": "modern",
+        "genre": "pop",
+        "label": "Music Genre",
+        "subgenre": "electro-pop",
+        "displayMode": "picks"
+      },
+      "type": "music-genre",
+      "dragging": false,
+      "measured": {
+        "width": 200,
+        "height": 100
+      },
+      "position": {
+        "x": 253.2275885734923,
+        "y": 2817.3674597914132
+      },
+      "selected": false
+    },
+    {
+      "id": "voice-delivery-1778418551551-o2df4y2ec",
+      "data": {
+        "label": "Voice Delivery",
+        "emotion": "flirty",
+        "displayMode": "picks"
+      },
+      "type": "voice-delivery",
+      "dragging": false,
+      "measured": {
+        "width": 200,
+        "height": 100
+      },
+      "position": {
+        "x": 100.02132444742,
+        "y": 2571.7094177858576
+      },
+      "selected": false
+    },
+    {
+      "id": "voice-character-1778418551551-4t69oehmw",
+      "data": {
+        "age": "young-adult",
+        "label": "Voice Character",
+        "accent": "general-american",
+        "gender": "female",
+        "timbre": "sultry",
+        "language": "english",
+        "displayMode": "picks"
+      },
+      "type": "voice-character",
+      "width": 232,
+      "height": 117,
+      "dragging": false,
+      "measured": {
+        "width": 232,
+        "height": 117
+      },
+      "position": {
+        "x": 122.30781266976288,
+        "y": 2358.7058715508656
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "instrumentation-1778418551551-rfui0ezdh",
+      "data": {
+        "label": "Instrumentation",
+        "production": "studio-pristine",
+        "displayMode": "picks",
+        "instruments": [
+          "piano",
+          "electric-guitar",
+          "saxophone",
+          "harmonica"
+        ],
+        "singingStyle": "pop-singing",
+        "vocalPresence": "female-lead"
+      },
+      "type": "instrumentation",
+      "width": 264,
+      "height": 178,
+      "dragging": false,
+      "measured": {
+        "width": 264,
+        "height": 178
+      },
+      "position": {
+        "x": 97.72698471371666,
+        "y": 2105.4214838878966
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "music-mood-1778418551551-ortzsz1n6",
+      "data": {
+        "vibe": "uplifting",
+        "label": "Music Mood",
+        "energy": "building",
+        "emotion": "triumphant",
+        "displayMode": "picks"
+      },
+      "type": "music-mood",
+      "dragging": false,
+      "measured": {
+        "width": 237,
+        "height": 100
+      },
+      "position": {
+        "x": 137.22327660041265,
+        "y": 1939.8873653790004
+      },
+      "selected": false
+    },
+    {
+      "id": "music-genre-1778418551551-476bprxgi",
+      "data": {
+        "era": "modern",
+        "genre": "pop",
+        "label": "Music Genre",
+        "subgenre": "electro-pop",
+        "displayMode": "picks"
+      },
+      "type": "music-genre",
+      "dragging": false,
+      "measured": {
+        "width": 200,
+        "height": 100
+      },
+      "position": {
+        "x": 129.07371839003113,
+        "y": 1758.010781032413
+      },
+      "selected": false
+    },
+    {
+      "id": "music-genre-1778418551551-4yld67l9h",
+      "data": {
+        "era": "modern",
+        "genre": [
+          "cinematic",
+          "world"
+        ],
+        "label": "Music Genre",
+        "displayMode": "picks"
+      },
+      "type": "music-genre",
+      "dragging": false,
+      "measured": {
+        "width": 200,
+        "height": 100
+      },
+      "position": {
+        "x": 34.04549012168016,
+        "y": 4151.708471532191
+      },
+      "selected": false
+    },
+    {
+      "id": "music-mood-1778418551551-oeqcsbtz4",
+      "data": {
+        "vibe": "cinematic",
+        "label": "Music Mood",
+        "energy": "simmering",
+        "emotion": "mysterious",
+        "displayMode": "picks"
+      },
+      "type": "music-mood",
+      "dragging": false,
+      "measured": {
+        "width": 263,
+        "height": 100
+      },
+      "position": {
+        "x": 3.330766569787528,
+        "y": 4303.7152114481005
+      },
+      "selected": false
+    },
+    {
+      "id": "instrumentation-1778418551551-rhpetodxd",
+      "data": {
+        "label": "Instrumentation",
+        "production": "modern",
+        "displayMode": "picks",
+        "instruments": [
+          "oud",
+          "duduk",
+          "frame-drum"
+        ],
+        "vocalPresence": "instrumental"
+      },
+      "type": "instrumentation",
+      "width": 220,
+      "height": 107,
+      "dragging": false,
+      "measured": {
+        "width": 220,
+        "height": 107
+      },
+      "position": {
+        "x": 15.033537565881261,
+        "y": 4452.319377097514
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "suno-generate-1778418551551-iw3pjedtd",
+      "data": {
+        "label": "Suno Generate",
+        "model": "V5",
+        "style": "",
+        "title": "",
+        "lyrics": "",
+        "prompt": "",
+        "sunoTaskId": "fe6b350584d7a4611eb65297361a6679",
+        "sunoTrackId": "b403246c-4ace-4f09-88d8-74ee86928cf9",
+        "instrumental": true,
+        "fieldMappings": {},
+        "negativeStyle": "",
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/audios/7c476712-649b-4d7b-b19d-04e1b34d58e0.wav",
+            "jobId": "7c476712-649b-4d7b-b19d-04e1b34d58e0",
+            "timestamp": "2026-05-10T10:59:18.610Z",
+            "sunoTaskId": "fe6b350584d7a4611eb65297361a6679",
+            "sunoTrackId": "b403246c-4ace-4f09-88d8-74ee86928cf9"
+          },
+          {
+            "url": "https://cdn.nodaro.ai/audios/31f5e06d-b647-4700-98f2-7db65229a702.wav",
+            "jobId": "31f5e06d-b647-4700-98f2-7db65229a702",
+            "timestamp": "2026-05-10T10:53:11.948Z",
+            "sunoTaskId": "572e2187d501728499e7fc999c5910f0",
+            "sunoTrackId": "60ecf4a4-5f5d-4344-a9c4-a2232dcd9384"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedAudioUrl": "https://cdn.nodaro.ai/audios/7c476712-649b-4d7b-b19d-04e1b34d58e0.wav"
+      },
+      "type": "suno-generate",
+      "width": 420,
+      "height": 154,
+      "dragging": false,
+      "measured": {
+        "width": 420,
+        "height": 154
+      },
+      "position": {
+        "x": 425.65574558570194,
+        "y": 4272.426866617807
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "instrumentation-1778418551551-t6israr9g",
+      "data": {
+        "label": "Instrumentation",
+        "production": "modern",
+        "displayMode": "picks",
+        "instruments": [
+          "oud",
+          "duduk",
+          "frame-drum"
+        ],
+        "vocalPresence": "instrumental"
+      },
+      "type": "instrumentation",
+      "width": 220,
+      "height": 107,
+      "dragging": false,
+      "measured": {
+        "width": 220,
+        "height": 107
+      },
+      "position": {
+        "x": -21.576835998613724,
+        "y": 4976.146908130948
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "music-mood-1778418551551-7ewdy765v",
+      "data": {
+        "vibe": "cinematic",
+        "label": "Music Mood",
+        "energy": "simmering",
+        "emotion": "mysterious",
+        "displayMode": "picks"
+      },
+      "type": "music-mood",
+      "dragging": false,
+      "measured": {
+        "width": 263,
+        "height": 100
+      },
+      "position": {
+        "x": -30.983137017852712,
+        "y": 4786.845100118764
+      },
+      "selected": false
+    },
+    {
+      "id": "instrumentation-1778418551551-xorsunun4",
+      "data": {
+        "label": "Instrumentation",
+        "production": "lo-fi",
+        "displayMode": "picks",
+        "instruments": [
+          "oud",
+          "duduk",
+          "frame-drum",
+          "cello"
+        ],
+        "vocalPresence": "instrumental"
+      },
+      "type": "instrumentation",
+      "width": 220,
+      "height": 107,
+      "dragging": false,
+      "measured": {
+        "width": 220,
+        "height": 107
+      },
+      "position": {
+        "x": -36.56905606521939,
+        "y": 5207.308833324409
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "suno-generate-1778418551551-wuk144qs3",
+      "data": {
+        "label": "Suno Generate",
+        "model": "V5",
+        "style": "",
+        "title": "",
+        "lyrics": "",
+        "prompt": "cinematic film score, espionage thriller, 90s spy movie soundtrack",
+        "sunoTaskId": "4833e286e4f252878d86ec81a9ea4f64",
+        "sunoTrackId": "bf478a78-622a-4314-8f96-6ba75229cdba",
+        "instrumental": true,
+        "fieldMappings": {},
+        "negativeStyle": "",
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/audios/7ef05ba9-1a44-4fcc-8bfc-1366f0836b79.wav",
+            "jobId": "7ef05ba9-1a44-4fcc-8bfc-1366f0836b79",
+            "timestamp": "2026-05-10T11:20:25.090Z",
+            "sunoTaskId": "4833e286e4f252878d86ec81a9ea4f64",
+            "sunoTrackId": "bf478a78-622a-4314-8f96-6ba75229cdba"
+          },
+          {
+            "url": "https://cdn.nodaro.ai/audios/699b4e7a-7d48-4815-be7b-0248302b9c05.wav",
+            "jobId": "699b4e7a-7d48-4815-be7b-0248302b9c05",
+            "timestamp": "2026-05-10T11:08:10.905Z",
+            "sunoTaskId": "bca7c31589cd326a1979e1be5f605caa",
+            "sunoTrackId": "2a6ca47d-85ff-43a0-a2a9-c8266dbc822c"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedAudioUrl": "https://cdn.nodaro.ai/audios/7ef05ba9-1a44-4fcc-8bfc-1366f0836b79.wav"
+      },
+      "type": "suno-generate",
+      "width": 373,
+      "height": 167,
+      "measured": {
+        "width": 373,
+        "height": 167
+      },
+      "position": {
+        "x": 425.75326871218385,
+        "y": 4952.999844201915
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "music-genre-1778418551551-e7btw3i1w",
+      "data": {
+        "era": "modern",
+        "genre": "cinematic",
+        "label": "Music Genre",
+        "displayMode": "picks"
+      },
+      "type": "music-genre",
+      "dragging": false,
+      "measured": {
+        "width": 200,
+        "height": 100
+      },
+      "position": {
+        "x": -42.2818512780555,
+        "y": 5847.077070213557
+      },
+      "selected": false
+    },
+    {
+      "id": "music-mood-1778418551551-rh7bvi7xf",
+      "data": {
+        "vibe": "dark",
+        "label": "Music Mood",
+        "energy": "simmering",
+        "emotion": "mysterious",
+        "displayMode": "picks"
+      },
+      "type": "music-mood",
+      "dragging": false,
+      "measured": {
+        "width": 228,
+        "height": 100
+      },
+      "position": {
+        "x": -75.55534320336044,
+        "y": 5997.964749757754
+      },
+      "selected": false
+    },
+    {
+      "id": "instrumentation-1778418551551-agn6d7286",
+      "data": {
+        "label": "Instrumentation",
+        "production": "minimalist",
+        "displayMode": "picks",
+        "instruments": [
+          "piano",
+          "cello",
+          "pads",
+          "frame-drum"
+        ],
+        "vocalPresence": "female-lead"
+      },
+      "type": "instrumentation",
+      "width": 231,
+      "height": 156,
+      "dragging": false,
+      "measured": {
+        "width": 231,
+        "height": 156
+      },
+      "position": {
+        "x": -85.54909247622015,
+        "y": 6133.166312059443
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "voice-character-1778418551551-vw1qg7t8w",
+      "data": {
+        "age": "young-adult",
+        "label": "Voice Character",
+        "gender": "female",
+        "timbre": "whispered",
+        "language": "english",
+        "displayMode": "picks"
+      },
+      "type": "voice-character",
+      "width": 220,
+      "dragging": false,
+      "measured": {
+        "width": 220,
+        "height": 109
+      },
+      "position": {
+        "x": -78.74284247622016,
+        "y": 6329.167874559443
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "voice-delivery-1778418551551-4eo885w21",
+      "data": {
+        "pace": "slow",
+        "label": "Voice Delivery",
+        "emotion": "somber",
+        "archetype": "asmr",
+        "displayMode": "picks"
+      },
+      "type": "voice-delivery",
+      "measured": {
+        "width": 205,
+        "height": 100
+      },
+      "position": {
+        "x": -30.336592476220176,
+        "y": 6496.769437059443
+      },
+      "selected": false
+    },
+    {
+      "id": "suno-generate-1778418551552-v7yhugq29",
+      "data": {
+        "label": "Suno Generate",
+        "model": "V5",
+        "style": "",
+        "title": "",
+        "lyrics": "",
+        "prompt": "",
+        "sunoTaskId": "a1ebbc74632d9a992a217a12f878f5e9",
+        "sunoTrackId": "8faebd30-0134-4a41-9348-db39c7c7818d",
+        "fieldMappings": {},
+        "negativeStyle": "",
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/audios/24f78d9a-87f8-4221-8f56-fbdda01a7dbc.wav",
+            "jobId": "24f78d9a-87f8-4221-8f56-fbdda01a7dbc",
+            "timestamp": "2026-05-10T12:29:31.838Z",
+            "sunoTaskId": "a1ebbc74632d9a992a217a12f878f5e9",
+            "sunoTrackId": "8faebd30-0134-4a41-9348-db39c7c7818d"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedAudioUrl": "https://cdn.nodaro.ai/audios/24f78d9a-87f8-4221-8f56-fbdda01a7dbc.wav"
+      },
+      "type": "suno-generate",
+      "width": 369,
+      "height": 177,
+      "measured": {
+        "width": 369,
+        "height": 177
+      },
+      "position": {
+        "x": 368.97891111520755,
+        "y": 6032.505612223802
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_1",
+      "data": {
+        "bold": true,
+        "text": "Example 1: The Basics\n4 style nodes → Suno. No prompt, no voice delivery.",
+        "color": "#1e3a5f",
+        "label": "Sticky Note",
+        "width": 515,
+        "height": 142,
+        "italic": false,
+        "fontSize": "lg",
+        "alignment": "left",
+        "textColor": "#ffffff"
+      },
+      "type": "sticky-note",
+      "width": 515,
+      "height": 142,
+      "zIndex": -1,
+      "dragging": false,
+      "measured": {
+        "width": 515,
+        "height": 142
+      },
+      "position": {
+        "x": -526.0125449517373,
+        "y": -78.21447238137516
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_2",
+      "data": {
+        "bold": true,
+        "text": "Example 2: Adding Voice Delivery\nSame setup + Voice Delivery node for emotional control.\n\n",
+        "color": "#1e3a5f",
+        "label": "Sticky Note",
+        "width": 606,
+        "height": 136,
+        "italic": false,
+        "fontSize": "lg",
+        "alignment": "left",
+        "textColor": "#ffffff"
+      },
+      "type": "sticky-note",
+      "width": 606,
+      "height": 136,
+      "zIndex": -1,
+      "dragging": false,
+      "measured": {
+        "width": 606,
+        "height": 136
+      },
+      "position": {
+        "x": -529.5453382985497,
+        "y": 1108.6789102088733
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_3",
+      "data": {
+        "bold": true,
+        "text": "Example 3: Style Nodes + Prompt\nAdd a short prompt to nudge the style (\"Middle Eastern influences\").",
+        "color": "#1e3a5f",
+        "label": "Sticky Note",
+        "width": 606,
+        "height": 136,
+        "italic": false,
+        "fontSize": "lg",
+        "alignment": "left",
+        "textColor": "#ffffff"
+      },
+      "type": "sticky-note",
+      "width": 606,
+      "height": 136,
+      "zIndex": -1,
+      "dragging": false,
+      "measured": {
+        "width": 606,
+        "height": 136
+      },
+      "position": {
+        "x": -559.5219973635772,
+        "y": 2135.577936774336
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_4",
+      "data": {
+        "bold": true,
+        "text": "Example 4: Same Nodes, Different Prompt\nSame style nodes, different prompt wording → different result.",
+        "color": "#1e3a5f",
+        "label": "Sticky Note",
+        "width": 606,
+        "height": 136,
+        "italic": false,
+        "fontSize": "lg",
+        "alignment": "left",
+        "textColor": "#ffffff"
+      },
+      "type": "sticky-note",
+      "width": 606,
+      "height": 136,
+      "zIndex": -1,
+      "dragging": false,
+      "measured": {
+        "width": 606,
+        "height": 136
+      },
+      "position": {
+        "x": -576.0800138872917,
+        "y": 3334.480783646934
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_5",
+      "data": {
+        "bold": true,
+        "text": "Example 5: Instrumental Only\nSkip Voice nodes + toggle Instrumental ON.",
+        "color": "#1e3a5f",
+        "label": "Sticky Note",
+        "width": 605,
+        "height": 102,
+        "italic": false,
+        "fontSize": "lg",
+        "alignment": "left",
+        "textColor": "#ffffff"
+      },
+      "type": "sticky-note",
+      "width": 605,
+      "height": 102,
+      "zIndex": -1,
+      "dragging": false,
+      "measured": {
+        "width": 605,
+        "height": 102
+      },
+      "position": {
+        "x": -732.2924810363747,
+        "y": 4298.787904021699
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_6",
+      "data": {
+        "bold": true,
+        "text": "Example 6: Stacking Instrumentation\nTwo Instrumentation nodes → richer sound. Long descriptive prompt.",
+        "color": "#1e3a5f",
+        "label": "Sticky Note",
+        "width": 605,
+        "height": 102,
+        "italic": false,
+        "fontSize": "lg",
+        "alignment": "left",
+        "textColor": "#ffffff"
+      },
+      "type": "sticky-note",
+      "width": 605,
+      "height": 102,
+      "zIndex": -1,
+      "dragging": false,
+      "measured": {
+        "width": 605,
+        "height": 102
+      },
+      "position": {
+        "x": -732.8848539508045,
+        "y": 4981.998839152479
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_7",
+      "data": {
+        "bold": true,
+        "text": "Example 7: Dark & Whispered\nSame node types, opposite vibe — somber mood + whispered ASMR voice.",
+        "color": "#1e3a5f",
+        "label": "Sticky Note",
+        "width": 605,
+        "height": 148,
+        "italic": false,
+        "fontSize": "lg",
+        "alignment": "left",
+        "textColor": "#ffffff"
+      },
+      "type": "sticky-note",
+      "width": 605,
+      "height": 148,
+      "zIndex": -1,
+      "dragging": false,
+      "measured": {
+        "width": 605,
+        "height": 148
+      },
+      "position": {
+        "x": -747.2976026577153,
+        "y": 6154.987696760243
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_8",
+      "data": {
+        "label": "Suno Generate",
+        "model": "V5",
+        "style": "",
+        "title": "",
+        "lyrics": "",
+        "prompt": "",
+        "fieldMappings": {},
+        "negativeStyle": "",
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/audios/2d40448c-965f-4e67-aefb-18800e85033e.wav",
+            "jobId": "2d40448c-965f-4e67-aefb-18800e85033e",
+            "timestamp": "2026-05-14T11:19:17.074Z"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedAudioUrl": "https://cdn.nodaro.ai/audios/2d40448c-965f-4e67-aefb-18800e85033e.wav"
+      },
+      "type": "suno-generate",
+      "dragging": false,
+      "measured": {
+        "width": 200,
+        "height": 182
+      },
+      "position": {
+        "x": 877.8903267317002,
+        "y": 3505.869648620087
+      },
+      "selected": false
+    },
+    {
+      "id": "node_9",
+      "data": {
+        "label": "Generate Image",
+        "model": "gemini-2.5-flash-image",
+        "style": "",
+        "prompt": "Over-the-shoulder view of a young man in a dark-room studio, working on music production at a professional gaming-style desk. Central monitor shows a digital audio workstation with colorful waveforms, mixing timeline, EQ curves; side monitors display audio tools and frequency spectrum. Wearing headphones, leaning toward screens with focused concentration. MIDI keyboard and RGB-lit mechanical keyboard on desk, studio monitors on stands, soft purple and cyan backlighting, warm screen key light illuminating his face, cinematic, shallow depth of field, realistic, detailed.",
+        "provider": "flux",
+        "providers": [
+          "flux"
+        ],
+        "resolution": "2K",
+        "aspectRatio": "16:9",
+        "fieldMappings": {},
+        "negativePrompt": "",
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/images/4f6c5e65-d0f1-486b-935f-06c28baae263.png",
+            "jobId": "4f6c5e65-d0f1-486b-935f-06c28baae263",
+            "width": 1888,
+            "height": 1072,
+            "timestamp": "2026-05-14T21:55:24.589Z"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedImageUrl": "https://cdn.nodaro.ai/images/4f6c5e65-d0f1-486b-935f-06c28baae263.png"
+      },
+      "type": "generate-image",
+      "width": 648.1194029850747,
+      "height": 368,
+      "measured": {
+        "width": 648,
+        "height": 368
+      },
+      "position": {
+        "x": -5058.926114575082,
+        "y": 11627.187660850428
+      },
+      "selected": false,
+      "className": "rf-resized"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-1778418551552-imu27yf0c",
+      "type": "default",
+      "source": "music-genre-1778418551551-j12a8t9k4",
+      "target": "suno-generate-1778418551551-uwym4p0l6",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    },
+    {
+      "id": "edge-1778418551552-rn0sf6zw7",
+      "type": "default",
+      "source": "music-mood-1778418551551-umbjnofua",
+      "target": "suno-generate-1778418551551-uwym4p0l6",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    },
+    {
+      "id": "edge-1778418551552-5un5qfiao",
+      "type": "default",
+      "source": "instrumentation-1778418551551-epu4hscg5",
+      "target": "suno-generate-1778418551551-uwym4p0l6",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    },
+    {
+      "id": "edge-1778418551552-x912fs442",
+      "type": "default",
+      "source": "voice-character-1778418551551-nfhd32wgl",
+      "target": "suno-generate-1778418551551-uwym4p0l6",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    },
+    {
+      "id": "edge-1778418551552-a0amygymz",
+      "type": "default",
+      "source": "music-genre-1778418551551-k1f0ei01c",
+      "target": "suno-generate-1778418551551-r65lfwqqc",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    },
+    {
+      "id": "edge-1778418551552-hm5ynjqe9",
+      "type": "default",
+      "source": "music-mood-1778418551551-0u991sw2h",
+      "target": "suno-generate-1778418551551-r65lfwqqc",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    },
+    {
+      "id": "edge-1778418551552-4nuwsd8w5",
+      "type": "default",
+      "source": "instrumentation-1778418551551-2kwwxvzvk",
+      "target": "suno-generate-1778418551551-r65lfwqqc",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    },
+    {
+      "id": "edge-1778418551552-sjgm39pfn",
+      "type": "default",
+      "source": "voice-character-1778418551551-o6fdupeh8",
+      "target": "suno-generate-1778418551551-r65lfwqqc",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    },
+    {
+      "id": "edge-1778418551552-awjjyuwrd",
+      "type": "default",
+      "source": "voice-delivery-1778418551551-859t0bruk",
+      "target": "suno-generate-1778418551551-r65lfwqqc",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    },
+    {
+      "id": "edge-1778418551552-cpnq6w7ln",
+      "type": "default",
+      "source": "music-genre-1778418551551-8y4mybo8s",
+      "target": "suno-generate-1778418551551-7zc5y07la",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    },
+    {
+      "id": "edge-1778418551552-xr0wpesbc",
+      "type": "default",
+      "source": "music-mood-1778418551551-ed9bmvb5b",
+      "target": "suno-generate-1778418551551-7zc5y07la",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    },
+    {
+      "id": "edge-1778418551552-tz9ixwvvw",
+      "type": "default",
+      "source": "instrumentation-1778418551551-lblm5lxtv",
+      "target": "suno-generate-1778418551551-7zc5y07la",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    },
+    {
+      "id": "edge-1778418551552-1e31g47cf",
+      "type": "default",
+      "source": "voice-character-1778418551551-ez3gfj4t9",
+      "target": "suno-generate-1778418551551-7zc5y07la",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    },
+    {
+      "id": "edge-1778418551552-x0ywsj1fh",
+      "type": "default",
+      "source": "voice-delivery-1778418551551-9ltgitw94",
+      "target": "suno-generate-1778418551551-7zc5y07la",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    },
+    {
+      "id": "edge-1778418551552-4xyeo5h8k",
+      "type": "default",
+      "source": "music-genre-1778418551551-476bprxgi",
+      "target": "suno-generate-1778418551551-m6kronudj",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    },
+    {
+      "id": "edge-1778418551552-r28rm4gei",
+      "type": "default",
+      "source": "music-mood-1778418551551-ortzsz1n6",
+      "target": "suno-generate-1778418551551-m6kronudj",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    },
+    {
+      "id": "edge-1778418551552-p454mzrrb",
+      "type": "default",
+      "source": "instrumentation-1778418551551-rfui0ezdh",
+      "target": "suno-generate-1778418551551-m6kronudj",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    },
+    {
+      "id": "edge-1778418551552-hw25chqii",
+      "type": "default",
+      "source": "voice-character-1778418551551-4t69oehmw",
+      "target": "suno-generate-1778418551551-m6kronudj",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    },
+    {
+      "id": "edge-1778418551552-f8mtmmqpp",
+      "type": "default",
+      "source": "voice-delivery-1778418551551-o2df4y2ec",
+      "target": "suno-generate-1778418551551-m6kronudj",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    },
+    {
+      "id": "edge-1778418551552-rrrwzbtoa",
+      "type": "default",
+      "source": "music-genre-1778418551551-4yld67l9h",
+      "target": "suno-generate-1778418551551-iw3pjedtd",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    },
+    {
+      "id": "edge-1778418551552-xz2hwx334",
+      "type": "default",
+      "source": "music-mood-1778418551551-oeqcsbtz4",
+      "target": "suno-generate-1778418551551-iw3pjedtd",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    },
+    {
+      "id": "edge-1778418551552-kh1gr1smc",
+      "type": "default",
+      "source": "instrumentation-1778418551551-rhpetodxd",
+      "target": "suno-generate-1778418551551-iw3pjedtd",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    },
+    {
+      "id": "edge-1778418551552-7z4eryevp",
+      "type": "default",
+      "source": "music-mood-1778418551551-7ewdy765v",
+      "target": "suno-generate-1778418551551-wuk144qs3",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    },
+    {
+      "id": "edge-1778418551552-nayty03kd",
+      "type": "default",
+      "source": "instrumentation-1778418551551-t6israr9g",
+      "target": "suno-generate-1778418551551-wuk144qs3",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    },
+    {
+      "id": "edge-1778418551552-hiqcrzasi",
+      "type": "default",
+      "source": "instrumentation-1778418551551-xorsunun4",
+      "target": "suno-generate-1778418551551-wuk144qs3",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    },
+    {
+      "id": "edge-1778418551552-zwm6f7tds",
+      "type": "default",
+      "source": "music-genre-1778418551551-e7btw3i1w",
+      "target": "suno-generate-1778418551552-v7yhugq29",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    },
+    {
+      "id": "edge-1778418551552-d7c519gqf",
+      "type": "default",
+      "source": "music-mood-1778418551551-rh7bvi7xf",
+      "target": "suno-generate-1778418551552-v7yhugq29",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    },
+    {
+      "id": "edge-1778418551552-x52mfk57d",
+      "type": "default",
+      "source": "instrumentation-1778418551551-agn6d7286",
+      "target": "suno-generate-1778418551552-v7yhugq29",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    },
+    {
+      "id": "edge-1778418551552-rdsyfi1mj",
+      "type": "default",
+      "source": "voice-character-1778418551551-vw1qg7t8w",
+      "target": "suno-generate-1778418551552-v7yhugq29",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    },
+    {
+      "id": "edge-1778418551552-c8m35nlfh",
+      "type": "default",
+      "source": "voice-delivery-1778418551551-4eo885w21",
+      "target": "suno-generate-1778418551552-v7yhugq29",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    },
+    {
+      "id": "edge_1778580830943",
+      "type": "default",
+      "source": "music-genre-1778418551551-8y4mybo8s",
+      "target": "node_8",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    },
+    {
+      "id": "edge_1778580832835",
+      "type": "default",
+      "source": "music-mood-1778418551551-ed9bmvb5b",
+      "target": "node_8",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    },
+    {
+      "id": "edge_1778580834847",
+      "type": "default",
+      "source": "instrumentation-1778418551551-lblm5lxtv",
+      "target": "node_8",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    },
+    {
+      "id": "edge_1778580836326",
+      "type": "default",
+      "source": "voice-character-1778418551551-ez3gfj4t9",
+      "target": "node_8",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    },
+    {
+      "id": "edge_1778580838222",
+      "type": "default",
+      "source": "voice-delivery-1778418551551-9ltgitw94",
+      "target": "node_8",
+      "sourceHandle": "out",
+      "targetHandle": "audio-style"
+    }
+  ],
+  "settings": {
+    "viewport": {
+      "x": 369.12733395869435,
+      "y": -508.4987778057032,
+      "zoom": 0.3482202253184498
+    },
+    "flowPromptTemplates": {},
+    "characterDefinitions": [],
+    "presentationSettings": {
+      "viewMode": "gallery",
+      "runTarget": "workflow"
+    }
+  }
+}

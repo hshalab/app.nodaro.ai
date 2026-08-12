@@ -1,0 +1,457 @@
+{
+  "slug": "person-node-basics",
+  "name": "Getting Started with the Person Node",
+  "description": "Pick attributes from dropdowns and the node writes the character prompt for you. Three runs, from one node to a full stack.",
+  "markdownDescription": null,
+  "category": "image-generation",
+  "outputTypes": [
+    "image"
+  ],
+  "tags": [
+    "getting-started",
+    "person",
+    "image"
+  ],
+  "complexity": "intermediate",
+  "previewMediaUrl": "https://cdn.nodaro.ai/templates/218c9601-17f3-45de-ad27-0a17cb8bcebd/preview.png",
+  "previewMediaType": "image",
+  "tutorialCategorySlug": "getting-started",
+  "tutorialSortOrder": 1,
+  "nodes": [
+    {
+      "id": "node_1",
+      "data": {
+        "label": "Generate Image",
+        "model": "gemini-2.5-flash-image",
+        "style": "",
+        "prompt": "",
+        "provider": "nano-banana-2",
+        "resolution": "2K",
+        "aspectRatio": "16:9",
+        "fieldMappings": {},
+        "negativePrompt": "",
+        "executionStatus": "completed",
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/images/77d9432e-b4b1-47c8-962a-acdb2e8f633c.png",
+            "jobId": "77d9432e-b4b1-47c8-962a-acdb2e8f633c",
+            "width": 320,
+            "height": 178,
+            "timestamp": "2026-05-07T15:34:54.570Z"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedImageUrl": "https://cdn.nodaro.ai/images/77d9432e-b4b1-47c8-962a-acdb2e8f633c.png"
+      },
+      "type": "generate-image",
+      "width": 911.967213114754,
+      "height": 505.72727272727275,
+      "dragging": false,
+      "measured": {
+        "width": 912,
+        "height": 506
+      },
+      "position": {
+        "x": 129.46045224091495,
+        "y": -1986.3628242491172
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_2",
+      "data": {
+        "age": "age-20s",
+        "type": "supermodel",
+        "label": "Person",
+        "eyeColor": "eyes-green",
+        "hairBase": "base-long-straight",
+        "skinTone": "skin-fair",
+        "ethnicity": [
+          "nordic",
+          "mexican-mesoamerican"
+        ],
+        "hairColor": "hair-blonde",
+        "displayMode": "picks",
+        "maxItemsPerRow": 2,
+        "bodyProportions": "proportions-long-legged"
+      },
+      "type": "person",
+      "dragging": false,
+      "measured": {
+        "width": 396,
+        "height": 275
+      },
+      "position": {
+        "x": -472.2183985487401,
+        "y": -1951.1746040766886
+      },
+      "selected": false
+    },
+    {
+      "id": "node_3",
+      "data": {
+        "age": "age-early-20s",
+        "type": "stunning-model",
+        "build": "voluptuous",
+        "label": "Person",
+        "eyeColor": "eyes-green",
+        "eyeState": "eye-state-gazing-away",
+        "eyebrows": "brows-straight",
+        "ethnicity": [
+          "italian",
+          "swedish"
+        ],
+        "hairColor": "hair-blonde",
+        "displayMode": "picks",
+        "skinTexture": "texture-smooth",
+        "maxItemsPerRow": 2,
+        "distinctiveFeature": [
+          "feature-bare-shoulders",
+          "feature-lip-piercing"
+        ]
+      },
+      "type": "person",
+      "dragging": false,
+      "measured": {
+        "width": 371,
+        "height": 337
+      },
+      "position": {
+        "x": -502.51273154090694,
+        "y": -1096.9863617781712
+      },
+      "selected": false
+    },
+    {
+      "id": "node_4",
+      "data": {
+        "label": "Generate Image",
+        "model": "gemini-2.5-flash-image",
+        "style": "",
+        "prompt": "",
+        "provider": "nano-banana-2",
+        "resolution": "2K",
+        "aspectRatio": "16:9",
+        "fieldMappings": {},
+        "negativePrompt": "",
+        "executionStatus": "completed",
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/images/3b9d3daa-c10e-44be-94c0-e5c10c06a41b.png",
+            "jobId": "3b9d3daa-c10e-44be-94c0-e5c10c06a41b",
+            "width": 320,
+            "height": 178,
+            "timestamp": "2026-05-09T19:06:11.770Z"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedImageUrl": "https://cdn.nodaro.ai/images/3b9d3daa-c10e-44be-94c0-e5c10c06a41b.png"
+      },
+      "type": "generate-image",
+      "width": 934.6746506986028,
+      "height": 518,
+      "dragging": false,
+      "measured": {
+        "width": 935,
+        "height": 518
+      },
+      "position": {
+        "x": 110.88175688199237,
+        "y": -1178.1465009243789
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_5",
+      "data": {
+        "label": "Generate Image",
+        "model": "gemini-2.5-flash-image",
+        "style": "",
+        "prompt": "",
+        "provider": "nano-banana-2",
+        "resolution": "2K",
+        "aspectRatio": "16:9",
+        "fieldMappings": {},
+        "negativePrompt": "",
+        "executionStatus": "completed",
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/images/79a3878a-c719-4da8-99a8-e721e3fd49a6.png",
+            "jobId": "79a3878a-c719-4da8-99a8-e721e3fd49a6",
+            "width": 2752,
+            "height": 1536,
+            "timestamp": "2026-05-09T19:05:24.717Z"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedImageUrl": "https://cdn.nodaro.ai/images/79a3878a-c719-4da8-99a8-e721e3fd49a6.png"
+      },
+      "type": "generate-image",
+      "width": 955.0447470817121,
+      "height": 533,
+      "dragging": false,
+      "measured": {
+        "width": 955,
+        "height": 533
+      },
+      "position": {
+        "x": 255.89781976835718,
+        "y": -409.5984472257994
+      },
+      "resizing": false,
+      "selected": true,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_6",
+      "data": {
+        "label": "Backdrop",
+        "backdrop": "white-seamless",
+        "displayMode": "picks"
+      },
+      "type": "backdrop",
+      "dragging": false,
+      "measured": {
+        "width": 200,
+        "height": 175
+      },
+      "position": {
+        "x": -482.2309516843217,
+        "y": -65.70842462029759
+      },
+      "selected": false
+    },
+    {
+      "id": "node_7",
+      "data": {
+        "label": "Framing",
+        "vantage": "front-on",
+        "displayMode": "picks"
+      },
+      "type": "framing",
+      "dragging": false,
+      "measured": {
+        "width": 200,
+        "height": 183
+      },
+      "position": {
+        "x": -483.2398667058283,
+        "y": 144.44611713437416
+      },
+      "selected": false
+    },
+    {
+      "id": "node_8",
+      "data": {
+        "mood": "playful",
+        "label": "Mood",
+        "displayMode": "picks"
+      },
+      "type": "mood",
+      "dragging": false,
+      "measured": {
+        "width": 205,
+        "height": 100
+      },
+      "position": {
+        "x": -482.0355986039712,
+        "y": 346.3095497153443
+      },
+      "selected": false
+    },
+    {
+      "id": "node_9",
+      "data": {
+        "age": "age-early-20s",
+        "type": "stunning-model",
+        "build": "voluptuous",
+        "label": "Person",
+        "eyeColor": "eyes-green",
+        "eyeState": "eye-state-gazing-away",
+        "eyebrows": "brows-straight",
+        "ethnicity": [
+          "italian",
+          "swedish"
+        ],
+        "hairColor": "hair-blonde",
+        "displayMode": "picks",
+        "skinTexture": "texture-smooth",
+        "maxItemsPerRow": 2,
+        "distinctiveFeature": [
+          "feature-bare-shoulders",
+          "feature-lip-piercing"
+        ]
+      },
+      "type": "person",
+      "dragging": false,
+      "measured": {
+        "width": 371,
+        "height": 337
+      },
+      "position": {
+        "x": -534.7525983754767,
+        "y": -433.96219771534413
+      },
+      "selected": false
+    },
+    {
+      "id": "node_10",
+      "data": {
+        "bold": true,
+        "text": "Step 1: Meet the Person Node\nPick attributes → Person writes the character prompt for you. Check the Final Prompt in Generate Image to see what's sent to the model.\nTry it: change any attribute and watch the prompt update. Add your own text in the Prompt field to combine with it (e.g. \"walking through Tokyo at night\").",
+        "color": "#1a2d2d",
+        "label": "Sticky Note",
+        "width": 548,
+        "height": 256,
+        "italic": false,
+        "fontSize": "lg",
+        "alignment": "left",
+        "textColor": "#ffffff"
+      },
+      "type": "sticky-note",
+      "width": 548,
+      "height": 256,
+      "zIndex": -1,
+      "dragging": false,
+      "measured": {
+        "width": 548,
+        "height": 256
+      },
+      "position": {
+        "x": -1204.623555282702,
+        "y": -1973.5905639989458
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_11",
+      "data": {
+        "bold": false,
+        "text": "Step 2: Same Node, Different Character\nSame Person node, different attributes = completely different result.\nAbove: Supermodel + Nordic/Mexican = editorial street style in Paris.\nHere: Stunning Model + Italian/Swedish + Bare Shoulders = intimate indoor portrait.\nThe Person node writes prompt-engineer-level descriptions for you (\"editorial poise\", \"the line of the collarbone uncovered\") - just from dropdown picks.",
+        "color": "#1a2e1a",
+        "label": "Sticky Note",
+        "width": 560,
+        "height": 333,
+        "italic": false,
+        "fontSize": "lg",
+        "alignment": "left",
+        "textColor": "#ffffff"
+      },
+      "type": "sticky-note",
+      "width": 560,
+      "height": 333,
+      "zIndex": -1,
+      "dragging": false,
+      "measured": {
+        "width": 560,
+        "height": 333
+      },
+      "position": {
+        "x": -1225.3473351329071,
+        "y": -1089.4916740279523
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_12",
+      "data": {
+        "bold": true,
+        "text": "Step 3: Stack Nodes for Full Scene Control\nSame Person - but now with Backdrop (white seamless), Framing (front-on), and Mood (playful) layered in.\nEach node adds its own description to the Final Prompt: scene → framing → mood → character. Same model, totally different shot.\nThe pattern: compose images from modular blocks. Swap any node to iterate fast.",
+        "color": "#2d1a1a",
+        "label": "Sticky Note",
+        "width": 581,
+        "height": 262,
+        "italic": false,
+        "fontSize": "lg",
+        "alignment": "left",
+        "textColor": "#ffffff"
+      },
+      "type": "sticky-note",
+      "width": 581,
+      "height": 262,
+      "zIndex": -1,
+      "dragging": false,
+      "measured": {
+        "width": 581,
+        "height": 262
+      },
+      "position": {
+        "x": -1236.5474333705224,
+        "y": -183.4838646714472
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_1778168001613",
+      "type": "default",
+      "source": "node_2",
+      "target": "node_1",
+      "sourceHandle": "out",
+      "targetHandle": "cinematography"
+    },
+    {
+      "id": "edge_1778351629021",
+      "type": "default",
+      "source": "node_3",
+      "target": "node_4",
+      "sourceHandle": "out",
+      "targetHandle": "cinematography"
+    },
+    {
+      "id": "edge_1778352174156",
+      "type": "default",
+      "source": "node_6",
+      "target": "node_5",
+      "sourceHandle": "out",
+      "targetHandle": "cinematography"
+    },
+    {
+      "id": "edge_1778352265809",
+      "type": "default",
+      "source": "node_7",
+      "target": "node_5",
+      "sourceHandle": "out",
+      "targetHandle": "cinematography"
+    },
+    {
+      "id": "edge_1778353183652",
+      "type": "default",
+      "source": "node_8",
+      "target": "node_5",
+      "sourceHandle": "out",
+      "targetHandle": "cinematography"
+    },
+    {
+      "id": "edge_1778353639186",
+      "type": "default",
+      "source": "node_9",
+      "target": "node_5",
+      "sourceHandle": "out",
+      "targetHandle": "cinematography"
+    }
+  ],
+  "settings": {
+    "viewport": {
+      "x": 130.60714967024728,
+      "y": 675.7434665117842,
+      "zoom": 1.098848167539267
+    },
+    "flowPromptTemplates": {},
+    "characterDefinitions": [],
+    "presentationSettings": {
+      "runTarget": "workflow"
+    }
+  }
+}

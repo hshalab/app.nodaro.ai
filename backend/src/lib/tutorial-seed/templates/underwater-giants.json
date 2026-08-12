@@ -1,0 +1,1939 @@
+{
+  "slug": "underwater-giants",
+  "name": "Underwater Giants",
+  "description": "Write eight scenes. Every scene becomes an image, every image a five second shot, edited together with music and posted.",
+  "markdownDescription": null,
+  "category": "video-production",
+  "outputTypes": [
+    "video"
+  ],
+  "tags": [
+    "cinematic",
+    "reel",
+    "instagram"
+  ],
+  "complexity": "advanced",
+  "previewMediaUrl": "https://cdn.nodaro.ai/templates/cafcd753-a33c-4802-ac04-3aa7a3f92d83/preview.png",
+  "previewMediaType": "image",
+  "tutorialCategorySlug": "advanced",
+  "tutorialSortOrder": 0,
+  "nodes": [
+    {
+      "id": "node_2",
+      "data": {
+        "label": "Scene 1",
+        "model": "gemini-2.5-flash-image",
+        "style": "cinematic",
+        "prompt": "Two divers slowly descend through clear blue water and suddenly discover a massive living room on the ocean floor. A gigantic sofa the size of a building, a coffee table as large as a small field, huge cushions gently drifting with the current. Soft sun rays penetrate from above, creating a calm, luxurious atmosphere. The divers appear tiny like ants inside a space built for giants.",
+        "provider": "nano-banana-2",
+        "resolution": "4K",
+        "aspectRatio": "9:16",
+        "fieldMappings": {
+          "prompt": {
+            "sourceNodeId": "node_18"
+          }
+        },
+        "negativePrompt": "",
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/images/0f1f0370-bb0f-4e86-bea8-781e80924528.png",
+            "jobId": "0f1f0370-bb0f-4e86-bea8-781e80924528",
+            "timestamp": "2026-03-17T11:06:07.086Z"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedImageUrl": "https://cdn.nodaro.ai/images/0f1f0370-bb0f-4e86-bea8-781e80924528.png",
+        "presentationInput": false,
+        "presentationOutput": true,
+        "presentationVisible": true
+      },
+      "type": "generate-image",
+      "width": 796.9944751381215,
+      "height": 368,
+      "measured": {
+        "width": 797,
+        "height": 368
+      },
+      "position": {
+        "x": 394.8216386627108,
+        "y": -511.9437070949997
+      },
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_3",
+      "data": {
+        "label": "Scene 2",
+        "model": "gemini-2.5-flash-image",
+        "style": "cinematic",
+        "prompt": "A diver swims beside a giant coffee cup as large as an entire room. Colorful coral reefs grow along its rim, and small fish swim inside the cup like it’s a miniature lagoon. The handle is big enough for a diver to swim through.",
+        "provider": "nano-banana-2",
+        "resolution": "4K",
+        "aspectRatio": "9:16",
+        "fieldMappings": {
+          "prompt": {
+            "sourceNodeId": "node_19"
+          }
+        },
+        "negativePrompt": "",
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/images/6f301b37-c663-4b7c-9607-f5a9e15b5a6c.png",
+            "jobId": "6f301b37-c663-4b7c-9607-f5a9e15b5a6c",
+            "timestamp": "2026-03-17T11:08:41.049Z"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedImageUrl": "https://cdn.nodaro.ai/images/6f301b37-c663-4b7c-9607-f5a9e15b5a6c.png",
+        "presentationInput": false,
+        "presentationOutput": true,
+        "presentationVisible": true
+      },
+      "type": "generate-image",
+      "width": 740.2057142857143,
+      "height": 368,
+      "measured": {
+        "width": 740,
+        "height": 368
+      },
+      "position": {
+        "x": 393.70819982515417,
+        "y": 6.904428629490269
+      },
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_4",
+      "data": {
+        "label": "Scene 3",
+        "model": "gemini-2.5-flash-image",
+        "style": "cinematic",
+        "prompt": "A colossal armchair the height of a four-story building stands on the seabed. Massive cushions are covered with soft coral and sea plants. One diver hovers near the armrest while another shines a light upward, revealing the unbelievable scale.",
+        "provider": "nano-banana-2",
+        "resolution": "4K",
+        "aspectRatio": "9:16",
+        "fieldMappings": {
+          "prompt": {
+            "sourceNodeId": "node_20"
+          }
+        },
+        "negativePrompt": "",
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/images/2676d6df-f91a-4065-92f9-dff9a921ccbf.png",
+            "jobId": "2676d6df-f91a-4065-92f9-dff9a921ccbf",
+            "width": 2048,
+            "height": 3669,
+            "timestamp": "2026-03-17T11:10:34.719Z"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedImageUrl": "https://cdn.nodaro.ai/images/2676d6df-f91a-4065-92f9-dff9a921ccbf.png",
+        "presentationInput": false,
+        "presentationOutput": true
+      },
+      "type": "generate-image",
+      "width": 385.57096057671055,
+      "height": 690.7518820097416,
+      "measured": {
+        "width": 386,
+        "height": 691
+      },
+      "position": {
+        "x": 392.96044634189826,
+        "y": 532.3868789996794
+      },
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_5",
+      "data": {
+        "label": "Scene 5",
+        "model": "gemini-2.5-flash-image",
+        "style": "cinematic",
+        "prompt": "A giant open book lies on the ocean floor, each page the size of a field. Deeply carved letters are filled with glowing algae. A diver swims across one of the letters as if crossing a landscape.",
+        "provider": "nano-banana-2",
+        "resolution": "4K",
+        "aspectRatio": "9:16",
+        "fieldMappings": {
+          "prompt": {
+            "sourceNodeId": "node_23"
+          }
+        },
+        "negativePrompt": "",
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/images/51cf2162-89b1-489a-b2b6-9026e5dfc08c.png",
+            "jobId": "51cf2162-89b1-489a-b2b6-9026e5dfc08c",
+            "width": 2048,
+            "height": 3669,
+            "timestamp": "2026-03-17T11:12:16.487Z"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedImageUrl": "https://cdn.nodaro.ai/images/51cf2162-89b1-489a-b2b6-9026e5dfc08c.png",
+        "presentationInput": false,
+        "presentationOutput": true
+      },
+      "type": "generate-image",
+      "width": 370.7840793828698,
+      "height": 664.2611265897212,
+      "measured": {
+        "width": 371,
+        "height": 664
+      },
+      "position": {
+        "x": 393.94530741246194,
+        "y": 1887.9278033237968
+      },
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_6",
+      "data": {
+        "label": "Scene 6",
+        "model": "gemini-2.5-flash-image",
+        "style": "cinematic",
+        "prompt": "A massive fruit bowl sits on a giant stone table. Instead of fruit, vibrant corals and small sea creatures fill the bowl. Fish swim through it like a living underwater garden.",
+        "provider": "nano-banana-2",
+        "resolution": "4K",
+        "aspectRatio": "9:16",
+        "fieldMappings": {
+          "prompt": {
+            "sourceNodeId": "node_24"
+          }
+        },
+        "negativePrompt": "",
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/images/fd9dd9b7-9655-4218-80c4-0df82e59ef04.png",
+            "jobId": "fd9dd9b7-9655-4218-80c4-0df82e59ef04",
+            "width": 320,
+            "height": 573,
+            "timestamp": "2026-03-17T11:14:01.786Z"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedImageUrl": "https://cdn.nodaro.ai/images/fd9dd9b7-9655-4218-80c4-0df82e59ef04.png",
+        "presentationOutput": true
+      },
+      "type": "generate-image",
+      "width": 409.93101561914693,
+      "height": 734.3930157747315,
+      "measured": {
+        "width": 410,
+        "height": 734
+      },
+      "position": {
+        "x": 390.8678971991099,
+        "y": 2363.3674710193036
+      },
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_7",
+      "data": {
+        "label": "Scene 7",
+        "model": "gemini-2.5-flash-image",
+        "style": "cinematic",
+        "prompt": "A giant bed with flowing white fabric rests on the seabed. The sheets move gently with the current like soft clouds. Above it hangs a massive lamp, surrounded by glowing jellyfish that illuminate the scene with soft, magical light.",
+        "provider": "nano-banana-2",
+        "resolution": "4K",
+        "aspectRatio": "9:16",
+        "errorMessage": "The operation was aborted due to timeout",
+        "fieldMappings": {
+          "prompt": {
+            "sourceNodeId": "node_25"
+          }
+        },
+        "negativePrompt": "",
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/images/7a82de7b-f0ad-4ef0-bafa-eb89b8c46ca8.png",
+            "jobId": "7a82de7b-f0ad-4ef0-bafa-eb89b8c46ca8",
+            "width": 2048,
+            "height": 3669,
+            "timestamp": "2026-03-17T11:24:11.298Z"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedImageUrl": "https://cdn.nodaro.ai/images/7a82de7b-f0ad-4ef0-bafa-eb89b8c46ca8.png",
+        "presentationOutput": true
+      },
+      "type": "generate-image",
+      "width": 459.0024073111628,
+      "height": 822.3046056761017,
+      "measured": {
+        "width": 459,
+        "height": 822
+      },
+      "position": {
+        "x": 390.42590286278164,
+        "y": 2818.342920638685
+      },
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_8",
+      "data": {
+        "label": "Scene 8",
+        "model": "gemini-2.5-flash-image",
+        "style": "cinematic",
+        "prompt": "Final wide shot. The camera pulls back to reveal the full environment — an enormous area filled with oversized everyday objects: giant sofas, books, cups, chairs, and living room elements scattered across the ocean floor. The divers look incredibly small within a surreal underwater world that feels like a frozen luxury living space built for giants.",
+        "provider": "nano-banana-2",
+        "resolution": "4K",
+        "aspectRatio": "9:16",
+        "fieldMappings": {
+          "prompt": {
+            "sourceNodeId": "node_26"
+          }
+        },
+        "negativePrompt": "",
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/images/bdc3251c-dd9c-4dbe-983e-b0e30d8770f1.png",
+            "jobId": "bdc3251c-dd9c-4dbe-983e-b0e30d8770f1",
+            "width": 320,
+            "height": 573,
+            "timestamp": "2026-03-17T11:42:39.675Z"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedImageUrl": "https://cdn.nodaro.ai/images/bdc3251c-dd9c-4dbe-983e-b0e30d8770f1.png",
+        "presentationOutput": true
+      },
+      "type": "generate-image",
+      "width": 394.12959409542725,
+      "height": 706.0847073906848,
+      "measured": {
+        "width": 394,
+        "height": 706
+      },
+      "position": {
+        "x": 389.98334400764634,
+        "y": 3324.5100218635384
+      },
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_9",
+      "data": {
+        "label": "Scene 1  video",
+        "model": "veo-3",
+        "motion": "subtle",
+        "prompt": "Slow cinematic camera movement, gentle forward drift toward the giant living room scene.  \nSoft volumetric light rays slowly shifting through clear blue water.  \nSmall fish swimming calmly across the frame.  \nFloating particles creating depth.  \nSubtle movement in cushions and soft fabrics.  \nMaintain exact composition and structure, no distortion or morphing.  \nUltra realistic, calm, luxury underwater atmosphere.  \ncentered subject, strong composition balance",
+        "duration": 5,
+        "provider": "kling-3.0",
+        "resolution": "1080p",
+        "aspectRatio": "9:16",
+        "cameraMotion": "zoom-in",
+        "errorMessage": "Generation failed. Please try again or contact support if the issue persists.",
+        "fieldMappings": {},
+        "generateAudio": false,
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/videos/94ca9f58-bf4c-4527-b8a1-0229bb067a03.mp4",
+            "jobId": "94ca9f58-bf4c-4527-b8a1-0229bb067a03",
+            "width": 1072,
+            "height": 1928,
+            "timestamp": "2026-03-17T11:45:24.086Z"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedVideoUrl": "https://cdn.nodaro.ai/videos/94ca9f58-bf4c-4527-b8a1-0229bb067a03.mp4"
+      },
+      "type": "generate-video",
+      "width": 377.80370371809147,
+      "height": 679.4827805676123,
+      "measured": {
+        "width": 378,
+        "height": 679
+      },
+      "position": {
+        "x": 844.2320872631408,
+        "y": -507.82834137627117
+      },
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_11",
+      "data": {
+        "label": "Scene 2  video",
+        "model": "veo-3",
+        "sound": false,
+        "motion": "subtle",
+        "prompt": "Slow cinematic camera movement, gentle forward drift toward the giant living room scene.  \nSoft volumetric light rays slowly shifting through clear blue water.  \nSmall fish swimming calmly across the frame.  \nFloating particles creating depth.  \nSubtle movement in cushions and soft fabrics.  \nMaintain exact composition and structure, no distortion or morphing.  \nUltra realistic, calm, luxury underwater atmosphere.  \ncentered subject, strong composition balance",
+        "duration": 5,
+        "provider": "kling-3.0",
+        "resolution": "1080p",
+        "aspectRatio": "9:16",
+        "cameraMotion": "zoom-in",
+        "motionPrompt": "Slow cinematic orbit around the giant coffee cup, minimal movement.  \nLight rays softly flickering across the surface of the cup and water.  \nSmall fish swimming inside and around the cup.  \nFloating particles drifting gently.  \nMaintain exact shape and proportions of the cup and corals.  \nNo deformation, no morphing, no structural changes.  \nUltra realistic, serene, premium underwater mood.  ",
+        "fieldMappings": {},
+        "generateAudio": false,
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/videos/1ce915fd-3401-4474-bc5f-c924dee813ac.mp4",
+            "jobId": "1ce915fd-3401-4474-bc5f-c924dee813ac",
+            "width": 1072,
+            "height": 1928,
+            "timestamp": "2026-03-17T11:51:54.403Z"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedVideoUrl": "https://cdn.nodaro.ai/videos/1ce915fd-3401-4474-bc5f-c924dee813ac.mp4"
+      },
+      "type": "generate-video",
+      "width": 377.80370371809147,
+      "height": 679.4827805676123,
+      "measured": {
+        "width": 378,
+        "height": 679
+      },
+      "position": {
+        "x": 848.2320872631408,
+        "y": -3.828341376271169
+      },
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_12",
+      "data": {
+        "label": "Scene 3 video",
+        "model": "veo-3",
+        "sound": false,
+        "motion": "subtle",
+        "prompt": "Slow cinematic camera movement, gentle forward drift toward the giant living room scene.  \nSoft volumetric light rays slowly shifting through clear blue water.  \nSmall fish swimming calmly across the frame.  \nFloating particles creating depth.  \nSubtle movement in cushions and soft fabrics.  \nMaintain exact composition and structure, no distortion or morphing.  \nUltra realistic, calm, luxury underwater atmosphere.  \ncentered subject, strong composition balance",
+        "duration": 5,
+        "provider": "kling-3.0",
+        "resolution": "1080p",
+        "aspectRatio": "9:16",
+        "cameraMotion": "zoom-in",
+        "motionPrompt": "Slow upward camera tilt revealing the full height of the giant armchair.  \nSoft light rays moving slowly from above.  \nTiny fish passing by to emphasize scale.  \nFloating particles in the water.  \nVery subtle fabric and coral movement.  \nKeep structure perfectly stable, no distortion.  \nCinematic, calm, luxury underwater aesthetic.  ",
+        "fieldMappings": {},
+        "generateAudio": false,
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/videos/57dbff64-bf67-439f-9325-203e36d9ee7c.mp4",
+            "jobId": "57dbff64-bf67-439f-9325-203e36d9ee7c",
+            "width": 1072,
+            "height": 1928,
+            "timestamp": "2026-03-17T11:52:46.443Z"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedVideoUrl": "https://cdn.nodaro.ai/videos/57dbff64-bf67-439f-9325-203e36d9ee7c.mp4"
+      },
+      "type": "generate-video",
+      "width": 377.80370371809147,
+      "height": 679.4827805676123,
+      "measured": {
+        "width": 378,
+        "height": 679
+      },
+      "position": {
+        "x": 853.2320872631408,
+        "y": 526.4216586237288
+      },
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_13",
+      "data": {
+        "label": "Scene 5  video",
+        "model": "veo-3",
+        "sound": false,
+        "motion": "subtle",
+        "prompt": "Slow cinematic camera movement, gentle forward drift toward the giant living room scene.  \nSoft volumetric light rays slowly shifting through clear blue water.  \nSmall fish swimming calmly across the frame.  \nFloating particles creating depth.  \nSubtle movement in cushions and soft fabrics.  \nMaintain exact composition and structure, no distortion or morphing.  \nUltra realistic, calm, luxury underwater atmosphere.  \ncentered subject, strong composition balance",
+        "duration": 5,
+        "provider": "kling-3.0",
+        "resolution": "1080p",
+        "aspectRatio": "9:16",
+        "cameraMotion": "zoom-in",
+        "motionPrompt": "Slow lateral camera drift across the giant hammock scene.  \nWhite fabric gently swaying with the underwater current.  \nSoft light rays shimmering through the water.  \nFish swimming slowly beneath the hammock.  \nFloating particles for depth.  \nPreserve exact composition, no morphing or shape changes.  \nDreamlike, calm, high-end underwater atmosphere.  ",
+        "fieldMappings": {},
+        "generateAudio": false,
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/videos/77d2f519-8260-4479-b3df-74e3e35bfb81.mp4",
+            "jobId": "77d2f519-8260-4479-b3df-74e3e35bfb81",
+            "width": 1072,
+            "height": 1928,
+            "timestamp": "2026-03-17T11:52:46.770Z"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedVideoUrl": "https://cdn.nodaro.ai/videos/77d2f519-8260-4479-b3df-74e3e35bfb81.mp4"
+      },
+      "type": "generate-video",
+      "width": 377.80370371809147,
+      "height": 679.4827805676123,
+      "measured": {
+        "width": 378,
+        "height": 679
+      },
+      "position": {
+        "x": 847.5191610164874,
+        "y": 1805.0700488072107
+      },
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_14",
+      "data": {
+        "label": "Scene 6  video",
+        "model": "veo-3",
+        "sound": false,
+        "motion": "subtle",
+        "prompt": "Slow cinematic camera movement, gentle forward drift toward the giant living room scene.  \nSoft volumetric light rays slowly shifting through clear blue water.  \nSmall fish swimming calmly across the frame.  \nFloating particles creating depth.  \nSubtle movement in cushions and soft fabrics.  \nMaintain exact composition and structure, no distortion or morphing.  \nUltra realistic, calm, luxury underwater atmosphere.  \ncentered subject, strong composition balance",
+        "duration": 5,
+        "provider": "kling-3.0",
+        "resolution": "1080p",
+        "aspectRatio": "9:16",
+        "cameraMotion": "zoom-in",
+        "motionPrompt": "Slow top-down camera movement across the giant open book pages.  \nGlowing algae subtly pulsing within the carved letters.  \nTiny fish moving along the surface like a landscape.  \nSoft light rays drifting across the pages.  \nFloating particles enhancing depth.  \nMaintain sharp structure of the book, no distortion.  \nMysterious, cinematic, premium underwater feel.  ",
+        "fieldMappings": {},
+        "generateAudio": false,
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/videos/244e36f5-5b59-4593-9618-0ce43e58ac00.mp4",
+            "jobId": "244e36f5-5b59-4593-9618-0ce43e58ac00",
+            "width": 1072,
+            "height": 1928,
+            "timestamp": "2026-03-17T11:53:43.838Z"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedVideoUrl": "https://cdn.nodaro.ai/videos/244e36f5-5b59-4593-9618-0ce43e58ac00.mp4"
+      },
+      "type": "generate-video",
+      "width": 377.80370371809147,
+      "height": 679.4827805676123,
+      "measured": {
+        "width": 378,
+        "height": 679
+      },
+      "position": {
+        "x": 855.6607934461842,
+        "y": 2361.2072335529924
+      },
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_15",
+      "data": {
+        "label": "Scene 7  video",
+        "model": "veo-3",
+        "sound": false,
+        "motion": "subtle",
+        "prompt": "Slow cinematic camera movement, gentle forward drift toward the giant living room scene.  \nSoft volumetric light rays slowly shifting through clear blue water.  \nSmall fish swimming calmly across the frame.  \nFloating particles creating depth.  \nSubtle movement in cushions and soft fabrics.  \nMaintain exact composition and structure, no distortion or morphing.  \nUltra realistic, calm, luxury underwater atmosphere.  \ncentered subject, strong composition balance",
+        "duration": 5,
+        "provider": "kling-3.0",
+        "resolution": "1080p",
+        "aspectRatio": "9:16",
+        "cameraMotion": "zoom-in",
+        "motionPrompt": "Slow circular camera movement around the giant fruit bowl.  \nFish weaving gently through the coral inside the bowl.  \nSoft light rays illuminating the textures.  \nFloating particles drifting slowly.  \nSubtle organic motion in corals only.  \nKeep all objects perfectly stable, no morphing.  \nElegant, calm, luxury underwater scene.  ",
+        "fieldMappings": {},
+        "generateAudio": false,
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/videos/cb033e3a-d860-4b36-a66b-dbe35f927e8e.mp4",
+            "jobId": "cb033e3a-d860-4b36-a66b-dbe35f927e8e",
+            "width": 1072,
+            "height": 1928,
+            "timestamp": "2026-03-17T11:54:08.743Z"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedVideoUrl": "https://cdn.nodaro.ai/videos/cb033e3a-d860-4b36-a66b-dbe35f927e8e.mp4"
+      },
+      "type": "generate-video",
+      "width": 377.80370371809147,
+      "height": 679.4827805676123,
+      "measured": {
+        "width": 378,
+        "height": 679
+      },
+      "position": {
+        "x": 849.6901360346081,
+        "y": 2905.6602018120375
+      },
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_16",
+      "data": {
+        "label": "Scene 8  video",
+        "model": "veo-3",
+        "sound": false,
+        "motion": "subtle",
+        "prompt": "Slow cinematic camera movement, gentle forward drift toward the giant living room scene.  \nSoft volumetric light rays slowly shifting through clear blue water.  \nSmall fish swimming calmly across the frame.  \nFloating particles creating depth.  \nSubtle movement in cushions and soft fabrics.  \nMaintain exact composition and structure, no distortion or morphing.  \nUltra realistic, calm, luxury underwater atmosphere.  \ncentered subject, strong composition balance",
+        "duration": 5,
+        "provider": "kling-3.0",
+        "resolution": "1080p",
+        "aspectRatio": "9:16",
+        "cameraMotion": "zoom-in",
+        "motionPrompt": "Slow cinematic pull-back revealing the full giant environment.  \nMultiple fish schools moving slowly across the wide frame.  \nSoft volumetric light rays shifting from above.  \nFloating particles adding depth and scale.  \nAll giant objects remain stable and unchanged.  \nNo morphing, no deformation.  \nEpic, calm, ultra realistic luxury underwater world.  \nvery subtle cinematic parallax effect",
+        "fieldMappings": {},
+        "generateAudio": false,
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/videos/917f2da9-b514-4fd8-932c-58e08607dad3.mp4",
+            "jobId": "917f2da9-b514-4fd8-932c-58e08607dad3",
+            "width": 1072,
+            "height": 1928,
+            "timestamp": "2026-03-17T11:55:35.829Z"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedVideoUrl": "https://cdn.nodaro.ai/videos/917f2da9-b514-4fd8-932c-58e08607dad3.mp4"
+      },
+      "type": "generate-video",
+      "width": 377.80370371809147,
+      "height": 679.4827805676123,
+      "dragging": false,
+      "measured": {
+        "width": 378,
+        "height": 679
+      },
+      "position": {
+        "x": 853.1462803590993,
+        "y": 3385.1923024685243
+      },
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_17",
+      "data": {
+        "label": "Scene 4",
+        "model": "gemini-2.5-flash-image",
+        "style": "cinematic",
+        "prompt": "Two enormous coral formations are connected by a giant white fabric hammock gently swaying in the water. The hammock is the size of a small field. Fish swim beneath it while the divers approach, realizing it was likely a resting place for giants.",
+        "provider": "nano-banana-2",
+        "resolution": "4K",
+        "aspectRatio": "9:16",
+        "fieldMappings": {
+          "prompt": {
+            "sourceNodeId": "node_22"
+          }
+        },
+        "negativePrompt": "",
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/images/a91978ff-e6c1-4fc7-92ab-2893ed389b8c.png",
+            "jobId": "a91978ff-e6c1-4fc7-92ab-2893ed389b8c",
+            "width": 320,
+            "height": 573,
+            "timestamp": "2026-03-17T11:54:01.095Z"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedImageUrl": "https://cdn.nodaro.ai/images/a91978ff-e6c1-4fc7-92ab-2893ed389b8c.png"
+      },
+      "type": "generate-image",
+      "width": 368.40553486999545,
+      "height": 659.9999548037174,
+      "measured": {
+        "width": 368,
+        "height": 660
+      },
+      "position": {
+        "x": 383.89698591062677,
+        "y": 1176.1257033803984
+      },
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_18",
+      "data": {
+        "text": "Two divers slowly descend through clear blue water and suddenly discover a massive living room on the ocean floor. A gigantic sofa the size of a building, a coffee table as large as a small field, huge cushions gently drifting with the current. Soft sun rays penetrate from above, creating a calm, luxurious atmosphere. The divers appear tiny like ants inside a space built for giants.",
+        "label": "Scene 1 Text Prompt",
+        "width": 392,
+        "height": 181,
+        "variables": {},
+        "presentationInput": true,
+        "presentationVisible": false
+      },
+      "type": "text-prompt",
+      "width": 392,
+      "dragging": false,
+      "measured": {
+        "width": 392,
+        "height": 181
+      },
+      "position": {
+        "x": -626.2610208273383,
+        "y": -395.4721224221463
+      },
+      "resizing": false,
+      "selected": false
+    },
+    {
+      "id": "node_19",
+      "data": {
+        "text": "A diver swims beside a giant coffee cup as large as an entire room. Colorful coral reefs grow along its rim, and small fish swim inside the cup like it’s a miniature lagoon. The handle is big enough for a diver to swim through.",
+        "label": "Scene 2 Text Prompt",
+        "width": 352,
+        "height": 175,
+        "variables": {},
+        "presentationInput": true,
+        "presentationVisible": false
+      },
+      "type": "text-prompt",
+      "width": 352,
+      "dragging": false,
+      "measured": {
+        "width": 352,
+        "height": 175
+      },
+      "position": {
+        "x": -619.7691914759017,
+        "y": 126.88340078483427
+      },
+      "resizing": false,
+      "selected": false
+    },
+    {
+      "id": "node_20",
+      "data": {
+        "text": "A colossal armchair the height of a four-story building stands on the seabed. Massive cushions are covered with soft coral and sea plants. One diver hovers near the armrest while another shines a light upward, revealing the unbelievable scale.",
+        "label": "Scene 3 Text Prompt",
+        "width": 354,
+        "height": 180,
+        "variables": {},
+        "presentationInput": true,
+        "presentationVisible": false
+      },
+      "type": "text-prompt",
+      "width": 354,
+      "height": 180,
+      "dragging": false,
+      "measured": {
+        "width": 354,
+        "height": 180
+      },
+      "position": {
+        "x": -627.6674287242791,
+        "y": 444.5352135618405
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_21",
+      "data": {
+        "label": "Scene 4  video",
+        "model": "veo-3",
+        "sound": false,
+        "motion": "subtle",
+        "prompt": "Slow cinematic camera movement, gentle forward drift toward the giant living room scene.  \nSoft volumetric light rays slowly shifting through clear blue water.  \nSmall fish swimming calmly across the frame.  \nFloating particles creating depth.  \nSubtle movement in cushions and soft fabrics.  \nMaintain exact composition and structure, no distortion or morphing.  \nUltra realistic, calm, luxury underwater atmosphere.  \ncentered subject, strong composition balance",
+        "duration": 5,
+        "provider": "kling-3.0",
+        "resolution": "1080p",
+        "aspectRatio": "9:16",
+        "cameraMotion": "zoom-in",
+        "motionPrompt": "Slow forward camera push toward the giant bed.  \nWhite sheets flowing gently like soft clouds in water.  \nGlowing jellyfish drifting slowly around the lamp.  \nSoft light rays and ambient glow creating atmosphere.  \nFloating particles throughout the scene.  \nMaintain exact structure of the bed and objects, no distortion.  \nDreamlike, emotional, cinematic underwater mood.  ",
+        "fieldMappings": {},
+        "generateAudio": false,
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/videos/352aa492-67c0-4b7b-a2ef-45abd3182bc4.mp4",
+            "jobId": "352aa492-67c0-4b7b-a2ef-45abd3182bc4",
+            "width": 1072,
+            "height": 1928,
+            "timestamp": "2026-03-17T12:02:11.814Z"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedVideoUrl": "https://cdn.nodaro.ai/videos/352aa492-67c0-4b7b-a2ef-45abd3182bc4.mp4",
+        "presentationInput": false
+      },
+      "type": "generate-video",
+      "width": 377.80370371809147,
+      "height": 679.4827805676123,
+      "measured": {
+        "width": 378,
+        "height": 679
+      },
+      "position": {
+        "x": 856.4695041372707,
+        "y": 1184.3130990965444
+      },
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_22",
+      "data": {
+        "text": "Two enormous coral formations are connected by a giant white fabric hammock gently swaying in the water. The hammock is the size of a small field. Fish swim beneath it while the divers approach, realizing it was likely a resting place for giants.",
+        "label": "Scene 4 Text Prompt",
+        "width": 316,
+        "height": 176,
+        "variables": {},
+        "presentationInput": true,
+        "presentationVisible": false
+      },
+      "type": "text-prompt",
+      "width": 316,
+      "dragging": false,
+      "measured": {
+        "width": 316,
+        "height": 176
+      },
+      "position": {
+        "x": -607.0646518816673,
+        "y": 1223.2955166367053
+      },
+      "resizing": false,
+      "selected": false
+    },
+    {
+      "id": "node_23",
+      "data": {
+        "text": "A giant open book lies on the ocean floor, each page the size of a field. Deeply carved letters are filled with glowing algae. A diver swims across one of the letters as if crossing a landscape.",
+        "label": "Scene 5 Text Prompt",
+        "width": 311,
+        "height": 171,
+        "variables": {},
+        "presentationInput": true,
+        "presentationVisible": false
+      },
+      "type": "text-prompt",
+      "width": 311,
+      "height": 171,
+      "dragging": false,
+      "measured": {
+        "width": 311,
+        "height": 171
+      },
+      "position": {
+        "x": -589.6941980978975,
+        "y": 1779.710446659587
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_24",
+      "data": {
+        "text": "A massive fruit bowl sits on a giant stone table. Instead of fruit, vibrant corals and small sea creatures fill the bowl. Fish swim through it like a living underwater garden.",
+        "label": "Scene 6 Text Prompt",
+        "width": 309,
+        "height": 139,
+        "variables": {},
+        "presentationInput": true,
+        "presentationVisible": false
+      },
+      "type": "text-prompt",
+      "width": 309,
+      "height": 139,
+      "dragging": false,
+      "measured": {
+        "width": 309,
+        "height": 139
+      },
+      "position": {
+        "x": -590.272619573509,
+        "y": 2436.9838666099804
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_25",
+      "data": {
+        "text": "A giant bed with flowing white fabric rests on the seabed. The sheets move gently with the current like soft clouds. Above it hangs a massive lamp, surrounded by glowing jellyfish that illuminate the scene with soft, magical light.",
+        "label": "Scene 7  Text Prompt",
+        "width": 432,
+        "height": 155,
+        "variables": {},
+        "presentationInput": true,
+        "presentationVisible": false
+      },
+      "type": "text-prompt",
+      "width": 432,
+      "height": 155,
+      "dragging": false,
+      "measured": {
+        "width": 432,
+        "height": 155
+      },
+      "position": {
+        "x": -589.3696071134726,
+        "y": 2922.9984828849833
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_26",
+      "data": {
+        "text": "Final wide shot. The camera pulls back to reveal the full environment — an enormous area filled with oversized everyday objects: giant sofas, books, cups, chairs, and living room elements scattered across the ocean floor. The divers look incredibly small within a surreal underwater world that feels like a frozen luxury living space built for giants.",
+        "label": "Scene 8 Text Prompt",
+        "width": 374,
+        "height": 182,
+        "variables": {},
+        "presentationInput": true,
+        "presentationVisible": false
+      },
+      "type": "text-prompt",
+      "width": 374,
+      "dragging": false,
+      "measured": {
+        "width": 374,
+        "height": 182
+      },
+      "position": {
+        "x": -585.5423665476706,
+        "y": 3396.3448800449364
+      },
+      "resizing": false,
+      "selected": false
+    },
+    {
+      "id": "node_27",
+      "data": {
+        "label": "Combine Videos 1 to 4",
+        "audioMode": "crossfade",
+        "clipOrder": [
+          "node_9",
+          "node_11",
+          "node_12",
+          "node_21",
+          "node_13",
+          "node_14",
+          "node_15",
+          "node_16"
+        ],
+        "transition": "fade",
+        "fieldMappings": {},
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/videos/d275b7ad-bfcd-4638-b18f-a80e10cac5c8.mp4",
+            "jobId": "d275b7ad-bfcd-4638-b18f-a80e10cac5c8",
+            "width": 1072,
+            "height": 1928,
+            "timestamp": "2026-03-17T12:07:55.027Z"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedVideoUrl": "https://cdn.nodaro.ai/videos/d275b7ad-bfcd-4638-b18f-a80e10cac5c8.mp4",
+        "transitionDuration": 0.5
+      },
+      "type": "combine-videos",
+      "width": 365.8730604427833,
+      "height": 658.0254296023192,
+      "dragging": false,
+      "measured": {
+        "width": 366,
+        "height": 658
+      },
+      "position": {
+        "x": 2211.493858317515,
+        "y": 220.61410919567186
+      },
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_28",
+      "data": {
+        "label": "Combine Videos 5 to 8",
+        "audioMode": "crossfade",
+        "clipOrder": [
+          "node_9",
+          "node_11",
+          "node_12",
+          "node_21",
+          "node_13",
+          "node_14",
+          "node_15",
+          "node_16"
+        ],
+        "transition": "fade",
+        "fieldMappings": {},
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/videos/fc3edb42-b920-4e1e-9545-40dd3b98bbd4.mp4",
+            "jobId": "fc3edb42-b920-4e1e-9545-40dd3b98bbd4",
+            "width": 1072,
+            "height": 1928,
+            "timestamp": "2026-03-17T12:08:30.742Z"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedVideoUrl": "https://cdn.nodaro.ai/videos/fc3edb42-b920-4e1e-9545-40dd3b98bbd4.mp4",
+        "transitionDuration": 1.2
+      },
+      "type": "combine-videos",
+      "width": 365.8730604427833,
+      "height": 658.0254296023192,
+      "dragging": false,
+      "measured": {
+        "width": 366,
+        "height": 658
+      },
+      "position": {
+        "x": 2116.597989917752,
+        "y": 1640.331140553205
+      },
+      "selected": true,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_29",
+      "data": {
+        "label": "Combine Videos",
+        "audioMode": "crossfade",
+        "transition": "fade",
+        "fieldMappings": {},
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/videos/773cdabf-c7a7-43a4-9caf-ca6e9e6d291d.mp4",
+            "jobId": "773cdabf-c7a7-43a4-9caf-ca6e9e6d291d",
+            "width": 1072,
+            "height": 1928,
+            "timestamp": "2026-03-17T12:11:15.362Z"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedVideoUrl": "https://cdn.nodaro.ai/videos/773cdabf-c7a7-43a4-9caf-ca6e9e6d291d.mp4",
+        "transitionDuration": 1.2
+      },
+      "type": "combine-videos",
+      "width": 365.8730604427833,
+      "height": 658.0254296023192,
+      "dragging": false,
+      "measured": {
+        "width": 366,
+        "height": 658
+      },
+      "position": {
+        "x": 2625.493858317515,
+        "y": 532.6141091956719
+      },
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_31",
+      "data": {
+        "label": "Suno Generate",
+        "model": "V5",
+        "style": "",
+        "title": "",
+        "lyrics": "",
+        "prompt": "cinematic ambient music with emotional build, deep ocean atmosphere, soft piano, evolving pads, subtle bass, mysterious and dreamy mood, slow build up to light emotional peak, immersive, no vocals, high-end film soundtrack, perfect for underwater fantasy visuals",
+        "sunoTaskId": "ec2a02280fbf67ba8895073c91129aa3",
+        "sunoTrackId": "ac17dcb0-ef5e-48d0-9708-f13f58ee168a",
+        "fieldMappings": {
+          "prompt": {
+            "sourceNodeId": "node_36"
+          }
+        },
+        "negativeStyle": "",
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/audios/cba101c6-34a4-47f6-908e-498404828478.wav",
+            "jobId": "cba101c6-34a4-47f6-908e-498404828478",
+            "timestamp": "2026-03-17T12:14:56.774Z"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedAudioUrl": "https://cdn.nodaro.ai/audios/cba101c6-34a4-47f6-908e-498404828478.wav"
+      },
+      "type": "suno-generate",
+      "dragging": false,
+      "measured": {
+        "width": 220,
+        "height": 220
+      },
+      "position": {
+        "x": 3544.133256880263,
+        "y": -116.05408770050701
+      },
+      "selected": false
+    },
+    {
+      "id": "node_34",
+      "data": {
+        "label": "Merge Video & Audio",
+        "audioType": "voiceover",
+        "fieldMappings": {},
+        "trackSettings": {},
+        "voiceoverVolume": 100,
+        "backgroundVolume": 30,
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/videos/e34af738-13c8-43f1-9925-a040d062358d.mp4",
+            "jobId": "e34af738-13c8-43f1-9925-a040d062358d",
+            "width": 1072,
+            "height": 1928,
+            "timestamp": "2026-03-17T12:16:40.502Z",
+            "thumbnailUrl": "https://cdn.nodaro.ai/thumbnails/e34af738-13c8-43f1-9925-a040d062358d.png"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedVideoUrl": "https://cdn.nodaro.ai/videos/e34af738-13c8-43f1-9925-a040d062358d.mp4",
+        "keepOriginalAudio": true,
+        "originalAudioRole": "background",
+        "originalAudioVolume": 30
+      },
+      "type": "merge-video-audio",
+      "width": 365.8730604427833,
+      "height": 658.0254296023192,
+      "dragging": false,
+      "measured": {
+        "width": 366,
+        "height": 658
+      },
+      "position": {
+        "x": 3204.484984811382,
+        "y": 589.7859619693498
+      },
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_35",
+      "data": {
+        "label": "Trim Video",
+        "endTime": 34,
+        "startTime": 0,
+        "fieldMappings": {},
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/videos/86b8111d-eda3-416b-bbdd-877d41c58207.mp4",
+            "jobId": "86b8111d-eda3-416b-bbdd-877d41c58207",
+            "width": 1072,
+            "height": 1928,
+            "timestamp": "2026-03-17T12:16:59.165Z",
+            "thumbnailUrl": "https://cdn.nodaro.ai/thumbnails/86b8111d-eda3-416b-bbdd-877d41c58207.png"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedVideoUrl": "https://cdn.nodaro.ai/videos/86b8111d-eda3-416b-bbdd-877d41c58207.mp4",
+        "presentationOutput": true
+      },
+      "type": "trim-video",
+      "width": 365.8730604427833,
+      "height": 658.0254296023192,
+      "dragging": false,
+      "measured": {
+        "width": 366,
+        "height": 658
+      },
+      "position": {
+        "x": 3605.51962561969,
+        "y": 589.0543259314321
+      },
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_36",
+      "data": {
+        "text": "cinematic ambient music with emotional build, deep ocean atmosphere, soft piano, evolving pads, subtle bass, mysterious and dreamy mood, slow build up to light emotional peak, immersive, no vocals, high-end film soundtrack, perfect for underwater fantasy visuals",
+        "label": "Suno Text Prompt",
+        "variables": {},
+        "presentationInput": true,
+        "presentationVisible": false
+      },
+      "type": "text-prompt",
+      "dragging": false,
+      "measured": {
+        "width": 220,
+        "height": 160
+      },
+      "position": {
+        "x": 3144.833482426187,
+        "y": -112.42897955758338
+      },
+      "selected": false
+    },
+    {
+      "id": "node_37",
+      "data": {
+        "label": "Instagram Post",
+        "action": "post-reel",
+        "caption": "",
+        "platform": "instagram",
+        "connectionId": "7c7d58df-6733-47b6-8b95-2482950d0ea3",
+        "fieldMappings": {
+          "caption": {
+            "sourceNodeId": "node_40"
+          }
+        },
+        "platformPostId": "17859794214616460",
+        "platformPostUrl": "https://www.instagram.com/p/DV_Fn6QCcD7/",
+        "presentationInput": false,
+        "presentationOutput": true,
+        "presentationVisible": false
+      },
+      "type": "instagram-post",
+      "dragging": false,
+      "measured": {
+        "width": 200,
+        "height": 103
+      },
+      "position": {
+        "x": 5098.427791462258,
+        "y": 422.0307596012634
+      },
+      "selected": false
+    },
+    {
+      "id": "node_38",
+      "data": {
+        "label": "Social Media Format",
+        "method": "pad",
+        "specKey": "instagram:feed-square",
+        "padColor": "#000000",
+        "platform": "instagram",
+        "contentType": "feed-square",
+        "fieldMappings": {
+          "formattedText": {
+            "sourceNodeId": "node_40"
+          }
+        },
+        "formattedText": "A surreal underwater world where everything is built for giants.\nDivers discovered a massive living space frozen in time beneath the ocean.\n\n#ai\n#aivideo\n#underwater\n#cinematic\n#surreal\n#giants\n#fantasy\n#visualart\n#midjourney\n#klingai\n#fyp\n#viral\n#nodaro.ai",
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/videos/d14ec86a-c4ef-4583-8103-3160f93eca27.mp4",
+            "jobId": "d14ec86a-c4ef-4583-8103-3160f93eca27",
+            "timestamp": "2026-03-17T12:25:54.993Z",
+            "thumbnailUrl": "https://cdn.nodaro.ai/thumbnails/d14ec86a-c4ef-4583-8103-3160f93eca27.png"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedVideoUrl": "https://cdn.nodaro.ai/videos/d14ec86a-c4ef-4583-8103-3160f93eca27.mp4",
+        "presentationInput": false,
+        "presentationOutput": true
+      },
+      "type": "social-media-format",
+      "width": 220,
+      "dragging": false,
+      "measured": {
+        "width": 220,
+        "height": 262
+      },
+      "position": {
+        "x": 4258.341704119663,
+        "y": 380.1497566870024
+      },
+      "resizing": false,
+      "selected": false
+    },
+    {
+      "id": "node_40",
+      "data": {
+        "text": "A surreal underwater world where everything is built for giants.\nDivers discovered a massive living space frozen in time beneath the ocean.\n\n#ai\n#aivideo\n#underwater\n#cinematic\n#surreal\n#giants\n#fantasy\n#visualart\n#midjourney\n#klingai\n#fyp\n#viral\n#nodaro.ai",
+        "label": "Caption / Post Text",
+        "width": 755,
+        "height": 353,
+        "variables": {},
+        "presentationInput": false,
+        "presentationOutput": true
+      },
+      "type": "text-prompt",
+      "width": 755,
+      "height": 353,
+      "dragging": false,
+      "measured": {
+        "width": 755,
+        "height": 353
+      },
+      "position": {
+        "x": 4511.427791462258,
+        "y": 650.5307596012634
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_41",
+      "data": {
+        "bold": true,
+        "text": "This template generates a full cinematic underwater video - from images to final Instagram-ready output",
+        "color": "#2d2d44",
+        "label": "How to use this template",
+        "width": 1059,
+        "height": 86,
+        "italic": false,
+        "fontSize": "lg",
+        "alignment": "left",
+        "textColor": "#ffffff"
+      },
+      "type": "sticky-note",
+      "width": 1059,
+      "height": 86,
+      "zIndex": -1,
+      "dragging": false,
+      "measured": {
+        "width": 1059,
+        "height": 86
+      },
+      "position": {
+        "x": 1848.3962546307177,
+        "y": -1241.4643398261678
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_42",
+      "data": {
+        "bold": false,
+        "text": "Each scene starts with a Text Prompt node.\nYou can:\n\nChange the concept (e.g. desert / space / city)\nAdjust details (objects, lighting, mood, scale)\nKeep structure but swap theme\n\nTip: Keep the “giant scale + small human” contrast — it’s what makes the video feel viral.",
+        "color": "#1a2e1a",
+        "label": "Step 1 — Edit the scenes (optional)",
+        "width": 958,
+        "height": 4701,
+        "italic": false,
+        "fontSize": "base",
+        "alignment": "left",
+        "textColor": "#ffffff"
+      },
+      "type": "sticky-note",
+      "width": 958,
+      "height": 4701,
+      "zIndex": -1,
+      "dragging": false,
+      "measured": {
+        "width": 958,
+        "height": 4701
+      },
+      "position": {
+        "x": -866.6998706773827,
+        "y": -850.9852846781351
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_43",
+      "data": {
+        "bold": false,
+        "text": "Run the image nodes (Scenes 1 - 8).\nEach scene produces a high-quality visual.\n\nIf needed:\n\nRe-run specific scenes\n\nSlightly tweak prompts for better composition\n\n",
+        "color": "#2d1a1a",
+        "label": "Step 2 - Generate images",
+        "width": 637,
+        "height": 4700,
+        "italic": false,
+        "fontSize": "base",
+        "alignment": "left",
+        "textColor": "#ffffff"
+      },
+      "type": "sticky-note",
+      "width": 637,
+      "height": 4700,
+      "zIndex": -1,
+      "dragging": false,
+      "measured": {
+        "width": 637,
+        "height": 4700
+      },
+      "position": {
+        "x": 116.34783771407251,
+        "y": -854.0923972749634
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_44",
+      "data": {
+        "bold": false,
+        "text": "Each image feeds into an Image-to-Video node.\n\nAlready configured:\n\nSubtle cinematic motion\nStable structure (no morphing)\nSmooth camera movement\n\nYou can tweak:\n\nCamera motion (zoom / orbit / pan)\nMotion intensity",
+        "color": "#2d2d44",
+        "label": "Step 3 - Turn images into video",
+        "width": 526,
+        "height": 4694,
+        "italic": false,
+        "fontSize": "base",
+        "alignment": "left",
+        "textColor": "#ffffff"
+      },
+      "type": "sticky-note",
+      "width": 526,
+      "height": 4694,
+      "zIndex": -1,
+      "dragging": false,
+      "measured": {
+        "width": 526,
+        "height": 4694
+      },
+      "position": {
+        "x": 766.3478377140727,
+        "y": -848.0923972749633
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_45",
+      "data": {
+        "bold": false,
+        "text": "The flow automatically:\n\nMerges all clips\n\nAdds transitions\n\nCreates a continuous story\n\nNo action needed unless you want to:\n\nChange clip order\n\nAdjust transition duration\n\n",
+        "color": "#1e3a5f",
+        "label": "Step 4 - Combine all scenes",
+        "width": 889,
+        "height": 1357,
+        "italic": false,
+        "fontSize": "base",
+        "alignment": "left",
+        "textColor": "#ffffff"
+      },
+      "type": "sticky-note",
+      "width": 889,
+      "height": 1357,
+      "zIndex": -1,
+      "dragging": false,
+      "measured": {
+        "width": 889,
+        "height": 1357
+      },
+      "position": {
+        "x": 2112.8428192198235,
+        "y": -180.8892828386539
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_46",
+      "data": {
+        "bold": false,
+        "text": "The Suno node generates cinematic background music.\n\nYou can:\n\nChange mood (epic / dark / emotional / ambient)\n\nAdd vocals if needed",
+        "color": "#1a2d2d",
+        "label": "Step 5 - Add music",
+        "width": 840,
+        "height": 540,
+        "italic": false,
+        "fontSize": "base",
+        "alignment": "left",
+        "textColor": "#ffffff"
+      },
+      "type": "sticky-note",
+      "zIndex": -1,
+      "dragging": false,
+      "measured": {
+        "width": 840,
+        "height": 540
+      },
+      "position": {
+        "x": 3053.8428192198235,
+        "y": -347.8892828386539
+      },
+      "selected": false
+    },
+    {
+      "id": "node_47",
+      "data": {
+        "bold": false,
+        "text": "The flow:\n\nMerges video + audio\n\nTrims to optimal length\n\nFormats for Instagram\n\n",
+        "color": "#0f172a",
+        "label": "Step 6 - Final output",
+        "width": 996,
+        "height": 733,
+        "italic": false,
+        "fontSize": "base",
+        "alignment": "left",
+        "textColor": "#ffffff"
+      },
+      "type": "sticky-note",
+      "width": 996,
+      "height": 733,
+      "zIndex": -1,
+      "dragging": false,
+      "measured": {
+        "width": 996,
+        "height": 733
+      },
+      "position": {
+        "x": 3062.8428192198235,
+        "y": 274.1107171613461
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_48",
+      "data": {
+        "bold": false,
+        "text": "Connected Instagram node will:\n\nUpload the video as a Reel\nUse the provided caption\n\nEdit caption in:\n👉 Caption / Post Text node",
+        "color": "#2d2d44",
+        "label": "Step 7 — Publish (optional)",
+        "width": 1243,
+        "height": 856,
+        "italic": false,
+        "fontSize": "base",
+        "alignment": "left",
+        "textColor": "#ffffff"
+      },
+      "type": "sticky-note",
+      "width": 1243,
+      "height": 856,
+      "zIndex": -1,
+      "dragging": false,
+      "measured": {
+        "width": 1243,
+        "height": 856
+      },
+      "position": {
+        "x": 4116.8428192198235,
+        "y": 173.1107171613461
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_50",
+      "data": {
+        "bold": true,
+        "text": "What makes this template work\n\nStrong visual hook (giant objects + tiny humans)\nConsistent cinematic motion\nCalm but intriguing pacing\nBuilt for vertical social content\n__________________________________________________________\n\nQuick customization ideas\n\nReplace ocean → space / desert / abandoned city\nChange objects → cars / statues / food / tech\nAdd story progression (discovery → mystery → reveal)\n\n___________________________________________________________\n\nTip\n\nTo publish directly to Instagram or any other platform, first go to the Integrations menu and connect your accounts to the system.",
+        "color": "#2d1a2d",
+        "label": "Make it yours",
+        "width": 848,
+        "height": 672,
+        "italic": false,
+        "fontSize": "lg",
+        "alignment": "left",
+        "textColor": "#ffffff"
+      },
+      "type": "sticky-note",
+      "width": 848,
+      "height": 672,
+      "zIndex": -1,
+      "dragging": false,
+      "measured": {
+        "width": 848,
+        "height": 672
+      },
+      "position": {
+        "x": 5524.623228578507,
+        "y": 258.3170867834418
+      },
+      "resizing": false,
+      "selected": false,
+      "className": "rf-resized"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_1773745535486",
+      "type": "default",
+      "source": "node_2",
+      "target": "node_3",
+      "sourceHandle": "image",
+      "targetHandle": "references"
+    },
+    {
+      "id": "edge_1773745590533",
+      "type": "default",
+      "source": "node_3",
+      "target": "node_4",
+      "sourceHandle": "image",
+      "targetHandle": "references"
+    },
+    {
+      "id": "edge_1773745751561",
+      "type": "default",
+      "source": "node_5",
+      "target": "node_6",
+      "sourceHandle": "image",
+      "targetHandle": "references"
+    },
+    {
+      "id": "edge_1773745764355",
+      "type": "default",
+      "source": "node_6",
+      "target": "node_7",
+      "sourceHandle": "image",
+      "targetHandle": "references"
+    },
+    {
+      "id": "edge_1773745774952",
+      "type": "default",
+      "source": "node_7",
+      "target": "node_8",
+      "sourceHandle": "image",
+      "targetHandle": "references"
+    },
+    {
+      "id": "edge_1773745980745",
+      "type": "default",
+      "source": "node_2",
+      "target": "node_9",
+      "sourceHandle": "image",
+      "targetHandle": "startFrame"
+    },
+    {
+      "id": "edge_1773747971458",
+      "type": "default",
+      "source": "node_3",
+      "target": "node_11",
+      "sourceHandle": "image",
+      "targetHandle": "startFrame"
+    },
+    {
+      "id": "edge_1773748081015",
+      "type": "default",
+      "source": "node_4",
+      "target": "node_12",
+      "sourceHandle": "image",
+      "targetHandle": "startFrame"
+    },
+    {
+      "id": "edge_1773748111314",
+      "type": "default",
+      "source": "node_5",
+      "target": "node_13",
+      "sourceHandle": "image",
+      "targetHandle": "startFrame"
+    },
+    {
+      "id": "edge_1773748145703",
+      "type": "default",
+      "source": "node_6",
+      "target": "node_14",
+      "sourceHandle": "image",
+      "targetHandle": "startFrame"
+    },
+    {
+      "id": "edge_1773748191678",
+      "type": "default",
+      "source": "node_7",
+      "target": "node_15",
+      "sourceHandle": "image",
+      "targetHandle": "startFrame"
+    },
+    {
+      "id": "edge_1773748212879",
+      "type": "default",
+      "source": "node_8",
+      "target": "node_16",
+      "sourceHandle": "image",
+      "targetHandle": "startFrame"
+    },
+    {
+      "id": "edge_1773748427251",
+      "type": "default",
+      "source": "node_18",
+      "target": "node_2",
+      "sourceHandle": "prompt",
+      "targetHandle": "prompt"
+    },
+    {
+      "id": "edge_1773748468809",
+      "type": "default",
+      "source": "node_19",
+      "target": "node_3",
+      "sourceHandle": "prompt",
+      "targetHandle": "prompt"
+    },
+    {
+      "id": "edge_1773748549765",
+      "type": "default",
+      "source": "node_20",
+      "target": "node_4",
+      "sourceHandle": "prompt",
+      "targetHandle": "prompt"
+    },
+    {
+      "id": "edge_1773748596962",
+      "type": "default",
+      "source": "node_4",
+      "target": "node_17",
+      "sourceHandle": "image",
+      "targetHandle": "references"
+    },
+    {
+      "id": "edge_1773748616759",
+      "type": "default",
+      "source": "node_17",
+      "target": "node_21",
+      "sourceHandle": "image",
+      "targetHandle": "startFrame"
+    },
+    {
+      "id": "edge_1773748669940",
+      "type": "default",
+      "source": "node_17",
+      "target": "node_5",
+      "sourceHandle": "image",
+      "targetHandle": "references"
+    },
+    {
+      "id": "edge_1773748723985",
+      "type": "default",
+      "source": "node_22",
+      "target": "node_17",
+      "sourceHandle": "prompt",
+      "targetHandle": "prompt"
+    },
+    {
+      "id": "edge_1773748760197",
+      "type": "default",
+      "source": "node_23",
+      "target": "node_5",
+      "sourceHandle": "prompt",
+      "targetHandle": "prompt"
+    },
+    {
+      "id": "edge_1773748823013",
+      "type": "default",
+      "source": "node_24",
+      "target": "node_6",
+      "sourceHandle": "prompt",
+      "targetHandle": "prompt"
+    },
+    {
+      "id": "edge_1773748861394",
+      "type": "default",
+      "source": "node_25",
+      "target": "node_7",
+      "sourceHandle": "prompt",
+      "targetHandle": "prompt"
+    },
+    {
+      "id": "edge_1773748928394",
+      "type": "default",
+      "source": "node_26",
+      "target": "node_8",
+      "sourceHandle": "prompt",
+      "targetHandle": "prompt"
+    },
+    {
+      "id": "edge_1773749085882",
+      "type": "default",
+      "source": "node_11",
+      "target": "node_27",
+      "selected": false,
+      "sourceHandle": "video",
+      "targetHandle": "in"
+    },
+    {
+      "id": "edge_1773749088434",
+      "type": "default",
+      "source": "node_12",
+      "target": "node_27",
+      "selected": false,
+      "sourceHandle": "video",
+      "targetHandle": "in"
+    },
+    {
+      "id": "edge_1773749090946",
+      "type": "default",
+      "source": "node_21",
+      "target": "node_27",
+      "selected": false,
+      "sourceHandle": "video",
+      "targetHandle": "in"
+    },
+    {
+      "id": "edge_1773749118735",
+      "type": "default",
+      "source": "node_9",
+      "target": "node_27",
+      "selected": false,
+      "sourceHandle": "video",
+      "targetHandle": "in"
+    },
+    {
+      "id": "edge_1773749252088",
+      "type": "default",
+      "source": "node_13",
+      "target": "node_28",
+      "selected": false,
+      "sourceHandle": "video",
+      "targetHandle": "in"
+    },
+    {
+      "id": "edge_1773749254544",
+      "type": "default",
+      "source": "node_14",
+      "target": "node_28",
+      "selected": false,
+      "sourceHandle": "video",
+      "targetHandle": "in"
+    },
+    {
+      "id": "edge_1773749257383",
+      "type": "default",
+      "source": "node_15",
+      "target": "node_28",
+      "selected": false,
+      "sourceHandle": "video",
+      "targetHandle": "in"
+    },
+    {
+      "id": "edge_1773749260768",
+      "type": "default",
+      "source": "node_16",
+      "target": "node_28",
+      "selected": false,
+      "sourceHandle": "video",
+      "targetHandle": "in"
+    },
+    {
+      "id": "edge_1773749419360",
+      "type": "default",
+      "source": "node_27",
+      "target": "node_29",
+      "selected": false,
+      "sourceHandle": "video",
+      "targetHandle": "in"
+    },
+    {
+      "id": "edge_1773749421925",
+      "type": "default",
+      "source": "node_28",
+      "target": "node_29",
+      "selected": false,
+      "sourceHandle": "video",
+      "targetHandle": "in"
+    },
+    {
+      "id": "edge_1773749784726",
+      "type": "default",
+      "source": "node_29",
+      "target": "node_34",
+      "selected": false,
+      "sourceHandle": "video",
+      "targetHandle": "in"
+    },
+    {
+      "id": "edge_1773749787067",
+      "type": "default",
+      "source": "node_31",
+      "target": "node_34",
+      "selected": false,
+      "sourceHandle": "audio",
+      "targetHandle": "in"
+    },
+    {
+      "id": "edge_1773749795148",
+      "type": "default",
+      "source": "node_34",
+      "target": "node_35",
+      "selected": false,
+      "sourceHandle": "video-out",
+      "targetHandle": "in"
+    },
+    {
+      "id": "edge_1773749959890",
+      "type": "default",
+      "source": "node_36",
+      "target": "node_31",
+      "selected": false,
+      "sourceHandle": "prompt",
+      "targetHandle": "prompt"
+    },
+    {
+      "id": "edge_1773750281670",
+      "type": "default",
+      "source": "node_35",
+      "target": "node_38",
+      "selected": false,
+      "sourceHandle": "video-out",
+      "targetHandle": "media"
+    },
+    {
+      "id": "edge_1773750420659",
+      "type": "default",
+      "source": "node_38",
+      "target": "node_37",
+      "selected": false,
+      "sourceHandle": "media",
+      "targetHandle": "in"
+    },
+    {
+      "id": "edge_1773766522703",
+      "type": "default",
+      "source": "node_40",
+      "target": "node_38",
+      "selected": false,
+      "sourceHandle": "prompt",
+      "targetHandle": "text"
+    },
+    {
+      "id": "edge_1773766593254",
+      "type": "default",
+      "source": "node_40",
+      "target": "node_37",
+      "selected": false,
+      "sourceHandle": "prompt",
+      "targetHandle": "in"
+    }
+  ],
+  "settings": {
+    "viewport": {
+      "x": 213.47502214053225,
+      "y": 134.07756352405204,
+      "zoom": 0.217637640824031
+    },
+    "flowPromptTemplates": {},
+    "characterDefinitions": [],
+    "presentationSettings": {
+      "viewMode": "horizontal",
+      "runTarget": "workflow",
+      "inputOrder": [
+        "node_18",
+        "node_19",
+        "node_20",
+        "node_21",
+        "node_22",
+        "node_23",
+        "node_24",
+        "node_25",
+        "node_26",
+        "node_36",
+        "node_38",
+        "node_37"
+      ],
+      "compareLeft": "node_2",
+      "outputOrder": [
+        "node_2",
+        "node_3",
+        "node_4",
+        "node_5",
+        "node_6",
+        "node_7",
+        "node_8",
+        "node_35",
+        "node_40",
+        "node_38",
+        "node_37"
+      ],
+      "compareRight": "node_38"
+    }
+  }
+}

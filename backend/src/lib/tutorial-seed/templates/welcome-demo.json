@@ -1,0 +1,308 @@
+{
+  "slug": "welcome-demo",
+  "name": "Welcome Demo",
+  "description": "One sentence became an image, the image became motion, and a voice line tied it together.",
+  "markdownDescription": null,
+  "category": "multi-step",
+  "outputTypes": [
+    "video"
+  ],
+  "tags": [
+    "getting-started",
+    "image",
+    "video",
+    "voice"
+  ],
+  "complexity": "intermediate",
+  "previewMediaUrl": "https://cdn.nodaro.ai/templates/68350123-95ce-41fa-9cb4-41bfb53806f0/preview.png",
+  "previewMediaType": "image",
+  "tutorialCategorySlug": "getting-started",
+  "tutorialSortOrder": 0,
+  "nodes": [
+    {
+      "id": "demo-note-welcome",
+      "data": {
+        "bold": false,
+        "text": "Welcome to Nodaro\n\nThis canvas is a finished run. One sentence (Scene Idea) became an image, the image became motion, and a voice line tied it together in the Final Cut.\n\nClick any node to see its settings and result. Nothing here costs anything to look at.\n\nTo make it yours: edit the Scene Idea text, then press Run on the Scene Image node.",
+        "color": "#2d2d44",
+        "label": "Sticky Note",
+        "width": 460,
+        "height": 330,
+        "italic": false,
+        "fontSize": "base",
+        "alignment": "left",
+        "textColor": "#ffffff"
+      },
+      "type": "sticky-note",
+      "zIndex": -1,
+      "measured": {
+        "width": 460,
+        "height": 330
+      },
+      "position": {
+        "x": -80,
+        "y": -430
+      }
+    },
+    {
+      "id": "demo-idea",
+      "data": {
+        "text": "A tiny vintage robot barista with warm glowing amber eyes stands on a wooden espresso bar, pouring latte art into a ceramic cup. Morning light streams through the cafe window, steam rising, soft bokeh, cinematic macro photography, shallow depth of field.",
+        "label": "Scene Idea",
+        "width": 380,
+        "height": 260,
+        "variables": {}
+      },
+      "type": "text-prompt",
+      "dragging": false,
+      "measured": {
+        "width": 380,
+        "height": 260
+      },
+      "position": {
+        "x": -102.957408114549,
+        "y": 66.0169913833178
+      },
+      "selected": false
+    },
+    {
+      "id": "demo-image",
+      "data": {
+        "label": "Scene Image",
+        "model": "z-image",
+        "style": "",
+        "prompt": "",
+        "provider": "z-image",
+        "aspectRatio": "16:9",
+        "fieldMappings": {},
+        "negativePrompt": "",
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/images/5389940e-997f-4104-8451-b32b3fff1d89.png",
+            "jobId": "demo-1",
+            "width": 1280,
+            "height": 720,
+            "timestamp": "2026-08-10T00:00:00.000Z"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedImageUrl": "https://cdn.nodaro.ai/images/5389940e-997f-4104-8451-b32b3fff1d89.png"
+      },
+      "type": "generate-image",
+      "width": 654.2222222222222,
+      "height": 368,
+      "measured": {
+        "width": 654,
+        "height": 368
+      },
+      "position": {
+        "x": 500,
+        "y": 0
+      },
+      "className": "rf-resized"
+    },
+    {
+      "id": "demo-video",
+      "data": {
+        "label": "Animate",
+        "prompt": "Slow cinematic push-in. The little robot finishes the pour with a gentle nod, steam curling up from the cup, dust motes drifting through the warm light.",
+        "duration": 5,
+        "imageUrl": "https://cdn.nodaro.ai/images/5389940e-997f-4104-8451-b32b3fff1d89.png",
+        "provider": "seedance-2-fast",
+        "aspectRatio": "16:9",
+        "fieldMappings": {},
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/videos/7c15f9f4-5de3-41e6-8f23-4c43a8f68c55.mp4",
+            "jobId": "demo-2",
+            "width": 1280,
+            "height": 720,
+            "duration": 5,
+            "timestamp": "2026-08-10T00:00:00.000Z"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedVideoUrl": "https://cdn.nodaro.ai/videos/7c15f9f4-5de3-41e6-8f23-4c43a8f68c55.mp4"
+      },
+      "type": "generate-video",
+      "width": 675.5555555555555,
+      "height": 380,
+      "measured": {
+        "width": 676,
+        "height": 380
+      },
+      "position": {
+        "x": 1260,
+        "y": 0
+      },
+      "className": "rf-resized"
+    },
+    {
+      "id": "demo-narration",
+      "data": {
+        "text": "It started as one sentence. Image, motion, voice - one canvas. Now try yours.",
+        "label": "Narration",
+        "width": 380,
+        "height": 200,
+        "variables": {}
+      },
+      "type": "text-prompt",
+      "measured": {
+        "width": 380,
+        "height": 200
+      },
+      "position": {
+        "x": 720,
+        "y": 640
+      }
+    },
+    {
+      "id": "demo-voice",
+      "data": {
+        "label": "Voiceover",
+        "speed": 1,
+        "style": 0,
+        "voiceId": "21m00Tcm4TlvDq8ikWAM",
+        "language": "en",
+        "provider": "elevenlabs-turbo",
+        "stability": 0.5,
+        "voiceType": "premade",
+        "directText": "",
+        "textSource": "connected",
+        "languageCode": "",
+        "fieldMappings": {},
+        "similarityBoost": 0.75,
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/audio/7b179b3c-7a87-4f3e-aa78-9158ccf8b5cd.mp3",
+            "jobId": "demo-3",
+            "duration": 7.7,
+            "timestamp": "2026-08-10T00:00:00.000Z"
+          }
+        ],
+        "voiceDisplayName": "Rachel",
+        "activeResultIndex": 0,
+        "generatedAudioUrl": "https://cdn.nodaro.ai/audio/7b179b3c-7a87-4f3e-aa78-9158ccf8b5cd.mp3"
+      },
+      "type": "text-to-speech",
+      "measured": {
+        "width": 220,
+        "height": 221
+      },
+      "position": {
+        "x": 1260,
+        "y": 640
+      }
+    },
+    {
+      "id": "demo-final",
+      "data": {
+        "label": "Final Cut",
+        "audioType": "voiceover",
+        "fieldMappings": {},
+        "voiceoverVolume": 100,
+        "backgroundVolume": 30,
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/videos/918250a3-7ee4-4793-8674-7462f270632d.mp4",
+            "jobId": "demo-4",
+            "width": 1280,
+            "height": 720,
+            "duration": 7.7,
+            "timestamp": "2026-08-10T00:00:00.000Z"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedVideoUrl": "https://cdn.nodaro.ai/videos/918250a3-7ee4-4793-8674-7462f270632d.mp4"
+      },
+      "type": "merge-video-audio",
+      "width": 654.2222222222222,
+      "height": 368,
+      "measured": {
+        "width": 654,
+        "height": 368
+      },
+      "position": {
+        "x": 2040,
+        "y": 320
+      },
+      "className": "rf-resized"
+    },
+    {
+      "id": "demo-note-run",
+      "data": {
+        "bold": false,
+        "text": "Run your first generation\n\nThe Scene Image node uses Z-Image - the fastest, cheapest model in the catalog: about 2 credits and under 10 seconds.\n\nYour account starts with free credits. Edit the Scene Idea, hit Run on Scene Image, then keep going down the chain.",
+        "color": "#2d2d44",
+        "label": "Sticky Note",
+        "width": 420,
+        "height": 300,
+        "italic": false,
+        "fontSize": "base",
+        "alignment": "left",
+        "textColor": "#ffffff"
+      },
+      "type": "sticky-note",
+      "zIndex": 10,
+      "dragging": false,
+      "measured": {
+        "width": 420,
+        "height": 300
+      },
+      "position": {
+        "x": 2189.5431479218446,
+        "y": -278.2098528590648
+      },
+      "selected": true
+    }
+  ],
+  "edges": [
+    {
+      "id": "demo-e1",
+      "source": "demo-idea",
+      "target": "demo-image",
+      "sourceHandle": "prompt",
+      "targetHandle": "prompt"
+    },
+    {
+      "id": "demo-e2",
+      "source": "demo-image",
+      "target": "demo-video",
+      "sourceHandle": "image",
+      "targetHandle": "startFrame"
+    },
+    {
+      "id": "demo-e3",
+      "source": "demo-narration",
+      "target": "demo-voice",
+      "sourceHandle": "prompt",
+      "targetHandle": "prompt"
+    },
+    {
+      "id": "demo-e4",
+      "source": "demo-video",
+      "target": "demo-final",
+      "sourceHandle": "video",
+      "targetHandle": "in"
+    },
+    {
+      "id": "demo-e5",
+      "source": "demo-voice",
+      "target": "demo-final",
+      "sourceHandle": "audio",
+      "targetHandle": "in"
+    }
+  ],
+  "settings": {
+    "viewport": {
+      "x": -213.17583154473687,
+      "y": 430.13645533151043,
+      "zoom": 0.5667886253092665
+    },
+    "flowPromptTemplates": {},
+    "characterDefinitions": [],
+    "presentationSettings": {
+      "runTarget": "workflow"
+    }
+  }
+}

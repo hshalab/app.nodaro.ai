@@ -1,0 +1,122 @@
+/* Additions for the Underwater Giants tutorial. It reuses the Autopilot frame
+ * (headline, IN→OUT, step chain) because the design deliberately shares it;
+ * only the traced-scene pieces are new. */
+
+/* Long scene prompts must clamp, not shrink: the preview box is fixed height
+ * and the source text is worth keeping intact. */
+.uw-clamp {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 10;
+  line-clamp: 10;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.uw-clamp--short {
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+}
+
+.uw-trace {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.uw-still {
+  flex: 0 0 62px;
+  height: 62px;
+  border-radius: 7px;
+  background-size: cover;
+  background-position: center;
+  background-color: rgba(255, 255, 255, 0.04);
+}
+.uw-scene-tag {
+  display: block;
+  font-family: var(--nd-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--nd-accent-dim);
+}
+.uw-ref {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--nd-ui);
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--nd-muted);
+}
+
+/* --- the traced scene ------------------------------------------------------ */
+
+.uw-timeline {
+  display: flex;
+  gap: 3px;
+}
+.uw-clip {
+  flex: 1 1 0;
+  height: 26px;
+  border-radius: 4px;
+  background-size: cover;
+  background-position: center;
+  background-color: rgba(255, 255, 255, 0.06);
+  border: 1px solid transparent;
+  opacity: 0.45;
+  cursor: pointer;
+  transition: opacity 160ms ease, border-color 160ms ease;
+}
+.uw-clip[data-active="true"] {
+  opacity: 1;
+  border-color: rgba(255, 45, 120, 0.9);
+}
+.uw-note {
+  margin-top: 8px;
+  font-family: var(--nd-mono);
+  font-size: 9.5px;
+  line-height: 1.5;
+  color: var(--nd-eyebrow);
+}
+
+.uw-specs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-family: var(--nd-mono);
+  font-size: 10px;
+  color: var(--nd-text-3);
+}
+
+/* --- hero ------------------------------------------------------------------ */
+
+/* A 9:16 reel, so the preview column is taller than it is wide. */
+.uw-reel {
+  flex: 0 0 190px;
+}
+.uw-shots {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 6px;
+}
+.uw-shot {
+  height: 96px;
+  border-radius: 7px;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--nd-inset);
+  border: 1px solid var(--nd-border-subtle);
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 160ms ease, border-color 160ms ease;
+}
+.uw-shot[data-active="true"] {
+  opacity: 1;
+  border-color: rgba(255, 45, 120, 0.9);
+}
+@media (max-width: 900px) {
+  .uw-reel {
+    flex: 1 1 auto;
+  }
+  .uw-shots {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}

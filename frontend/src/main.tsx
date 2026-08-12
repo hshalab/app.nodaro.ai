@@ -19,9 +19,20 @@ window.addEventListener("vite:preloadError", () => {
 // Backstop: prevent browser back from exiting the app on mobile.
 // Push a /projects entry at the bottom of the history stack so back
 // always has somewhere to go within the app.
-if (window.history.length <= 2 && window.location.pathname !== "/projects" && !window.location.pathname.startsWith("/present/") && !window.location.pathname.startsWith("/app/") && !window.location.pathname.startsWith("/embed/")) {
+//
+// Standalone routes are exempt: they are opened from a shared or bookmarked
+// link, often by someone with no account, and rewriting the entry underneath
+// them makes the address bar disagree with what is on screen — so a refresh or
+// a copied link lands on /projects instead of the thing they were sent.
+const STANDALONE_ROUTES = ["/present/", "/app/", "/embed/", "/tutorials/"]
+const path = window.location.pathname
+if (
+  window.history.length <= 2 &&
+  path !== "/projects" &&
+  !STANDALONE_ROUTES.some((prefix) => path.startsWith(prefix))
+) {
   window.history.replaceState(null, "", "/projects")
-  window.history.pushState(null, "", window.location.pathname + window.location.search + window.location.hash)
+  window.history.pushState(null, "", path + window.location.search + window.location.hash)
 }
 
 import { StrictMode, Suspense } from "react"

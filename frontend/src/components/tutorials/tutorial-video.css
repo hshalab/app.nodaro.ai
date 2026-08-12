@@ -1,0 +1,77 @@
+/* Playback controls for a tutorial video. Uses the tutorial's own tokens, so a
+ * body only has to place the element. */
+
+.tv {
+  position: relative;
+  border-radius: 10px;
+  border: 1px solid var(--nd-border);
+  background: var(--nd-bar);
+  overflow: hidden;
+  line-height: 0;
+}
+.tv video {
+  width: 100%;
+  display: block;
+  cursor: pointer;
+}
+
+/* In fullscreen the wrapper becomes the whole screen, so the rounded card
+ * styling has to stand down and the clip is centred on black instead. */
+.tv:fullscreen {
+  border: 0;
+  border-radius: 0;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tv:fullscreen video {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  cursor: default;
+}
+
+.tv-badge {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  pointer-events: none;
+}
+
+.tv-controls {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  gap: 6px;
+  /* Visible from the start rather than hover-only: on a touch screen there is
+   * no hover, and a control nobody can find is not a control. */
+  opacity: 0.75;
+  transition: opacity 160ms ease;
+}
+.tv:hover .tv-controls,
+.tv:focus-within .tv-controls {
+  opacity: 1;
+}
+.tv-controls button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  color: var(--nd-text);
+  background: rgba(11, 11, 15, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+  transition: background 160ms ease;
+}
+.tv-controls button:hover {
+  background: rgba(11, 11, 15, 0.95);
+}
+.tv-icon {
+  width: 14px;
+  height: 14px;
+}

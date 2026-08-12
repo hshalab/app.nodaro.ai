@@ -23,6 +23,30 @@ pre-wired Nodaro workflow with the right nodes, providers, and parameters
 already in place. The complexity badge tells you roughly how involved it
 is, and the credit estimate is what one run will cost.
 
+## Guided walkthroughs
+
+Some flow tutorials open into a **guided walkthrough** instead of dropping
+you straight into the editor — a full-screen page that explains the
+workflow before you run anything. Cards that have one say so; the rest go
+to the usual template preview.
+
+A walkthrough has two views, switched from the bar at the top:
+
+- **Tutorial mode** — the lesson. A numbered step rail on the left, and on
+  the right the actual run this tutorial was built from: the real prompts,
+  the images and videos it produced, the audio it generated. Hover a step
+  to focus it. Every walkthrough is laid out a little differently, because
+  each one teaches a different idea.
+- **Canvas mode** — the same workflow as a read-only canvas, every node and
+  connection exactly as it sits in the editor. Nothing here is editable and
+  nothing costs credits; it is there so you can see the machine behind the
+  lesson. Sticky notes are hidden, since Tutorial mode already covers what
+  they say — the node count at the bottom tells you how many.
+
+Nothing on either view spends credits. **Run tutorial** in the top-right
+clones the workflow into one of your projects, exactly like Clone & Try
+below, and that copy is what you run.
+
 ## Clone & Try
 
 Hit **Clone & Try** on any flow tutorial card to copy the workflow into one
@@ -48,6 +72,22 @@ publishes them — there's nothing for end users to configure.
 
 If your Tutorials tab is empty, it's because no tutorials are published
 yet for your edition. Check back later.
+
+## Self-hosted installs
+
+A self-hosted Nodaro seeds a starter set of guided walkthroughs the first
+time it boots, so the Tutorials tab has something in it on a fresh
+install. They are ordinary workflow templates owned by a built-in
+`Nodaro` account — clone them, run them, take them apart.
+
+Seeding is idempotent: it runs on every boot, creates only what is
+missing, and updates a seeded tutorial only when the shipped version has
+actually changed. Editing your own clone never affects it. Deleting a
+seeded tutorial is not permanent — the next boot puts it back.
+
+The workflows are seeded from the repo, but the images, videos, and audio
+they display are fetched from Nodaro's CDN, so a walkthrough's media needs
+an internet connection to render.
 
 ## See also
 

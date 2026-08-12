@@ -1,0 +1,380 @@
+/* Layout for the Suno Music tutorial body.
+ *
+ * Bespoke to THIS tutorial. One run at a time, read left to right as a causal
+ * chain — options FEED the generator, which MAKES the track — with a stepper
+ * above it. The template is seven runs of the same idea, so showing them all at
+ * once would bury the one thing each run changes. */
+
+.sm {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+
+/* --- run stepper ---------------------------------------------------------- */
+
+.sm-stepper {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  border-radius: 14px;
+  background: var(--nd-panel);
+  border: 1px solid var(--nd-border);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.4);
+}
+.sm-run-count {
+  font-family: var(--nd-display);
+  font-weight: 600;
+  font-size: 16px;
+}
+.sm-divider {
+  width: 1px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.09);
+}
+.sm-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.sm-pill {
+  width: 38px;
+  height: 34px;
+  border-radius: 9px;
+  font-family: var(--nd-mono);
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--nd-muted);
+  background: var(--nd-surface);
+  border: 1px solid var(--nd-border);
+  transition: background 180ms ease, color 180ms ease;
+}
+.sm-pill[data-active="true"] {
+  color: #fff;
+  background: var(--nd-accent);
+  border-color: rgba(255, 45, 120, 0.5);
+}
+.sm-change {
+  flex: 1 1 220px;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--nd-muted);
+}
+.sm-nav {
+  display: flex;
+  gap: 8px;
+}
+.sm-nav button {
+  padding: 9px 15px;
+  border-radius: 9px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--nd-muted);
+  background: var(--nd-surface);
+  border: 1px solid var(--nd-border);
+}
+.sm-nav button.sm-next {
+  color: #fff;
+  background: var(--nd-accent);
+  border-color: transparent;
+  box-shadow: 0 6px 20px var(--nd-accent-b28);
+}
+.sm-nav button:disabled {
+  opacity: 0.4;
+  cursor: default;
+  box-shadow: none;
+}
+
+/* --- three stages --------------------------------------------------------- */
+
+.sm-stages {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) 56px minmax(0, 1fr) 56px minmax(0, 0.95fr);
+  align-items: stretch;
+  gap: 0;
+}
+@media (max-width: 1400px) {
+  .sm-stages {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+}
+
+.sm-panel {
+  border-radius: 14px;
+  background: var(--nd-panel);
+  border: 1px solid var(--nd-border);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+/* Stage 3 is the payoff, so it is the one that glows. */
+.sm-panel--payoff {
+  border-color: rgba(255, 45, 120, 0.3);
+  box-shadow: 0 0 0 4px rgba(255, 45, 120, 0.06), 0 18px 44px rgba(0, 0, 0, 0.4);
+}
+.sm-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--nd-border-subtle);
+}
+.sm-badge {
+  flex: 0 0 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--nd-mono);
+  font-size: 12px;
+  color: var(--nd-muted);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.sm-badge--payoff {
+  color: #fff;
+  background: var(--nd-accent);
+  border-color: transparent;
+}
+.sm-title {
+  font-family: var(--nd-display);
+  font-weight: 600;
+  font-size: 15px;
+}
+.sm-sub {
+  font-size: 12px;
+  color: var(--nd-faint);
+  margin-top: 1px;
+}
+.sm-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-height: 0;
+}
+
+/* --- connectors ----------------------------------------------------------- */
+/* These carry the causality: picks FEED the generator, which MAKES the track. */
+
+.sm-connector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 6px;
+}
+.sm-connector-bar {
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(to right, rgba(46, 230, 214, 0.1), rgba(46, 230, 214, 0.75));
+}
+.sm-connector-label {
+  font-family: var(--nd-mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: #4f8f8a;
+}
+@media (max-width: 1400px) {
+  .sm-connector {
+    flex-direction: row;
+    gap: 10px;
+  }
+  .sm-connector-bar {
+    flex: 1;
+  }
+}
+
+/* --- stage 1 cards -------------------------------------------------------- */
+
+.sm-card {
+  border-radius: 11px;
+  background: var(--nd-surface-soft);
+  border: 1px solid var(--nd-border);
+  overflow: hidden;
+  transition: opacity 220ms ease, border-color 220ms ease;
+}
+.sm-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  padding: 9px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.sm-card-name {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.sm-tag {
+  font-family: var(--nd-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--nd-eyebrow);
+  padding: 3px 7px;
+  border-radius: 5px;
+  background: var(--nd-surface);
+}
+.sm-card-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 12px;
+}
+.sm-value {
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: var(--nd-inset);
+  border: 1px solid var(--nd-border);
+  font-size: 12.5px;
+  color: var(--nd-text-2);
+}
+/* A node the run does not use stays in place — its absence is the lesson. */
+.sm-card[data-unused="true"] {
+  opacity: 0.4;
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+/* --- stage 2 -------------------------------------------------------------- */
+
+.sm-style {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--nd-surface-soft);
+  border: 1px solid var(--nd-border-subtle);
+}
+.sm-style-note {
+  font-size: 12.5px;
+  color: var(--nd-text-3);
+  margin: 6px 0 8px;
+}
+.sm-style-text {
+  font-family: var(--nd-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--nd-muted);
+  overflow-wrap: anywhere;
+}
+.sm-prompt {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--nd-inset);
+  border: 1px solid var(--nd-border);
+  font-family: var(--nd-mono);
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--nd-eyebrow);
+  overflow-wrap: anywhere;
+}
+.sm-prompt[data-filled="true"] {
+  border-color: rgba(255, 45, 120, 0.4);
+  color: var(--nd-accent-text);
+}
+.sm-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12.5px;
+  color: var(--nd-text-3);
+}
+.sm-toggle-state {
+  font-family: var(--nd-mono);
+  font-size: 10px;
+  color: var(--nd-eyebrow);
+}
+.sm-toggle-state[data-on="true"] {
+  color: #8fe9e0;
+}
+.sm-toggle {
+  position: relative;
+  width: 30px;
+  height: 17px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  transition: background 200ms ease;
+}
+.sm-toggle[data-on="true"] {
+  background: rgba(46, 230, 214, 0.35);
+}
+.sm-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 13px;
+  height: 13px;
+  border-radius: 999px;
+  background: var(--nd-faint);
+  transition: left 200ms ease, background 200ms ease;
+}
+.sm-toggle[data-on="true"] .sm-knob {
+  left: 15px;
+  background: var(--nd-wire);
+}
+.sm-run {
+  margin-top: auto;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--nd-accent);
+  border: 0;
+  cursor: pointer;
+  box-shadow: 0 6px 20px var(--nd-accent-b28);
+}
+
+/* --- stage 3 -------------------------------------------------------------- */
+
+.sm-track-eyebrow {
+  font-family: var(--nd-mono);
+  font-size: 11px;
+  color: var(--nd-accent-dim);
+}
+.sm-track-title {
+  font-family: var(--nd-display);
+  font-weight: 600;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin: 6px 0 8px;
+}
+.sm-track-desc {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--nd-muted);
+}
+.sm-player {
+  margin-top: 14px;
+}
+.sm-caption {
+  font-family: var(--nd-mono);
+  font-size: 10px;
+  color: var(--nd-eyebrow);
+  margin-top: 8px;
+}
+.sm-why {
+  margin-top: auto;
+  padding: 14px;
+  border-radius: 11px;
+  background: var(--nd-accent-10);
+  border: 1px solid var(--nd-accent-b28);
+}
+.sm-why-body {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--nd-accent-text);
+  margin-top: 6px;
+}

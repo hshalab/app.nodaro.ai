@@ -1,0 +1,387 @@
+{
+  "slug": "multi-reference-control",
+  "name": "Multi-Reference Control",
+  "description": "Five source images, one generated image. Point at a picture instead of describing it.",
+  "markdownDescription": null,
+  "category": "image-generation",
+  "outputTypes": [
+    "image"
+  ],
+  "tags": [
+    "references",
+    "image",
+    "prompting"
+  ],
+  "complexity": "intermediate",
+  "previewMediaUrl": "https://cdn.nodaro.ai/templates/d4d1725a-e0cd-461c-93e5-fd3285245e06/preview.png",
+  "previewMediaType": "image",
+  "tutorialCategorySlug": "workflows",
+  "tutorialSortOrder": 0,
+  "nodes": [
+    {
+      "id": "frame-refs",
+      "data": {
+        "color": "#22D3EE40",
+        "label": "5 references"
+      },
+      "type": "group",
+      "width": 1060,
+      "height": 2185,
+      "position": {
+        "x": 400,
+        "y": -1100
+      }
+    },
+    {
+      "id": "frame-gen",
+      "data": {
+        "color": "#ff007340",
+        "label": "One generated image"
+      },
+      "type": "group",
+      "width": 3814.0425194576355,
+      "height": 2326.64891719492,
+      "position": {
+        "x": 1900,
+        "y": -1170
+      }
+    },
+    {
+      "id": "node_12",
+      "data": {
+        "url": "https://cdn.nodaro.ai/images/250089e3-7029-4f69-b1a1-2abfd73ac706.png",
+        "label": "Ryan",
+        "r2Url": "https://cdn.nodaro.ai/images/250089e3-7029-4f69-b1a1-2abfd73ac706.png",
+        "assetId": "f7e44ed6-0d9e-4981-a009-f6f8cb18b13f",
+        "fileSize": 1156302,
+        "filename": "250089e3-7029-4f69-b1a1-2abfd73ac706.png",
+        "metadata": {},
+        "mimeType": "image/png",
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/images/250089e3-7029-4f69-b1a1-2abfd73ac706.png",
+            "jobId": "legacy-1786402743011",
+            "width": 320,
+            "height": 426,
+            "timestamp": "2026-08-10T22:59:03.011Z"
+          }
+        ],
+        "activeResultIndex": 0
+      },
+      "type": "upload-image",
+      "width": 425.2621640704472,
+      "height": 566.130255918783,
+      "parentId": "frame-refs",
+      "position": {
+        "x": 70,
+        "y": 190
+      },
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_7",
+      "data": {
+        "url": "https://cdn.nodaro.ai/images/c6a76314-5be9-41ce-b56e-af1310825a93.png",
+        "label": "Jessica",
+        "r2Url": "https://cdn.nodaro.ai/images/c6a76314-5be9-41ce-b56e-af1310825a93.png",
+        "assetId": "f4272d85-2f4f-4ee1-b749-20ff2af0956f",
+        "fileSize": 2110335,
+        "filename": "c6a76314-5be9-41ce-b56e-af1310825a93.png",
+        "metadata": {},
+        "mimeType": "image/png",
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/images/c6a76314-5be9-41ce-b56e-af1310825a93.png",
+            "jobId": "legacy-1786400932336",
+            "width": 320,
+            "height": 426,
+            "timestamp": "2026-08-10T22:28:52.336Z"
+          }
+        ],
+        "activeResultIndex": 0
+      },
+      "type": "upload-image",
+      "width": 425.2621640704472,
+      "height": 566.130255918783,
+      "parentId": "frame-refs",
+      "position": {
+        "x": 565,
+        "y": 190
+      },
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_3",
+      "data": {
+        "url": "https://cdn.nodaro.ai/images/0a529cd2-8db6-42a6-a425-760125ade8d4.png",
+        "label": "Emily",
+        "r2Url": "https://cdn.nodaro.ai/images/0a529cd2-8db6-42a6-a425-760125ade8d4.png",
+        "assetId": "de81d40b-d5e6-456c-8d43-e0d5357983a8",
+        "fileSize": 2374036,
+        "filename": "0a529cd2-8db6-42a6-a425-760125ade8d4.png",
+        "metadata": {},
+        "mimeType": "image/png",
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/images/0a529cd2-8db6-42a6-a425-760125ade8d4.png",
+            "jobId": "legacy-1786400563087",
+            "width": 320,
+            "height": 426,
+            "timestamp": "2026-08-10T22:22:43.087Z"
+          }
+        ],
+        "activeResultIndex": 0
+      },
+      "type": "upload-image",
+      "width": 425.2621640704472,
+      "height": 566.130255918783,
+      "parentId": "frame-refs",
+      "position": {
+        "x": 70,
+        "y": 826
+      },
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_11",
+      "data": {
+        "url": "https://cdn.nodaro.ai/images/54f11764-7d60-4908-a1ca-7c47648925b2.png",
+        "label": "Ethan",
+        "r2Url": "https://cdn.nodaro.ai/images/54f11764-7d60-4908-a1ca-7c47648925b2.png",
+        "assetId": "0687d181-036c-43a2-9c74-d5d7686e3034",
+        "fileSize": 1840332,
+        "filename": "54f11764-7d60-4908-a1ca-7c47648925b2.png",
+        "metadata": {},
+        "mimeType": "image/png",
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/images/54f11764-7d60-4908-a1ca-7c47648925b2.png",
+            "jobId": "legacy-1786402650211",
+            "width": 320,
+            "height": 426,
+            "timestamp": "2026-08-10T22:57:30.211Z"
+          }
+        ],
+        "activeResultIndex": 0
+      },
+      "type": "upload-image",
+      "width": 425.2621640704472,
+      "height": 566.130255918783,
+      "parentId": "frame-refs",
+      "position": {
+        "x": 565,
+        "y": 826
+      },
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_5",
+      "data": {
+        "url": "https://cdn.nodaro.ai/uploads/images/9f753f7f-7c75-40e6-834d-2bea2df1f897.jpg",
+        "label": "Lauren",
+        "r2Url": "https://cdn.nodaro.ai/uploads/images/9f753f7f-7c75-40e6-834d-2bea2df1f897.jpg",
+        "assetId": "40ee8426-8669-435e-bada-87df6238d438",
+        "fileSize": 372062,
+        "filename": "grok-image-fc2ba66c-8433-4a02-92c9-f0c5301bd832.jpg",
+        "metadata": {
+          "width": 1056,
+          "format": "jpeg",
+          "height": 1872,
+          "thumbnail_url": "https://cdn.nodaro.ai/uploads/images/9f753f7f-7c75-40e6-834d-2bea2df1f897_thumb.jpg",
+          "original_filename": "grok-image-fc2ba66c-8433-4a02-92c9-f0c5301bd832.jpg"
+        },
+        "mimeType": "image/jpeg",
+        "thumbnailUrl": "https://cdn.nodaro.ai/uploads/images/9f753f7f-7c75-40e6-834d-2bea2df1f897_thumb.jpg",
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/uploads/images/9f753f7f-7c75-40e6-834d-2bea2df1f897.jpg",
+            "jobId": "legacy-1786400633102",
+            "width": 1056,
+            "height": 1872,
+            "timestamp": "2026-08-10T22:23:53.102Z",
+            "thumbnailUrl": "https://cdn.nodaro.ai/uploads/images/9f753f7f-7c75-40e6-834d-2bea2df1f897_thumb.jpg"
+          }
+        ],
+        "activeResultIndex": 0
+      },
+      "type": "upload-image",
+      "width": 368.52384368154975,
+      "height": 653.2922683445655,
+      "parentId": "frame-refs",
+      "position": {
+        "x": 345.7380781592251,
+        "y": 1462
+      },
+      "className": "rf-resized"
+    },
+    {
+      "id": "node_13",
+      "data": {
+        "label": "Generate Image",
+        "model": "gemini-2.5-flash-image",
+        "style": "",
+        "prompt": "{image:1} is standing in the same spot where {image:5} is standing, but not in her pose. He is wearing a shirt in the same color as {image:5} shirt and he is wearing the exact jacket worn by {image:4} . On {image:1} right cheek only, apply the same face-paint design seen on {image:3} cheeks. His left cheek must remain completely free of face paint.\n He is wearing {image:2} hat, and his face is turned toward the camera.",
+        "provider": "gpt-image-2",
+        "resolution": "2K",
+        "aspectRatio": "16:9",
+        "fieldMappings": {},
+        "negativePrompt": "",
+        "generatedResults": [
+          {
+            "url": "https://cdn.nodaro.ai/images/cbe43b87-fabd-4ca5-a753-66722d5319c1.png",
+            "jobId": "cbe43b87-fabd-4ca5-a753-66722d5319c1",
+            "width": 2048,
+            "height": 1152,
+            "timestamp": "2026-08-10T23:20:13.757Z"
+          }
+        ],
+        "activeResultIndex": 0,
+        "generatedImageUrl": "https://cdn.nodaro.ai/images/cbe43b87-fabd-4ca5-a753-66722d5319c1.png"
+      },
+      "type": "generate-image",
+      "width": 3674.0425194576355,
+      "height": 2066.64891719492,
+      "parentId": "frame-gen",
+      "position": {
+        "x": 70,
+        "y": 190
+      },
+      "resizing": false,
+      "className": "rf-resized"
+    },
+    {
+      "id": "note-mrc-intro",
+      "data": {
+        "bold": false,
+        "text": "Multi-Reference Control\n\nFive source images. One generated image.\nEach source contributes something different:\nwho the person is, where he stands, what he\nwears, and a detail painted on one cheek.\n\nYou are not describing a scene in words and\nhoping — you point at an image and say\n\"that jacket, that hat, that spot\".",
+        "color": "#2d2d44",
+        "label": "Sticky Note",
+        "width": 760,
+        "height": 480,
+        "italic": false,
+        "fontSize": "xl",
+        "alignment": "left",
+        "textColor": "#ffffff"
+      },
+      "type": "sticky-note",
+      "position": {
+        "x": 400,
+        "y": -1912.06875
+      }
+    },
+    {
+      "id": "note-mrc-tokens",
+      "data": {
+        "bold": false,
+        "text": "How {image:N} works\n\nAll five uploads feed the SAME References\nhandle. The number is a POSITION in that\nlist — not the node's name.\n\n   1   Ryan       the person\n   2   Jessica    the hat\n   3   Emily      the face paint\n   4   Ethan      the jacket\n   5   Lauren     the place + shirt colour\n\nThe order comes from the order the\nconnections were made, and you can reorder\nthe references on the node itself.\n\nSo when the wrong element lands in the wrong\nplace, check the order before you rewrite\nthe prompt.",
+        "color": "#2d2d44",
+        "label": "Sticky Note",
+        "width": 720,
+        "height": 880,
+        "italic": false,
+        "fontSize": "xl",
+        "alignment": "left",
+        "textColor": "#ffffff"
+      },
+      "type": "sticky-note",
+      "position": {
+        "x": 400,
+        "y": 1245
+      }
+    },
+    {
+      "id": "note-mrc-try",
+      "data": {
+        "bold": false,
+        "text": "Make it yours\n\nSwap any upload for your own image and run\nagain. The tokens keep working — they point\nat positions, not at files.\n\nTo feel what one reference contributes:\nchange it, rerun, compare.",
+        "color": "#2d2d44",
+        "label": "Sticky Note",
+        "width": 760,
+        "height": 400,
+        "italic": false,
+        "fontSize": "xl",
+        "alignment": "left",
+        "textColor": "#ffffff"
+      },
+      "type": "sticky-note",
+      "position": {
+        "x": 400,
+        "y": 2285
+      }
+    },
+    {
+      "id": "note-mrc-prompt",
+      "data": {
+        "bold": false,
+        "text": "Reading the prompt\n\n\"{image:1} is standing in the same spot where {image:5} is standing, but not in her pose.\"\n        Person from 1, place from 5 — plus an explicit DON'T.\n        Saying what NOT to take is as load-bearing as saying what to take.\n\n\"a shirt in the same color as {image:5} shirt\"\n        One attribute (colour) rather than the whole garment.\n\n\"the exact jacket worn by {image:4}\"\n        The whole garment, matched.\n\n\"On {image:1} right cheek only … his left cheek must remain completely free of face paint.\"\n        A detail from 3, constrained to one side of the face.\n\n\"He is wearing {image:2} hat, and his face is turned toward the camera.\"\n        An object from 2, plus a direction none of the sources supply.\n\nModel: GPT Image 2 at 2K, 16:9 — stacking references needs a model that\naccepts several reference images at once.",
+        "color": "#2d2d44",
+        "label": "Sticky Note",
+        "width": 2400,
+        "height": 920,
+        "italic": false,
+        "fontSize": "xl",
+        "alignment": "left",
+        "textColor": "#ffffff"
+      },
+      "type": "sticky-note",
+      "position": {
+        "x": 1900,
+        "y": 1316.6489171949202
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_1786403067248",
+      "type": "default",
+      "source": "node_12",
+      "target": "node_13",
+      "sourceHandle": "image",
+      "targetHandle": "references"
+    },
+    {
+      "id": "edge_1786403070410",
+      "type": "default",
+      "source": "node_7",
+      "target": "node_13",
+      "sourceHandle": "image",
+      "targetHandle": "references"
+    },
+    {
+      "id": "edge_1786403073593",
+      "type": "default",
+      "source": "node_3",
+      "target": "node_13",
+      "sourceHandle": "image",
+      "targetHandle": "references"
+    },
+    {
+      "id": "edge_1786403076489",
+      "type": "default",
+      "source": "node_11",
+      "target": "node_13",
+      "sourceHandle": "image",
+      "targetHandle": "references"
+    },
+    {
+      "id": "edge_1786403079586",
+      "type": "default",
+      "source": "node_5",
+      "target": "node_13",
+      "sourceHandle": "image",
+      "targetHandle": "references"
+    }
+  ],
+  "settings": {
+    "viewport": {
+      "x": 417.8043575886056,
+      "y": 382.8338710401057,
+      "zoom": 0.14792034598133863
+    },
+    "flowPromptTemplates": {},
+    "characterDefinitions": [],
+    "presentationSettings": {
+      "runTarget": "workflow"
+    }
+  }
+}

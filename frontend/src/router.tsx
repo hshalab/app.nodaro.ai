@@ -32,6 +32,7 @@ const PricingPage = lazy(() => import("@/app/pricing/page"))
 const CheckoutCompletePage = lazy(() => import("@/app/checkout-complete/page"))
 const PresentPage = lazy(() => import("@/routes/present-page"))
 const AppRunnerPage = lazy(() => import("@/routes/app-runner-page"))
+const TutorialPage = lazy(() => import("@/routes/tutorial-page"))
 const EmbedPage = lazy(() => import("@/routes/embed-page"))
 const ApiSettingsPage = lazy(() => import("@/app/(dashboard)/settings/api/page"))
 const DeveloperAppsPage = lazy(() => import("@/app/(dashboard)/settings/developer-apps/page"))
@@ -189,6 +190,13 @@ export const router = createBrowserRouter([
   {
     path: "/app/:slug",
     element: <SuspenseWrapper><AppRunnerPage /></SuspenseWrapper>,
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
+    // Guided view of a flow tutorial. Full-screen by design — it brings its own
+    // app bar, so it sits outside DashboardLayout.
+    path: "/tutorials/:slug",
+    element: <SuspenseWrapper><TutorialPage /></SuspenseWrapper>,
     errorElement: <RouteErrorBoundary />,
   },
   {
