@@ -125,7 +125,10 @@ export function creditGuardImpl(
     // a payg account spends its FREE pool only, under free-tier semantics.
     // The flag is a surface predicate; payg-ness resolves inside the credit
     // check / reservation / RPC, so free users and subscribers see no change.
-    req.webFreeMode = isWebFreeModeCandidate(req)
+    // OR-preserve: internal orchestrator calls arrive with the flag already
+    // stamped by auth (X-Web-Free-Mode) — the surface predicate must not
+    // erase it (internal calls have no Origin and would derive false).
+    req.webFreeMode = req.webFreeMode === true || isWebFreeModeCandidate(req)
     const communityInstance = req.appAuthorization?.appKind === "community_instance"
 
     // Step 0b: per-instance monthly spend cap (Phase 4a containment trio).

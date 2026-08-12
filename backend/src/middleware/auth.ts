@@ -284,6 +284,11 @@ export function registerAuthHook(app: FastifyInstance): void {
       if (firstHeaderValue(req.headers["x-app-run"]) === "true") {
         req.isAppRun = true
       }
+      // Pool-aware spend-surface flag riding orchestrator-internal calls —
+      // same trust model as X-App-Run (the internal secret above gates it).
+      if (firstHeaderValue(req.headers["x-web-free-mode"]) === "true") {
+        req.webFreeMode = true
+      }
       return
     }
 

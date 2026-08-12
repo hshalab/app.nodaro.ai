@@ -541,6 +541,11 @@ async function executeSyncHttpNode(
   if (ctx.isAppRun) {
     headers["X-App-Run"] = "true"
   }
+  // Same propagation pattern as X-App-Run: the route's credit guard applies
+  // pool-aware payg semantics when the RUN originated on a consumer surface.
+  if (ctx.webFreeMode) {
+    headers["X-Web-Free-Mode"] = "true"
+  }
 
   const response = await fetch(url, {
     method: "POST",
@@ -1363,7 +1368,7 @@ async function executeWorkerNode(
       // generate a blocked model (e.g. 4K gemini-omni-video). checkCredits
       // self-fetches the profile and reports blocked/over-limit; the
       // surrounding catch deletes the orphaned pending jobs row on throw.
-      const preflight = await CreditsService.checkCredits(ctx.userId, modelIdentifier, ctx.isAppRun, creditOverride)
+      const preflight = await CreditsService.checkCredits(ctx.userId, modelIdentifier, ctx.isAppRun, creditOverride, { webFreeMode: ctx.webFreeMode ?? false })
       if (!preflight.allowed) {
         throw new Error(preflight.error ?? "Model not available on your plan or insufficient credits")
       }
@@ -1374,7 +1379,7 @@ async function executeWorkerNode(
         modelIdentifier,
         0, // provider cost calculated in worker
         0, // display cost calculated in worker
-        { isAppRun: ctx.isAppRun, creditOverride },
+        { isAppRun: ctx.isAppRun, creditOverride, webFreeMode: ctx.webFreeMode ?? false },
       )
       usageLogId = reservation.usageLogId
       creditsUsed = reservation.creditsReserved

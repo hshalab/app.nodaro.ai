@@ -347,6 +347,18 @@ async function deleteJobBestEffort(jobId: string): Promise<void> {
  * this factory exists only for the entry points whose spending is deferred.
  * No-op unless the edition has credits (same shim contract as creditGuard).
  */
+/**
+ * Pool-aware replacement for the binary paygSurfaceGuard on run-creation
+ * routes (D1 v2 threading): resolves the SURFACE flag only — payg-ness and
+ * semantics resolve downstream in the credits layer, so free users and
+ * subscribers are byte-identical. Returns false on non-credit editions.
+ */
+export async function resolveWebSurfaceFlag(req: FastifyRequest): Promise<boolean> {
+  if (!hasCredits()) return false
+  const impl = await import("../ee/lib/payg-surface-guard.js")
+  return impl.isWebFreeModeCandidate(req)
+}
+
 export function paygSurfaceGuard() {
   const implPromise = hasCredits() ? import("../ee/lib/payg-surface-guard.js") : null
 

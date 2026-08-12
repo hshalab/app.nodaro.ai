@@ -1729,6 +1729,7 @@ export class CreditsService {
     modelIdentifier: string,
     isAppRun?: boolean,
     creditOverride?: number,
+    surface?: { webFreeMode?: boolean; communityInstance?: boolean },
   ): Promise<CreditCheckResult> {
     // Self-hosted: always allow
     if (creditsDisabled()) {
@@ -1753,7 +1754,7 @@ export class CreditsService {
     // ref-video reservation) preflight the EXACT amount it will reserve, not the
     // base DB cost — so a balance between base and scaled never passes preflight
     // then fails at reserve.
-    return CreditsService.checkCreditsWithProfile(userId, profile as CreditProfile, modelIdentifier, isAppRun, creditOverride)
+    return CreditsService.checkCreditsWithProfile(userId, profile as CreditProfile, modelIdentifier, isAppRun, creditOverride, surface)
   }
 
   /**
