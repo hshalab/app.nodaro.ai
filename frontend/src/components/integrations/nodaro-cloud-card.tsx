@@ -60,6 +60,13 @@ export function NodaroCloudCard() {
     const params = new URLSearchParams(window.location.search)
     if (params.get("nodaro") !== "connected") return
     connectToastShownRef.current = true
+    // Guided-setup continuity: when the connect started from /setup, bounce
+    // straight back there — step 2 flips done and step 3 lights up.
+    if (localStorage.getItem("nodaro_connect_from") === "setup") {
+      localStorage.removeItem("nodaro_connect_from")
+      window.location.replace("/setup?nodaro=connected")
+      return
+    }
     toast.success("Connected to nodaro.ai!")
     params.delete("nodaro")
     const query = params.toString()

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react"
+import { getAuthHeaders } from "@/lib/api"
 import { Link } from "react-router-dom"
 
 /**
@@ -308,6 +309,7 @@ export default function SetupPage() {
   const [envCopied, setEnvCopied] = useState(false)
   const [envHelpOpen, setEnvHelpOpen] = useState(false)
   const [envWrite, setEnvWrite] = useState<"idle" | "done" | "nocompose" | "error">("idle")
+  const [connectPending, setConnectPending] = useState(false)
   const spinTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const load = useCallback(async () => {
@@ -430,6 +432,35 @@ export default function SetupPage() {
         : avgLatency !== null
           ? `All services connected \u00b7 ${avgLatency}ms avg latency`
           : "All services connected"
+
+  // One-click cloud connect: call the start endpoint directly and jump to
+  // the nodaro.ai consent — no stop at /integrations (founder: the extra hop
+  // read as "it sent me back to the editor", 2026-08-15). Falls back to the
+  // integrations card if anything is off; unauthenticated -> login first.
+  const startCloudConnect = async () => {
+    if (connectPending) return
+    setConnectPending(true)
+    try {
+      const headers = await getAuthHeaders()
+      if (!headers.Authorization) {
+        window.location.href = "/login?redirect=/setup"
+        return
+      }
+      const res = await fetch("/v1/nodaro-connect/start", {
+        method: "POST",
+        headers,
+      })
+      const json = (await res.json().catch(() => null)) as { authorizeUrl?: string } | null
+      if (res.ok && json?.authorizeUrl) {
+        localStorage.setItem("nodaro_connect_from", "setup")
+        window.location.href = json.authorizeUrl
+        return
+      }
+      window.location.href = "/integrations"
+    } catch {
+      window.location.href = "/integrations"
+    }
+  }
 
   // File System Access API (Chrome/Edge): pick the install folder and write
   // the .env template into it directly — no text editor needed. Hidden where
@@ -737,21 +768,43 @@ export default function SetupPage() {
                         alignSelf: "center",
                       }}
                     >
-                      <a
-                        href={st.href}
-                        style={{
-                          background: st.accent ? ACCENT : INK,
-                          color: "#fff",
-                          fontWeight: 700,
-                          fontSize: 14.5,
-                          padding: "12px 22px",
-                          borderRadius: 11,
-                          textDecoration: "none",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {st.cta} &rarr;
-                      </a>
+                      {st.accent ? (
+                        <button
+                          onClick={startCloudConnect}
+                          disabled={connectPending}
+                          style={{
+                            border: "none",
+                            cursor: connectPending ? "wait" : "pointer",
+                            background: ACCENT,
+                            color: "#fff",
+                            fontFamily: SANS,
+                            fontWeight: 700,
+                            fontSize: 14.5,
+                            padding: "12px 22px",
+                            borderRadius: 11,
+                            whiteSpace: "nowrap",
+                            opacity: connectPending ? 0.75 : 1,
+                          }}
+                        >
+                          {connectPending ? "Opening nodaro.ai\u2026" : <>{st.cta} &rarr;</>}
+                        </button>
+                      ) : (
+                        <a
+                          href={st.href}
+                          style={{
+                            background: INK,
+                            color: "#fff",
+                            fontWeight: 700,
+                            fontSize: 14.5,
+                            padding: "12px 22px",
+                            borderRadius: 11,
+                            textDecoration: "none",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {st.cta} &rarr;
+                        </a>
+                      )}
                       {st.altKeys && (
                         <button
                           onClick={() => setTab("health")}
@@ -1029,21 +1082,43 @@ export default function SetupPage() {
                     MANAGE &rarr;
                   </a>
                 ) : (
-                  <a
-                    href={status?.hasUsers === false ? "/signup?from=setup" : "/integrations"}
-                    style={{
-                      background: ACCENT,
-                      color: "#fff",
-                      fontWeight: 700,
-                      fontSize: 14.5,
-                      padding: "12px 22px",
-                      borderRadius: 11,
-                      textDecoration: "none",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    Connect nodaro.ai &rarr;
-                  </a>
+                  status?.hasUsers === false ? (
+                    <a
+                      href="/signup?from=setup"
+                      style={{
+                        background: ACCENT,
+                        color: "#fff",
+                        fontWeight: 700,
+                        fontSize: 14.5,
+                        padding: "12px 22px",
+                        borderRadius: 11,
+                        textDecoration: "none",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Connect nodaro.ai &rarr;
+                    </a>
+                  ) : (
+                    <button
+                      onClick={startCloudConnect}
+                      disabled={connectPending}
+                      style={{
+                        border: "none",
+                        cursor: connectPending ? "wait" : "pointer",
+                        background: ACCENT,
+                        color: "#fff",
+                        fontFamily: SANS,
+                        fontWeight: 700,
+                        fontSize: 14.5,
+                        padding: "12px 22px",
+                        borderRadius: 11,
+                        whiteSpace: "nowrap",
+                        opacity: connectPending ? 0.75 : 1,
+                      }}
+                    >
+                      {connectPending ? "Opening nodaro.ai\u2026" : <>Connect nodaro.ai &rarr;</>}
+                    </button>
+                  )
                 )}
               </div>
             )
