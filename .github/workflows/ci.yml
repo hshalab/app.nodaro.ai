@@ -241,6 +241,11 @@ jobs:
     runs-on: ubuntu-latest
     env:
       YOUTUBE_DL_SKIP_DOWNLOAD: true
+      # tsc on the full frontend tree keeps hitting the default ~4 GB V8 heap
+      # ceiling on hosted runners — four exit-134 (SIGABRT/OOM) crashes with
+      # zero type errors across #594/#598/#599 on 2026-08-12 alone. 6 GB on a
+      # 16 GB runner leaves ample headroom for npm + the gen-skills step.
+      NODE_OPTIONS: --max-old-space-size=6144
     steps:
       - uses: actions/checkout@v5
         with:
