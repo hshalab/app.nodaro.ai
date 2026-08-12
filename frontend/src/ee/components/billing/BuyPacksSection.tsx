@@ -57,7 +57,7 @@ export function BuyPacksSection() {
       ? `≈ ${formatCredits(customCredits)} credits · added to top-up`
       : customUsd
         ? `$${MIN_LOAD_USD}–$${MAX_LOAD_USD}, whole dollars`
-        : "goes to top-up · never expires"
+        : "goes to top-up · valid for 12 months"
 
   return (
     <section style={sectionCardSpaced}>
@@ -70,7 +70,7 @@ export function BuyPacksSection() {
         </span>
       </div>
       <p style={{ ...mutedParagraph, margin: "0 0 20px" }}>
-        Purchased packs land in your top-up balance and never expire.
+        Purchased packs land in your top-up balance and are valid for 12 months.
       </p>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14 }}>

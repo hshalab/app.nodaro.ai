@@ -457,7 +457,7 @@ export function AppSidebar({
                     >
                       {creditBalance.topup.toLocaleString()}
                     </div>
-                    <div style={{ fontSize: 10.5, color: "var(--blg-t3-head)", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>never expires</div>
+                    <div style={{ fontSize: 10.5, color: "var(--blg-t3-head)", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>valid 12 months</div>
                   </div>
                 </div>
               </div>

@@ -50,7 +50,7 @@ function EarningsSection() {
     <section style={sectionCardSpaced}>
       <h2 style={{ ...sectionTitle, margin: "0 0 4px" }}>MiniApp Earnings</h2>
       <p style={{ ...mutedParagraph, margin: "0 0 20px" }}>
-        Earnings are added to your top-up balance and never expire.
+        Earnings are added to your top-up balance and are valid for 12 months.
       </p>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 24 }}>
         {stats.map((stat) => (
