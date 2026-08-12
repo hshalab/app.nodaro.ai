@@ -399,6 +399,7 @@ describe("creditGuard", () => {
       "flux",
       true,
       undefined,
+      false,
     )
   })
 
@@ -440,6 +441,7 @@ describe("creditGuard", () => {
       "flux",
       undefined,
       undefined,
+      false,
     )
   })
 
