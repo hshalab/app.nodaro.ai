@@ -29,6 +29,8 @@ interface ActivityRow {
   /** Signed credit amount, e.g. "+3,300" / "−990" (U+2212 minus). */
   amount: string
   positive: boolean
+  /** Stripe hosted receipt link (view/download); null for older rows. */
+  receiptUrl: string | null
 }
 
 const TAG_COLORS: Record<ActivitySource, { color: string; background: string }> = {
@@ -63,6 +65,7 @@ function toActivityRow(tx: TransactionRecord): ActivityRow {
     date: formatShortDate(tx.created_at),
     amount: `${negative ? "−" : "+"}${formatCredits(credits)}`,
     positive: !negative,
+    receiptUrl: tx.receipt_url ?? null,
   }
 }
 
@@ -116,7 +119,19 @@ export function CreditActivity({ transactions, loading }: CreditActivityProps) {
       ) : (
         rows.map((row) => (
           <div key={row.id} style={bodyRow}>
-            <span style={{ color: "#e4e4e9" }}>{row.description}</span>
+            <span style={{ color: "#e4e4e9" }}>
+              {row.description}
+              {row.receiptUrl && (
+                <a
+                  href={row.receiptUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ marginLeft: 10, fontSize: 11.5, color: "#7c7c85", textDecoration: "underline" }}
+                >
+                  Receipt ↗
+                </a>
+              )}
+            </span>
             <span
               style={{
                 justifySelf: "start",

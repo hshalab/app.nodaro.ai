@@ -112,6 +112,13 @@ async function chargeForRecharge(userId: string, amountUsd: number): Promise<voi
   }
 
   const credits = creditsForLoadUsd(amountUsd)
+  // Receipt destination (Billing-UX): per-PI receipt_email makes Stripe mail
+  // the charge receipt for every auto-recharge, matching manual loads.
+  const { data: emailRow } = await supabase
+    .from("profiles")
+    .select("email")
+    .eq("id", userId)
+    .single()
   try {
     await stripe.paymentIntents.create(
       {
@@ -121,6 +128,7 @@ async function chargeForRecharge(userId: string, amountUsd: number): Promise<voi
         payment_method: paymentMethod,
         off_session: true,
         confirm: true,
+        ...(emailRow?.email ? { receipt_email: emailRow.email } : {}),
         metadata: {
           userId,
           kind: "auto_recharge",

@@ -158,7 +158,10 @@ export function CurrentPlanCard({
       )}
 
       <div style={{ display: "flex", gap: 12, marginTop: 26 }}>
-        {subscription && subscription.status !== "canceled" && (
+        {/* The Stripe portal serves ANY customer — payg users (who have one
+            from their first load) use it to change their card and browse
+            invoices, so the button shows for them too (Billing-UX). */}
+        {((subscription && subscription.status !== "canceled") || effectiveTier === "payg") && (
           <button
             onClick={onManageSubscription}
             disabled={managePending}
@@ -169,7 +172,7 @@ export function CurrentPlanCard({
               color: "#eaeaef",
             }}
           >
-            ↗ Manage Subscription
+            ↗ {subscription && subscription.status !== "canceled" ? "Manage Subscription" : "Manage Billing"}
           </button>
         )}
         <Link to="/pricing">

@@ -5488,6 +5488,9 @@ export interface TransactionRecord {
   credits_granted: number
   tier: string | null
   created_at: string
+  /** Stripe hosted receipt link (captured at provisioning; null for older
+   *  rows and non-Stripe entries like admin comps). */
+  receipt_url?: string | null
 }
 
 export async function getSubscription(userId: string): Promise<SubscriptionInfo | null> {
