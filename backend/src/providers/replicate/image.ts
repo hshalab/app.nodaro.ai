@@ -113,6 +113,29 @@ const IMAGE_MODELS: Record<string, ReplicateModelSpec> = {
       return input
     },
   },
+  // BFL FLUX Fill Pro — dedicated inpainting: repaints ONLY the mask's white
+  // region of the source image (white = edit, matching the painter /
+  // generate-mask convention). The i2i lane delivers the source image as
+  // refs[0] (image-ai.ts allImages) and the painted mask via
+  // extraParams.mask_url (set for every provider). Output size follows the
+  // input image — no aspect_ratio param in this schema.
+  "flux-fill": {
+    model: "black-forest-labs/flux-fill-pro",
+    buildInput: (prompt, referenceImageUrls, extraParams) => {
+      const input: Record<string, unknown> = {
+        prompt,
+        output_format: "png",
+        safety_tolerance: 5,
+      }
+      const refs = referenceImageUrls ?? []
+      if (refs[0]) input.image = refs[0]
+      const maskUrl = extraParams?.mask_url as string | undefined
+      if (maskUrl) input.mask = maskUrl
+      const seed = extraParams?.seed as number | undefined
+      if (seed != null) input.seed = seed
+      return input
+    },
+  },
   // BFL Flux 2 Max — even larger sibling of Pro. Same safety_tolerance
   // lever pinned to 5 (the max for the family). Variable pricing: base
   // + per ref image (handled via composite identifiers in

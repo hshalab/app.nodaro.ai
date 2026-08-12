@@ -876,6 +876,20 @@ export const NODE_REGISTRY: NodeDescriptor[] = [
       ],
     },
   },
+  {
+    type: "paint-mask",
+    label: "Paint Mask",
+    category: "processing",
+    description: "Hand-paint a mask over a connected image in the editor; emits the painted mask PNG (white = edit, black = preserve) for any mask input. Source node — never executes; optionally seeded by a Generate Mask output for hand-refinement.",
+    outputType: "image",
+    creditCost: 0,
+    capabilities: ["inpainting-prep", "manual"],
+    inputSchema: {
+      fields: [
+        { key: "maskUrl", type: "image-url" },
+      ],
+    },
+  },
   // ---- Additional ai-image nodes (creditCost auto-filled from STATIC_CREDIT_COSTS; per-provider variable pricing) ----
   { type: "modify-image", label: "Modify Image", category: "ai-image", description: "Transform an existing image with a text prompt across 20+ image-to-image / editing providers (Flux, GPT Image, Ideogram, Nano Banana, Qwen, Seedream, + Nano Banana Edit). Migrated successor of edit-image.", outputType: "image", creditCost: "1-18" },
   { type: "upscale-image", label: "Upscale Image", category: "ai-image", description: "Increase image resolution with Recraft Upscale or Topaz Upscale (2K/4K/8K). No prompt — pure enhancement utility.", outputType: "image", creditCost: "1-10" },

@@ -333,6 +333,9 @@ describe("mediaTabNodeOptions", () => {
       "modify-image",
       "remove-background",
       "generate-mask",
+      // paint-mask emits the hand-painted mask PNG — an image producer
+      // (IMAGE_PRODUCER_TYPES), listed in NODE_OPTIONS pool order.
+      "paint-mask",
       "reference-sheet",
       // reference-board is an image producer (emits a composited board image),
       // so it surfaces as an image-input candidate — see IMAGE_PRODUCER_TYPES.

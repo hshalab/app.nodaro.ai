@@ -607,6 +607,9 @@ export const IMAGE_I2I_PROVIDERS = [
   "flux-2-pro",
   // BFL Flux 2 Max — runs through Replicate with safety_tolerance=5, up to 8 refs
   "flux-2-max",
+  // BFL FLUX Fill Pro — dedicated inpainting via Replicate (image + mask + prompt,
+  // white = edit area). Second mask-capable i2i provider alongside ideogram-edit.
+  "flux-fill",
 ] as const
 
 /** Image editing providers (upscale, remove bg, etc.) */
@@ -1039,7 +1042,7 @@ export type VoiceDesignModel = typeof VOICE_DESIGN_MODELS[number]
 export const DEFAULT_VOICE_DESIGN_MODEL: VoiceDesignModel = "eleven_ttv_v3"
 
 /** I2I providers that support mask-based inpainting */
-export const I2I_MASK_SUPPORT = new Set(["ideogram-edit"])
+export const I2I_MASK_SUPPORT = new Set(["ideogram-edit", "flux-fill"])
 
 /**
  * Mask edit tier per image-gen provider (single source of truth for inpaint).

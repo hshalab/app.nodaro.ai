@@ -3417,11 +3417,11 @@ export function getImageProxyUrl(url: string): string {
   return `${API_BASE_URL}/v1/image-proxy?url=${encodeURIComponent(url)}`
 }
 
-export async function uploadImage(file: File | Blob, userId?: string): Promise<{ url: string }> {
+export async function uploadImage(file: File | Blob, userId?: string, filename?: string): Promise<{ url: string }> {
   const resolvedUserId = userId ?? await getCurrentUserId()
   const asFile = file instanceof File
     ? file
-    : new File([file], "crop.png", { type: file.type || "image/png" })
+    : new File([file], filename ?? "crop.png", { type: file.type || "image/png" })
   const result = await uploadFile(asFile, resolvedUserId)
   return { url: result.url }
 }

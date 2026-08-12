@@ -126,6 +126,10 @@ export const IMAGE_PRODUCER_TYPES: ReadonlySet<string> = new Set([
   // downstream image consumers (Generate Image References, etc.) enumerate it
   // as a valid candidate.
   "generate-mask",
+  // paint-mask emits the hand-painted mask PNG (a plain image at runtime).
+  // Membership is what makes mask targets accept it (ACCEPTS_IMAGE_OR_DYN) —
+  // mask is an advisory color, not a gated type.
+  "paint-mask",
   // reference-sheet's `sheet` handle is a single composited image and `panels`
   // carries clean reference images; both resolve to image URLs at runtime
   // (node-input-resolver.ts / input-resolver.ts route them into

@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-08-04T14:59:28.909Z
-generated_from: 210cb078c
+generated_at: 2026-08-12T01:03:20.209Z
+generated_from: 2178f7c5f
 ---
 
 ---
@@ -155,6 +155,7 @@ Call `get_node_skill(<type>)` for the full schema of any node type:
 - `music-genre` — Music Genre
 - `music-mood` — Music Mood
 - `object` — Object/Props Asset
+- `paint-mask` — Paint Mask
 - `person` — Person
 - `photo-genre` — Photo Genre
 - `photographer` — Photographer / Artist Style

@@ -1582,6 +1582,20 @@ function routeOutput(
     return
   }
 
+  // --- Paint mask ---
+  // A `mask` target handle was already routed above (edge.targetHandle ===
+  // "mask" → inputs.maskUrl). Reaching here means the painted mask is wired
+  // into a generic image input, where it is just an image URL — route like
+  // upload-image.
+  if (srcType === "paint-mask") {
+    if (targetType === "generate-image" || targetType === "reference-board" || targetType === "video-to-video" || targetType === "switchx") {
+      inputs.referenceImageUrls = [...(inputs.referenceImageUrls ?? []), output]
+    } else {
+      inputs.imageUrl = output
+    }
+    return
+  }
+
   // --- Entity nodes → reference images (or imageUrl for lip-sync / motion-transfer / ai-avatar image mode) ---
   if (ENTITY_NODE_TYPES.has(srcType)) {
     if (targetType === "lip-sync" || targetType === "speech-to-video" || targetType === "motion-transfer" || targetType === "ai-avatar") {
