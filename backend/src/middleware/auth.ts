@@ -49,6 +49,10 @@ declare module "fastify" {
      *  non-JWT kind as a programmatic caller regardless of Origin. Unset on
      *  public routes and legacy body-userId fallbacks. */
     authKind?: "internal" | "app_token" | "api_token" | "jwt"
+    /** Pool-aware spend-surface mode (D1 v2), stamped by creditGuard Step 0:
+     *  true = consumer-surface browser session while the flag is on. Payg
+     *  resolution happens downstream (check/reserve/RPC self-gate). */
+    webFreeMode?: boolean
   }
 }
 

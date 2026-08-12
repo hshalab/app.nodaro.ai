@@ -332,10 +332,25 @@ export function AppSidebar({
               </div>
 
               <div className="mb-3">
-                <span className="text-2xl font-bold text-zinc-900 dark:text-white font-mono tracking-tight">
-                  {creditBalance.total.toLocaleString()}
-                </span>
-                <span className="ml-2 text-xs text-zinc-500 dark:text-zinc-500">credits</span>
+                {creditBalance.effectiveTier === "payg" ? (
+                  // Pool-aware display (D1 v2): the two pools are different
+                  // moneys — free spends in the studio, loaded spends via the
+                  // developer surfaces. One merged number misleads on both.
+                  <span className="text-2xl font-bold text-zinc-900 dark:text-white font-mono tracking-tight">
+                    {creditBalance.subscription.toLocaleString()}
+                    <span className="text-sm font-normal text-zinc-500"> free</span>
+                    <span className="text-sm font-normal text-zinc-500"> · </span>
+                    {creditBalance.topup.toLocaleString()}
+                    <span className="text-sm font-normal text-zinc-500"> API</span>
+                  </span>
+                ) : (
+                  <>
+                    <span className="text-2xl font-bold text-zinc-900 dark:text-white font-mono tracking-tight">
+                      {creditBalance.total.toLocaleString()}
+                    </span>
+                    <span className="ml-2 text-xs text-zinc-500 dark:text-zinc-500">credits</span>
+                  </>
+                )}
               </div>
 
               {(() => {
@@ -354,7 +369,7 @@ export function AppSidebar({
               })()}
 
               <div className="space-y-0.5">
-                {creditBalance.effectiveTier === "free" ? (
+                {creditBalance.effectiveTier === "free" || creditBalance.effectiveTier === "payg" ? (
                   creditBalance.dailyLimit != null && (
                     <p className="text-[11px] text-zinc-500 dark:text-zinc-500">
                       <span className="font-mono text-zinc-600 dark:text-zinc-400">{Math.max(0, creditBalance.dailyLimit - creditBalance.dailySpent)}</span> daily credits left

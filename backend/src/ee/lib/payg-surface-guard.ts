@@ -58,6 +58,17 @@ export function isConsumerSurfaceRequest(req: FastifyRequest): boolean {
   return BLOCKED_SOURCES.has(deriveJobSource(req).source)
 }
 
+/**
+ * Pool-aware candidate check (D1 v2): true when the flag is on AND this is a
+ * browser-session consumer-surface request. Deliberately profile-free — the
+ * payg resolution happens downstream (checkCreditsWithProfile /
+ * reserveCredits / the RPC all self-gate), so callers thread this flag
+ * unconditionally and free users / subscribers are unaffected.
+ */
+export function isWebFreeModeCandidate(req: FastifyRequest): boolean {
+  return blockEnabled() && isConsumerSurfaceRequest(req)
+}
+
 /** The founder-approved consumer-surface block message. */
 export function sendSubscriptionRequired(reply: FastifyReply): void {
   reply.status(403).send({

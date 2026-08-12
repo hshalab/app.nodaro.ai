@@ -10,7 +10,7 @@ import { warmAdminCache } from "../../lib/admin-check.js"
 import { getAppSettings } from "../../lib/app-settings.js"
 import type { CreditReservation, StorageSnapshot, CreditGuardOpts } from "../../middleware/credit-guard.js"
 import { resolveEffectiveTier } from "@nodaro/shared"
-import { blockPaygOnConsumerSurface } from "./payg-surface-guard.js"
+import { isWebFreeModeCandidate, sendSubscriptionRequired } from "./payg-surface-guard.js"
 
 // 503 is right: the route exists and the request is valid, but the system
 // cannot serve it because pricing is unconfigured. Not 400 (client is fine);
@@ -92,15 +92,11 @@ export function creditGuardImpl(
 
     warmAdminCache(userId, (profile as Record<string, unknown>).role as string | undefined)
 
-    // Step 0: spend-surface enforcement — payg accounts cannot spend from a
-    // consumer surface. Before storage and reservation so a blocked request
-    // never creates any reservation state.
-    const surfaceBlocked = await blockPaygOnConsumerSurface(req, reply, {
-      tier: (profile as CreditProfile).tier ?? null,
-      subscription_tier: (profile as CreditProfile).subscription_tier ?? null,
-      lifetime_topup_credits: (profile as CreditProfile).lifetime_topup_credits,
-    })
-    if (surfaceBlocked) return
+    // Step 0: spend-surface mode (D1 v2, pool-aware) — on a consumer surface
+    // a payg account spends its FREE pool only, under free-tier semantics.
+    // The flag is a surface predicate; payg-ness resolves inside the credit
+    // check / reservation / RPC, so free users and subscribers see no change.
+    req.webFreeMode = isWebFreeModeCandidate(req)
 
     // Step 1: storage limit
     try {
@@ -146,9 +142,17 @@ export function creditGuardImpl(
         modelIdentifier,
         req.isAppRun,
         computedCreditOverride,
+        req.webFreeMode,
       )
 
       if (!creditCheck.allowed) {
+        // Pool-aware web spending: the free pool can't cover this run — the
+        // remaining (topup) credits are developer-surface money, so the
+        // answer is the subscription modal, not a plain 402.
+        if (creditCheck.subscriptionRequired) {
+          sendSubscriptionRequired(reply)
+          return
+        }
         reply.status(402).send({
           error: {
             code: "insufficient_credits",
@@ -204,6 +208,7 @@ export async function reserveCreditsForJobImpl(
         // exclusion predicate.
         skipAutoRecharge: Boolean(req.appAuthorization),
         creditOverride: req.creditReservation?.creditOverride,
+        webFreeMode: req.webFreeMode,
       },
     )
 
@@ -230,6 +235,12 @@ export async function reserveCreditsForJobImpl(
     // Hard-fail policy: missing-price misconfig → 503 (handled below)
     if (handlePriceNotConfigured(err, reply, routeName)) return undefined
     const detail = err instanceof Error ? err.message : String(err)
+    // TOCTOU backstop for pool-aware web mode: the RPC re-checks the free
+    // pool atomically and raises with this marker when it can't cover.
+    if (detail.includes("SUBSCRIPTION_REQUIRED:")) {
+      sendSubscriptionRequired(reply)
+      return undefined
+    }
     console.error(`[credit-guard] ${routeName} credit reservation failed:`, detail)
     reply.status(500).send({
       error: { code: "credit_reservation_failed", message: `Failed to reserve credits: ${detail}` },

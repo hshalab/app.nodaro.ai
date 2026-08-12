@@ -161,6 +161,9 @@ export interface CreditCheckResult {
   watermark?: boolean
   /** App credits allowance shortage (only set when app run is blocked for free users) */
   appCreditsAllowance?: number
+  /** Pool-aware web block (D1 v2): the free pool can't cover a payg web run —
+   *  the guard answers with the subscription_required modal, not a 402. */
+  subscriptionRequired?: boolean
 }
 
 export interface UserBalance {
@@ -1764,6 +1767,7 @@ export class CreditsService {
     modelIdentifier: string,
     isAppRun?: boolean,
     creditOverride?: number,
+    webFreeMode?: boolean,
   ): Promise<CreditCheckResult> {
     if (creditsDisabled()) {
       return { allowed: true, balance: 999999, watermark: false }
@@ -1785,12 +1789,19 @@ export class CreditsService {
     }
 
     const userTier = effectiveTierOf(profile)
-    const isFree = userTier === "free"
+    // Pool-aware web spending (D1 v2): on consumer surfaces a payg account
+    // spends its FREE pool only, under full free-tier semantics — the topup
+    // pool is invisible here and stays redeemable via the developer surfaces.
+    // Resolved here (not by callers) so the surface flag can be threaded
+    // dumbly: for free users the restriction is vacuous, for subscribers it
+    // must not apply.
+    const webFree = Boolean(webFreeMode) && userTier === "payg"
+    const isFree = userTier === "free" || webFree
     const watermark = isFree && FREE_TIER_RESTRICTIONS.watermark
 
     // Check tier restriction (from model_pricing table)
     if (pricing.tierRestriction) {
-      const userTierIndex = TIER_ORDER.indexOf(userTier)
+      const userTierIndex = TIER_ORDER.indexOf(webFree ? "free" : userTier)
       const requiredTierIndex = TIER_ORDER.indexOf(pricing.tierRestriction)
 
       if (userTierIndex < requiredTierIndex) {
@@ -1814,26 +1825,32 @@ export class CreditsService {
       }
     }
 
-    // Calculate total balance
+    // Calculate total balance. In web-free mode the topup pool is excluded —
+    // it never spends on a consumer surface.
     const subscriptionCredits = profile.subscription_credits ?? 0
-    const topupCredits = profile.topup_credits ?? 0
+    const topupCredits = webFree ? 0 : (profile.topup_credits ?? 0)
     const totalBalance = subscriptionCredits + topupCredits
 
     // Check if user has enough credits
     if (totalBalance < pricing.creditCost) {
       return {
         allowed: false,
-        error: `Insufficient credits. Required: ${pricing.creditCost}, Available: ${totalBalance}`,
+        error: webFree
+          ? `Your free credits can't cover this run (need ${pricing.creditCost}, free pool has ${totalBalance}).`
+          : `Insufficient credits. Required: ${pricing.creditCost}, Available: ${totalBalance}`,
         balance: totalBalance,
         required: pricing.creditCost,
         subscriptionCredits,
         topupCredits,
         watermark,
+        subscriptionRequired: webFree,
       }
     }
 
-    // App run check: free tier users with no topup must have earned enough app allowance
-    if (isAppRun && isFree && topupCredits === 0) {
+    // App run check: free tier users with no topup must have earned enough app
+    // allowance. Payg web-free users are exempt — they left the allowance
+    // economy at first purchase (mirrors the RPC's v_lifetime gate).
+    if (isAppRun && isFree && !webFree && topupCredits === 0) {
       const appAllowance = profile.app_credits_allowance ?? 0
       if (appAllowance < pricing.creditCost) {
         return {
@@ -1928,7 +1945,7 @@ export class CreditsService {
     modelIdentifier: string,
     providerCostUsd: number,
     displayCostUsd: number,
-    options?: { watermarkOverride?: boolean; isAppRun?: boolean; creditOverride?: number; skipAutoRecharge?: boolean },
+    options?: { watermarkOverride?: boolean; isAppRun?: boolean; creditOverride?: number; skipAutoRecharge?: boolean; webFreeMode?: boolean },
   ): Promise<ReserveResult> {
     // Self-hosted: skip reservation
     if (creditsDisabled()) {
@@ -1952,14 +1969,18 @@ export class CreditsService {
     const userTier = tierProfile
       ? effectiveTierOf(tierProfile as { tier: string | null; subscription_tier: string | null; lifetime_topup_credits: number })
       : "free"
+    // Pool-aware web spending (D1 v2): resolved against payg-ness here so the
+    // surface flag can be threaded from any web-origin caller unconditionally.
+    const webFree = Boolean(options?.webFreeMode) && userTier === "payg"
     const watermark = watermarkOverride !== undefined
       ? watermarkOverride
-      : (userTier === "free" && FREE_TIER_RESTRICTIONS.watermark)
+      : ((userTier === "free" || webFree) && FREE_TIER_RESTRICTIONS.watermark)
 
     // Daily credit cap, enforced atomically inside reserve_credits (closes the
     // TOCTOU the read-only creditGuard preHandler left open). Free tier uses the
     // fixed cap; paid tiers use their configured daily_credit_limit (null = no cap).
-    const dailyLimit: number | null = userTier === "free"
+    // Web-free payg runs ride the free cap — they ARE free-tier spending.
+    const dailyLimit: number | null = (userTier === "free" || webFree)
       ? FREE_TIER_RESTRICTIONS.dailyCreditCap
       : (await getTierConfig(userTier)).daily_credit_limit
 
@@ -1996,6 +2017,7 @@ export class CreditsService {
       p_display_cost_usd: displayCostUsd,
       p_is_app_run: isAppRun ?? false,
       p_daily_limit: dailyLimit,
+      p_web_free_mode: webFree,
     })
 
     if (reserveError) {

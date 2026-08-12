@@ -35,10 +35,23 @@ export function CreditBalance({ userId, onClick }: CreditBalanceProps) {
     )
   }
 
+  // Pool-aware display (D1 v2): a payg balance is two different moneys — the
+  // free pool spends in the studio under free rules, the loaded pool spends
+  // via the API/SDK/MCP. One merged number misleads on both sides.
+  const isPayg = balance.effectiveTier === "payg"
   const content = (
     <>
       <Coins className="w-4 h-4 text-muted-foreground" />
-      <span className="text-sm font-medium font-mono">{balance.total.toLocaleString()}</span>
+      {isPayg ? (
+        <span className="text-sm font-medium font-mono" title="Free credits (studio) / API credits (SDK, MCP, API)">
+          {balance.subscription.toLocaleString()}
+          <span className="text-muted-foreground"> free · </span>
+          {balance.topup.toLocaleString()}
+          <span className="text-muted-foreground"> API</span>
+        </span>
+      ) : (
+        <span className="text-sm font-medium font-mono">{balance.total.toLocaleString()}</span>
+      )}
       <span className="text-xs text-muted-foreground hidden sm:inline">credits</span>
       <Badge
         variant="secondary"
