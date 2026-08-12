@@ -9,6 +9,7 @@ REST-first; the included visual editor is one of many possible clients.
 ## Quickstart by goal
 
 - **Self-host Nodaro for my team** → [Community Edition Quickstart](./community-edition-quickstart.md)
+- **Use Nodaro Cloud models from my self-hosted instance** → [Community Cloud-Connect](./community-cloud-connect.md)
 - **Build a server-side integration** → [API Integration](./api-integration.md) → [OAuth Flow](./oauth-flow.md)
 - **Build a custom frontend** → [SDK Quickstart](./sdk-quickstart.md) → [SDK Reference](./sdk-reference.md)
 - **Build Nodaro's parameter pickers in your own app** (Mood, Framing, Lens, Voice…) → [Picker Catalogs](./picker-catalogs.md)
