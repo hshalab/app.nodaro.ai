@@ -37,7 +37,7 @@ import { cn } from "@/lib/utils"
 import { useAuth } from "@/hooks/use-auth"
 import { isFeatureEnabled, hasCredits, isMultiUser } from "@/lib/edition"
 import { useUserCredits } from "@/ee/hooks/queries/use-credits-queries"
-import { PRICING_TIERS, FREE_TIER_CREDITS } from "@/lib/pricing-data"
+import { PRICING_TIERS } from "@/lib/pricing-data"
 import { APP_VERSION } from "@/lib/version"
 import { NodaroLogo } from "@/components/nodaro-logo"
 import { otherNodaroApps } from "@/lib/nodaro-apps"
@@ -57,6 +57,9 @@ import { useSidebar, SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_EXPANDED_WIDTH } from "./s
 const NODARO_SURFACES = otherNodaroApps("flow")
 
 const STORAGE_KEY = "nodaro-sidebar-collapsed"
+
+/** Mono stack for the credit block, from the designer's Pricing mock. */
+const MONO_FONT = "'JetBrains Mono Variable','JetBrains Mono',monospace"
 
 interface NavItem {
   readonly href: string
@@ -288,10 +291,39 @@ export function AppSidebar({
                   <button
                     type="button"
                     onClick={() => navigate("/billing")}
-                    className="w-full h-9 flex items-center justify-center gap-1 rounded-md text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                    className="w-full flex flex-col items-center gap-1.5 hover:opacity-90 transition-opacity"
+                    style={{
+                      padding: "10px 6px",
+                      borderRadius: 12,
+                      border: "1px solid #1f1f25",
+                      background: "linear-gradient(180deg,#131317,#0e0e11)",
+                    }}
                   >
-                    <Coins className="h-4 w-4" strokeWidth={1.5} />
-                    <span className="font-mono text-[11px]">{creditBalance.total}</span>
+                    <span className="font-mono" style={{ fontSize: 12, fontWeight: 700, color: "#f2f2f4" }}>
+                      {creditBalance.total >= 1000
+                        ? `${(creditBalance.total / 1000).toFixed(1).replace(/\.0$/, "")}K`
+                        : creditBalance.total}
+                    </span>
+                    <span className="flex flex-col gap-[3px] w-full px-1">
+                      <span
+                        style={{
+                          display: "block",
+                          height: 4,
+                          borderRadius: 99,
+                          background: "#ff2d6f",
+                          width: `${creditBalance.total > 0 ? Math.max(12, (creditBalance.subscription / creditBalance.total) * 100) : 12}%`,
+                        }}
+                      />
+                      <span
+                        style={{
+                          display: "block",
+                          height: 4,
+                          borderRadius: 99,
+                          background: "oklch(0.75 0.13 205)",
+                          width: `${creditBalance.total > 0 ? Math.max(12, (creditBalance.topup / creditBalance.total) * 100) : 12}%`,
+                        }}
+                      />
+                    </span>
                   </button>
                 </TooltipTrigger>
                 <TooltipContent
@@ -311,82 +343,125 @@ export function AppSidebar({
                 </TooltipContent>
               </Tooltip>
             </div>
-          ) : (
-            <div
-              className="mx-2 mt-2 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 p-4 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors text-left"
-              onClick={() => navigate("/billing")}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                  {creditBalance.effectiveTier === "free" ? "Free Plan" : `${PRICING_TIERS.find((t) => t.id === creditBalance.effectiveTier)?.name ?? (creditBalance.effectiveTier.charAt(0).toUpperCase() + creditBalance.effectiveTier.slice(1))} Plan`}
-                </span>
-                {(creditBalance.effectiveTier === "free" || creditBalance.total <= (PRICING_TIERS.find((t) => t.id === creditBalance.effectiveTier)?.credits ?? FREE_TIER_CREDITS) * 0.1) && (
-                  <Link
-                    to="/pricing"
-                    onClick={(e) => e.stopPropagation()}
-                    className="text-[10px] font-medium text-[#ff0073] hover:text-[#ff0073]/80 transition-colors"
-                  >
-                    Upgrade →
-                  </Link>
-                )}
-              </div>
+          ) : (() => {
+            const tierName = PRICING_TIERS.find((t) => t.id === creditBalance.effectiveTier)?.name
+            const planLabel = (tierName ?? creditBalance.effectiveTier).toUpperCase()
+            const subPct = creditBalance.total > 0 ? (creditBalance.subscription / creditBalance.total) * 100 : 0
+            const topupPct = creditBalance.total > 0 ? (creditBalance.topup / creditBalance.total) * 100 : 0
+            const dailyLeft = creditBalance.dailyLimit != null
+              ? Math.max(0, creditBalance.dailyLimit - creditBalance.dailySpent)
+              : null
+            const isDailyTier = creditBalance.effectiveTier === "free" || creditBalance.effectiveTier === "payg"
+            const renewal = creditBalance.periodEnd ? formatRenewalTime(creditBalance.periodEnd) : null
+            // "renews" is a PAID-tier fact only — free/payg credits are a
+            // one-time signup grant, nothing refreshes (verified 2026-08-12).
+            const subscriptionSubline = isDailyTier
+              ? dailyLeft != null
+                ? `${dailyLeft} daily left`
+                : "one-time grant"
+              : renewal
+                ? `renews ${renewal}`
+                : null
 
-              <div className="mb-3">
-                {creditBalance.effectiveTier === "payg" ? (
-                  // Pool-aware display (D1 v2): the two pools are different
-                  // moneys — free spends in the studio, loaded spends via the
-                  // developer surfaces. One merged number misleads on both.
-                  <span className="text-2xl font-bold text-zinc-900 dark:text-white font-mono tracking-tight">
-                    {creditBalance.subscription.toLocaleString()}
-                    <span className="text-sm font-normal text-zinc-500"> free</span>
-                    <span className="text-sm font-normal text-zinc-500"> · </span>
-                    {creditBalance.topup.toLocaleString()}
-                    <span className="text-sm font-normal text-zinc-500"> API</span>
-                  </span>
-                ) : (
-                  <>
-                    <span className="text-2xl font-bold text-zinc-900 dark:text-white font-mono tracking-tight">
+            // Credit block from the designer's Pricing mock (2026-08-12):
+            // dark-committed gradient card, identical in both app themes.
+            return (
+              <div
+                className="mx-2 mt-2 cursor-pointer text-left"
+                style={{
+                  border: "1px solid #1f1f25",
+                  borderRadius: 14,
+                  background: "linear-gradient(180deg,#131317,#0e0e11)",
+                  overflow: "hidden",
+                }}
+                onClick={() => navigate("/billing")}
+              >
+                <div style={{ padding: "14px 16px 12px" }}>
+                  <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: 10, letterSpacing: "0.14em", color: "#7c7c85", fontWeight: 600 }}>
+                      TOTAL CREDITS
+                    </span>
+                    <span style={{ fontSize: 10, color: "#5f5f68", fontFamily: MONO_FONT }}>
+                      {planLabel}
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 7, marginTop: 6 }}>
+                    <span
+                      style={{
+                        fontSize: 32,
+                        fontWeight: 700,
+                        letterSpacing: "-0.03em",
+                        fontVariantNumeric: "tabular-nums",
+                        color: "#f2f2f4",
+                      }}
+                    >
                       {creditBalance.total.toLocaleString()}
                     </span>
-                    <span className="ml-2 text-xs text-zinc-500 dark:text-zinc-500">credits</span>
-                  </>
-                )}
-              </div>
-
-              {(() => {
-                const tierAllocation = PRICING_TIERS.find((t) => t.id === creditBalance.effectiveTier)?.credits ?? FREE_TIER_CREDITS
-                const remainPercent = Math.min(100, Math.max(0, Math.round((creditBalance.total / tierAllocation) * 100)))
-                return (
-                  <div className="mb-3">
-                    <div className="w-full h-[2px] bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-[#ff0073] transition-all"
-                        style={{ width: `${remainPercent}%` }}
-                      />
-                    </div>
+                    <span style={{ fontSize: 13, color: "#7c7c85" }}>credits</span>
                   </div>
-                )
-              })()}
-
-              <div className="space-y-0.5">
-                {creditBalance.effectiveTier === "free" || creditBalance.effectiveTier === "payg" ? (
-                  creditBalance.dailyLimit != null && (
-                    <p className="text-[11px] text-zinc-500 dark:text-zinc-500">
-                      <span className="font-mono text-zinc-600 dark:text-zinc-400">{Math.max(0, creditBalance.dailyLimit - creditBalance.dailySpent)}</span> daily credits left
-                    </p>
-                  )
-                ) : (
-                  <>
-                    {creditBalance.periodEnd && formatRenewalTime(creditBalance.periodEnd) && (
-                      <p className="text-[11px] text-zinc-500 dark:text-zinc-500">
-                        Renews {formatRenewalTime(creditBalance.periodEnd)}
-                      </p>
+                  <div
+                    style={{
+                      display: "flex",
+                      height: 5,
+                      borderRadius: 99,
+                      overflow: "hidden",
+                      marginTop: 12,
+                      background: "#1c1c21",
+                    }}
+                  >
+                    <div style={{ width: `${subPct}%`, background: "#ff2d6f" }} />
+                    <div style={{ width: `${topupPct}%`, background: "oklch(0.75 0.13 205)" }} />
+                  </div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderTop: "1px solid #1f1f25" }}>
+                  <div style={{ padding: "11px 14px", borderRight: "1px solid #1f1f25" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: 99, background: "#ff2d6f" }} />
+                      <span style={{ fontSize: 10, letterSpacing: "0.08em", color: "#8a8a93", fontWeight: 600, whiteSpace: "nowrap" }}>
+                        SUBSCRIPTION
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 18,
+                        fontWeight: 700,
+                        marginTop: 4,
+                        fontVariantNumeric: "tabular-nums",
+                        color: "#f2f2f4",
+                      }}
+                    >
+                      {creditBalance.subscription.toLocaleString()}
+                    </div>
+                    {subscriptionSubline && (
+                      <div style={{ fontSize: 10.5, color: "#6a6a73", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {subscriptionSubline}
+                      </div>
                     )}
-                  </>
-                )}
+                  </div>
+                  <div style={{ padding: "11px 14px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: 99, background: "oklch(0.75 0.13 205)" }} />
+                      <span style={{ fontSize: 10, letterSpacing: "0.08em", color: "#8a8a93", fontWeight: 600, whiteSpace: "nowrap" }}>
+                        TOP&#8209;UP
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 18,
+                        fontWeight: 700,
+                        marginTop: 4,
+                        fontVariantNumeric: "tabular-nums",
+                        color: "#f2f2f4",
+                      }}
+                    >
+                      {creditBalance.topup.toLocaleString()}
+                    </div>
+                    <div style={{ fontSize: 10.5, color: "#6a6a73", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>never expires</div>
+                  </div>
+                </div>
               </div>
-            </div>
-          )
+            )
+          })()
         )}
 
         {/* Navigation */}
@@ -411,10 +486,10 @@ export function AppSidebar({
                       onClick={handleNavClick}
                       aria-label={item.label}
                       className={cn(
-                        "flex items-center justify-center w-full h-9 rounded-md transition-all duration-200",
+                        "flex items-center justify-center w-full h-9 transition-all duration-200",
                         isActive
-                          ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white"
-                          : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-white",
+                          ? "rounded-[9px] bg-zinc-200 dark:bg-[#1b1b21] text-zinc-900 dark:text-white shadow-[inset_2px_0_0_#ff0073]"
+                          : "rounded-md text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-white",
                       )}
                     >
                       <span className="relative">
@@ -461,10 +536,10 @@ export function AppSidebar({
                         onClick={handleNavClick}
                         aria-label={item.label}
                         className={cn(
-                          "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200",
+                          "flex items-center gap-3 px-3 py-2 text-sm transition-all duration-200",
                           isActive
-                            ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white border-l-2 border-zinc-400 dark:border-zinc-500 -ml-0.5 pl-[10px]"
-                            : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-white",
+                            ? "rounded-[9px] font-semibold bg-zinc-200 dark:bg-[#1b1b21] text-zinc-900 dark:text-white shadow-[inset_2px_0_0_#ff0073]"
+                            : "rounded-md font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-white",
                         )}
                       >
                         <item.icon className="h-4 w-4 flex-shrink-0" strokeWidth={1.5} />

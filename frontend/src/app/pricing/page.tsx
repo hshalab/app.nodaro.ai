@@ -1,8 +1,5 @@
 import { useState, useEffect, useRef } from "react"
-import { Link, useNavigate, useSearchParams } from "react-router-dom"
-import { Check, Zap } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import { useAuth } from "@/hooks/use-auth"
 import {
   PRICING_TIERS,
@@ -16,6 +13,50 @@ import { toast } from "sonner"
 import { useSubscription, useChangePlanMutation } from "@/ee/hooks/queries/use-billing-queries"
 import { useUserCredits } from "@/ee/hooks/queries/use-credits-queries"
 import { TopupSection } from "./topup-section"
+
+/**
+ * Dark-committed pricing page, ported 1:1 from the designer's Pricing mock
+ * (sister folder `Pricing/`, 2026-08-12). All colors/spacing are the mock's
+ * inline values; the page forces the `dark` variant on its subtree so the
+ * theme-aware TopupSection renders its dark design regardless of app theme.
+ */
+
+const PINK = "#ff2d6f"
+const CYAN = "oklch(0.75 0.13 205)"
+const MONO = "'JetBrains Mono Variable','JetBrains Mono',monospace"
+
+/** Audience lines from the mock's plan data, keyed by tier id. */
+const TIER_AUDIENCE: Record<string, string> = {
+  basic: "For hobbyists and side projects",
+  standard: "For active creators",
+  pro: "For professionals & teams",
+  business: "For agencies & studios",
+}
+
+/** Credits get their own mono line on the card, so drop the feature restating them. */
+const CREDITS_FEATURE_RE = /^\d[\d,]* credits \/ month/
+
+interface SectionHeaderRowProps {
+  readonly dotColor: string
+  readonly labelColor: string
+  readonly label: string
+  readonly note: string
+  readonly margin: string
+}
+
+/** "● LABEL  note ————" section-header row from the mock. */
+function SectionHeaderRow({ dotColor, labelColor, label, note, margin }: SectionHeaderRowProps) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 12, margin }}>
+      <span style={{ width: 7, height: 7, borderRadius: 99, background: dotColor }} />
+      <span style={{ fontFamily: MONO, fontSize: 11, letterSpacing: "0.16em", color: labelColor }}>
+        {label}
+      </span>
+      <span style={{ fontSize: 12.5, color: "#66666f" }}>{note}</span>
+      <span style={{ flex: 1, height: 1, background: "#18181d" }} />
+    </div>
+  )
+}
 
 export default function PricingPage() {
   const { user, loading: authLoading } = useAuth()
@@ -111,186 +152,424 @@ export default function PricingPage() {
     return PRICING_TIERS.find((t) => t.id === tierId)?.cta ?? "Subscribe"
   }
 
+  const annual = billingCycle === "annual"
+  const paidTiers = PRICING_TIERS.filter((t) => t.priceMonthly > 0)
+  const freeTier = PRICING_TIERS.find((t) => t.id === "free")
+
+  // "You're on X" — effective tier from the balance endpoint (covers free,
+  // payg, and subscribed states); hidden while signed out / not loaded.
+  const effectiveTier = creditBalance?.effectiveTier
+  const currentPlanName = effectiveTier
+    ? PRICING_TIERS.find((t) => t.id === effectiveTier)?.name ??
+      effectiveTier.charAt(0).toUpperCase() + effectiveTier.slice(1)
+    : null
+
   return (
-    <div className="min-h-screen bg-background">
-      {/* Hero */}
-      <section className="py-16 text-center">
-        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-          Simple, transparent pricing
-        </h1>
-        <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-          Start free and scale as you grow. All plans include access to the
-          visual workflow editor and AI video generation tools.
-        </p>
-
-        {/* Billing cycle toggle */}
-        <div className="mt-8 inline-flex items-center gap-1 rounded-full border border-zinc-200 dark:border-zinc-800 p-1 bg-card">
-          <button
-            className={cn(
-              "rounded-full px-5 py-2 text-sm font-medium transition-colors",
-              billingCycle === "monthly"
-                ? "bg-[#ff0073] text-white"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-            onClick={() => setBillingCycle("monthly")}
+    <div className="dark min-h-full" style={{ background: "#08080a", color: "#f2f2f4" }}>
+      <div className="px-5 pt-10 pb-16 sm:px-14 sm:pt-14 sm:pb-[90px]">
+        <div style={{ maxWidth: 1280, margin: "0 auto" }}>
+          {/* Header: title + billing-cycle toggle */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-end",
+              justifyContent: "space-between",
+              gap: 32,
+              flexWrap: "wrap",
+              marginBottom: 34,
+            }}
           >
-            Monthly
-          </button>
-          <button
-            className={cn(
-              "rounded-full px-5 py-2 text-sm font-medium transition-colors flex items-center gap-2",
-              billingCycle === "annual"
-                ? "bg-[#ff0073] text-white"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-            onClick={() => setBillingCycle("annual")}
+            <div>
+              <h1 style={{ fontSize: 36, fontWeight: 700, letterSpacing: "-0.03em", margin: 0 }}>
+                Pricing
+              </h1>
+              <p style={{ fontSize: 15, color: "#85858e", margin: "8px 0 0", maxWidth: 560 }}>
+                {currentPlanName && (
+                  <>
+                    You&apos;re on{" "}
+                    <span style={{ color: "#f2f2f4", fontWeight: 600 }}>{currentPlanName}</span>.{" "}
+                  </>
+                )}
+                Subscribe for a monthly credit allocation, or keep loading top-up credits.
+              </p>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <button
+                type="button"
+                onClick={() => setBillingCycle("monthly")}
+                style={{
+                  background: "none",
+                  border: "none",
+                  padding: 0,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: annual ? "#7c7c85" : "#f2f2f4",
+                }}
+              >
+                Monthly
+              </button>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={annual}
+                aria-label="Bill annually"
+                onClick={() => setBillingCycle(annual ? "monthly" : "annual")}
+                style={{
+                  width: 52,
+                  height: 28,
+                  borderRadius: 99,
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 3,
+                  display: "flex",
+                  justifyContent: annual ? "flex-end" : "flex-start",
+                  background: annual ? PINK : "#2a2a32",
+                  transition: "background .2s",
+                }}
+              >
+                <span style={{ width: 22, height: 22, borderRadius: 99, background: "#fff", display: "block" }} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setBillingCycle("annual")}
+                style={{
+                  background: "none",
+                  border: "none",
+                  padding: 0,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: annual ? "#f2f2f4" : "#7c7c85",
+                }}
+              >
+                Annual
+              </button>
+              {hasAnnualSavings && (
+                <span
+                  style={{
+                    fontFamily: MONO,
+                    fontSize: 10.5,
+                    letterSpacing: "0.12em",
+                    color: PINK,
+                    border: "1px solid #46132a",
+                    borderRadius: 99,
+                    padding: "5px 11px",
+                  }}
+                >
+                  2 MONTHS FREE
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* SUBSCRIPTION PLANS */}
+          <SectionHeaderRow
+            dotColor={PINK}
+            labelColor="#ff77a0"
+            label="SUBSCRIPTION PLANS"
+            note="monthly credit allocation · resets each cycle"
+            margin="0 0 16px"
+          />
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))",
+              gap: 18,
+              alignItems: "stretch",
+            }}
           >
-            Annual
-            {hasAnnualSavings && (
-              <span
-                className={cn(
-                  "text-xs font-semibold px-2 py-0.5 rounded-full",
-                  billingCycle === "annual"
-                    ? "bg-white/20 text-white"
-                    : "bg-green-500/10 text-green-600 dark:text-green-400",
-                )}
-              >
-                2 months free
-              </span>
-            )}
-          </button>
-        </div>
-      </section>
+            {paidTiers.map((tier) => {
+              const isPopular = !!tier.highlighted
+              const displayPrice = getTierPrice(tier, billingCycle)
+              const priceId = getTierPriceId(tier, billingCycle)
+              const savingsDollars = getAnnualSavingsDollars(tier)
+              const disabled = tier.id === currentTierId || loadingTier === tier.id || subLoading
+              const cardFeatures = tier.features.filter((f) => !CREDITS_FEATURE_RE.test(f))
 
-      {/* Tier Cards */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
-          {PRICING_TIERS.map((tier) => {
-            const isCurrent = tier.id === currentTierId
-            const displayPrice = getTierPrice(tier, billingCycle)
-            const priceId = getTierPriceId(tier, billingCycle)
-            const savingsDollars = getAnnualSavingsDollars(tier)
-
-            return (
-              <div
-                key={tier.id}
-                className={cn(
-                  "relative flex flex-col rounded-xl border p-6",
-                  "bg-card text-card-foreground",
-                  isCurrent
-                    ? "border-green-500 ring-2 ring-green-500/20"
-                    : tier.highlighted
-                      ? "border-[#ff0073] ring-2 ring-[#ff0073]/20 dark:ring-[#ff0073]/30"
-                      : "border-zinc-200 dark:border-zinc-800",
-                )}
-              >
-                {isCurrent && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="inline-flex items-center rounded-full bg-green-500 px-3 py-1 text-xs font-medium text-white">
-                      Current Plan
+              return (
+                <div
+                  key={tier.id}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    padding: "28px 26px 26px",
+                    borderRadius: 18,
+                    position: "relative",
+                    ...(isPopular
+                      ? {
+                          border: `1px solid ${PINK}`,
+                          background: "linear-gradient(180deg,#1b0c14,#0b080a)",
+                          boxShadow: "0 0 44px rgba(255,45,111,0.16)",
+                        }
+                      : {
+                          border: "1px solid #1e1e24",
+                          background: "linear-gradient(180deg,#101013,#0a0a0c)",
+                        }),
+                  }}
+                >
+                  {isPopular && (
+                    <span
+                      style={{
+                        fontFamily: MONO,
+                        fontSize: 10.5,
+                        letterSpacing: "0.16em",
+                        color: PINK,
+                        marginBottom: 14,
+                        display: "block",
+                      }}
+                    >
+                      ● MOST POPULAR
                     </span>
+                  )}
+                  <div style={{ fontSize: 23, fontWeight: 700, letterSpacing: "-0.02em" }}>{tier.name}</div>
+                  <div style={{ fontSize: 13, color: "#7c7c85", marginTop: 5 }}>
+                    {TIER_AUDIENCE[tier.id] ?? ""}
                   </div>
-                )}
-                {!isCurrent && tier.highlighted && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-[#ff0073] px-3 py-1 text-xs font-medium text-white">
-                      <Zap className="h-3 w-3" />
-                      Most Popular
-                    </span>
-                  </div>
-                )}
 
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold">{tier.name}</h3>
-                  <div className="mt-3 flex items-baseline gap-1">
-                    {billingCycle === "annual" && tier.priceMonthly > 0 && (
-                      <span className="text-lg text-muted-foreground line-through mr-1">
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 26 }}>
+                    {annual && (
+                      <span
+                        style={{
+                          fontSize: 20,
+                          fontWeight: 600,
+                          color: "#5a5a63",
+                          textDecoration: "line-through",
+                        }}
+                      >
                         ${tier.priceMonthly}
                       </span>
                     )}
-                    <span className="text-3xl font-bold">
+                    <span style={{ fontSize: 44, fontWeight: 700, letterSpacing: "-0.04em" }}>
                       ${displayPrice}
                     </span>
-                    <span className="text-sm text-muted-foreground">/mo</span>
+                    <span style={{ fontSize: 14, color: "#85858e" }}>/mo</span>
                   </div>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {tier.priceMonthly > 0
-                      ? billingCycle === "annual"
-                        ? <><span className="text-foreground font-medium">${tier.priceAnnual * 12}</span>/yr · <span className="text-emerald-400 font-medium">Save ${savingsDollars}</span></>
-                        : "Billed monthly"
-                      : <span className="text-emerald-400 font-medium">🎁 {tier.credits} free credits</span>}
-                  </p>
+                  <div style={{ fontFamily: MONO, fontSize: 12.5, letterSpacing: "0.06em", marginTop: 10 }}>
+                    <span style={{ color: PINK, fontWeight: 700 }}>{tier.credits.toLocaleString()}</span>
+                    <span style={{ color: "#9a9aa3" }}> CREDITS / MO</span>
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: MONO,
+                      fontSize: 11,
+                      letterSpacing: "0.06em",
+                      color: "#63636c",
+                      marginTop: 5,
+                    }}
+                  >
+                    {annual
+                      ? `$${tier.priceAnnual * 12}/YR · SAVE $${savingsDollars}`
+                      : "BILLED MONTHLY"}
+                  </div>
+
+                  <div style={{ height: 1, background: "#1a1a20", margin: "22px 0 20px" }} />
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 13, flex: 1 }}>
+                    {cardFeatures.map((f) => (
+                      <div
+                        key={f}
+                        style={{
+                          display: "flex",
+                          gap: 10,
+                          alignItems: "flex-start",
+                          fontSize: 13.5,
+                          color: "#c4c4cc",
+                        }}
+                      >
+                        <span style={{ color: PINK, fontSize: 13, lineHeight: 1.4 }}>✓</span>
+                        <span>{f}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => handleSubscribe(tier.id, priceId)}
+                    style={{
+                      marginTop: 24,
+                      width: "100%",
+                      fontFamily: "inherit",
+                      fontSize: 14,
+                      fontWeight: 700,
+                      padding: 14,
+                      borderRadius: 11,
+                      cursor: disabled ? "default" : "pointer",
+                      ...(isPopular
+                        ? { background: PINK, border: "none", color: "#fff" }
+                        : { background: "transparent", border: "1px solid #2a2a32", color: "#eaeaef" }),
+                      ...(disabled ? { opacity: 0.55 } : {}),
+                    }}
+                  >
+                    {getButtonLabel(tier.id)}
+                  </button>
                 </div>
+              )
+            })}
+          </div>
 
-                <ul className="flex-1 space-y-2.5 mb-6">
-                  {tier.features.map((feature) => (
-                    <li key={feature} className="flex items-start gap-2 text-sm">
-                      <Check className="h-4 w-4 text-[#ff0073] flex-shrink-0 mt-0.5" />
-                      <span className="text-muted-foreground">
-                        {/^\d[\d,]* credits \/ month/.test(feature)
-                          ? <><span className="text-foreground font-medium">{feature.replace(/ \/.*$/, '')}</span>{feature.match(/ \/.*$/)?.[0]}</>
-                          : feature}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-
-                <Button
-                  className={cn(
-                    "w-full",
-                    !isCurrent && tier.highlighted
-                      ? "bg-[#ff0073] text-white hover:bg-[#ff0073]/90"
-                      : "",
-                  )}
-                  variant={!isCurrent && tier.highlighted ? "default" : "outline"}
-                  disabled={isCurrent || loadingTier === tier.id || subLoading}
-                  onClick={() => handleSubscribe(tier.id, priceId)}
+          {/* FREE TIER strip — acquisition pitch for guests; "you're on this
+              plan" for signed-in free/payg; hidden for paid subscribers. */}
+          {freeTier && !currentTierId && (
+            <div
+              style={{
+                border: "1px dashed #2a2a32",
+                borderRadius: 16,
+                padding: "24px 28px",
+                marginTop: 18,
+                display: "flex",
+                alignItems: "center",
+                gap: 28,
+                flexWrap: "wrap",
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 340 }}>
+                <div
+                  style={{
+                    fontFamily: MONO,
+                    fontSize: 11,
+                    letterSpacing: "0.16em",
+                    color: PINK,
+                    marginBottom: 9,
+                  }}
                 >
-                  {getButtonLabel(tier.id)}
-                </Button>
+                  ● FREE TIER
+                </div>
+                <div style={{ fontSize: 18, fontWeight: 600 }}>
+                  {user ? (
+                    <>
+                      You&apos;re on this plan —{" "}
+                      <span style={{ fontWeight: 800 }}>
+                        {freeTier.credits.toLocaleString()} free credits
+                      </span>{" "}
+                      included at signup.
+                    </>
+                  ) : (
+                    <>
+                      Try everything with{" "}
+                      <span style={{ fontWeight: 800 }}>
+                        {freeTier.credits.toLocaleString()} free credits
+                      </span>{" "}
+                      — no credit card.
+                    </>
+                  )}
+                </div>
+                <div
+                  style={{
+                    fontFamily: MONO,
+                    fontSize: 11,
+                    letterSpacing: "0.08em",
+                    color: "#5f5f68",
+                    marginTop: 10,
+                  }}
+                >
+                  {freeTier.features.join(" · ").toUpperCase()}
+                </div>
               </div>
-            )
-          })}
-        </div>
+              {user ? (
+                <span
+                  style={{
+                    fontFamily: MONO,
+                    fontSize: 11,
+                    letterSpacing: "0.14em",
+                    color: PINK,
+                    border: "1px solid #46132a",
+                    borderRadius: 99,
+                    padding: "9px 18px",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                  }}
+                >
+                  CURRENT PLAN
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  disabled={loadingTier === "free" || subLoading}
+                  onClick={() => handleSubscribe("free", null)}
+                  className="bg-transparent border border-[#ff2d6f] text-[#ff2d6f] hover:bg-[#ff2d6f] hover:text-white"
+                  style={{
+                    fontFamily: "inherit",
+                    fontSize: 14,
+                    fontWeight: 700,
+                    padding: "13px 34px",
+                    borderRadius: 11,
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                    ...(loadingTier === "free" || subLoading ? { opacity: 0.55, cursor: "default" } : {}),
+                  }}
+                >
+                  {getButtonLabel("free")}
+                </button>
+              )}
+            </div>
+          )}
 
-        {/* API / Pay-as-you-go — designer mock 2026-08-12 (sister folder Pricing/) */}
-        <TopupSection
-          topupBalance={user ? creditBalance?.topup : undefined}
-          loading={loadingTopup}
-          onLoad={handleLoadCredits}
-        />
-        <p className="mt-4 text-center text-xs text-muted-foreground">
-          Credits without an active subscription are redeemable through the
-          developer surfaces (API, SDK, CLI, MCP). The web studio is included
-          with every subscription above.
-        </p>
-
-        {/* FAQ / Extra info */}
-        <div className="mt-16 text-center">
-          <p className="text-sm text-muted-foreground">
-            Need more credits? Purchase{" "}
-            <Link to="/billing" className="text-[#ff0073] underline underline-offset-4">
-              top-up packs
-            </Link>{" "}
-            any time. Credits never expire.
+          {/* TOP-UP CREDITS — header row from the mock; the card below keeps the
+              founder's amended design (TopupSection). */}
+          <SectionHeaderRow
+            dotColor={CYAN}
+            labelColor="oklch(0.8 0.09 205)"
+            label="TOP-UP CREDITS"
+            note="no subscription · never expire · used after your monthly allocation"
+            margin="46px 0 16px"
+          />
+          <TopupSection
+            topupBalance={user ? creditBalance?.topup : undefined}
+            loading={loadingTopup}
+            onLoad={handleLoadCredits}
+          />
+          <p className="mt-4 text-center text-xs text-muted-foreground">
+            Credits without an active subscription are redeemable through the
+            developer surfaces (API, SDK, CLI, MCP). The web studio is included
+            with every subscription above.
           </p>
-        </div>
 
-        {/* Legal links */}
-        <div className="mt-8 flex items-center justify-center gap-4 text-xs text-muted-foreground/60">
-          <a href="https://nodaro.ai/terms" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">
-            Terms of Service
-          </a>
-          <span>&middot;</span>
-          <a href="https://nodaro.ai/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">
-            Privacy Policy
-          </a>
-          <span>&middot;</span>
-          <a href="https://nodaro.ai/refund" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">
-            Refund Policy
-          </a>
+          {/* Legal links */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              gap: 22,
+              marginTop: 44,
+              fontSize: 12.5,
+              color: "#5f5f68",
+            }}
+          >
+            <a
+              href="https://nodaro.ai/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: "#7c7c85", textDecoration: "none" }}
+            >
+              Terms of Service
+            </a>
+            <span>·</span>
+            <a
+              href="https://nodaro.ai/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: "#7c7c85", textDecoration: "none" }}
+            >
+              Privacy Policy
+            </a>
+            <span>·</span>
+            <a
+              href="https://nodaro.ai/refund"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: "#7c7c85", textDecoration: "none" }}
+            >
+              Refund Policy
+            </a>
+          </div>
         </div>
-      </section>
+      </div>
     </div>
   )
 }

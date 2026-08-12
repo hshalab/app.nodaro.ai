@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react"
-import { RefreshCw } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { getAutoRecharge, updateAutoRecharge, type AutoRechargeConfig } from "@/lib/api"
@@ -7,107 +6,158 @@ import { creditsForLoadUsd, MIN_LOAD_USD, MAX_LOAD_USD } from "@/lib/pricing-dat
 
 /**
  * Auto-recharge settings — "when my balance drops below X credits, load $Y".
+ *
+ * Designer-mock behavior (2026-08-12, "without too many saves"): there is NO
+ * save button. The toggle persists immediately; the two value fields persist
+ * via a short debounce once valid. The green status line is the only state
+ * feedback: "Active — settings saved." / "Paused." / "Saving…".
+ *
  * The failure state doubles as the in-app notification surface: declined
  * attempts show here, and three failures auto-disable until the user
  * re-saves a card (any manual load does) and re-enables.
- *
- * Nothing applies until Save: the toggle and fields edit a draft, and a
- * highlighted "unsaved changes" bar appears whenever the draft differs from
- * the server state, so the pending-save step is impossible to miss.
  */
 
-interface FormSnapshot {
-  enabled: boolean
-  threshold: string
-  amount: string
-}
+const SAVE_DEBOUNCE_MS = 900
 
-function snapshotFromConfig(c: AutoRechargeConfig): FormSnapshot {
-  return {
-    enabled: c.enabled,
-    threshold: c.thresholdCredits ? String(c.thresholdCredits) : "",
-    amount: c.amountUsd ? String(c.amountUsd) : "",
-  }
-}
-
-export function AutoRechargeCard() {
+export function AutoRechargeCard({ frameless = false }: { frameless?: boolean } = {}) {
   const [config, setConfig] = useState<AutoRechargeConfig | null>(null)
-  const [saved, setSaved] = useState<FormSnapshot | null>(null)
   const [threshold, setThreshold] = useState("")
   const [amount, setAmount] = useState("")
   const [enabled, setEnabled] = useState(false)
   const [saving, setSaving] = useState(false)
+  const lastSavedRef = useRef<string>("")
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     getAutoRecharge()
       .then((c) => {
-        const snap = snapshotFromConfig(c)
         setConfig(c)
-        setSaved(snap)
-        setEnabled(snap.enabled)
-        setThreshold(snap.threshold)
-        setAmount(snap.amount)
+        setEnabled(c.enabled)
+        const th = c.thresholdCredits ? String(c.thresholdCredits) : ""
+        const am = c.amountUsd ? String(c.amountUsd) : ""
+        setThreshold(th)
+        setAmount(am)
+        lastSavedRef.current = JSON.stringify([c.enabled, th, am])
       })
       .catch(() => setConfig(null))
   }, [])
 
-  if (!config) return null
-
   const parsedThreshold = /^\d+$/.test(threshold) ? parseInt(threshold, 10) : NaN
   const parsedAmount = /^\d+$/.test(amount) ? parseInt(amount, 10) : NaN
   const previewCredits = Number.isNaN(parsedAmount) ? null : creditsForLoadUsd(parsedAmount)
-  const valid =
-    !enabled ||
-    (parsedThreshold >= 100 && parsedThreshold <= 100000 && previewCredits !== null)
-  const dirty =
-    saved !== null &&
-    (enabled !== saved.enabled || threshold !== saved.threshold || amount !== saved.amount)
+  const valuesValid =
+    parsedThreshold >= 100 && parsedThreshold <= 100000 && previewCredits !== null
 
-  async function handleSave() {
-    if (!valid) return
+  async function persist(nextEnabled: boolean, th: number | undefined, am: number | undefined) {
+    const key = JSON.stringify([nextEnabled, th ? String(th) : "", am ? String(am) : ""])
+    if (key === lastSavedRef.current) return
     setSaving(true)
     try {
       await updateAutoRecharge({
-        enabled,
-        ...(Number.isNaN(parsedThreshold) ? {} : { thresholdCredits: parsedThreshold }),
-        ...(Number.isNaN(parsedAmount) ? {} : { amountUsd: parsedAmount }),
+        enabled: nextEnabled,
+        ...(th === undefined ? {} : { thresholdCredits: th }),
+        ...(am === undefined ? {} : { amountUsd: am }),
       })
-      toast.success(enabled ? "Auto-recharge enabled" : "Auto-recharge disabled")
-      setSaved({ enabled, threshold, amount })
-      setConfig((c) => (c ? { ...c, enabled, failureCount: 0 } : c))
+      lastSavedRef.current = key
+      setConfig((c) => (c ? { ...c, enabled: nextEnabled, failureCount: 0 } : c))
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save")
+      toast.error(err instanceof Error ? err.message : "Failed to save auto-recharge")
     } finally {
       setSaving(false)
     }
   }
 
+  function handleToggle() {
+    const next = !enabled
+    if (next && !valuesValid) {
+      setEnabled(next)
+      return // persists once the fields become valid (debounced effect below)
+    }
+    setEnabled(next)
+    void persist(
+      next,
+      Number.isNaN(parsedThreshold) ? undefined : parsedThreshold,
+      Number.isNaN(parsedAmount) ? undefined : parsedAmount,
+    )
+  }
+
+  // Debounced field auto-save — fires only for valid values, never on mount.
+  useEffect(() => {
+    if (!config) return
+    if (!valuesValid) return
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      void persist(enabled, parsedThreshold, parsedAmount)
+    }, SAVE_DEBOUNCE_MS)
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [threshold, amount, enabled])
+
+  if (!config) return null
+
+  const statusText = saving
+    ? "Saving…"
+    : enabled
+      ? valuesValid
+        ? "Active — settings saved."
+        : `Enter a threshold (100–100,000) and an amount ($${MIN_LOAD_USD}–$${MAX_LOAD_USD}).`
+      : "Paused."
+
+  const inputStyle: React.CSSProperties = {
+    background: "#101014",
+    border: "1px solid #26262c",
+    borderRadius: 10,
+    color: "#f2f2f4",
+    fontSize: 15,
+    fontWeight: 600,
+    padding: "10px 14px",
+    outline: "none",
+  }
+
   return (
-    <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium flex items-center gap-2">
-          <RefreshCw className="h-4 w-4" />
-          Auto-recharge
-        </h3>
+    <div className={cn("space-y-4", !frameless && "rounded-lg border border-zinc-200 dark:border-zinc-800 p-4")}>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h3 style={{ fontSize: 19, fontWeight: 700, color: "#f2f2f4", letterSpacing: "-0.01em" }}>
+            Auto-recharge
+          </h3>
+          <p style={{ fontSize: 13.5, color: "#7c7c85", marginTop: 2 }}>
+            Tops up your <span style={{ color: "oklch(0.8 0.09 205)", fontWeight: 600 }}>top-up balance</span> when
+            the total drops low.
+          </p>
+        </div>
         <button
           role="switch"
           aria-checked={enabled}
-          onClick={() => setEnabled((v) => !v)}
-          className={cn(
-            "relative h-5 w-9 rounded-full transition-colors",
-            enabled ? "bg-[#ff0073]" : "bg-zinc-300 dark:bg-zinc-700"
-          )}
+          onClick={handleToggle}
+          className="relative shrink-0 transition-colors"
+          style={{
+            width: 52,
+            height: 28,
+            borderRadius: 99,
+            background: enabled ? "#ff2d6f" : "#26262c",
+            border: "none",
+            cursor: "pointer",
+          }}
         >
           <span
-            className={cn(
-              "absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform",
-              enabled ? "translate-x-4" : "translate-x-0.5"
-            )}
+            className="absolute transition-transform"
+            style={{
+              top: 3,
+              left: 3,
+              width: 22,
+              height: 22,
+              borderRadius: 99,
+              background: "#fff",
+              transform: enabled ? "translateX(24px)" : "translateX(0)",
+            }}
           />
         </button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 text-sm">
+      <div className="flex flex-wrap items-center gap-3" style={{ fontSize: 15.5, color: "#c4c4cc" }}>
         <span>When my balance drops below</span>
         <input
           type="text"
@@ -115,51 +165,33 @@ export function AutoRechargeCard() {
           value={threshold}
           onChange={(e) => setThreshold(e.target.value.replace(/[^0-9]/g, ""))}
           placeholder="3000"
-          className="w-24 rounded-md border border-zinc-200 dark:border-zinc-800 bg-transparent px-2 py-1 focus:border-[#ff0073]/60 focus:outline-none"
+          style={{ ...inputStyle, width: 110 }}
           aria-label="Threshold in credits"
         />
         <span>credits, load</span>
-        <span className="text-muted-foreground">$</span>
-        <input
-          type="text"
-          inputMode="numeric"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value.replace(/[^0-9]/g, ""))}
-          placeholder={`${MIN_LOAD_USD}-${MAX_LOAD_USD}`}
-          className="w-20 rounded-md border border-zinc-200 dark:border-zinc-800 bg-transparent px-2 py-1 focus:border-[#ff0073]/60 focus:outline-none"
-          aria-label="Recharge amount in dollars"
-        />
+        <span
+          className="flex items-center gap-2"
+          style={{ ...inputStyle, width: 110, display: "inline-flex" }}
+        >
+          <span style={{ color: "#7c7c85", fontWeight: 500 }}>$</span>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value.replace(/[^0-9]/g, ""))}
+            placeholder={`${MIN_LOAD_USD}-${MAX_LOAD_USD}`}
+            aria-label="Recharge amount in dollars"
+            style={{ background: "transparent", border: "none", outline: "none", color: "#f2f2f4", fontSize: 15, fontWeight: 600, width: "100%" }}
+          />
+        </span>
         {previewCredits !== null && (
-          <span className="text-muted-foreground">= {previewCredits.toLocaleString()} credits</span>
+          <span style={{ color: "#7c7c85" }}>= {previewCredits.toLocaleString()} credits</span>
         )}
       </div>
 
-      {dirty && (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[#ff0073]/40 bg-[#ff0073]/5 px-3 py-2">
-          <span className="text-xs font-medium text-[#ff0073]">
-            {valid
-              ? "You have unsaved changes"
-              : `Enter a threshold (100–100,000 credits) and an amount ($${MIN_LOAD_USD}–$${MAX_LOAD_USD})`}
-          </span>
-          <button
-            onClick={handleSave}
-            disabled={!valid || saving}
-            className={cn(
-              "rounded-md bg-[#ff0073] px-4 py-1.5 text-sm font-semibold text-white shadow-sm",
-              (!valid || saving) && "opacity-40 pointer-events-none"
-            )}
-          >
-            {saving ? "Saving…" : "Save changes"}
-          </button>
-        </div>
-      )}
-      {!dirty && saved !== null && (
-        <p className="text-xs text-muted-foreground">
-          {saved.enabled
-            ? "Active — settings saved."
-            : "Off — flip the switch and save to activate."}
-        </p>
-      )}
+      <p style={{ fontSize: 13.5, color: enabled && !valuesValid && !saving ? "#e5b76a" : "#6ee7b7" }}>
+        {statusText}
+      </p>
 
       {!config.hasSavedCard && (
         <p className="text-xs text-amber-600 dark:text-amber-400">
