@@ -92,8 +92,13 @@ describe("BaseNode run strip", () => {
     expect(screen.getByText("BESPOKE")).toBeInTheDocument()
   })
 
-  it("renders no bottom run strip when neither toolbar prop is set", () => {
+  it("renders a settings-only strip when neither toolbar prop is set", () => {
+    // Previously this asserted NO strip at all. That was correct while the
+    // settings toggle floated off the node's right edge; now the strip is the
+    // only way in, so a node passing no toolbar content still gets one — with
+    // the settings button and nothing else.
     renderBase()
-    expect(screen.queryByTestId("node-run-strip")).not.toBeInTheDocument()
+    expect(screen.getByTestId("node-run-strip")).toBeInTheDocument()
+    expect(screen.getByTestId("node-settings-button")).toBeInTheDocument()
   })
 })

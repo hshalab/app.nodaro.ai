@@ -100,6 +100,8 @@ describe("useUserSettings", () => {
       preferredLocale: null,
       showRecentNodes: false,
       showMostUsedNodes: false,
+      variableDisplayMode: "raw",
+      nodeDoubleClickAction: "settings",
     })
   })
 
@@ -120,6 +122,10 @@ describe("useUserSettings", () => {
       preferredLocale: null,
       showRecentNodes: false,
       showMostUsedNodes: false,
+      // Defaults to "raw" — the mode every user effectively had before this
+      // preference existed, so an existing account sees no change.
+      variableDisplayMode: "raw",
+      nodeDoubleClickAction: "settings",
     })
   })
 

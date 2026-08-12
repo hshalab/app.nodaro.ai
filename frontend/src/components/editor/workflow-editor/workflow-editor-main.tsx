@@ -56,6 +56,7 @@ import { useWorkflowPersistence } from "@/hooks/use-workflow-persistence";
 import { useWorkflowStore } from "@/hooks/use-workflow-store";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useUndoRedoSubscription } from "@/hooks/use-undo-redo";
+import { useSyncEditorPreferences } from "@/hooks/use-sync-editor-preferences";
 import { useAltKeyTracker } from "@/hooks/use-alt-key";
 import { useProjectsStore } from "@/hooks/use-projects-store";
 import { useAuth } from "@/hooks/use-auth";
@@ -120,6 +121,11 @@ export function WorkflowEditor({ projectId, workflowId }: WorkflowEditorProps) {
   const createWorkflowWithContent = useProjectsStore((s) => s.createWorkflowWithContent);
   useUndoRedoSubscription();
   useAltKeyTracker();
+  // Fills the store's per-user editor preferences (variable display mode, node
+  // double-click action) from their saved values. The editor is the only reader
+  // — presentation's ReadOnlyPromptBlock pins "resolved" and never consults the
+  // store — so this is the only mount needed.
+  useSyncEditorPreferences();
   // Hydrate admin node defaults into React Query cache so addNode() can read them
   // synchronously. Cache key matches what use-workflow-store.addNode() reads.
   useNodeDefaults();

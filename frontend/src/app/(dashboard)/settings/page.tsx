@@ -2,9 +2,10 @@ import { useState, useEffect } from "react"
 import {
   Loader2, Globe, Lock, RotateCcw, FileText, Save, Info,
   Pencil, X, Download, Upload, Key, ChevronRight, LayoutList,
-  Plus, Trash2, Sparkles,
+  Plus, Trash2, Sparkles, Braces,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import {
   Tooltip,
@@ -22,7 +23,8 @@ import {
   TEMPLATE_GROUPS,
   WRAPPER_TEMPLATE_KEY,
 } from "@/lib/prompt-templates"
-import { useUserSettings, useUpdatePublicOutputsMutation, useSaveTemplatesMutation, useUpdateNodeMenuPrefsMutation } from "@/hooks/queries/use-user-settings-queries"
+import { useUserSettings, useUpdatePublicOutputsMutation, useSaveTemplatesMutation, useUpdateNodeMenuPrefsMutation, useUpdateVariableDisplayModeMutation } from "@/hooks/queries/use-user-settings-queries"
+import type { VariableDisplayMode } from "@/components/editor/config-panels/types"
 import type { GenerateTextTemplate } from "@/lib/generate-text-templates"
 import { LlmModelSelect } from "@/components/editor/config-panels/llm-model-select"
 import { ReasoningEffortSelect } from "@/components/editor/config-panels/reasoning-effort-select"
@@ -59,11 +61,13 @@ export default function SettingsPage() {
   const toggleMutation = useUpdatePublicOutputsMutation()
   const templatesMutation = useSaveTemplatesMutation()
   const nodeMenuMutation = useUpdateNodeMenuPrefsMutation()
+  const variableModeMutation = useUpdateVariableDisplayModeMutation()
 
   const publicOutputs = settings?.publicOutputs ?? true
   const tier = settings?.tier ?? "free"
   const showRecentNodes = settings?.showRecentNodes ?? false
   const showMostUsedNodes = settings?.showMostUsedNodes ?? false
+  const variableDisplayMode = settings?.variableDisplayMode ?? "raw"
 
   useEffect(() => {
     if (settings?.promptTemplates) {
@@ -95,6 +99,16 @@ export default function SettingsPage() {
     try {
       await nodeMenuMutation.mutateAsync({ userId: user.id, showRecentNodes: next })
       toast.success(next ? "Recent category shown" : "Recent category hidden")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update")
+    }
+  }
+
+  async function handleVariableDisplayMode(next: VariableDisplayMode) {
+    if (!user?.id) return
+    try {
+      await variableModeMutation.mutateAsync({ userId: user.id, variableDisplayMode: next })
+      toast.success("Prompt variable display updated")
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update")
     }
@@ -444,6 +458,44 @@ export default function SettingsPage() {
               onCheckedChange={handleToggleMostUsed}
             />
           </div>
+        </div>
+      </div>
+
+      {/* Prompt Variables */}
+      <div className="bg-card border border-border rounded-lg p-6">
+        <div className="flex items-center gap-2 mb-1">
+          <Braces className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-base font-semibold">Prompt Variables</h2>
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">
+          How <code className="text-xs">{"{Node Name}"}</code> placeholders are shown in prompt fields.
+          This only changes what you see — the value sent to the model is the same either way.
+        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <label htmlFor="variable-display-mode" className="text-sm font-medium">Display mode</label>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {variableDisplayMode === "raw" && "Placeholders stay as written."}
+              {variableDisplayMode === "annotated" && "Placeholders show their resolved value alongside the name."}
+              {variableDisplayMode === "resolved" && "Placeholders are replaced by their value, as the model receives it."}
+            </p>
+          </div>
+          <Select
+            value={variableDisplayMode}
+            disabled={!user?.id}
+            onValueChange={(v) => handleVariableDisplayMode(v as VariableDisplayMode)}
+          >
+            <SelectTrigger id="variable-display-mode" className="w-[230px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {/* Each label shows the mode applied to itself, so the list is its
+                  own preview — no need to open the editor to see the difference. */}
+              <SelectItem value="raw">{"{Subject}"}</SelectItem>
+              <SelectItem value="annotated">{"{Subject: a red fox}"}</SelectItem>
+              <SelectItem value="resolved">a red fox</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

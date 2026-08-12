@@ -13,7 +13,7 @@ import type {
   ProviderResult,
   ReconcileOpts,
 } from "../provider.interface.js"
-import { createCloudJob, waitForCloudJob, NodaroCloudError } from "./client.js"
+import { createCloudJob, waitForCloudJob, NodaroCloudError, ensureCloudReachableImageUrls } from "./client.js"
 
 /**
  * The worker handler (workers/handlers/image-ai.ts) hands providers KIE-style
@@ -63,10 +63,11 @@ export class NodaroCloudImageProvider implements ImageGenerationProvider {
     // foreign id — force-failing a job still running on the cloud. Until a
     // dedicated "nodaro" ProviderKind exists, a worker crash mid-poll re-runs
     // the handler from scratch (a second cloud job) — accepted Phase 4a cost.
+    const cloudRefUrls = await ensureCloudReachableImageUrls(referenceImageUrls)
     const body: Record<string, unknown> = {
       prompt,
       ...(model !== undefined ? { provider: model } : {}),
-      ...(referenceImageUrls?.length ? { referenceImageUrls } : {}),
+      ...(cloudRefUrls?.length ? { referenceImageUrls: cloudRefUrls } : {}),
       ...mapExtraParams(extraParams),
     }
 
@@ -80,7 +81,7 @@ export class NodaroCloudImageProvider implements ImageGenerationProvider {
     const url = typeof output.imageUrl === "string" ? output.imageUrl : undefined
     if (!url) {
       throw new NodaroCloudError(
-        `Nodaro Cloud: image job ${jobId} completed but returned no imageUrl`,
+        `nodaro.ai: image job ${jobId} completed but returned no imageUrl`,
       )
     }
     // Multi-variant results land as output_data.imageUrls with the primary at

@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { queryKeys } from "@/lib/query-keys"
 import { getAuthHeaders } from "@/lib/api"
 import type { GenerateTextTemplate } from "@/lib/generate-text-templates"
+import type { VariableDisplayMode } from "@/components/editor/config-panels/types"
+import { DEFAULT_NODE_DOUBLE_CLICK_ACTION, type NodeDoubleClickAction } from "@/lib/node-double-click-action"
 
 interface UserSettings {
   publicOutputs: boolean
@@ -17,6 +19,11 @@ interface UserSettings {
   showRecentNodes: boolean
   /** Editor Add Node menu — show the "Most Used" shortcut category. */
   showMostUsedNodes: boolean
+  /** How {nodeRef} placeholders render in prompt fields. Was a toolbar
+   *  dropdown; now a Settings preference, so it has to survive a reload. */
+  variableDisplayMode: VariableDisplayMode
+  /** What double-clicking a canvas node does. */
+  nodeDoubleClickAction: NodeDoubleClickAction
 }
 
 async function fetchUserSettings(userId: string): Promise<UserSettings> {
@@ -35,6 +42,8 @@ async function fetchUserSettings(userId: string): Promise<UserSettings> {
     preferredLocale: data.preferredLocale ?? null,
     showRecentNodes: data.showRecentNodes ?? false,
     showMostUsedNodes: data.showMostUsedNodes ?? false,
+    variableDisplayMode: data.variableDisplayMode ?? "raw",
+    nodeDoubleClickAction: data.nodeDoubleClickAction ?? DEFAULT_NODE_DOUBLE_CLICK_ACTION,
   }
 }
 
@@ -166,6 +175,82 @@ export function useUpdateNodeMenuPrefsMutation() {
       if (context?.previous !== undefined) {
         qc.setQueryData(context.queryKey, context.previous)
       }
+    },
+    onSettled: (_data, _err, { userId }) => {
+      qc.invalidateQueries({ queryKey: queryKeys.userSettings.detail(userId) })
+    },
+  })
+}
+
+/**
+ * Persist the editor's variable display mode.
+ *
+ * The mode used to be a toolbar dropdown backed by in-memory Zustand state, so
+ * it reset to "raw" on every reload. As a Settings preference it has to stick,
+ * which is what this writes. The editor still READS it from the store — see
+ * `useSyncVariableDisplayMode`, which seeds the store from this query.
+ */
+export function useUpdateVariableDisplayModeMutation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ userId, variableDisplayMode }: { userId: string; variableDisplayMode: VariableDisplayMode }) => {
+      const authHeaders = await getAuthHeaders()
+      const res = await fetch(`/v1/user/settings`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        body: JSON.stringify({ userId, variableDisplayMode }),
+      })
+      if (!res.ok) throw new Error("Failed to update variable display mode")
+      return res.json()
+    },
+    // Optimistic, like the node-menu prefs: the Select and any open editor both
+    // read this query, so the change lands without waiting on the round trip.
+    onMutate: async ({ userId, variableDisplayMode }) => {
+      const queryKey = queryKeys.userSettings.detail(userId)
+      await qc.cancelQueries({ queryKey })
+      const previous = qc.getQueryData<UserSettings>(queryKey)
+      if (previous) qc.setQueryData<UserSettings>(queryKey, { ...previous, variableDisplayMode })
+      return { queryKey, previous }
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous !== undefined) qc.setQueryData(context.queryKey, context.previous)
+    },
+    onSettled: (_data, _err, { userId }) => {
+      qc.invalidateQueries({ queryKey: queryKeys.userSettings.detail(userId) })
+    },
+  })
+}
+
+/**
+ * Persist which action a double-click on a canvas node performs.
+ *
+ * Toggled from the editor toolbar rather than the Settings page — it is a
+ * working preference you flip while editing, not something you go configure.
+ * Optimistic so the toolbar flips instantly and the canvas honours the new
+ * behaviour on the very next double-click.
+ */
+export function useUpdateNodeDoubleClickActionMutation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ userId, nodeDoubleClickAction }: { userId: string; nodeDoubleClickAction: NodeDoubleClickAction }) => {
+      const authHeaders = await getAuthHeaders()
+      const res = await fetch(`/v1/user/settings`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        body: JSON.stringify({ userId, nodeDoubleClickAction }),
+      })
+      if (!res.ok) throw new Error("Failed to update double-click action")
+      return res.json()
+    },
+    onMutate: async ({ userId, nodeDoubleClickAction }) => {
+      const queryKey = queryKeys.userSettings.detail(userId)
+      await qc.cancelQueries({ queryKey })
+      const previous = qc.getQueryData<UserSettings>(queryKey)
+      if (previous) qc.setQueryData<UserSettings>(queryKey, { ...previous, nodeDoubleClickAction })
+      return { queryKey, previous }
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous !== undefined) qc.setQueryData(context.queryKey, context.previous)
     },
     onSettled: (_data, _err, { userId }) => {
       qc.invalidateQueries({ queryKey: queryKeys.userSettings.detail(userId) })

@@ -2,9 +2,10 @@
 
 import { useState, useRef, useCallback, useEffect, Suspense } from "react"
 import { lazyWithRetry as lazy } from "@/lib/lazy-with-retry"
-import { ArrowLeft, Braces, ChevronRight, Save, CheckCircle, Loader2, RefreshCw, Play, Pause, MoreVertical, Download, Upload, Package, FileJson, FileText, ClipboardPaste, PanelRight } from "lucide-react"
+import { ArrowLeft, ChevronRight, Save, CheckCircle, Loader2, RefreshCw, Play, Pause, MoreVertical, Download, Upload, Package, FileJson, FileText, ClipboardPaste } from "lucide-react"
 import { CreditBalance } from "@/ee/components/credits/CreditBalance"
 import { Button } from "@/components/ui/button"
+import { NodeDoubleClickToggle } from "./node-double-click-toggle"
 import { Input } from "@/components/ui/input"
 import {
   DropdownMenu,
@@ -84,10 +85,6 @@ interface ExportedWorkflow {
 export function EditorToolbar({ projectId, onSave, saving, onNavigate, activeTab = "editor", onTabChange }: EditorToolbarProps) {
   const workflowName = useWorkflowStore((s) => s.workflowName)
   const setWorkflowName = useWorkflowStore((s) => s.setWorkflowName)
-  // Subscribe to a primitive (whether any connections exist) rather than the
-  // whole edges array — this component only needs the boolean for the variable-
-  // display-mode toggle, so it shouldn't re-render on every edge mutation.
-  const hasConnections = useWorkflowStore((s) => s.edges.length > 0)
   const isDirty = useWorkflowStore((s) => s.isDirty)
   const isReadOnly = useWorkflowStore((s) => s.isReadOnly)
   const saveStatus = useWorkflowStore((s) => s.saveStatus)
@@ -104,8 +101,6 @@ export function EditorToolbar({ projectId, onSave, saving, onNavigate, activeTab
   const focusedNodeId = useWorkflowStore((s) => s.focusedNodeId)
   const selectedNodeId = useWorkflowStore((s) => s.selectedNodeId)
   const selectNode = useWorkflowStore((s) => s.selectNode)
-  const variableDisplayMode = useWorkflowStore((s) => s.variableDisplayMode)
-  const setVariableDisplayMode = useWorkflowStore((s) => s.setVariableDisplayMode)
   const [flowTemplatesOpen, setFlowTemplatesOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [importing, setImporting] = useState(false)
@@ -617,59 +612,17 @@ export function EditorToolbar({ projectId, onSave, saving, onNavigate, activeTab
           )
         })()}
 
-        {(() => {
-          return hasConnections ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  title="Variable display mode"
-                  className={variableDisplayMode !== "raw" ? "text-white hover:opacity-90" : ""}
-                  style={variableDisplayMode !== "raw" ? { backgroundColor: '#38BDF8', borderColor: '#38BDF8' } : undefined}
-                >
-                  <Braces className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setVariableDisplayMode("raw")}>
-                  <span className={variableDisplayMode === "raw" ? "font-bold" : ""}>
-                    {"{x}"} Raw
-                  </span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setVariableDisplayMode("annotated")}>
-                  <span className={variableDisplayMode === "annotated" ? "font-bold" : ""}>
-                    {"{x: v}"} Annotated
-                  </span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setVariableDisplayMode("resolved")}>
-                  <span className={variableDisplayMode === "resolved" ? "font-bold" : ""}>
-                    v Resolved
-                  </span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : null
-        })()}
+        {/* The `{}` variable-display dropdown used to sit here. It is a
+            preference, not a per-session action, so it moved to
+            Settings → Editor. The mode itself is unchanged — every prompt field
+            still reads it from the workflow store. */}
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            if (selectedNodeId) {
-              selectNode(null)
-            } else if (focusedNodeId) {
-              selectNode(focusedNodeId)
-            }
-          }}
-          aria-label={selectedNodeId ? "Close settings panel" : "Open settings panel"}
-          title={selectedNodeId ? "Close settings panel" : focusedNodeId ? "Open settings for selected node" : "Click a node first to open its settings"}
-          className={selectedNodeId ? "text-white hover:opacity-90" : ""}
-          style={selectedNodeId ? { backgroundColor: '#ff0073', borderColor: '#ff0073' } : undefined}
-          disabled={!focusedNodeId && !selectedNodeId}
-        >
-          <PanelRight className="h-4 w-4" />
-        </Button>
+        {/* Was a momentary "open the settings panel for the focused node".
+            That role moved onto the nodes themselves — each one carries a
+            settings control in its run strip — so this slot now owns the CHOICE
+            of what a double-click does, and is never disabled: it sets a
+            preference rather than acting on a selection. */}
+        <NodeDoubleClickToggle />
 
         <Button
           variant="outline"

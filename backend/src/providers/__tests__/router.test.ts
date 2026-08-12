@@ -22,6 +22,13 @@ import type { ProviderUsed, RoutingDecision } from "../config.js"
 // Mocks — must be hoisted, since vi.mock() runs before imports.
 // ---------------------------------------------------------------------------
 
+// Self-heal probe must be deterministic and instant in tests — never a real
+// DB read (it hung the no-provider-supports-the-model case for 5s+).
+vi.mock("../nodaro/index.js", () => ({
+  NODARO_PROVIDER_ID: "nodaro",
+  registerNodaroCloudProviderIfConnected: vi.fn(async () => false),
+}))
+
 const { configMocks, registryMocks } = vi.hoisted(() => {
   const configMocks = {
     buildRoutingDecision: vi.fn<

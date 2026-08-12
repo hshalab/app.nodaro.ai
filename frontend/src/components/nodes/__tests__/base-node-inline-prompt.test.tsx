@@ -32,7 +32,10 @@ vi.mock("@/hooks/use-alt-key", () => ({
 vi.mock("@/components/editor/workflow-editor/use-node-insert-animation", () => ({
   useNodeInsertAnimation: () => undefined,
 }))
-vi.mock("lucide-react", () => ({ MoreHorizontal: (p: any) => <span {...p} /> }))
+vi.mock("lucide-react", () => {
+  const I = (p: any) => <span {...p} />
+  return { MoreHorizontal: I, SlidersHorizontal: I }
+})
 
 // Stub the heavy TipTap editor. This suite asserts BaseNode's DECISION to mount
 // the inline editor (the `showInline` gate), not the editor's internals — those

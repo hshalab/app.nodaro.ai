@@ -32,7 +32,7 @@ export const NODARO_PROVIDER_ID = "nodaro"
 
 const nodaroInfo: ProviderInfo = {
   id: NODARO_PROVIDER_ID,
-  name: "Nodaro Cloud",
+  name: "nodaro.ai",
   capabilities: ["image-generation", "image-to-video", "text-to-video"],
   supportedModels: {
     "image-generation": Object.keys(KIE_IMAGE_MODELS),

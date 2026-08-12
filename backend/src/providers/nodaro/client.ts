@@ -12,7 +12,7 @@
  * message, so the instance user sees the real reason a run failed.
  */
 
-import { nodaroCloudFetch } from "../../lib/nodaro-connect.js"
+import { nodaroCloudFetch, getNodaroConnection, nodaroCloudBase } from "../../lib/nodaro-connect.js"
 import type { ProgressCallback } from "../provider.interface.js"
 
 /** Poll every 2s for the first few attempts, then 4s (spec: 2-4s interval). */
@@ -72,12 +72,12 @@ function cloudError(
 ): NodaroCloudError {
   const fallback =
     status === 402
-      ? "Insufficient Nodaro Cloud credits — top up or upgrade your connected account."
+      ? "Insufficient nodaro.ai credits — top up or upgrade your connected account."
       : status === 401 || status === 403
-        ? "The Nodaro Cloud connection was rejected — it may have been revoked. Reconnect from Integrations."
+        ? "The nodaro.ai connection was rejected — it may have been revoked. Reconnect from Integrations."
         : `${operation} failed (${status})`
   const message = err?.message?.trim() ? err.message : fallback
-  return new NodaroCloudError(`Nodaro Cloud: ${message}`, status, err?.code)
+  return new NodaroCloudError(`nodaro.ai: ${message}`, status, err?.code)
 }
 
 function sleep(ms: number): Promise<void> {
@@ -104,7 +104,7 @@ export async function createCloudJob(
   const jobId = typeof json?.jobId === "string" ? json.jobId : undefined
   if (!jobId) {
     throw new NodaroCloudError(
-      `Nodaro Cloud: POST ${path} succeeded but returned no jobId`,
+      `nodaro.ai: POST ${path} succeeded but returned no jobId`,
       res.status,
     )
   }
@@ -158,7 +158,7 @@ export async function waitForCloudJob(
       if (transientFailures > MAX_TRANSIENT_POLL_FAILURES) {
         const message = err instanceof Error ? err.message : String(err)
         throw new NodaroCloudError(
-          `Nodaro Cloud: polling job ${jobId} failed repeatedly (${message})`,
+          `nodaro.ai: polling job ${jobId} failed repeatedly (${message})`,
         )
       }
       continue
@@ -168,7 +168,7 @@ export async function waitForCloudJob(
       transientFailures += 1
       if (transientFailures > MAX_TRANSIENT_POLL_FAILURES) {
         throw new NodaroCloudError(
-          `Nodaro Cloud: job ${jobId} poll returned no data repeatedly`,
+          `nodaro.ai: job ${jobId} poll returned no data repeatedly`,
         )
       }
       continue
@@ -188,15 +188,101 @@ export async function waitForCloudJob(
     if (job.status === "completed") return job
     if (job.status === "cancelled") {
       throw new NodaroCloudError(
-        `Nodaro Cloud: generation was cancelled on the cloud (job ${jobId})`,
+        `nodaro.ai: generation was cancelled on the cloud (job ${jobId})`,
       )
     }
     throw new NodaroCloudError(
-      `Nodaro Cloud: ${job.error_message?.trim() ? job.error_message : `generation failed (job ${jobId})`}`,
+      `nodaro.ai: ${job.error_message?.trim() ? job.error_message : `generation failed (job ${jobId})`}`,
     )
   }
 
   throw new NodaroCloudError(
-    `Nodaro Cloud: job ${jobId} did not finish within ${Math.round(POLL_BUDGET_MS / 60_000)} minutes`,
+    `nodaro.ai: job ${jobId} did not finish within ${Math.round(POLL_BUDGET_MS / 60_000)} minutes`,
   )
+}
+
+
+// ─── Instance→cloud media handoff ─────────────────────────────────
+//
+// Local artifacts live in the instance's own storage (MinIO / self-host R2),
+// often on localhost or a private network the cloud cannot and will not fetch
+// (its safe-fetch guard rejects private hosts — the exact error the founder
+// hit live: "imageUrl: URL must use http(s) and must not point to localhost
+// or private networks"). Any media INPUT the instance sends to a cloud job is
+// therefore re-hosted first: read the bytes locally, push them through the
+// cloud's public upload route with the instance token, pass the returned
+// public URL.
+
+function isCloudUnreachableUrl(url: string): boolean {
+  try {
+    const u = new URL(url)
+    if (u.protocol !== "http:" && u.protocol !== "https:") return true
+    const host = u.hostname
+    return (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "::1" ||
+      host === "host.docker.internal" ||
+      /^10\./.test(host) ||
+      /^192\.168\./.test(host) ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(host) ||
+      host.endsWith(".local") ||
+      !host.includes(".")
+    )
+  } catch {
+    return true
+  }
+}
+
+const MIME_TO_UPLOAD_NAME: Record<string, string> = {
+  "image/png": "frame.png",
+  "image/jpeg": "frame.jpg",
+  "image/webp": "frame.webp",
+  "image/avif": "frame.avif",
+}
+
+/** Pass public URLs through untouched; re-host instance-local ones. */
+export async function ensureCloudReachableImageUrl(url: string): Promise<string>
+export async function ensureCloudReachableImageUrl(url: string | undefined): Promise<string | undefined>
+export async function ensureCloudReachableImageUrl(url: string | undefined): Promise<string | undefined> {
+  if (!url || !isCloudUnreachableUrl(url)) return url
+
+  // Plain fetch on purpose: the URL is the instance's OWN storage (often a
+  // private host), which the safe-fetch guard would reject by design.
+  const local = await fetch(url)
+  if (!local.ok) {
+    throw new NodaroCloudError(
+      `nodaro.ai: failed to read local media for cloud upload (${local.status})`,
+    )
+  }
+  const buffer = Buffer.from(await local.arrayBuffer())
+  const mime = local.headers.get("content-type")?.split(";")[0] ?? "image/png"
+
+  const conn = await getNodaroConnection()
+  if (!conn?.accessToken) {
+    throw new NodaroCloudError("nodaro.ai is not connected")
+  }
+  const form = new FormData()
+  form.append("file", new Blob([buffer], { type: mime }), MIME_TO_UPLOAD_NAME[mime] ?? "frame.png")
+  const res = await fetch(`${nodaroCloudBase()}/v1/upload/image`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${conn.accessToken}` },
+    body: form,
+  })
+  if (!res.ok) {
+    throw new NodaroCloudError(`nodaro.ai: media upload failed (${res.status})`, res.status)
+  }
+  const json = (await res.json().catch(() => null)) as { url?: string } | null
+  if (!json?.url) {
+    throw new NodaroCloudError("nodaro.ai: media upload returned no url")
+  }
+  return json.url
+}
+
+/** Array form of ensureCloudReachableImageUrl (order preserved). */
+export async function ensureCloudReachableImageUrls(
+  urls: string[] | undefined,
+): Promise<string[] | undefined> {
+  if (!urls?.length) return urls
+  return Promise.all(urls.map((u) => ensureCloudReachableImageUrl(u)))
 }

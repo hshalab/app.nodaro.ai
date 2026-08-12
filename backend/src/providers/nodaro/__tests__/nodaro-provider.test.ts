@@ -147,14 +147,14 @@ describe("NodaroCloudImageProvider", () => {
     )
     await expect(
       new NodaroCloudImageProvider().generateImage("a cat", undefined, "nano-banana"),
-    ).rejects.toThrow("Nodaro Cloud: Insufficient credits. Need 10, have 2.")
+    ).rejects.toThrow("nodaro.ai: Insufficient credits. Need 10, have 2.")
   })
 
   it("relays the cloud's 403 message and falls back to the revoked hint when absent", async () => {
     queueResponses(jsonResponse(403, { error: { code: "forbidden", message: "Token revoked" } }))
     await expect(
       new NodaroCloudImageProvider().generateImage("a cat", undefined, "nano-banana"),
-    ).rejects.toThrow("Nodaro Cloud: Token revoked")
+    ).rejects.toThrow("nodaro.ai: Token revoked")
 
     queueResponses(jsonResponse(403, {}))
     await expect(
@@ -166,7 +166,7 @@ describe("NodaroCloudImageProvider", () => {
     queueResponses(jsonResponse(500, null))
     await expect(
       new NodaroCloudImageProvider().generateImage("a cat", undefined, "nano-banana"),
-    ).rejects.toThrow("Nodaro Cloud: POST /v1/generate-image failed (500)")
+    ).rejects.toThrow("nodaro.ai: POST /v1/generate-image failed (500)")
   })
 
   it("throws the cloud's error_message when the job fails", async () => {
@@ -178,7 +178,7 @@ describe("NodaroCloudImageProvider", () => {
     )
     await expect(
       new NodaroCloudImageProvider().generateImage("a cat", undefined, "nano-banana"),
-    ).rejects.toThrow("Nodaro Cloud: Provider rejected the prompt")
+    ).rejects.toThrow("nodaro.ai: Provider rejected the prompt")
   })
 
   it("keeps polling through non-terminal statuses (fake timers)", async () => {

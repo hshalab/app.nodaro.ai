@@ -36,7 +36,11 @@ export async function getNodaroConnection(): Promise<NodaroConnection | null> {
     .select("value")
     .eq("key", NODARO_CONNECT_SETTINGS_KEY)
     .maybeSingle()
-  if (error || !data?.value) return null
+  if (error) {
+    console.error("[nodaro-connect] connection read failed:", error.message)
+    return null
+  }
+  if (!data?.value) return null
   const value = typeof data.value === "string" ? safeParse(data.value) : data.value
   if (!value || typeof value !== "object") return null
   const conn = value as NodaroConnection
@@ -68,7 +72,7 @@ export async function isNodaroConnected(): Promise<boolean> {
 export async function nodaroCloudFetch(path: string, init?: RequestInit): Promise<Response> {
   const conn = await getNodaroConnection()
   if (!conn?.accessToken) {
-    throw new Error("Nodaro Cloud is not connected")
+    throw new Error("nodaro.ai is not connected")
   }
   return fetch(`${nodaroCloudBase()}${path}`, {
     ...init,

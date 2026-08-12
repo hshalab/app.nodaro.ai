@@ -731,7 +731,7 @@ export function registerVideoVerbs({ server, session, fastify }: RegisterOpts): 
           .boolean()
           .optional()
           .describe(
-            "PSNR-match the last frames of each clip against the first frames of the next and cut where the chosen smart_cut_mode decides — seamless for continuation clips (next generated from prev's last frame). Replaces the fixed trim_* frame counts. Nodaro Cloud only (self-hosted editions return cloud_only_feature).",
+            "PSNR-match the last frames of each clip against the first frames of the next and cut where the chosen smart_cut_mode decides — seamless for continuation clips (next generated from prev's last frame). Replaces the fixed trim_* frame counts. nodaro.ai only (self-hosted editions return cloud_only_feature).",
           ),
         smart_cut_mode: z.enum(["best-pair", "preroll-keep-prev", "preroll-keep-next"]).optional()
           .describe(

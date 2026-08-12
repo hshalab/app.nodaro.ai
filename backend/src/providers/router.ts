@@ -40,6 +40,10 @@ import {
   type ProviderUsed,
   type RoutingDecision,
 } from "./config.js"
+import {
+  registerNodaroCloudProviderIfConnected,
+  NODARO_PROVIDER_ID,
+} from "./nodaro/index.js"
 
 // ─── Result type ──────────────────────────────────────────────────
 
@@ -73,13 +77,44 @@ export interface RouteResult {
  * @param executor     callback that receives the provider instance and
  *                     returns a ProviderResult
  */
+/** Self-healing late registration of the cloud connection (community).
+ *
+ *  The boot-time gate misses two real cases (both hit live, 2026-08-15):
+ *  connect-AFTER-boot (the operator connects and generates immediately — no
+ *  restart), and a transient DB/proxy race at worker boot that silently
+ *  resolved "not connected". When routing finds no provider, try once to
+ *  (re)register the connection and re-route. Cheap: skipped when already
+ *  registered, rate-limited to one probe per 10s per process. */
+let lastNodaroSelfHealAt = 0
+
+async function selfHealNodaroRegistration(): Promise<boolean> {
+  if (providerRegistry.getProvider(NODARO_PROVIDER_ID)) return false
+  const now = Date.now()
+  if (now - lastNodaroSelfHealAt < 10_000) return false
+  lastNodaroSelfHealAt = now
+  try {
+    // Bounded probe: a hung DB read must not stall a failing route.
+    const registered = await Promise.race([
+      registerNodaroCloudProviderIfConnected(),
+      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 3_000)),
+    ])
+    if (registered) {
+      console.log("[router] nodaro.ai connection registered late (self-heal)")
+    }
+    return registered
+  } catch (err) {
+    console.error("[router] nodaro.ai self-heal registration failed:", err)
+    return false
+  }
+}
+
 async function routeAndExecute(
   capability: ProviderCapability,
   model: string,
   operation: string,
   executor: (provider: unknown) => Promise<ProviderResult>
 ): Promise<RouteResult> {
-  const decision = await buildRoutingDecision(capability, model)
+  let decision = await buildRoutingDecision(capability, model)
 
   if (decision.providerChain.length === 0) {
     throw new Error(
@@ -87,6 +122,29 @@ async function routeAndExecute(
         `in current mode (ai_provider=${decision.activeProvider})`
     )
   }
+
+  let result = await walkChainAndExecute(capability, model, operation, executor, decision)
+  if (result === null && (await selfHealNodaroRegistration())) {
+    // The chain may now include the cloud connection — rebuild and re-walk.
+    decision = await buildRoutingDecision(capability, model)
+    result = await walkChainAndExecute(capability, model, operation, executor, decision)
+  }
+  if (result === null) {
+    throw new Error(
+      `Model "${model}" is not supported for ${capability} by any registered provider`
+    )
+  }
+  return result
+}
+
+async function walkChainAndExecute(
+  capability: ProviderCapability,
+  model: string,
+  operation: string,
+  executor: (provider: unknown) => Promise<ProviderResult>,
+  decision: RoutingDecision
+): Promise<RouteResult | null> {
+
 
   // Walk chain: first provider that supports this model wins
   for (const providerId of decision.providerChain) {
@@ -132,9 +190,7 @@ async function routeAndExecute(
   }
 
   // No provider in the chain supports this model
-  throw new Error(
-    `Model "${model}" is not supported for ${capability} by any registered provider`
-  )
+  return null
 }
 
 // ─── Convenience wrappers (typed) ─────────────────────────────────

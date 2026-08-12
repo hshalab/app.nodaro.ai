@@ -8,6 +8,7 @@ import { cancelJob, stopGenerateVideoPro } from "@/lib/api"
 import { useWorkflowStore } from "@/hooks/use-workflow-store"
 import { abortNodeRun } from "@/lib/node-run-abort"
 import { RUN_BUTTON_CLASS } from "@/lib/run-button-style"
+import { NodeSettingsButton } from "./node-settings-button"
 import { shouldConfirmDiscard, suppressDiscardConfirm } from "@/lib/run-confirm-pref"
 import { getListInputForNode } from "@/components/editor/workflow-editor/node-input-resolver"
 import { REPEATABLE_NODE_TYPES, getEffectiveRepeatCount } from "@nodaro/shared"
@@ -211,6 +212,7 @@ export function RunNodeButton({ nodeId, credits, isRunning, onRun, runFromHere }
     // directly. `e.stopPropagation()` keeps clicks from selecting the node.
     return (
       <>
+        <NodeSettingsButton nodeId={nodeId} />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
@@ -253,6 +255,8 @@ export function RunNodeButton({ nodeId, credits, isRunning, onRun, runFromHere }
   const label = runFromHere ? "Run from here" : "Run"
 
   return (
+    <>
+    <NodeSettingsButton nodeId={nodeId} />
     <button
       type="button"
       className={`flex items-center gap-1 h-6 px-2.5 text-[11px] font-medium rounded-md whitespace-nowrap ${RUN_BUTTON_CLASS}`}
@@ -266,5 +270,6 @@ export function RunNodeButton({ nodeId, credits, isRunning, onRun, runFromHere }
         </span>
       )}
     </button>
+    </>
   )
 }
