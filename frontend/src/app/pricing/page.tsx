@@ -11,9 +11,11 @@ import {
   getAnnualSavingsDollars,
   type BillingCycle,
 } from "@/lib/pricing-data"
-import { startCheckout } from "@/lib/checkout"
+import { startCheckout, startLoadCheckout } from "@/lib/checkout"
 import { toast } from "sonner"
 import { useSubscription, useChangePlanMutation } from "@/ee/hooks/queries/use-billing-queries"
+import { useUserCredits } from "@/ee/hooks/queries/use-credits-queries"
+import { TopupSection } from "./topup-section"
 
 export default function PricingPage() {
   const { user, loading: authLoading } = useAuth()
@@ -25,6 +27,22 @@ export default function PricingPage() {
 
   const { data: subscription, isLoading: subLoading } = useSubscription(user?.id)
   const changePlanMutation = useChangePlanMutation()
+  const { data: creditBalance } = useUserCredits(user?.id)
+  const [loadingTopup, setLoadingTopup] = useState(false)
+
+  async function handleLoadCredits(amountUsd: number) {
+    if (!user) {
+      navigate("/login?redirect=/pricing")
+      return
+    }
+    setLoadingTopup(true)
+    try {
+      await startLoadCheckout(amountUsd)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to open checkout")
+      setLoadingTopup(false)
+    }
+  }
 
   // Derive current tier from active subscription
   const isActiveSub = subscription &&
@@ -235,31 +253,17 @@ export default function PricingPage() {
           })}
         </div>
 
-        {/* API / Pay-as-you-go */}
-        <div className="mt-16 mx-auto max-w-3xl rounded-xl border border-zinc-200 dark:border-zinc-800 p-8 text-center">
-          <h2 className="text-2xl font-bold">API / Pay-as-you-go</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            No subscription required. Load any amount of credits and build with
-            the API, SDK, CLI, and MCP — on your own terms.
-          </p>
-          <ul className="mt-6 grid gap-2 text-sm text-left mx-auto max-w-md">
-            <li>✓ Credits never expire</li>
-            <li>✓ All models unlocked from your first load — no watermark, no daily cap</li>
-            <li>✓ Load any whole-dollar amount ($5–$1,000); bigger loads earn a better rate</li>
-            <li>✓ Outputs are public — private mode is a subscription feature (Standard and up)</li>
-          </ul>
-          <p className="mt-4 text-xs text-muted-foreground">
-            Credits without an active subscription are redeemable through the
-            developer surfaces (API, SDK, CLI, MCP). The web studio is included
-            with every subscription above.
-          </p>
-          <Link
-            to="/billing"
-            className="mt-6 inline-block rounded-md bg-[#ff0073] px-6 py-2 text-sm font-medium text-white"
-          >
-            Load credits
-          </Link>
-        </div>
+        {/* API / Pay-as-you-go — designer mock 2026-08-12 (sister folder Pricing/) */}
+        <TopupSection
+          topupBalance={user ? creditBalance?.topup : undefined}
+          loading={loadingTopup}
+          onLoad={handleLoadCredits}
+        />
+        <p className="mt-4 text-center text-xs text-muted-foreground">
+          Credits without an active subscription are redeemable through the
+          developer surfaces (API, SDK, CLI, MCP). The web studio is included
+          with every subscription above.
+        </p>
 
         {/* FAQ / Extra info */}
         <div className="mt-16 text-center">
