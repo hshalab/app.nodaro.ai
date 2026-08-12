@@ -277,6 +277,9 @@ export async function billingRoutes(app: FastifyInstance) {
           },
         ],
         metadata: { userId, kind: "load", loadUsd: String(amountUsd) },
+        // Save the card for off-session auto-recharge (design §5.1) — the
+        // ONLY extra field; grant sizing never reads PI metadata from here.
+        payment_intent_data: { setup_future_usage: "off_session" },
         success_url: successUrl,
         cancel_url: cancelUrl,
       })
@@ -286,6 +289,92 @@ export async function billingRoutes(app: FastifyInstance) {
       console.error("[billing] Failed to create load session:", (err as Error).message)
       return reply.status(500).send({ error: "Failed to create load session" })
     }
+  })
+
+  // Auto-recharge configuration — "when balance < X credits, load $Y".
+  // JWT-only like every billing surface. The columns are RLS-guarded against
+  // client writes; this service-role route is the ONLY writer.
+  app.get("/v1/billing/auto-recharge", async (req, reply) => {
+    const userId = req.userId
+    if (!userId) return reply.status(401).send({ error: "Authentication required" })
+    if (rejectProgrammaticAuth(req, reply, BILLING_JWT_ONLY_MSG)) return
+
+    const { data: p } = await supabase
+      .from("profiles")
+      .select(
+        "auto_recharge_enabled, auto_recharge_threshold_credits, auto_recharge_amount_usd, auto_recharge_failure_count, auto_recharge_last_attempt_at"
+      )
+      .eq("id", userId)
+      .single()
+    if (!p) return reply.status(404).send({ error: "Profile not found" })
+
+    // Saved-card presence drives the needs_setup UI state.
+    let hasSavedCard = false
+    try {
+      const { data: cust } = await supabase
+        .from("stripe_customers")
+        .select("stripe_customer_id")
+        .eq("user_id", userId)
+        .maybeSingle()
+      const custId = cust?.stripe_customer_id
+      if (custId) {
+        const pms = await getStripe().paymentMethods.list({ customer: custId, type: "card", limit: 1 })
+        hasSavedCard = pms.data.length > 0
+      }
+    } catch {
+      // Card lookup is best-effort — the config itself still loads.
+    }
+
+    return reply.send({
+      data: {
+        enabled: p.auto_recharge_enabled ?? false,
+        thresholdCredits: p.auto_recharge_threshold_credits ?? null,
+        amountUsd: p.auto_recharge_amount_usd ?? null,
+        failureCount: p.auto_recharge_failure_count ?? 0,
+        lastAttemptAt: p.auto_recharge_last_attempt_at ?? null,
+        hasSavedCard,
+      },
+    })
+  })
+
+  app.put("/v1/billing/auto-recharge", async (req, reply) => {
+    const userId = req.userId
+    if (!userId) return reply.status(401).send({ error: "Authentication required" })
+    if (rejectProgrammaticAuth(req, reply, BILLING_JWT_ONLY_MSG)) return
+
+    const parsed = z
+      .object({
+        enabled: z.boolean(),
+        thresholdCredits: z.number().int().min(100).max(100000).optional(),
+        amountUsd: z.number().int().min(MIN_LOAD_USD).max(MAX_LOAD_USD).optional(),
+      })
+      .safeParse(req.body)
+    if (!parsed.success) {
+      return reply.status(400).send({
+        error: parsed.error.issues[0]?.message ?? "Invalid auto-recharge config",
+      })
+    }
+    const { enabled, thresholdCredits, amountUsd } = parsed.data
+    if (enabled && (!thresholdCredits || !amountUsd)) {
+      return reply.status(400).send({ error: "Enabling requires thresholdCredits and amountUsd" })
+    }
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        auto_recharge_enabled: enabled,
+        ...(thresholdCredits !== undefined ? { auto_recharge_threshold_credits: thresholdCredits } : {}),
+        ...(amountUsd !== undefined ? { auto_recharge_amount_usd: amountUsd } : {}),
+        // A deliberate config change is the user vouching for their card
+        // again — clear the failure streak so re-enabling actually works.
+        auto_recharge_failure_count: 0,
+      })
+      .eq("id", userId)
+    if (error) {
+      console.error("[billing] auto-recharge config update failed:", error.message)
+      return reply.status(500).send({ error: "Failed to update auto-recharge settings" })
+    }
+    return reply.send({ data: { enabled, thresholdCredits: thresholdCredits ?? null, amountUsd: amountUsd ?? null } })
   })
 
   // Create a Stripe Customer Portal session for subscription management

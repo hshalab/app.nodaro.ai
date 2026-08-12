@@ -17,6 +17,8 @@ import {
   handleSubscriptionCanceled,
   handleTransactionCompleted,
   handleTopupClawback,
+  handleAutoRechargeSucceeded,
+  handleAutoRechargeFailed,
   handleInvoicePaid,
   resolveUserId,
 } from "../billing/provision-credits.js"
@@ -197,6 +199,29 @@ export async function stripeWebhookRoutes(app: FastifyInstance) {
             paymentIntentId: (dispute.payment_intent as string) ?? null,
             refunds: [{ refundId: dispute.id, amountCents: dispute.amount ?? 0 }],
           })
+          break
+        }
+
+        case "payment_intent.succeeded": {
+          // Auto-recharge grants ONLY (kind gate) — checkout-created PIs are
+          // granted by checkout.session.completed; entering here would
+          // double-grant (regression-tested).
+          const pi = event.data.object as Stripe.PaymentIntent
+          if (pi.metadata?.kind === "auto_recharge") {
+            await handleAutoRechargeSucceeded({
+              piId: pi.id,
+              userId: pi.metadata.userId ?? null,
+              amountReceivedCents: pi.amount_received ?? 0,
+            })
+          }
+          break
+        }
+
+        case "payment_intent.payment_failed": {
+          const pi = event.data.object as Stripe.PaymentIntent
+          if (pi.metadata?.kind === "auto_recharge") {
+            await handleAutoRechargeFailed({ userId: pi.metadata.userId ?? null })
+          }
           break
         }
 

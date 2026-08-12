@@ -21,6 +21,7 @@ import { hasCredits } from "@/lib/edition"
 import { useUserCredits } from "@/ee/hooks/queries/use-credits-queries"
 import { useSubscription, useTransactions, useStorageProfile, useManageSubscriptionMutation } from "@/ee/hooks/queries/use-billing-queries"
 import { CreditTopup } from "@/ee/components/credits/CreditTopup"
+import { AutoRechargeCard } from "@/ee/components/credits/AutoRechargeCard"
 import { getScheduledCancelDate } from "@/ee/lib/subscription"
 import { PRICING_TIERS, FREE_TIER_CREDITS, getBillingCycleFromPriceId } from "@/lib/pricing-data"
 import { toast } from "sonner"
@@ -351,6 +352,7 @@ export default function BillingPage() {
         <Separator />
 
         {user && <CreditTopup />}
+        {user && <AutoRechargeCard />}
       </section>
 
       {/* App Earnings */}

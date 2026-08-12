@@ -98,6 +98,13 @@ const envSchema = z.object({
   /** Master feature flag for the MCP server. Default false; set to true once v1.2 ships.
    *  Strict parsing: only "true" or "1" are truthy; anything else (incl. "false", "0", "", or unset) is false.
    *  z.coerce.boolean() would be wrong here — Boolean("false") === true, so MCP_ENABLED=false would silently enable. */
+  /** Auto-recharge kill switch (design 2026-07-05 §5.2 step 5). Default OFF;
+   *  guards the trigger+charge path only — webhook provisioning stays on so
+   *  in-flight PaymentIntents settle. Strict parsing like MCP_ENABLED. */
+  AUTO_RECHARGE_ENABLED: z
+    .string()
+    .optional()
+    .transform((v) => v === "true" || v === "1"),
   MCP_ENABLED: z
     .string()
     .optional()

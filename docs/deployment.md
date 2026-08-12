@@ -562,6 +562,7 @@ If you're still stuck, file an issue with the Docker logs at
 The MCP (Model Context Protocol) server lets Claude.ai, Cursor, Cline,
 Continue.dev, Goose, and any MCP-compatible client drive Nodaro tools on
 a user's behalf via OAuth. It is gated behind `MCP_ENABLED` (default
+a user's behalf via OAuth. It is gated behind `AUTO_RECHARGE_ENABLED` (default — enables the auto-recharge trigger/charge path (webhook provisioning always on). Default `false`.
 `false`) and lives at the `mcp.nodaro.ai/mcp` subdomain.
 
 **To enable on a hosted instance:**

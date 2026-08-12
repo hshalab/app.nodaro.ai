@@ -1,4 +1,5 @@
 import { supabase } from "../../lib/supabase.js"
+import { attemptAutoRecharge } from "./auto-recharge.js"
 import { hasCredits } from "../../lib/config.js"
 import { getAppSettings } from "../../lib/app-settings.js"
 import { FREE_TIER_RESTRICTIONS, TIER_STORAGE_LIMITS } from "./stripe-config.js"
@@ -1927,7 +1928,7 @@ export class CreditsService {
     modelIdentifier: string,
     providerCostUsd: number,
     displayCostUsd: number,
-    options?: { watermarkOverride?: boolean; isAppRun?: boolean; creditOverride?: number },
+    options?: { watermarkOverride?: boolean; isAppRun?: boolean; creditOverride?: number; skipAutoRecharge?: boolean },
   ): Promise<ReserveResult> {
     // Self-hosted: skip reservation
     if (creditsDisabled()) {
@@ -2048,6 +2049,12 @@ export class CreditsService {
       balanceAfter,
     })
 
+    // Successful reserve = the only place balances DECREASE — fire the
+    // auto-recharge check (best-effort, never blocks). Third-party-app
+    // attributed operations are excluded via skipAutoRecharge.
+    if (!options?.skipAutoRecharge) {
+      void attemptAutoRecharge(userId)
+    }
     return { usageLogId: usageLogId as string, creditsReserved: pricing.creditCost, watermark }
   }
 

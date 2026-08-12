@@ -287,6 +287,12 @@ watermarked, and there is no daily spending cap. Credits never expire.
 Subscriptions remain available and always include a lower per-credit
 rate at sustained volume.
 
+**Auto-recharge** (optional): in Billing you can set "when my balance drops
+below X credits, load $Y" — the amount is charged off-session to your saved
+card (any manual load saves it) at the same rate as manual loads. Three
+failed charges disable auto-recharge until you re-enable it. Rollout-gated:
+availability may lag this document.
+
 Two behaviors to know:
 
 - **Outputs are public by default.** Private mode is a subscription

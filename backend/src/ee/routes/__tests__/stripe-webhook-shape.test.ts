@@ -50,6 +50,8 @@ const STRIPE_HANDLED_EVENTS: readonly string[] = [
   "invoice.payment_failed",
   "charge.refunded",
   "charge.dispute.funds_withdrawn",
+  "payment_intent.succeeded",
+  "payment_intent.payment_failed",
 ] as const
 
 /**
@@ -62,6 +64,34 @@ const STRIPE_HANDLED_EVENTS: readonly string[] = [
  * matching schema below to match.
  */
 const STRIPE_EVENT_SHAPES: Record<string, z.ZodType> = {
+  // case "payment_intent.succeeded" / "payment_intent.payment_failed":
+  //   reads: pi.id, pi.metadata.kind/userId, pi.amount_received
+  "payment_intent.succeeded": z
+    .object({
+      data: z.object({
+        object: z
+          .object({
+            id: z.string(),
+            amount_received: z.number().optional(),
+            metadata: z.record(z.string(), z.string()).nullable().optional(),
+          })
+          .passthrough(),
+      }),
+    })
+    .passthrough(),
+  "payment_intent.payment_failed": z
+    .object({
+      data: z.object({
+        object: z
+          .object({
+            id: z.string(),
+            metadata: z.record(z.string(), z.string()).nullable().optional(),
+          })
+          .passthrough(),
+      }),
+    })
+    .passthrough(),
+
   // case "charge.refunded":
   //   reads: charge.payment_intent, charge.refunds.data[].id/.amount
   "charge.refunded": z
@@ -257,6 +287,26 @@ const STRIPE_EVENT_SHAPES: Record<string, z.ZodType> = {
  * surface fast.
  */
 const STRIPE_FIXTURES: Record<string, unknown> = {
+  "payment_intent.succeeded": {
+    type: "payment_intent.succeeded",
+    data: {
+      object: {
+        id: "pi_ar_test",
+        amount_received: 5000,
+        metadata: { kind: "auto_recharge", userId: "user-uuid", loadUsd: "50" },
+      },
+    },
+  },
+  "payment_intent.payment_failed": {
+    type: "payment_intent.payment_failed",
+    data: {
+      object: {
+        id: "pi_ar_fail",
+        metadata: { kind: "auto_recharge", userId: "user-uuid" },
+      },
+    },
+  },
+
   "charge.refunded": {
     type: "charge.refunded",
     data: {

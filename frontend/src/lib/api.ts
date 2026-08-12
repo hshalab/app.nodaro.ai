@@ -5564,6 +5564,39 @@ export async function createLoadSession(params: {
   return (json as { data: { url: string; credits: number } }).data
 }
 
+export interface AutoRechargeConfig {
+  enabled: boolean
+  thresholdCredits: number | null
+  amountUsd: number | null
+  failureCount: number
+  lastAttemptAt: string | null
+  hasSavedCard: boolean
+}
+
+export async function getAutoRecharge(): Promise<AutoRechargeConfig> {
+  const res = await fetch(`${API_BASE_URL}/v1/billing/auto-recharge`, {
+    headers: await getAuthHeaders(),
+  })
+  if (!res.ok) throw new Error("Failed to load auto-recharge settings")
+  return ((await res.json()) as { data: AutoRechargeConfig }).data
+}
+
+export async function updateAutoRecharge(params: {
+  enabled: boolean
+  thresholdCredits?: number
+  amountUsd?: number
+}): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/v1/billing/auto-recharge`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...await getAuthHeaders() },
+    body: JSON.stringify(params),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error((err as Record<string, string>).error ?? "Failed to update auto-recharge settings")
+  }
+}
+
 // ============================================================
 // Voices (ElevenLabs)
 // ============================================================
