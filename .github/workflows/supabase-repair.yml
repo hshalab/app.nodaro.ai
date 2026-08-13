@@ -1,0 +1,77 @@
+# Manual remediation for Supabase migration-history drift.
+#
+# When the remote `schema_migrations` table holds versions that don't exist in
+# supabase/migrations/, `supabase db push` refuses to run — ci.yml's migrate job
+# fails, the check suite goes red, and Railway SKIPS the production deploy
+# (exactly what blocked the 2026-08-13 deploy). Supabase's own remedy is
+# `migration repair`; this job runs it HERE, with the credentials that already
+# live in this repo's secrets, because SUPABASE_ACCESS_TOKEN / _PROJECT_ID are
+# production credentials that must not leave internal. Every run is audited in
+# the Actions log with before/after state.
+#
+# This job never applies migrations — `db push` stays in ci.yml on merges to
+# main. It only corrects the bookkeeping table.
+name: Supabase Migration Repair
+
+on:
+  workflow_dispatch:
+    inputs:
+      versions:
+        description: 'Versions to repair, space-separated digits, e.g. "20260812181418 20260812181431"'
+        required: true
+        type: string
+      status:
+        description: "reverted = forget it (not in the repo) | applied = record it without running it"
+        required: true
+        default: reverted
+        type: choice
+        options:
+          - reverted
+          - applied
+
+jobs:
+  repair:
+    name: Repair Supabase migration history
+    runs-on: ubuntu-latest
+    # Same guard as ci.yml's migrate job — the mirror must never touch the DB.
+    if: github.repository == 'nodaroai/app.nodaro.ai-internal'
+    env:
+      # See ci.yml migrate: the CLI's telemetry flush can time out on a runner
+      # and surface as a spurious exit 1 after the command already succeeded.
+      SUPABASE_TELEMETRY_DISABLED: "1"
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        with:
+          # Same pin as ci.yml, so repair and push agree on the history format.
+          version: 2.105.0
+
+      - name: Link Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
+        env:
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+
+      - name: Migration state BEFORE
+        run: supabase migration list
+
+      - name: Repair
+        env:
+          # Env, never `${{ }}` inside run: — a dispatch input is untrusted text.
+          VERSIONS: ${{ inputs.versions }}
+          STATUS: ${{ inputs.status }}
+        run: |
+          set -euo pipefail
+          if ! printf '%s' "$VERSIONS" | grep -Eq '^[0-9]+( [0-9]+)*$'; then
+            echo "Refusing: versions must be space-separated digits, got: $VERSIONS"
+            exit 1
+          fi
+          # Word-splitting intended: each version is a separate argument.
+          # shellcheck disable=SC2086
+          supabase migration repair --status "$STATUS" $VERSIONS
+
+      - name: Migration state AFTER
+        run: supabase migration list
