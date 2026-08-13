@@ -190,6 +190,9 @@ There are FIVE registries a parameter picker must appear in. **Missing any one o
 - **NEVER create RLS policies on `profiles` that query `profiles`** — infinite recursion. Use the `is_admin()` SECURITY DEFINER function instead.
 - All credit operations must be atomic (RPC functions with `FOR UPDATE` locks).
 - Full schema reference: the SQL migrations in `supabase/migrations/`.
+- **NEVER run `supabase db push` (or `migration up`, or hand-written DDL) against the shared cloud project.** Migrations reach the database exactly one way: the `migrate` job in `ci.yml`, on a push to `main`. Name files `NNN_description.sql` continuing the existing sequence — NOT `supabase migration new`, whose timestamp names are what a local push writes into the remote history.
+  Why it matters: a local push records versions that don't exist in `supabase/migrations/`, so every later `supabase db push` refuses to run → the `migrate` job fails → the whole check suite goes red → **Railway skips the production deploy** and reports "Skipped: CI check suite failed", which reads like an unrelated CI problem. Cost when it happened (2026-08-12, migrations 315/316 pushed locally by a parallel session): production sat on stale code for a day while the merge looked clean.
+  Remedy if it happens again: run the **Supabase Migration Repair** workflow (`workflow_dispatch`, `.github/workflows/supabase-repair.yml`) with the offending versions and `status = reverted`, then re-run `Push Database Migrations` on `main`. It runs in CI on purpose — `SUPABASE_ACCESS_TOKEN`/`SUPABASE_PROJECT_ID` are production credentials that must not leave the internal repo.
 
 ---
 
