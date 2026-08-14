@@ -127,6 +127,7 @@ Enterprise code lives under `backend/src/ee/` and `frontend/src/ee/` and is gove
 | 6 | `frontend/src/components/nodes/<node>-node.tsx` | Node component |
 | 7 | `frontend/src/components/nodes/index.ts` | `nodeTypes` map |
 | 8 | `frontend/src/components/editor/add-node-popup.tsx` | `NODE_OPTIONS` (popup/context menu) |
+| 8b | `frontend/src/lib/node-families.ts` | Add the type to the owning family's `types` array, and set the matching family id as `group:` on the `NODE_OPTIONS` entry. ⚠️ **This is the picker's single source of truth** — tabs, family headers, the All tab's `TAB · FAMILY` sections and the search "own vs from other tabs" split all derive from it. `frontend/src/lib/__tests__/node-families.test.ts` hard-fails if a creatable node has no family or if `group` and the registry disagree. Nodes shown on a tab they do not own (e.g. Text beside the uploads on every media tab) go in `TAB_SUPERSET`, which changes display only — never the node's `group`. |
 | 9 | `frontend/src/components/editor/node-toolbar.tsx` | Sidebar node list ⚠️ **SEPARATE from popup** |
 | 10 | `frontend/src/components/editor/editor-toolbar.tsx` | Reset/clear `switch` case |
 | 11 | `frontend/src/components/editor/config-panels/<cat>-configs.tsx` | Config component. If it exposes provider-aware dropdowns (resolution, quality, aspect ratio, voice, etc.), MUST include the fail-safe `useEffect([currentProvider])` from Provider Enum Sync step 12b — snap stale values to the first valid option, clear when the provider has no such lever. |

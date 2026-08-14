@@ -112,8 +112,6 @@ import {
   ScanFace,
   VenetianMask,
   Paintbrush,
-  TrendingUp,
-  Star,
   LayoutGrid,
   Link2,
 } from "lucide-react";
@@ -130,10 +128,25 @@ import {
   readAddNodeMenuTab,
   persistAddNodeMenuTab,
   nextAddNodeMenuTab,
+  readCreativeControlsOpen,
+  persistCreativeControlsOpen,
   type AddNodeMenuTab,
 } from "@/lib/add-node-menu-tab";
-import { IMAGE_PRODUCER_TYPES } from "@/lib/generate-image-handles";
-import { AUDIO_PRODUCER_TYPES, VIDEO_PRODUCER_TYPES, searchModelVariants, type ModelKind, type ModelTreeVariant } from "@nodaro/shared"
+import { sectionsForTab, tabTypeSet } from "@/lib/node-picker-sections";
+import { familyLabel } from "@/lib/node-families";
+import {
+  SearchOwnBlock,
+  SearchOtherBlock,
+  SearchEmptyState,
+} from "./add-node-popup/picker-search-results";
+import { COMMON_SECTIONS as COMMON_TAB_SECTIONS } from "@/lib/node-families";
+import { PickerTabBar } from "./add-node-popup/picker-tab-bar";
+import {
+  PickerSectionList,
+  flattenSections,
+  isCreativeControlsNavItem,
+} from "./add-node-popup/picker-section-list";
+import { searchModelVariants, type ModelKind, type ModelTreeVariant } from "@nodaro/shared"
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserSettings } from "@/hooks/queries/use-user-settings-queries";
@@ -158,6 +171,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Text",
     icon: <Type className="h-4 w-4" />,
     category: "Input",
+    group: "automate-text",
     // Renamed from "Text Prompt" → "Text"; keep "prompt" searchable so users
     // who look for "prompt" still find this node.
     keywords: ["prompt", "text prompt"],
@@ -167,18 +181,21 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Upload Image",
     icon: <Upload className="h-4 w-4" />,
     category: "Input",
+    group: "image-add-your-own",
   },
   {
     type: "upload-video",
     label: "Upload Video",
     icon: <Video className="h-4 w-4" />,
     category: "Input",
+    group: "video-add-your-own",
   },
   {
     type: "upload-audio",
     label: "Upload Audio",
     icon: <Music className="h-4 w-4" />,
     category: "Input",
+    group: "audio-add-your-own",
   },
   // Hidden — uncomment to restore in the Add Node UI:
   // {
@@ -192,12 +209,14 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Video URL",
     icon: <Video className="h-4 w-4" />,
     category: "Input",
+    group: "automate-get-content",
   },
   {
     type: "reference-audio",
     label: "Reference Audio",
     icon: <Music className="h-4 w-4" />,
     category: "Input",
+    group: "audio-add-your-own",
   },
   // Triggers
   {
@@ -205,10 +224,12 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Webhook Trigger",
     icon: <Webhook className="h-4 w-4" />,
     category: "Triggers",
+    group: "automate-triggers",
   },
   {
     type: "schedule-trigger" as const,
     label: "Schedule Trigger",
+    group: "automate-triggers",
     icon: <Clock className="h-4 w-4" />,
     category: "Triggers",
   },
@@ -217,12 +238,14 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Telegram Trigger",
     icon: <Send className="h-4 w-4" />,
     category: "Triggers",
+    group: "automate-triggers",
   },
   {
     type: "telegram-channel-feed",
     label: "Telegram Channel Feed",
     icon: <Rss className="h-4 w-4" />,
     category: "Input",
+    group: "automate-get-content",
     keywords: ["telegram", "channel", "feed", "monitor", "follow", "scrape", "rss"],
   },
   // Data
@@ -231,12 +254,14 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "List",
     icon: <List className="h-4 w-4" />,
     category: "Data",
+    group: "automate-lists",
   },
   {
     type: "web-scrape",
     label: "Web Scrape",
     icon: <Globe className="h-4 w-4" />,
     category: "Data",
+    group: "automate-get-content",
   },
   // Hidden — uncomment to restore in the Add Node UI:
   // {
@@ -250,36 +275,42 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Extract Field",
     icon: <Braces className="h-4 w-4" />,
     category: "Data",
+    group: "automate-logic",
   },
   {
     type: "filter-list",
     label: "Filter List",
     icon: <ListFilter className="h-4 w-4" />,
     category: "Data",
+    group: "automate-lists",
   },
   {
     type: "deduplicate",
     label: "Remove Duplicates",
     icon: <CopyMinus className="h-4 w-4" />,
     category: "Data",
+    group: "automate-lists",
   },
   {
     type: "merge-lists",
     label: "Merge Lists",
     icon: <GitMerge className="h-4 w-4" />,
     category: "Data",
+    group: "automate-lists",
   },
   {
     type: "sort-list",
     label: "Sort List",
     icon: <ArrowUpDown className="h-4 w-4" />,
     category: "Data",
+    group: "automate-lists",
   },
   {
     type: "selector",
     label: "Selector",
     icon: <ListTree className="h-4 w-4" />,
     category: "Data",
+    group: "automate-lists",
   },
   // Parameter
   {
@@ -287,49 +318,56 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Tone",
     icon: <Palette className="h-4 w-4" />,
     category: "Parameter",
+    group: "models-generation-settings",
   },
   {
     type: "style-guide",
     label: "Style Guide",
     icon: <PaintBucket className="h-4 w-4" />,
     category: "Parameter",
+    group: "models-generation-settings",
   },
   {
     type: "provider",
     label: "Provider",
     icon: <Server className="h-4 w-4" />,
     category: "Parameter",
+    group: "models-generation-settings",
   },
   {
     type: "scene-count",
     label: "Scene Count",
     icon: <Hash className="h-4 w-4" />,
     category: "Parameter",
+    group: "models-generation-settings",
   },
   {
     type: "duration",
     label: "Duration",
     icon: <Clock className="h-4 w-4" />,
     category: "Parameter",
+    group: "models-generation-settings",
   },
   {
     type: "aspect-ratio",
     label: "Aspect Ratio",
     icon: <RatioIcon className="h-4 w-4" />,
     category: "Parameter",
+    group: "models-generation-settings",
   },
   {
     type: "motion",
     label: "Motion",
     icon: <SlidersHorizontal className="h-4 w-4" />,
     category: "Parameter",
+    group: "models-generation-settings",
   },
   {
     type: "camera-motion",
     label: "Camera Motion",
     icon: <Video className="h-4 w-4" />,
     category: "Pickers",
-    group: "Camera",
+    group: "cc-motion-time",
     keywords: ["camera", "shot", "movement", "orbit", "pan", "tilt", "dolly", "crane", "zoom"],
   },
   {
@@ -337,7 +375,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Transition",
     icon: <GitBranch className="h-4 w-4" />,
     category: "Pickers",
-    group: "Camera",
+    group: "cc-effects",
     keywords: ["transition", "cut", "dissolve", "fade", "wipe", "morph", "blend", "cross", "scene change"],
   },
   {
@@ -345,7 +383,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Framing",
     icon: <Frame className="h-4 w-4" />,
     category: "Pickers",
-    group: "Camera",
+    group: "cc-camera",
     keywords: ["camera", "shot", "composition", "close-up", "wide", "angle", "vantage"],
   },
   {
@@ -353,7 +391,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Lens",
     icon: <Aperture className="h-4 w-4" />,
     category: "Pickers",
-    group: "Camera",
+    group: "cc-camera",
     keywords: ["camera", "optics", "focal length", "bokeh", "depth of field", "anamorphic", "fisheye"],
   },
   {
@@ -361,7 +399,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Camera / Film Stock",
     icon: <Film className="h-4 w-4" />,
     category: "Pickers",
-    group: "Camera",
+    group: "cc-camera",
     keywords: ["camera", "film", "35mm", "super 8", "vhs", "imax", "stock", "format"],
   },
   {
@@ -369,7 +407,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Lighting",
     icon: <Lightbulb className="h-4 w-4" />,
     category: "Pickers",
-    group: "Look",
+    group: "cc-light-look",
     keywords: ["light", "rembrandt", "chiaroscuro", "golden hour", "key", "rim", "shot"],
   },
   {
@@ -377,7 +415,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Color / Look",
     icon: <SwatchBook className="h-4 w-4" />,
     category: "Pickers",
-    group: "Look",
+    group: "cc-light-look",
     keywords: ["color", "grade", "palette", "lut", "kodak", "fuji", "teal orange", "shot"],
   },
   {
@@ -385,7 +423,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Atmosphere",
     icon: <CloudFog className="h-4 w-4" />,
     category: "Pickers",
-    group: "Look",
+    group: "cc-light-look",
     keywords: ["weather", "fog", "rain", "snow", "smoke", "god rays", "particles", "shot"],
   },
   {
@@ -393,7 +431,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Action FX",
     icon: <Zap className="h-4 w-4" />,
     category: "Pickers",
-    group: "Look",
+    group: "cc-effects",
     keywords: ["explosion", "lightning", "storm", "earthquake", "fire", "laser", "magic", "blast", "fx", "vfx", "action", "shockwave", "force field", "sci-fi"],
   },
   {
@@ -401,7 +439,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Character FX",
     icon: <Sparkles className="h-4 w-4" />,
     category: "Pickers",
-    group: "Look",
+    group: "cc-effects",
     keywords: ["character", "fx", "effect", "expression", "emotion", "gesture", "blink", "wink", "laugh", "cry", "smile", "frown", "shiver", "tremble", "gasp", "reaction"],
   },
   {
@@ -409,7 +447,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Style",
     icon: <Brush className="h-4 w-4" />,
     category: "Pickers",
-    group: "Look",
+    group: "cc-light-look",
     keywords: ["anime", "oil painting", "watercolor", "cinematic", "photorealistic", "comic", "pixel art", "pop art", "noir", "illustration", "rendering"],
   },
   {
@@ -417,7 +455,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Setting",
     icon: <Mountain className="h-4 w-4" />,
     category: "Pickers",
-    group: "Look",
+    group: "cc-scene",
     keywords: ["place", "environment", "location", "scene", "forest", "cafe", "alley", "cathedral", "desert", "cyberpunk", "fantasy", "indoor", "urban", "nature"],
   },
   {
@@ -425,7 +463,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Loop Subject",
     icon: <Sparkles className="h-4 w-4" />,
     category: "Pickers",
-    group: "Look",
+    group: "cc-scene",
     keywords: ["loop", "loopable", "seamless", "tunnel", "kaleidoscope", "fractal", "aurora", "particle", "vj", "background", "perfect loop", "veo loop"],
   },
   {
@@ -433,7 +471,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Person",
     icon: <UserRound className="h-4 w-4" />,
     category: "Pickers",
-    group: "Subject",
+    group: "cc-subject",
     keywords: ["subject", "character", "people", "human", "gender", "age", "ethnicity", "hair", "skin", "eyes", "build", "man", "woman", "child", "beard", "mustache"],
   },
   {
@@ -441,7 +479,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Mood",
     icon: <Smile className="h-4 w-4" />,
     category: "Pickers",
-    group: "Subject",
+    group: "cc-light-look",
     keywords: ["emotion", "expression", "feeling", "happy", "sad", "angry", "serene", "fierce", "brooding", "confident", "melancholy", "mysterious"],
   },
   {
@@ -449,7 +487,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Photographer / Artist Style",
     icon: <Camera className="h-4 w-4" />,
     category: "Pickers",
-    group: "Camera",
+    group: "cc-light-look",
     keywords: ["photographer", "artist", "style", "tim walker", "deakins", "lubezki", "fashion", "editorial", "cinematographer", "illustrator", "painter", "ghibli", "rutkowski", "leibovitz", "cartier-bresson"],
   },
   {
@@ -457,7 +495,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Aesthetic / Microtrend",
     icon: <Sparkles className="h-4 w-4" />,
     category: "Pickers",
-    group: "Look",
+    group: "cc-light-look",
     keywords: ["aesthetic", "microtrend", "core", "y2k", "cottagecore", "dark academia", "techwear", "gorpcore", "old money", "preppy", "streetwear", "coquette", "indie sleaze", "balletcore", "goblincore", "minimalism", "maximalism", "vibe"],
   },
   {
@@ -465,7 +503,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Era / Period",
     icon: <Hourglass className="h-4 w-4" />,
     category: "Pickers",
-    group: "Look",
+    group: "cc-scene",
     keywords: ["era", "period", "decade", "1920s", "1950s", "1970s", "1980s", "1990s", "2000s", "victorian", "medieval", "renaissance", "wild west", "feudal japan", "cyberpunk", "post-apocalyptic", "retrofuturism", "dieselpunk", "atompunk", "vintage", "future"],
   },
   {
@@ -473,7 +511,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Pose",
     icon: <PersonStanding className="h-4 w-4" />,
     category: "Pickers",
-    group: "Subject",
+    group: "cc-wardrobe-pose",
     keywords: ["pose", "posture", "action", "stance", "standing", "sitting", "running", "walking", "dancing", "jumping", "fighting", "body", "position"],
   },
   {
@@ -481,7 +519,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Styling",
     icon: <Gem className="h-4 w-4" />,
     category: "Pickers",
-    group: "Subject",
+    group: "cc-wardrobe-pose",
     keywords: ["beauty", "makeup", "glamour", "smoky eye", "lipstick", "eyewear", "sunglasses", "aviators", "headwear", "hat", "beanie", "fedora", "jewelry", "necklace", "earrings", "nails", "manicure", "face paint", "fabric", "silk", "leather", "denim", "velvet", "satin", "lace"],
   },
   {
@@ -489,7 +527,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Material",
     icon: <Layers className="h-4 w-4" />,
     category: "Pickers",
-    group: "Object",
+    group: "cc-scene",
     keywords: ["material", "fabric", "metal", "stone", "wood", "glass", "silk", "leather", "chrome", "marble", "gold", "silver", "bronze", "velvet", "porcelain", "crystal", "holographic", "iridescent", "neon", "made of"],
   },
   {
@@ -497,7 +535,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Animal",
     icon: <PawPrint className="h-4 w-4" />,
     category: "Pickers",
-    group: "Object",
+    group: "cc-subject",
     keywords: ["animal", "cat", "dog", "bird", "fish", "horse", "lion", "tiger", "bear", "wolf", "fox", "elephant", "pet", "wildlife", "dinosaur", "dragon"],
   },
   {
@@ -505,7 +543,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Vehicle",
     icon: <Car className="h-4 w-4" />,
     category: "Pickers",
-    group: "Object",
+    group: "cc-subject",
     keywords: ["vehicle", "car", "truck", "motorcycle", "bike", "boat", "plane", "helicopter", "tank", "spaceship", "muscle", "classic", "sports", "transport"],
   },
   {
@@ -513,7 +551,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Weapon",
     icon: <Swords className="h-4 w-4" />,
     category: "Pickers",
-    group: "Object",
+    group: "cc-subject",
     keywords: ["weapon", "sword", "katana", "gun", "rifle", "pistol", "bow", "dagger", "axe", "spear", "mace", "crossbow", "firearm", "blade"],
   },
   {
@@ -521,7 +559,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Furniture",
     icon: <Armchair className="h-4 w-4" />,
     category: "Pickers",
-    group: "Object",
+    group: "cc-scene",
     keywords: ["furniture", "chair", "sofa", "couch", "table", "desk", "bed", "lamp", "cabinet", "shelf", "wardrobe", "stool"],
   },
   {
@@ -529,7 +567,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Photo Genre",
     icon: <Camera className="h-4 w-4" />,
     category: "Pickers",
-    group: "Subject",
+    group: "cc-light-look",
     keywords: ["photo", "genre", "intent", "paparazzi", "editorial", "vogue", "lookbook", "selfie", "mirror selfie", "gym selfie", "headshot", "mugshot", "passport", "yearbook", "wedding", "movie poster", "album cover", "advertising", "documentary", "snapshot", "noir"],
   },
   {
@@ -537,7 +575,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Backdrop",
     icon: <LayoutDashboard className="h-4 w-4" />,
     category: "Pickers",
-    group: "Camera",
+    group: "cc-scene",
     keywords: ["backdrop", "background", "studio", "seamless", "wall", "gradient", "muslin", "velvet", "halo", "bokeh", "vignette", "white seamless", "black seamless", "brick wall", "concrete"],
   },
   {
@@ -545,7 +583,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Held Prop",
     icon: <HandMetal className="h-4 w-4" />,
     category: "Pickers",
-    group: "Subject",
+    group: "cc-scene",
     keywords: ["prop", "hand", "holding", "phone", "cigarette", "coffee", "wine", "microphone", "book", "umbrella", "bouquet", "guitar", "katana", "drink", "smoking", "instrument", "bag"],
   },
   {
@@ -553,7 +591,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Temporal",
     icon: <Clock className="h-4 w-4" />,
     category: "Pickers",
-    group: "Camera",
+    group: "cc-motion-time",
     keywords: ["time", "speed", "slow motion", "freeze", "bullet time", "shutter", "shot"],
   },
   {
@@ -561,7 +599,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Exposure Settings",
     icon: <Aperture className="h-4 w-4" />,
     category: "Pickers",
-    group: "Camera",
+    group: "cc-camera",
     keywords: ["exposure", "aperture", "f-stop", "shutter", "iso", "depth of field", "bokeh", "grain", "long exposure", "freeze"],
   },
   {
@@ -569,7 +607,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Render Quality",
     icon: <Cpu className="h-4 w-4" />,
     category: "Pickers",
-    group: "Look",
+    group: "cc-light-look",
     keywords: ["render", "engine", "unreal", "octane", "cycles", "raytracing", "pbr", "8k", "4k", "masterpiece", "raw", "award-winning", "lumen", "global illumination"],
   },
   {
@@ -577,7 +615,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Composition Effects",
     icon: <Wand2 className="h-4 w-4" />,
     category: "Pickers",
-    group: "Look",
+    group: "cc-effects",
     keywords: ["composition", "frame", "burst", "shatter", "smoke", "liquid", "pixel", "particles", "glitch", "mosaic", "silhouette", "exploding", "fragment", "glass", "trick"],
   },
   {
@@ -585,7 +623,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Post-Process Effects",
     icon: <Sparkles className="h-4 w-4" />,
     category: "Pickers",
-    group: "Look",
+    group: "cc-effects",
     keywords: ["post", "grade", "vignette", "grain", "halation", "bloom", "chromatic aberration", "light leak", "film burn", "scratched", "diffusion", "contrast", "glow"],
   },
   // Sound
@@ -594,7 +632,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Music Genre",
     icon: <Music className="h-4 w-4" />,
     category: "Pickers",
-    group: "Sound",
+    group: "cc-music-voice",
     keywords: ["music", "genre", "rock", "pop", "electronic"],
   },
   {
@@ -602,7 +640,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Music Mood",
     icon: <Activity className="h-4 w-4" />,
     category: "Pickers",
-    group: "Sound",
+    group: "cc-music-voice",
     keywords: ["music", "mood", "energy", "emotion", "vibe"],
   },
   {
@@ -610,7 +648,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Instrumentation",
     icon: <Piano className="h-4 w-4" />,
     category: "Pickers",
-    group: "Sound",
+    group: "cc-music-voice",
     keywords: ["instruments", "guitar", "piano", "drums"],
   },
   {
@@ -618,7 +656,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Voice Character",
     icon: <User className="h-4 w-4" />,
     category: "Pickers",
-    group: "Sound",
+    group: "cc-music-voice",
     keywords: ["voice", "age", "gender", "accent", "timbre"],
   },
   {
@@ -626,7 +664,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Voice Delivery",
     icon: <MessageCircle className="h-4 w-4" />,
     category: "Pickers",
-    group: "Sound",
+    group: "cc-music-voice",
     keywords: ["voice", "pace", "emotion", "narrator"],
   },
   // AI — Script & Text
@@ -635,21 +673,21 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Generate Script",
     icon: <BookOpen className="h-4 w-4" />,
     category: "AI",
-    group: "Script & Text",
+    group: "video-story-script",
   },
   {
     type: "llm-chat",
     label: "Generate Text",
     icon: <MessageSquare className="h-4 w-4" />,
     category: "AI",
-    group: "Script & Text",
+    group: "automate-text",
   },
   {
     type: "transcribe",
     label: "Transcribe",
     icon: <FileText className="h-4 w-4" />,
     category: "AI",
-    group: "Script & Text",
+    group: "audio-transcribe",
   },
   // AI — Image
   {
@@ -657,42 +695,42 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Generate Image",
     icon: <ImageIcon className="h-4 w-4" />,
     category: "AI",
-    group: "Image",
+    group: "image-create",
   },
   {
     type: "modify-image",
     label: "Modify Image",
     icon: <Layers className="h-4 w-4" />,
     category: "AI",
-    group: "Image",
+    group: "image-edit-retouch",
   },
   {
     type: "upscale-image",
     label: "Upscale Image",
     icon: <ZoomIn className="h-4 w-4" />,
     category: "AI",
-    group: "Image",
+    group: "image-edit-retouch",
   },
   {
     type: "remove-background",
     label: "Remove Background",
     icon: <Eraser className="h-4 w-4" />,
     category: "AI",
-    group: "Image",
+    group: "image-edit-retouch",
   },
   {
     type: "generate-mask",
     label: "Generate Mask",
     icon: <VenetianMask className="h-4 w-4" />,
     category: "AI",
-    group: "Image",
+    group: "image-edit-retouch",
   },
   {
     type: "paint-mask",
     label: "Paint Mask",
     icon: <Paintbrush className="h-4 w-4" />,
     category: "Processing",
-    group: "Image",
+    group: "image-edit-retouch",
     keywords: ["mask", "paint", "brush", "inpaint", "matte", "hand", "draw"],
   },
   {
@@ -700,7 +738,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Reference Sheet",
     icon: <LayoutGrid className="h-4 w-4" />,
     category: "AI",
-    group: "Image",
+    group: "image-references",
     keywords: ["sheet", "reference", "turnaround", "character sheet", "model sheet"],
   },
   {
@@ -708,7 +746,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Reference Board",
     icon: <LayoutGrid className="h-4 w-4" />,
     category: "AI",
-    group: "Image",
+    group: "image-references",
     keywords: ["board", "reference", "palette", "hero", "panels", "reference board"],
   },
   {
@@ -716,14 +754,14 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Describe Image",
     icon: <Eye className="h-4 w-4" />,
     category: "AI",
-    group: "Image",
+    group: "image-understand",
   },
   {
     type: "describe-to-picker",
     label: "Describe to Picker",
     icon: <ScanFace className="h-4 w-4" />,
     category: "AI",
-    group: "Image",
+    group: "image-understand",
   },
   // AI — Video
   {
@@ -731,7 +769,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Generate Video",
     icon: <Clapperboard className="h-4 w-4" />,
     category: "AI",
-    group: "Video",
+    group: "video-create",
     keywords: ["image-to-video", "text-to-video", "i2v", "t2v", "video"],
   },
   {
@@ -739,7 +777,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Generate Video Pro",
     icon: <Clapperboard className="h-4 w-4" />,
     category: "AI",
-    group: "Video",
+    group: "video-create",
     keywords: ["long-form", "long video", "multi-segment", "stitch", "extended duration", "seedance", "pro"],
   },
   {
@@ -747,7 +785,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Edit Video Pro",
     icon: <Scissors className="h-4 w-4" />,
     category: "AI",
-    group: "Video",
+    group: "video-continue-restyle",
     keywords: ["retake", "replace span", "edit clip", "seedance", "pro", "reshoot"],
   },
   {
@@ -755,14 +793,14 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Video to Video",
     icon: <Film className="h-4 w-4" />,
     category: "AI",
-    group: "Video",
+    group: "video-continue-restyle",
   },
   {
     type: "switchx",
     label: "Relight & Switch",
     icon: <Wand2 className="h-4 w-4" />,
     category: "AI",
-    group: "Video",
+    group: "video-continue-restyle",
     keywords: ["relight", "relighting", "relit", "lighting", "switch", "swap background", "replace background", "change background", "scene swap", "restyle", "recolor", "composite", "compositing", "green screen", "chroma key", "rotoscope", "matte", "alpha", "color match", "harmonize", "vfx", "video to video", "beeble"],
   },
   {
@@ -770,7 +808,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Story → Video",
     icon: <Film className="h-4 w-4" />,
     category: "AI",
-    group: "Pipeline",
+    group: "video-story-script",
     keywords: ["story", "pipeline", "trailer", "short film", "music video", "reel", "commercial", "cinematic"],
   },
   {
@@ -778,7 +816,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "AI Avatar",
     icon: <UserRound className="h-4 w-4" />,
     category: "AI",
-    group: "Video",
+    group: "video-animate-perform",
     keywords: ["heygen", "talking avatar", "avatar", "talking head", "voice", "tts"],
   },
   {
@@ -786,7 +824,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Cinematic Avatar",
     icon: <Clapperboard className="h-4 w-4" />,
     category: "AI",
-    group: "Video",
+    group: "video-animate-perform",
     keywords: ["heygen", "cinematic", "avatar", "generative", "prompt", "looks", "seedance"],
   },
   {
@@ -794,35 +832,35 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Lip Sync",
     icon: <Users className="h-4 w-4" />,
     category: "AI",
-    group: "Video",
+    group: "video-animate-perform",
   },
   {
     type: "speech-to-video",
     label: "Speech to Video",
     icon: <AudioLines className="h-4 w-4" />,
     category: "AI",
-    group: "Video",
+    group: "video-animate-perform",
   },
   {
     type: "motion-transfer",
     label: "Motion Transfer",
     icon: <Waypoints className="h-4 w-4" />,
     category: "AI",
-    group: "Video",
+    group: "video-animate-perform",
   },
   {
     type: "extend-video",
     label: "Extend Video",
     icon: <FastForward className="h-4 w-4" />,
     category: "AI",
-    group: "Video",
+    group: "video-continue-restyle",
   },
   {
     type: "video-retake",
     label: "Retake Video",
     icon: <Scissors className="h-4 w-4" />,
     category: "AI",
-    group: "Video",
+    group: "video-continue-restyle",
     keywords: ["retake", "replace audio", "replace video", "ltx", "ltx-2.3"],
   },
   {
@@ -830,14 +868,14 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Face Swap",
     icon: <ScanFace className="h-4 w-4" />,
     category: "AI",
-    group: "Video",
+    group: "video-animate-perform",
   },
   {
     type: "video-sfx",
     label: "Video SFX",
     icon: <AudioWaveform className="h-4 w-4" />,
     category: "AI",
-    group: "Video",
+    group: "video-sound",
     keywords: ["sfx", "foley", "sound effects", "mmaudio", "audio", "sound"],
   },
   // AI — Audio & Speech
@@ -846,84 +884,84 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Text to Speech",
     icon: <Mic className="h-4 w-4" />,
     category: "AI",
-    group: "Audio & Speech",
+    group: "audio-speech",
   },
   {
     type: "text-to-audio",
     label: "Text to Audio",
     icon: <Volume2 className="h-4 w-4" />,
     category: "AI",
-    group: "Audio & Speech",
+    group: "audio-sfx",
   },
   {
     type: "audio-isolation",
     label: "Voice Extractor",
     icon: <AudioWaveform className="h-4 w-4" />,
     category: "AI",
-    group: "Audio & Speech",
+    group: "audio-clean-separate",
   },
   {
     type: "audio-separation",
     label: "Audio Separation",
     icon: <Scissors className="h-4 w-4" />,
     category: "AI",
-    group: "Audio & Speech",
+    group: "audio-clean-separate",
   },
   {
     type: "text-to-dialogue",
     label: "Text to Dialogue",
     icon: <Users className="h-4 w-4" />,
     category: "AI",
-    group: "Audio & Speech",
+    group: "audio-speech",
   },
   {
     type: "voice-changer",
     label: "Voice Changer",
     icon: <AudioWaveform className="h-4 w-4" />,
     category: "AI",
-    group: "Audio & Speech",
+    group: "audio-voices",
   },
   {
     type: "voice-changer-pro",
     label: "Voice Changer Pro",
     icon: <AudioWaveform className="h-4 w-4" />,
     category: "AI",
-    group: "Audio & Speech",
+    group: "audio-voices",
   },
   {
     type: "dubbing",
     label: "Dubbing",
     icon: <Languages className="h-4 w-4" />,
     category: "AI",
-    group: "Audio & Speech",
+    group: "audio-voices",
   },
   {
     type: "voice-remix",
     label: "Voice Remix",
     icon: <Mic className="h-4 w-4" />,
     category: "AI",
-    group: "Audio & Speech",
+    group: "audio-voices",
   },
   {
     type: "voice-design",
     label: "Voice Design",
     icon: <Wand2 className="h-4 w-4" />,
     category: "AI",
-    group: "Audio & Speech",
+    group: "audio-voices",
   },
   {
     type: "forced-alignment",
     label: "Forced Alignment",
     icon: <AlignLeft className="h-4 w-4" />,
     category: "AI",
-    group: "Audio & Speech",
+    group: "audio-transcribe",
   },
   {
     type: "generate-music",
     label: "Generate Music",
     icon: <Music className="h-4 w-4" />,
     category: "AI",
-    group: "Audio & Speech",
+    group: "audio-music",
   },
   // AI — Suno Music
   {
@@ -931,98 +969,98 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Suno Voice",
     icon: <Mic className="h-4 w-4" />,
     category: "AI",
-    group: "Suno Music",
+    group: "cc-music-voice",
   },
   {
     type: "suno-generate",
     label: "Suno Create Music",
     icon: <Music className="h-4 w-4" />,
     category: "AI",
-    group: "Suno Music",
+    group: "audio-music",
   },
   {
     type: "suno-cover",
     label: "Suno Cover",
     icon: <Disc3 className="h-4 w-4" />,
     category: "AI",
-    group: "Suno Music",
+    group: "audio-music",
   },
   {
     type: "suno-extend",
     label: "Suno Extend",
     icon: <FastForward className="h-4 w-4" />,
     category: "AI",
-    group: "Suno Music",
+    group: "audio-music",
   },
   {
     type: "suno-lyrics",
     label: "Suno Lyrics",
     icon: <FileText className="h-4 w-4" />,
     category: "AI",
-    group: "Suno Music",
+    group: "audio-music",
   },
   {
     type: "suno-separate",
     label: "Suno Separate",
     icon: <Scissors className="h-4 w-4" />,
     category: "AI",
-    group: "Suno Music",
+    group: "audio-clean-separate",
   },
   {
     type: "suno-music-video",
     label: "Music Video",
     icon: <Film className="h-4 w-4" />,
     category: "AI",
-    group: "Suno Music",
+    group: "video-create",
   },
   {
     type: "suno-mashup",
     label: "Suno Mashup",
     icon: <Merge className="h-4 w-4" />,
     category: "AI",
-    group: "Suno Music",
+    group: "audio-music",
   },
   {
     type: "suno-replace-section",
     label: "Suno Replace Section",
     icon: <Scissors className="h-4 w-4" />,
     category: "AI",
-    group: "Suno Music",
+    group: "audio-music",
   },
   {
     type: "suno-style-boost",
     label: "Suno Style Boost",
     icon: <Sparkles className="h-4 w-4" />,
     category: "AI",
-    group: "Suno Music",
+    group: "audio-music",
   },
   {
     type: "suno-add-instrumental",
     label: "Suno Add Instrumental",
     icon: <Music className="h-4 w-4" />,
     category: "AI",
-    group: "Suno Music",
+    group: "audio-music",
   },
   {
     type: "suno-add-vocals",
     label: "Suno Add Vocals",
     icon: <Mic className="h-4 w-4" />,
     category: "AI",
-    group: "Suno Music",
+    group: "audio-music",
   },
   {
     type: "suno-convert-wav",
     label: "Suno Convert WAV",
     icon: <AudioLines className="h-4 w-4" />,
     category: "AI",
-    group: "Suno Music",
+    group: "audio-music",
   },
   {
     type: "suno-upload-extend",
     label: "Suno Upload Extend",
     icon: <FastForward className="h-4 w-4" />,
     category: "AI",
-    group: "Suno Music",
+    group: "audio-music",
   },
   // AI — Quality
   {
@@ -1030,7 +1068,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "QA Check",
     icon: <ShieldCheck className="h-4 w-4" />,
     category: "AI",
-    group: "Quality",
+    group: "automate-logic",
     adminOnly: true,
   },
   {
@@ -1038,7 +1076,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Image Critic",
     icon: <Eye className="h-4 w-4" />,
     category: "AI",
-    group: "Quality",
+    group: "image-understand",
     // adminOnly NOT set — image-critic is user-facing (qa-check is admin-only; we deliberately differ)
   },
   // Processing — Image
@@ -1047,7 +1085,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Image Collage",
     icon: <LayoutGrid className="h-4 w-4" />,
     category: "Processing",
-    group: "Image",
+    group: "image-edit-retouch",
     keywords: ["collage", "grid", "montage", "mosaic", "combine images", "contact sheet", "tile"],
   },
   // Processing — Video
@@ -1056,14 +1094,14 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Combine Videos",
     icon: <Merge className="h-4 w-4" />,
     category: "Processing",
-    group: "Video",
+    group: "video-cut-assemble",
   },
   {
     type: "assemble-narrated-video",
     label: "Assemble Narrated Video",
     icon: <Merge className="h-4 w-4" />,
     category: "Processing",
-    group: "Video",
+    group: "video-cut-assemble",
     keywords: ["narration", "voiceover", "narrated", "audio-led", "montage", "assemble"],
   },
   {
@@ -1071,49 +1109,49 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Resize Video",
     icon: <Maximize className="h-4 w-4" />,
     category: "Processing",
-    group: "Video",
+    group: "video-format-export",
   },
   {
     type: "social-media-format",
     label: "Social Media Format",
     icon: <Share2 className="h-4 w-4" />,
     category: "Processing",
-    group: "Video",
+    group: "video-format-export",
   },
   {
     type: "trim-video",
     label: "Trim Video",
     icon: <Scissors className="h-4 w-4" />,
     category: "Processing",
-    group: "Video",
+    group: "video-cut-assemble",
   },
   {
     type: "extract-frame",
     label: "Extract Frame",
     icon: <Frame className="h-4 w-4" />,
     category: "Processing",
-    group: "Video",
+    group: "image-edit-retouch",
   },
   {
     type: "video-upscale",
     label: "Upscale Video",
     icon: <ArrowUpFromLine className="h-4 w-4" />,
     category: "Processing",
-    group: "Video",
+    group: "video-format-export",
   },
   {
     type: "add-captions",
     label: "Add Captions",
     icon: <Captions className="h-4 w-4" />,
     category: "Processing",
-    group: "Video",
+    group: "video-titles-graphics",
   },
   {
     type: "video-analysis",
     label: "Video Analysis",
     icon: <ScanSearch className="h-4 w-4" />,
     category: "Processing",
-    group: "Video",
+    group: "video-analyze",
     keywords: ["analyze video", "scene breakdown", "shot list", "understand video", "describe video", "storyboard from video"],
   },
   {
@@ -1121,7 +1159,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "AI Audit",
     icon: <SearchCheck className="h-4 w-4" />,
     category: "Processing",
-    group: "Video",
+    group: "video-analyze",
     keywords: ["audit", "ai audit", "verify analysis", "check analysis", "fact check video", "qa analysis", "review scene breakdown", "correct analysis"],
   },
   // Processing — Video Production
@@ -1130,84 +1168,84 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Compose Video",
     icon: <Sparkles className="h-4 w-4" />,
     category: "Processing",
-    group: "Video Production",
+    group: "video-cut-assemble",
   },
   {
     type: "after-effects",
     label: "After Effects",
     icon: <Wand2 className="h-4 w-4" />,
     category: "Processing",
-    group: "Video Production",
+    group: "video-titles-graphics",
   },
   {
     type: "lottie-overlay",
     label: "Lottie Overlay",
     icon: <Layers className="h-4 w-4" />,
     category: "Processing",
-    group: "Video Production",
+    group: "video-titles-graphics",
   },
   {
     type: "3d-title",
     label: "3D Title",
     icon: <Box className="h-4 w-4" />,
     category: "Processing",
-    group: "Video Production",
+    group: "video-titles-graphics",
   },
   {
     type: "motion-graphics",
     label: "Motion Graphics",
     icon: <Shapes className="h-4 w-4" />,
     category: "Processing",
-    group: "Video Production",
+    group: "video-titles-graphics",
   },
   {
     type: "composite",
     label: "Composite",
     icon: <Layers className="h-4 w-4" />,
     category: "Processing",
-    group: "Video Production",
+    group: "video-cut-assemble",
   },
   {
     type: "render-video",
     label: "Render Video",
     icon: <Film className="h-4 w-4" />,
     category: "Processing",
-    group: "Video Production",
+    group: "video-titles-graphics",
   },
   {
     type: "speed-ramp",
     label: "Adjust Speed",
     icon: <Gauge className="h-4 w-4" />,
     category: "Processing",
-    group: "Video",
+    group: "video-cut-assemble",
   },
   {
     type: "loop-video",
     label: "Loop Video",
     icon: <Repeat className="h-4 w-4" />,
     category: "Processing",
-    group: "Video",
+    group: "video-cut-assemble",
   },
   {
     type: "fade-video",
     label: "Fade In/Out",
     icon: <SunDim className="h-4 w-4" />,
     category: "Processing",
-    group: "Video",
+    group: "video-cut-assemble",
   },
   {
     type: "transcode-video",
     label: "Transcode Video",
     icon: <RefreshCw className="h-4 w-4" />,
     category: "Processing",
-    group: "Video",
+    group: "video-format-export",
   },
   {
     type: "manual-edit",
     label: "Manual Edit",
     icon: <Scissors className="h-4 w-4" />,
     category: "Processing",
-    group: "Video",
+    group: "video-cut-assemble",
   },
   // Processing — Audio
   {
@@ -1215,28 +1253,28 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Merge Video & Audio",
     icon: <Volume2 className="h-4 w-4" />,
     category: "Processing",
-    group: "Audio",
+    group: "video-sound",
   },
   {
     type: "trim-audio",
     label: "Trim Audio",
     icon: <AudioLines className="h-4 w-4" />,
     category: "Processing",
-    group: "Audio",
+    group: "audio-edit",
   },
   {
     type: "split-media",
     label: "Split into Chunks",
     icon: <Scissors className="h-4 w-4" />,
     category: "Processing",
-    group: "Audio",
+    group: "video-cut-assemble",
   },
   {
     type: "extract-audio",
     label: "Extract Audio",
     icon: <AudioLines className="h-4 w-4" />,
     category: "Processing",
-    group: "Audio",
+    group: "video-sound",
     keywords: ["extract audio", "rip audio", "audio from video", "demux", "detach audio", "get audio", "mp3", "split video audio"],
   },
   {
@@ -1244,7 +1282,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Remove Audio",
     icon: <VolumeX className="h-4 w-4" />,
     category: "Processing",
-    group: "Audio",
+    group: "video-sound",
     keywords: ["remove audio", "mute", "strip audio", "silent video", "delete audio", "no sound", "detach audio", "split video audio"],
   },
   {
@@ -1252,28 +1290,28 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Mix Audio",
     icon: <Music className="h-4 w-4" />,
     category: "Processing",
-    group: "Audio",
+    group: "audio-edit",
   },
   {
     type: "combine-audio",
     label: "Combine Audio",
     icon: <ListMusic className="h-4 w-4" />,
     category: "Processing",
-    group: "Audio",
+    group: "audio-edit",
   },
   {
     type: "adjust-volume",
     label: "Adjust Volume",
     icon: <SlidersHorizontal className="h-4 w-4" />,
     category: "Processing",
-    group: "Audio",
+    group: "audio-edit",
   },
   {
     type: "audio-fx",
     label: "Audio FX",
     icon: <SlidersHorizontal className="h-4 w-4" />,
     category: "Processing",
-    group: "Audio",
+    group: "audio-edit",
   },
   // Processing — Text
   {
@@ -1281,14 +1319,14 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Combine Text",
     icon: <Merge className="h-4 w-4" />,
     category: "Processing",
-    group: "Text",
+    group: "automate-text",
   },
   {
     type: "split-text",
     label: "Split Text",
     icon: <Scissors className="h-4 w-4" />,
     category: "Processing",
-    group: "Text",
+    group: "automate-text",
   },
   // Assets
   {
@@ -1296,30 +1334,35 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Character Asset",
     icon: <UserPlus className="h-4 w-4" />,
     category: "Assets",
+    group: "assets-characters",
   },
   {
     type: "object",
     label: "Object/Props Asset",
     icon: <Package className="h-4 w-4" />,
     category: "Assets",
+    group: "assets-objects",
   },
   {
     type: "creature",
     label: "Animal/Creature Asset",
     icon: <PawPrint className="h-4 w-4" />,
     category: "Assets",
+    group: "assets-creatures",
   },
   {
     type: "location",
     label: "Location Asset",
     icon: <MapPin className="h-4 w-4" />,
     category: "Assets",
+    group: "assets-places",
   },
   {
     type: "face",
     label: "Create Face",
     icon: <Smile className="h-4 w-4" />,
     category: "Assets",
+    group: "assets-characters",
   },
   // Scene (Phase 1B.2 pipeline-managed SceneNode — replaces legacy scene)
   {
@@ -1327,7 +1370,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Scene",
     icon: <Clapperboard className="h-4 w-4" />,
     category: "AI",
-    group: "Pipeline",
+    group: "video-story-script",
     keywords: ["scene", "shot list", "storyboard", "camera", "pipeline"],
   },
   // Output
@@ -1336,12 +1379,14 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Save to Storage",
     icon: <HardDrive className="h-4 w-4" />,
     category: "Output",
+    group: "publish-export",
   },
   {
     type: "webhook-output",
     label: "Webhook Output",
     icon: <Webhook className="h-4 w-4" />,
     category: "Output",
+    group: "publish-export",
   },
   // Output — Social Media
   {
@@ -1349,56 +1394,56 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Instagram Post",
     icon: <Instagram className="h-4 w-4" />,
     category: "Output",
-    group: "Social Media",
+    group: "publish-platforms",
   },
   {
     type: "tiktok-post",
     label: "TikTok Post",
     icon: <Video className="h-4 w-4" />,
     category: "Output",
-    group: "Social Media",
+    group: "publish-platforms",
   },
   {
     type: "youtube-upload",
     label: "YouTube Upload",
     icon: <Youtube className="h-4 w-4" />,
     category: "Output",
-    group: "Social Media",
+    group: "publish-platforms",
   },
   {
     type: "linkedin-post",
     label: "LinkedIn Post",
     icon: <Linkedin className="h-4 w-4" />,
     category: "Output",
-    group: "Social Media",
+    group: "publish-platforms",
   },
   {
     type: "x-post",
     label: "X Post",
     icon: <Twitter className="h-4 w-4" />,
     category: "Output",
-    group: "Social Media",
+    group: "publish-platforms",
   },
   {
     type: "facebook-post",
     label: "Facebook Post",
     icon: <Facebook className="h-4 w-4" />,
     category: "Output",
-    group: "Social Media",
+    group: "publish-platforms",
   },
   {
     type: "telegram-post",
     label: "Telegram Post",
     icon: <Send className="h-4 w-4" />,
     category: "Output",
-    group: "Social Media",
+    group: "publish-platforms",
   },
   {
     type: "publish-social",
     label: "Publish to Social",
     icon: <Share2 className="h-4 w-4" />,
     category: "Output",
-    group: "Social Media",
+    group: "publish-one-click",
   },
   // Workflow
   {
@@ -1406,42 +1451,49 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Sub-Workflow Input",
     icon: <LogIn className="h-4 w-4" />,
     category: "Workflow",
+    group: "automate-workflows",
   },
   {
     type: "sub-workflow-output",
     label: "Sub-Workflow Output",
     icon: <LogOut className="h-4 w-4" />,
     category: "Workflow",
+    group: "automate-workflows",
   },
   {
     type: "sub-workflow",
     label: "Sub-Workflow",
     icon: <Workflow className="h-4 w-4" />,
     category: "Workflow",
+    group: "automate-workflows",
   },
   {
     type: "teleport-send",
     label: "Teleport Send",
     icon: <Send className="h-4 w-4" />,
     category: "Workflow",
+    group: "automate-canvas",
   },
   {
     type: "teleport-receive",
     label: "Teleport Receive",
     icon: <Download className="h-4 w-4" />,
     category: "Workflow",
+    group: "automate-canvas",
   },
   {
     type: "router",
     label: "Router",
     icon: <GitBranch className="h-4 w-4" />,
     category: "Workflow",
+    group: "automate-logic",
   },
   {
     type: "group",
     label: "Group",
     icon: <Box className="h-4 w-4" />,
     category: "Workflow",
+    group: "automate-canvas",
     keywords: ["group", "container", "wrap"],
   },
   {
@@ -1449,6 +1501,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Collect",
     icon: <Layers className="h-4 w-4" />,
     category: "Workflow",
+    group: "automate-lists",
     keywords: ["collect", "gather", "bucket", "by-type", "split-by-type"],
   },
   {
@@ -1456,6 +1509,7 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Reduce",
     icon: <Funnel className="h-4 w-4" />,
     category: "Workflow",
+    group: "automate-lists",
     keywords: ["reduce", "fan-in", "merge", "pick best", "join", "aggregate", "vote", "count"],
   },
   {
@@ -1463,19 +1517,21 @@ export const NODE_OPTIONS: ReadonlyArray<NodeOption> = [
     label: "Sticky Note",
     icon: <StickyNote className="h-4 w-4" />,
     category: "Workflow",
+    group: "automate-canvas",
   },
   {
     type: "component" as SceneNodeType,
     label: "Component",
     icon: <Puzzle className="h-4 w-4" />,
     category: "Component",
+    group: "automate-workflows",
   },
   {
     type: "preview",
     label: "Preview",
     icon: <Eye className="h-4 w-4" />,
     category: "Processing",
-    group: "Text",
+    group: "automate-canvas",
   },
 ];
 
@@ -1490,7 +1546,6 @@ export function getNodeOptions(): ReadonlyArray<NodeOption> {
 
 export const VIRTUAL_CATEGORY_IDS = {
   recent: "Recent",
-  mostUsed: "Most Used",
   common: "Common",
   commonPickers: "Common Pickers",
   models: "Models",
@@ -1510,91 +1565,12 @@ function mapHistoryToOptions(
     .filter(isNodeOption);
 }
 
-// Curated COMMON tab. The lead block renders without a sub-header; the rest
-// are grouped into titled sections. `COMMON_PICKER_SECTIONS` live inside a
-// collapsible "Common Pickers" submenu (see the COMMON render branch).
-interface CommonSection {
-  readonly title: string;
-  readonly types: ReadonlyArray<SceneNodeType>;
-}
-const COMMON_LEAD: ReadonlyArray<SceneNodeType> = [
-  "text-prompt",
-  "llm-chat",
-  "combine-text",
-  "upload-image",
-  "upload-video",
-  "list",
-];
-const COMMON_SECTIONS: ReadonlyArray<CommonSection> = [
-  { title: "Image", types: ["generate-image", "upscale-image", "image-to-text", "describe-to-picker", "image-critic"] },
-  { title: "Video", types: ["generate-video", "extend-video", "motion-transfer", "lip-sync", "combine-videos", "merge-video-audio"] },
-  { title: "Voice & Music", types: ["text-to-speech", "voice-changer", "suno-generate"] },
-];
-const COMMON_PICKER_SECTIONS: ReadonlyArray<CommonSection> = [
-  { title: "Camera", types: ["camera-motion", "transition", "framing"] },
-  { title: "Look", types: ["atmosphere", "action-fx", "style", "setting"] },
-  { title: "Subject", types: ["person", "pose", "styling", "held-prop"] },
-  { title: "Object", types: ["animal", "vehicle", "weapon", "furniture", "material"] },
-  { title: "Sound", types: ["music-genre", "music-mood", "instrumentation"] },
-];
-const COMMON_ASSETS_SECTION: CommonSection = {
-  title: "Assets",
-  types: ["character", "object", "creature", "location"],
-};
-/** Every node type in the curated COMMON tab, flattened in display order
- *  (lead, titled sections, Common Pickers, Assets). The media tabs use the
- *  indices to put common members first, in Common-tab order. */
-const COMMON_TYPES_ORDERED: ReadonlyArray<SceneNodeType> = [
-  ...COMMON_LEAD,
-  ...COMMON_SECTIONS.flatMap((s) => s.types),
-  ...COMMON_PICKER_SECTIONS.flatMap((s) => s.types),
-  ...COMMON_ASSETS_SECTION.types,
-];
-const COMMON_TYPE_RANK: ReadonlyMap<SceneNodeType, number> = new Map(
-  COMMON_TYPES_ORDERED.map((t, i) => [t, i]),
+/** Set view of the Common tab's membership, derived from the family registry
+ *  so the two can never disagree. Search ranking puts these before
+ *  non-common matches. */
+export const COMMON_NODE_TYPES: ReadonlySet<SceneNodeType> = new Set(
+  COMMON_TAB_SECTIONS.flatMap((s) => s.types),
 );
-/** Set view of the curated COMMON tab membership. Search ranking puts these
- *  before non-common matches. */
-export const COMMON_NODE_TYPES: ReadonlySet<SceneNodeType> = new Set(COMMON_TYPES_ORDERED);
-
-/** Producer sets backing the Image / Video / Audio tabs — the platform's
- *  single sources of truth for "primary output is this medium" (the same sets
- *  drive canvas handle validation and backend output routing, so the tabs can
- *  never drift from execution reality). Plan-emitting Video Production nodes
- *  (after-effects, composite, …) are correctly absent: they output render
- *  plans, not video URLs. */
-const MEDIA_TAB_PRODUCERS = {
-  image: IMAGE_PRODUCER_TYPES,
-  video: VIDEO_PRODUCER_TYPES,
-  audio: AUDIO_PRODUCER_TYPES,
-} as const;
-export type MediaTab = keyof typeof MEDIA_TAB_PRODUCERS;
-
-/** The nodes for a media tab, split into the curated-common block (ordered as
- *  on the Common tab) and the remaining producers (catalog order). */
-export function mediaTabNodeOptions(
-  pool: ReadonlyArray<NodeOption>,
-  tab: MediaTab,
-): { common: NodeOption[]; rest: NodeOption[] } {
-  const producers = MEDIA_TAB_PRODUCERS[tab];
-  const matches = pool.filter((n) => producers.has(n.type));
-  const common = matches
-    .filter((n) => COMMON_TYPE_RANK.has(n.type))
-    .sort((a, b) => COMMON_TYPE_RANK.get(a.type)! - COMMON_TYPE_RANK.get(b.type)!);
-  const rest = matches.filter((n) => !COMMON_TYPE_RANK.has(n.type));
-  return { common, rest };
-}
-/** Nav-list sentinel for the "Common Pickers" row. It has `id` but no `type`,
- *  so the popup's keyboard nav treats it like a category — Enter/click opens
- *  the Common Pickers sub-view, and arrows highlight it like any other row. */
-interface CommonPickersNavItem {
-  readonly id: typeof VIRTUAL_CATEGORY_IDS.commonPickers;
-  readonly isCommonPickersNav: true;
-}
-const COMMON_PICKERS_NAV_ITEM: CommonPickersNavItem = {
-  id: VIRTUAL_CATEGORY_IDS.commonPickers,
-  isCommonPickersNav: true,
-};
 
 export const CATEGORIES = [
   {
@@ -1602,12 +1578,6 @@ export const CATEGORIES = [
     label: "RECENT",
     icon: <Clock className="h-4 w-4" />,
     description: "Recently added nodes",
-  },
-  {
-    id: VIRTUAL_CATEGORY_IDS.mostUsed,
-    label: "MOST USED",
-    icon: <TrendingUp className="h-4 w-4" />,
-    description: "Your most-added nodes",
   },
   // "Common" is deliberately NOT a category here — it's the popup's Common
   // tab (see the tablist above the search box). The All tab shows this list.
@@ -1691,25 +1661,6 @@ export const CATEGORIES = [
   },
 ].sort((a, b) => categoryRank(a.id) - categoryRank(b.id));
 
-// Category icon colors
-const CATEGORY_COLORS: Record<string, string> = {
-  Recent: "text-[#06B6D4]",
-  "Most Used": "text-[#F59E0B]",
-  Common: "text-[#ff0073] dark:text-[#ff0073]",
-  Input: "text-[#007AFF]",
-  Triggers: "text-[#F97316]",
-  Data: "text-[#14B8A6]",
-  Parameter: "text-[#6366F1]",
-  Pickers: "text-[#6366F1]",
-  Sound: "text-[#a78bfa]",
-  AI: "text-[#ff0073]",
-  Processing: "text-[#475569]",
-  Assets: "text-[#EC4899]",
-  Output: "text-[#22C55E]",
-  Workflow: "text-[#F59E0B]",
-  Component: "text-[#A855F7]",
-};
-
 /** Filter a node pool by a search query (label / type / category / keywords)
  *  and rank the matches: direct-match tier first (edge-drop context), then
  *  COMMON nodes, then the rest — pool order preserved within each bucket
@@ -1748,7 +1699,10 @@ export function searchNodeOptionsSectioned(
   // "all"/"models" are flat at the node level (all matches in `own`); the popup
   // interleaves model hits around them per SEARCH_BLOCK_ORDER below.
   if (tab === "all" || tab === "models") return { own: ranked, other: [] };
-  const ownSet: ReadonlySet<string> = tab === "common" ? COMMON_NODE_TYPES : MEDIA_TAB_PRODUCERS[tab];
+  // "On this tab" means exactly what browsing the tab renders — families,
+  // superset members and Creative Controls — so a match can never be filed
+  // under "From other tabs" while sitting in plain sight on this one.
+  const ownSet = tabTypeSet(pool, tab);
   return {
     own: ranked.filter((n) => ownSet.has(n.type)),
     other: ranked.filter((n) => !ownSet.has(n.type)),
@@ -1770,9 +1724,16 @@ export const SEARCH_BLOCK_ORDER: Record<AddNodeMenuTab, readonly SearchBlock[]> 
   models: ["models", "nodeOwn", "nodeOther"],
   all: ["nodeOwn", "models", "nodeOther"],
   common: ["nodeOwn", "nodeOther", "models"],
+  // The non-media intent tabs have no model affinity, so models trail the
+  // cross-tab matches rather than splitting the two node blocks apart.
+  assets: ["nodeOwn", "nodeOther", "models"],
+  automate: ["nodeOwn", "nodeOther", "models"],
+  publish: ["nodeOwn", "nodeOther", "models"],
 };
 
-const SEARCH_BLOCK_HEADER: Record<SearchBlock, string> = { nodeOwn: "Nodes", models: "Models", nodeOther: "Other" };
+/** "From other tabs" is deliberately explicit: a search must never look like
+ *  a dead end just because the match lives on a different tab. */
+const SEARCH_BLOCK_HEADER: Record<SearchBlock, string> = { nodeOwn: "Nodes", models: "Models", nodeOther: "From other tabs" };
 
 /** The model kind a media tab PRIORITIZES in search (sorts first, never filters);
  *  undefined = no kind preference (Models/All/Common show every model in order). */
@@ -1797,8 +1758,8 @@ function ToggleLabel({
   return (
     <label className="flex items-center gap-1.5 cursor-pointer select-none" title={title}>
       {icon}
-      <span className="text-[11px] font-semibold text-[#475569] dark:text-[#cbd5e1] whitespace-nowrap">{label}</span>
-      <Switch size="sm" checked={checked} onCheckedChange={onChange} aria-label={ariaLabel} className="data-[state=checked]:bg-[#ff0073]" />
+      <span className="text-[11px] font-semibold text-[var(--npk-badge-text)] whitespace-nowrap">{label}</span>
+      <Switch size="sm" checked={checked} onCheckedChange={onChange} aria-label={ariaLabel} className="data-[state=checked]:bg-[var(--npk-accent)]" />
     </label>
   );
 }
@@ -1807,8 +1768,8 @@ function ToggleLabel({
  *  "connects" in Tab-auto-connect, "direct" in edge-drop. */
 function MatchBadge({ label, className }: { label: string; className?: string }) {
   return (
-    <span className={cn("text-[12px] text-[#4ade80] font-medium flex items-center gap-1 shrink-0", className)}>
-      <span className="w-1.5 h-1.5 rounded-full bg-[#4ade80]" />
+    <span className={cn("text-[12px] text-[var(--npk-match)] font-medium flex items-center gap-1 shrink-0", className)}>
+      <span className="w-1.5 h-1.5 rounded-full bg-[var(--npk-match)]" />
       {label}
     </span>
   );
@@ -1855,7 +1816,6 @@ export function AddNodePopup({
   const { data: userSettings } = useUserSettings(user?.id);
   const openPickerForNode = useWorkflowStore((s) => s.openPickerForNode);
   const showRecentNodes = userSettings?.showRecentNodes ?? false;
-  const showMostUsedNodes = userSettings?.showMostUsedNodes ?? false;
   const history = useNodeSelectionHistoryStore((s) => s.history);
   const recordSelection = useNodeSelectionHistoryStore((s) => s.recordSelection);
   const [searchQuery, setSearchQuery] = useState("");
@@ -1865,6 +1825,15 @@ export function AddNodePopup({
   const [activeTab, setActiveTab] = useState<AddNodeMenuTab>(readAddNodeMenuTab);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const [componentBrowserOpen, setComponentBrowserOpen] = useState(false);
+  // Creative Controls stay collapsed by default and remember their state for
+  // the session (sessionStorage, so a new tab starts collapsed again).
+  const [creativeControlsOpen, setCreativeControlsOpen] = useState(readCreativeControlsOpen);
+  const toggleCreativeControls = useCallback(() => {
+    setCreativeControlsOpen((prev) => {
+      persistCreativeControlsOpen(!prev);
+      return !prev;
+    });
+  }, []);
   // Auto-connect toggle (Tab-from-focused-node). Seeded from localStorage; the
   // live value lets the user flip it within the open popup.
   const [autoConnect, setAutoConnect] = useState(getAutoConnectPref);
@@ -1884,10 +1853,20 @@ export function AddNodePopup({
     searchInputRef.current?.focus();
   }, []);
 
-  // The "Parameter" category is currently hidden from the UI. Re-enable by
-  // dropping the `n.category !== "Parameter"` clause below.
+  // Compatibility pool. Parameter-category nodes stay OUT of it: edge-drop
+  // reaches them through the typed-handle pool below, and letting them into
+  // the generic compatibility tiers would offer a Duration node on handles
+  // that cannot consume one.
   const visibleNodes = useMemo(
     () => getNodeOptions().filter((n) => (!n.adminOnly || isAdmin) && n.category !== "Parameter"),
+    [isAdmin],
+  );
+
+  // Browse + search pool. Unlike `visibleNodes` this DOES include the seven
+  // Parameter nodes — the redesign surfaces them under Models · Generation
+  // Settings instead of leaving them reachable only by dragging a wire.
+  const browsePool = useMemo(
+    () => getNodeOptions().filter((n) => !n.adminOnly || isAdmin),
     [isAdmin],
   );
 
@@ -2068,8 +2047,15 @@ export function AddNodePopup({
   // Node matches, sectioned (own first, then "other"); flat on all/models.
   const searchSections = useMemo(() => {
     if (!searchActive) return null;
-    return searchNodeOptionsSectioned(effectivePool, searchQuery, searchTab, directMatchTypes);
-  }, [searchActive, effectivePool, searchQuery, searchTab, directMatchTypes]);
+    // Search spans the browse pool so the Generation Settings nodes are
+    // findable by name, not only by dragging a compatible wire.
+    return searchNodeOptionsSectioned(
+      isFiltered ? effectivePool : browsePool,
+      searchQuery,
+      searchTab,
+      directMatchTypes,
+    );
+  }, [searchActive, effectivePool, browsePool, isFiltered, searchQuery, searchTab, directMatchTypes]);
 
   // ALL matching models (never filtered by tab) — just ordered so the active
   // media tab's own kind leads. Suppressed in edge-drop (connection-driven).
@@ -2096,62 +2082,68 @@ export function AddNodePopup({
 
   const searchRows = useMemo<SearchRow[]>(() => (searchBlocks ? searchBlocks.flatMap((b) => b.rows) : []), [searchBlocks]);
 
-  // Curated COMMON tab root. Flat nav order matches the COMMON render below:
-  // lead, the Common Pickers nav row (under List), titled sections, then Assets.
-  const commonRootItems = useMemo<Array<NodeOption | CommonPickersNavItem>>(() => {
-    const toOpts = (types: ReadonlyArray<SceneNodeType>) =>
-      types.map((t) => optionByType.get(t)).filter(isNodeOption);
-    return [
-      ...toOpts(COMMON_LEAD),
-      COMMON_PICKERS_NAV_ITEM,
-      ...toOpts(COMMON_SECTIONS.flatMap((s) => s.types)),
-      ...toOpts(COMMON_ASSETS_SECTION.types),
-    ];
-  }, [optionByType]);
 
-  const categoryNodes = useMemo<Array<NodeOption | CommonPickersNavItem>>(() => {
+  const categoryNodes = useMemo<NodeOption[]>(() => {
     if (!selectedCategory) return [];
-    if (selectedCategory === VIRTUAL_CATEGORY_IDS.commonPickers) {
-      // Common Pickers sub-view: picker nodes grouped by section. Each node's
-      // `group` is overridden to its section title so the generic render below
-      // shows Camera / Look / Subject / Object headers.
-      return COMMON_PICKER_SECTIONS.flatMap((sec) =>
-        sec.types
-          .map((t) => optionByType.get(t))
-          .filter(isNodeOption)
-          .map((o) => ({ ...o, group: sec.title })),
-      );
-    }
     if (selectedCategory === VIRTUAL_CATEGORY_IDS.recent) {
       return mapHistoryToOptions(history, (a, b) => b.lastUsedAt - a.lastUsedAt, optionByType);
-    }
-    if (selectedCategory === VIRTUAL_CATEGORY_IDS.mostUsed) {
-      return mapHistoryToOptions(
-        history,
-        (a, b) => b.count - a.count || b.lastUsedAt - a.lastUsedAt,
-        optionByType,
-      );
     }
     // Real categories: cluster nodes by group so each section header renders
     // once (the virtual categories above keep their curated/history order).
     return clusterByGroup(effectivePool.filter((node) => node.category === selectedCategory));
   }, [selectedCategory, effectivePool, optionByType, history]);
 
-  // Recent + Most Used are opt-in per-user (Settings → Add Node Menu); hidden by
-  // default to keep the popup compact.
+  // Recent is opt-in per-user (Settings → Add Node Menu). Most Used was
+  // removed with the picker redesign — POPULAR covers the same need
+  // editorially, and a second history list was never reachable.
   const visibleCategories = useMemo(() => {
     return CATEGORIES.filter((cat) => {
       if (cat.id === VIRTUAL_CATEGORY_IDS.recent) return showRecentNodes;
-      if (cat.id === VIRTUAL_CATEGORY_IDS.mostUsed) return showMostUsedNodes;
       return true;
     });
-  }, [showRecentNodes, showMostUsedNodes]);
+  }, [showRecentNodes]);
 
-  // Image / Video / Audio tab content — null on the non-media tabs.
-  const mediaTabItems = useMemo(() => {
-    if (activeTab === "common" || activeTab === "all" || activeTab === "models") return null;
-    return mediaTabNodeOptions(effectivePool, activeTab);
-  }, [activeTab, effectivePool]);
+  // Family-grouped content for the active tab. Built for Models too — that
+  // view keeps the model tree and appends the Generation Settings family
+  // underneath it.
+  const pickerSections = useMemo(() => {
+    const built = sectionsForTab(isFiltered ? effectivePool : browsePool, activeTab);
+    // RECENT leads the Common tab when the user has opted in — the per-user
+    // counterpart to the editorial POPULAR block. It is derived from history,
+    // so it cannot live in the static registry; an empty history renders
+    // nothing at all, same as any other empty family.
+    if (activeTab !== "common" || !showRecentNodes) return built;
+    const recent = mapHistoryToOptions(
+      history,
+      (a, b) => b.lastUsedAt - a.lastUsedAt,
+      optionByType,
+    ).slice(0, 6);
+    if (!recent.length) return built;
+    return {
+      ...built,
+      sections: [{ id: "common-recent", label: "Recent", options: recent }, ...built.sections],
+    };
+  }, [activeTab, effectivePool, browsePool, isFiltered, showRecentNodes, history, optionByType]);
+
+  // Generation Settings rows under the model tree. They keep their own cursor
+  // because the tree owns the arrows on that tab and hands the index over once
+  // it runs off its own end.
+  const modelsTrailingRows = useMemo(
+    () => (pickerSections ? pickerSections.sections.flatMap((s) => [...s.options]) : []),
+    [pickerSections],
+  );
+  const [modelsTrailingIndex, setModelsTrailingIndex] = useState<number | null>(null);
+  useEffect(() => setModelsTrailingIndex(null), [activeTab, searchQuery]);
+
+  // Rows the section list contributes to the flat keyboard order, in render
+  // order — including the Creative Controls toggle sentinel.
+  const sectionNavItems = useMemo(
+    () =>
+      pickerSections
+        ? flattenSections(pickerSections.sections, pickerSections.controls, creativeControlsOpen)
+        : [],
+    [pickerSections, creativeControlsOpen],
+  );
 
   // Items to display (search results, compatibility tiers, category nodes,
   // a media tab, the Common tab root, or the All tab's categories)
@@ -2161,10 +2153,21 @@ export function AddNodePopup({
     if (searchActive) return searchSections ? [...searchSections.own, ...searchSections.other] : [];
     if (isFiltered && !selectedCategory) return effectivePool;
     if (selectedCategory) return categoryNodes;
-    if (mediaTabItems) return [...mediaTabItems.common, ...mediaTabItems.rest];
-    if (activeTab === "common") return commonRootItems;
+    if (pickerSections) return sectionNavItems;
     return visibleCategories;
-  }, [searchActive, searchSections, isFiltered, selectedCategory, effectivePool, categoryNodes, mediaTabItems, activeTab, commonRootItems, visibleCategories]);
+  }, [searchActive, searchSections, isFiltered, selectedCategory, effectivePool, categoryNodes, pickerSections, sectionNavItems, visibleCategories]);
+
+  // Footer count: node rows currently on screen. Model rows, category rows and
+  // the Creative Controls toggle are excluded — none of them is a node you can
+  // add — and nothing here is a hardcoded catalog total, so the number stays
+  // honest as families collapse or an edition hides its Cloud-only nodes.
+  const renderedNodeCount = useMemo(
+    () =>
+      searchActive
+        ? searchRows.filter((r) => r.kind === "node").length
+        : displayItems.filter((item) => item && "type" in item).length,
+    [searchActive, searchRows, displayItems],
+  );
 
   // Reset state when opening/closing
   useEffect(() => {
@@ -2216,6 +2219,16 @@ export function AddNodePopup({
         return;
       }
 
+      // ←/→ cycle tabs while the query is empty — the footer advertises
+      // "→ Tabs", so the shortcut has to work. Placed above the Models bail
+      // because the model tree only claims ArrowLeft when a series is drilled
+      // open (it stops propagation there, and backing out wins over cycling).
+      if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && !searchQuery && !isFiltered) {
+        e.preventDefault();
+        switchTab(nextAddNodeMenuTab(activeTab, e.key === "ArrowRight" ? 1 : -1));
+        return;
+      }
+
       // In the Models browse view the model-tree owns Arrow/Enter. Bail before
       // those branches — but AFTER Escape (closes) and Tab (cycles tabs), and
       // only while NOT searching (search is the popup's own unified list).
@@ -2239,7 +2252,9 @@ export function AddNodePopup({
         } else {
           const item = displayItems[highlightedIndex];
           if (item) {
-            if ("type" in item) {
+            if (isCreativeControlsNavItem(item)) {
+              toggleCreativeControls();
+            } else if ("type" in item) {
               handleNodeSelect(item.type);
             } else {
               // It's a category
@@ -2272,6 +2287,7 @@ export function AddNodePopup({
     onClose,
     handleNodeSelect,
     handleSelectModel,
+    toggleCreativeControls,
   ]);
 
   // Reset highlighted index when items change
@@ -2280,11 +2296,15 @@ export function AddNodePopup({
   }, [searchQuery, selectedCategory, activeTab]);
 
   // Keep the keyboard-highlighted item scrolled into view (arrow up/down).
+  // `modelsTrailingIndex` is in the deps because the Generation Settings rows
+  // under the model tree carry their own cursor — without it those rows are
+  // navigable but scroll off-screen, which is the defect the keyboard fix was
+  // meant to remove.
   useEffect(() => {
     scrollContainerRef.current
       ?.querySelector('[data-active="true"]')
       ?.scrollIntoView({ block: "nearest" });
-  }, [highlightedIndex, displayItems]);
+  }, [highlightedIndex, displayItems, modelsTrailingIndex]);
 
   if (!open && !componentBrowserOpen) return null;
 
@@ -2306,24 +2326,26 @@ export function AddNodePopup({
     {open && !componentBrowserOpen && <div
       ref={popupRef}
       className={cn(
-        "fixed z-[100] w-[660px] max-w-[calc(100vw-16px)] flex flex-col",
-        "bg-white dark:bg-[#1E1E1E]",
-        "border border-[#E2E8F0] dark:border-[#2D2D2D]",
+        // 790px is the design width — the nine intent tabs need it to fit on
+        // one line without the strip having to scroll.
+        "fixed z-[100] w-[790px] max-w-[calc(100vw-16px)] flex flex-col",
+        "bg-[var(--npk-surface)]",
+        "border border-[var(--npk-border)]",
         "rounded-xl shadow-xl",
         "overflow-hidden",
       )}
       style={popupStyle}
     >
       {/* Header */}
-      <div className="px-4 py-3 border-b border-[#E2E8F0] dark:border-[#2D2D2D]">
-        <h3 className="text-base font-semibold text-[#1E293B] dark:text-white">
+      <div className="px-4 py-3 border-b border-[var(--npk-border)]">
+        <h3 className="text-base font-semibold text-[var(--npk-t1)]">
           {selectedCategory ? (
             <button
               onClick={() => {
                 setSelectedCategory(null);
                 searchInputRef.current?.focus();
               }}
-              className="flex items-center gap-2 hover:text-[#ff0073] transition-colors"
+              className="flex items-center gap-2 hover:text-[var(--npk-accent)] transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               {selectedCategory}
@@ -2344,7 +2366,8 @@ export function AddNodePopup({
                   <span
                     className={cn(
                       "px-2 py-0.5 rounded-full text-sm font-medium border",
-                      !c && "bg-[#a78bfa]/20 text-[#a78bfa] border-[#a78bfa]/30",
+                      !c &&
+                        "bg-[var(--npk-chip-fallback)]/20 text-[var(--npk-chip-fallback)] border-[var(--npk-chip-fallback)]/30",
                     )}
                     style={style}
                   >
@@ -2358,53 +2381,23 @@ export function AddNodePopup({
           ) : autoConnectCtx ? (
             <span className="flex items-center gap-1.5">
               <span>Connecting new node to</span>
-              <span className="text-[#ff0073]">{autoConnectCtx.focusedLabel}</span>
+              <span className="text-[var(--npk-accent)]">{autoConnectCtx.focusedLabel}</span>
             </span>
           ) : (
-            "What do you want to create?"
+            "What do you want to do?"
           )}
         </h3>
       </div>
 
       {/* Mode tabs — hidden in edge-drop compatibility mode where the list is
           connection-driven, not category-driven. Tab cycles, Shift+Tab reverses. */}
-      {!isFiltered && (
-        <div className="px-3 pt-2" role="tablist" aria-label="Node menu mode">
-          <div className="flex gap-1 rounded-lg bg-[#F1F5F9] dark:bg-[#121212] p-1">
-            {([
-              { id: "common", label: "Common", icon: <Star className="h-3.5 w-3.5" /> },
-              { id: "image", label: "Image", icon: <ImageIcon className="h-3.5 w-3.5" /> },
-              { id: "video", label: "Video", icon: <Film className="h-3.5 w-3.5" /> },
-              { id: "audio", label: "Audio", icon: <Music className="h-3.5 w-3.5" /> },
-              { id: "models", label: "Models", icon: <Layers className="h-3.5 w-3.5" /> },
-              { id: "all", label: "All", icon: <LayoutGrid className="h-3.5 w-3.5" /> },
-            ] as const).map(({ id, label, icon }) => (
-              <button
-                key={id}
-                type="button"
-                role="tab"
-                aria-selected={activeTab === id}
-                onClick={() => switchTab(id)}
-                className={cn(
-                  "flex-1 flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-sm font-medium transition-colors",
-                  activeTab === id
-                    ? "bg-white dark:bg-[#2D2D2D] text-[#ff0073] shadow-sm"
-                    : "text-[#64748B] dark:text-[#94A3B8] hover:text-[#1E293B] dark:hover:text-white",
-                )}
-              >
-                {icon}
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      {!isFiltered && <PickerTabBar activeTab={activeTab} onSelect={switchTab} />}
 
       {/* Search */}
-      <div className="px-3 py-2 border-b border-[#E2E8F0] dark:border-[#2D2D2D]">
+      <div className="px-3 py-2 border-b border-[var(--npk-border)]">
         <div className="flex items-center gap-2">
           <div className={cn("relative", isFiltered ? "flex-1" : "w-[300px] max-w-full")}>
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--npk-muted)]" />
             <input
               ref={searchInputRef}
               type="text"
@@ -2413,12 +2406,12 @@ export function AddNodePopup({
               onChange={(e) => setSearchQuery(e.target.value)}
               className={cn(
                 "w-full pl-9 pr-3 py-2 text-base",
-                "bg-[#F8FAFC] dark:bg-[#121212]",
-                "border border-[#E2E8F0] dark:border-[#2D2D2D]",
+                "bg-[var(--npk-footer)]",
+                "border border-[var(--npk-border)]",
                 "rounded-lg",
-                "text-[#1E293B] dark:text-white",
-                "placeholder:text-[#94A3B8]",
-                "focus:outline-none focus:ring-2 focus:ring-[#ff0073]/50 focus:border-[#ff0073]",
+                "text-[var(--npk-t1)]",
+                "placeholder:text-[var(--npk-muted)]",
+                "focus:outline-none focus:ring-2 focus:ring-[var(--npk-accent)]/50 focus:border-[var(--npk-accent)]",
               )}
             />
           </div>
@@ -2431,7 +2424,7 @@ export function AddNodePopup({
           {autoConnectCtx && (
             <div className="flex items-center gap-3 shrink-0 ml-auto">
               <ToggleLabel
-                icon={<Link2 className="w-3.5 h-3.5 text-[#ff0073]" />}
+                icon={<Link2 className="w-3.5 h-3.5 text-[var(--npk-accent)]" />}
                 label="Auto Connect"
                 checked={autoConnect}
                 onChange={(v) => {
@@ -2454,81 +2447,108 @@ export function AddNodePopup({
       <div ref={scrollContainerRef} className="py-2">
         {inModelsView && !searchActive ? (
           // Models browse view (the Models tab or the All-tab "Models"
-          // category): series → variants. Search is handled by the unified
-          // branch below, so this only renders when idle.
-          <ModelsTab onSelectModel={handleSelectModel} />
+          // category): series → variants, then the Generation Settings family
+          // — the seven config nodes that used to be reachable only by
+          // dragging a wire. The model tree owns the arrow keys, so it hands
+          // the cursor on to these rows rather than clamping at its own end.
+          <>
+            <ModelsTab
+              onSelectModel={handleSelectModel}
+              trailing={
+                modelsTrailingRows.length > 0
+                  ? {
+                      count: modelsTrailingRows.length,
+                      highlighted: modelsTrailingIndex,
+                      onHighlight: setModelsTrailingIndex,
+                      onEnter: (i) => {
+                        const node = modelsTrailingRows[i];
+                        if (node) handleNodeSelect(node.type);
+                      },
+                    }
+                  : undefined
+              }
+            />
+            {pickerSections.sections.length > 0 && (
+              <PickerSectionList
+                sections={pickerSections.sections}
+                controls={[]}
+                controlsOpen={false}
+                onToggleControls={toggleCreativeControls}
+                highlightedIndex={modelsTrailingIndex ?? -1}
+                onHover={setModelsTrailingIndex}
+                onSelect={handleNodeSelect}
+              />
+            )}
+          </>
         ) : searchActive ? (
-          // Unified node + model search: blocks ordered per SEARCH_BLOCK_ORDER,
-          // a divider + header before every non-first block. One running nav
-          // index across all rows so keyboard highlight/Enter line up.
+          // Search: current-tab hits under their family headers, then a
+          // labelled separator and the cross-tab hits, each badged with the
+          // tab it lives on. Model hits slot in per SEARCH_BLOCK_ORDER. One
+          // running nav index across every row so keyboard highlight/Enter
+          // line up with what is drawn.
           searchBlocks && searchBlocks.length > 0 ? (
             (() => {
               let nav = 0;
-              const nodeRow = (node: NodeOption) => {
-                const index = nav++;
-                return (
-                  <button
-                    key={`n-${node.type}`}
-                    type="button"
-                    onClick={() => handleNodeSelect(node.type)}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors",
-                      index === highlightedIndex ? "bg-[#F1F5F9] dark:bg-[#2D2D2D]" : "hover:bg-[#F8FAFC] dark:hover:bg-[#252525]",
-                    )}
-                    onMouseEnter={() => setHighlightedIndex(index)}
-                    data-active={index === highlightedIndex ? "true" : undefined}
-                  >
-                    <span className={cn("text-[#64748B] dark:text-[#94A3B8]", CATEGORY_COLORS[node.category])}>{node.icon}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-base font-medium text-[#1E293B] dark:text-white truncate">{node.label}</div>
-                      <div className="text-sm text-[#94A3B8]">{node.category}</div>
+              return searchBlocks.map(({ block, rows }) => {
+                const at = nav;
+                nav += rows.length;
+                if (block === "models") {
+                  return (
+                    <div key={block} className="mb-2.5">
+                      <div className="sticky top-0 z-10 bg-[var(--npk-surface)] px-2.5 pb-1.5 pt-2 text-[10.5px] font-semibold uppercase tracking-[1.3px] text-[var(--npk-dim)]">
+                        {SEARCH_BLOCK_HEADER[block]}
+                      </div>
+                      {rows.map((r, i) =>
+                        r.kind === "model" ? (
+                          <VariantRow
+                            key={`m-${r.model.id}`}
+                            v={r.model}
+                            active={at + i === highlightedIndex}
+                            onHover={() => setHighlightedIndex(at + i)}
+                            onPick={(v) => handleSelectModel(variantToSelection(v))}
+                          />
+                        ) : null,
+                      )}
                     </div>
-                    {directMatchTypes.has(node.type) && (
-                      <MatchBadge label={matchLabel} className="ml-auto" />
-                    )}
-                  </button>
-                );
-              };
-              const modelRow = (model: ModelTreeVariant) => {
-                const index = nav++;
-                return (
-                  <VariantRow
-                    key={`m-${model.id}`}
-                    v={model}
-                    active={index === highlightedIndex}
-                    onHover={() => setHighlightedIndex(index)}
-                    onPick={(v) => handleSelectModel(variantToSelection(v))}
+                  );
+                }
+                const hits = rows.flatMap((r) => (r.kind === "node" ? [r.node] : []));
+                const badge = (node: NodeOption) =>
+                  directMatchTypes.has(node.type) ? matchLabel : undefined;
+                return block === "nodeOwn" ? (
+                  <SearchOwnBlock
+                    key={block}
+                    hits={hits}
+                    startIndex={at}
+                    highlightedIndex={highlightedIndex}
+                    onHover={setHighlightedIndex}
+                    onSelect={handleNodeSelect}
+                    badgeFor={badge}
+                  />
+                ) : (
+                  <SearchOtherBlock
+                    key={block}
+                    hits={hits}
+                    startIndex={at}
+                    highlightedIndex={highlightedIndex}
+                    onHover={setHighlightedIndex}
+                    onSelect={handleNodeSelect}
+                    directBadge={badge}
                   />
                 );
-              };
-              return (
-                <>
-                  {searchBlocks.map(({ block, rows }, bi) => (
-                    <div key={block}>
-                      {bi > 0 && (
-                        <>
-                          <div className="border-t border-muted-foreground/10 mx-3 mt-1" />
-                          <div className="text-[12px] uppercase tracking-wider text-muted-foreground/60 font-medium px-4 pt-2 pb-1">
-                            {SEARCH_BLOCK_HEADER[block]}
-                          </div>
-                        </>
-                      )}
-                      {rows.map((r) => (r.kind === "node" ? nodeRow(r.node) : modelRow(r.model)))}
-                    </div>
-                  ))}
-                </>
-              );
+              });
             })()
           ) : (
-            <div className="px-4 py-8 text-center text-base text-[#94A3B8]">No results found</div>
+            <SearchEmptyState query={searchQuery.trim()} />
           )
+
         ) : isFiltered && compatibilityNodes && !selectedCategory ? (
           // Smart edge-drop: show direct matches then compatible
           <>
             {compatibilityNodes.direct.length > 0 && (
               <>
-                <div className="text-[12px] uppercase tracking-wider text-[#4ade80]/80 font-medium px-4 pt-2 pb-1 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#4ade80]" />
+                <div className="text-[12px] uppercase tracking-wider text-[var(--npk-match)]/80 font-medium px-4 pt-2 pb-1 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--npk-match)]" />
                   Direct Match
                 </div>
                 {compatibilityNodes.direct.map((node, index) => (
@@ -2539,18 +2559,18 @@ export function AddNodePopup({
                     className={cn(
                       "w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors",
                       index === highlightedIndex
-                        ? "bg-[#F1F5F9] dark:bg-[#2D2D2D]"
-                        : "hover:bg-[#F8FAFC] dark:hover:bg-[#252525]",
+                        ? "bg-[var(--npk-sel-bg)]"
+                        : "hover:bg-[var(--npk-hover)]",
                     )}
                     onMouseEnter={() => setHighlightedIndex(index)}
                 data-active={index === highlightedIndex ? "true" : undefined}
                   >
-                    <span className={cn("text-[#64748B] dark:text-[#94A3B8]", CATEGORY_COLORS[node.category])}>
+                    <span className="text-[var(--npk-icon)]">
                       {node.icon}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <div className="text-base font-medium text-[#1E293B] dark:text-white truncate">{node.label}</div>
-                      <div className="text-sm text-[#94A3B8]">{node.category}</div>
+                      <div className="text-base font-medium text-[var(--npk-t1)] truncate">{node.label}</div>
+                      <div className="text-sm text-[var(--npk-muted)]">{node.category}</div>
                     </div>
                     <MatchBadge label={matchLabel} />
                   </button>
@@ -2572,18 +2592,18 @@ export function AddNodePopup({
                       className={cn(
                         "w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors",
                         index === highlightedIndex
-                          ? "bg-[#F1F5F9] dark:bg-[#2D2D2D]"
-                          : "hover:bg-[#F8FAFC] dark:hover:bg-[#252525]",
+                          ? "bg-[var(--npk-sel-bg)]"
+                          : "hover:bg-[var(--npk-hover)]",
                       )}
                       onMouseEnter={() => setHighlightedIndex(index)}
                 data-active={index === highlightedIndex ? "true" : undefined}
                     >
-                      <span className={cn("text-[#64748B] dark:text-[#94A3B8]", CATEGORY_COLORS[node.category])}>
+                      <span className="text-[var(--npk-icon)]">
                         {node.icon}
                       </span>
                       <div className="flex-1 min-w-0">
-                        <div className="text-base font-medium text-[#1E293B] dark:text-white/70 truncate">{node.label}</div>
-                        <div className="text-sm text-[#94A3B8]">{node.category}</div>
+                        <div className="text-base font-medium text-[var(--npk-t2)] truncate">{node.label}</div>
+                        <div className="text-sm text-[var(--npk-muted)]">{node.category}</div>
                       </div>
                     </button>
                   );
@@ -2593,7 +2613,7 @@ export function AddNodePopup({
           </>
         ) : selectedCategory ? (
           categoryNodes.length === 0 ? (
-            <div className="px-4 py-8 text-center text-base text-[#94A3B8]">
+            <div className="px-4 py-8 text-center text-base text-[var(--npk-muted)]">
               No nodes here yet — they&apos;ll appear as you use them.
             </div>
           ) : (
@@ -2611,7 +2631,7 @@ export function AddNodePopup({
                       <div className="border-t border-muted-foreground/10 mx-3 mt-1" />
                     )}
                     <div className="text-[12px] uppercase tracking-wider text-muted-foreground/60 font-medium px-4 pt-2 pb-1">
-                      {node.group}
+                      {familyLabel(node.group)}
                     </div>
                   </>
                 )}
@@ -2622,21 +2642,20 @@ export function AddNodePopup({
                     "w-full flex items-center gap-3 px-4 py-2.5 text-left",
                     "transition-colors",
                     index === highlightedIndex
-                      ? "bg-[#F1F5F9] dark:bg-[#2D2D2D]"
-                      : "hover:bg-[#F8FAFC] dark:hover:bg-[#252525]",
+                      ? "bg-[var(--npk-sel-bg)]"
+                      : "hover:bg-[var(--npk-hover)]",
                   )}
                   onMouseEnter={() => setHighlightedIndex(index)}
                 data-active={index === highlightedIndex ? "true" : undefined}
                 >
                   <span
                     className={cn(
-                      "text-[#64748B] dark:text-[#94A3B8]",
-                      CATEGORY_COLORS[node.category],
+                      "text-[var(--npk-icon)]",
                     )}
                   >
                     {node.icon}
                   </span>
-                  <span className="text-base text-[#1E293B] dark:text-white">
+                  <span className="text-base text-[var(--npk-t1)]">
                     {node.label}
                   </span>
                   {directMatchTypes.has(node.type) && (
@@ -2647,151 +2666,27 @@ export function AddNodePopup({
             );
           })
           )
-        ) : mediaTabItems ? (
-          // Image / Video / Audio tab: curated-common producers first, the
-          // remaining producers under a "More" divider. Nav order mirrors
-          // displayItems ([...common, ...rest]) so keyboard highlight/Enter
-          // line up with what's rendered.
-          (() => {
-            let nav = 0;
-            const row = (node: NodeOption) => {
-              const i = nav++;
-              return (
-                <button
-                  key={node.type}
-                  type="button"
-                  onClick={() => handleNodeSelect(node.type)}
-                  className={cn(
-                    "w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors",
-                    i === highlightedIndex
-                      ? "bg-[#F1F5F9] dark:bg-[#2D2D2D]"
-                      : "hover:bg-[#F8FAFC] dark:hover:bg-[#252525]",
-                  )}
-                  onMouseEnter={() => setHighlightedIndex(i)}
-                  data-active={i === highlightedIndex ? "true" : undefined}
-                >
-                  <span className={cn("text-[#64748B] dark:text-[#94A3B8]", CATEGORY_COLORS[node.category])}>
-                    {node.icon}
-                  </span>
-                  <span className="text-base text-[#1E293B] dark:text-white">{node.label}</span>
-                  {directMatchTypes.has(node.type) && (
-                    <MatchBadge label={matchLabel} className="ml-auto" />
-                  )}
-                </button>
-              );
-            };
-            return (
-              <>
-                {mediaTabItems.common.map(row)}
-                {mediaTabItems.rest.length > 0 && (
-                  <div key="__media_more">
-                    {mediaTabItems.common.length > 0 && (
-                      <div className="border-t border-muted-foreground/10 mx-3 mt-1" />
-                    )}
-                    <div className="text-[12px] uppercase tracking-wider text-muted-foreground/60 font-medium px-4 pt-2 pb-1">
-                      More
-                    </div>
-                  </div>
-                )}
-                {mediaTabItems.rest.map(row)}
-                {mediaTabItems.common.length === 0 && mediaTabItems.rest.length === 0 && (
-                  <div className="px-4 py-8 text-center text-base text-[#94A3B8]">
-                    No nodes found
-                  </div>
-                )}
-              </>
-            );
-          })()
-        ) : activeTab === "common" ? (
-            // Curated COMMON root: titled sections + a collapsible Common
-            // Pickers submenu. `nav` mirrors the commonRootItems flat order so
-            // keyboard highlight/Enter line up with what's rendered.
-            (() => {
-              const rows: ReactNode[] = [];
-              let nav = 0;
-              const pushNode = (node: NodeOption, header: string | null, indent: boolean) => {
-                const i = nav++;
-                rows.push(
-                  <div key={node.type}>
-                    {header && (
-                      <>
-                        {rows.length > 0 && (
-                          <div className="border-t border-muted-foreground/10 mx-3 mt-1" />
-                        )}
-                        <div className={cn("text-[12px] uppercase tracking-wider text-muted-foreground/60 font-medium px-4 pt-2 pb-1", indent && "pl-8")}>
-                          {header}
-                        </div>
-                      </>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => handleNodeSelect(node.type)}
-                      className={cn(
-                        "w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors",
-                        indent && "pl-8",
-                        i === highlightedIndex
-                          ? "bg-[#F1F5F9] dark:bg-[#2D2D2D]"
-                          : "hover:bg-[#F8FAFC] dark:hover:bg-[#252525]",
-                      )}
-                      onMouseEnter={() => setHighlightedIndex(i)}
-                      data-active={i === highlightedIndex ? "true" : undefined}
-                    >
-                      <span className={cn("text-[#64748B] dark:text-[#94A3B8]", CATEGORY_COLORS[node.category])}>
-                        {node.icon}
-                      </span>
-                      <span className="text-base text-[#1E293B] dark:text-white">{node.label}</span>
-                      {directMatchTypes.has(node.type) && (
-                        <MatchBadge label={matchLabel} className="ml-auto" />
-                      )}
-                    </button>
-                  </div>,
-                );
-              };
-              COMMON_LEAD.forEach((t) => {
-                const o = optionByType.get(t);
-                if (o) pushNode(o, null, false);
-              });
-              // Common Pickers sits in the lead block, right under List — a
-              // real nav row: it consumes a nav index so arrows highlight it
-              // and Enter (handled via its categoryNodes sentinel) opens it.
-              {
-                const i = nav++;
-                rows.push(
-                  <button
-                    key="__common_pickers_nav"
-                    type="button"
-                    onClick={() => {
-                      setSelectedCategory(VIRTUAL_CATEGORY_IDS.commonPickers);
-                      setHighlightedIndex(0);
-                      searchInputRef.current?.focus();
-                    }}
-                    onMouseEnter={() => setHighlightedIndex(i)}
-                    data-active={i === highlightedIndex ? "true" : undefined}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors",
-                      i === highlightedIndex
-                        ? "bg-[#F1F5F9] dark:bg-[#2D2D2D]"
-                        : "hover:bg-[#F8FAFC] dark:hover:bg-[#252525]",
-                    )}
-                  >
-                    <span className="text-[#818CF8]"><Layers className="h-4 w-4" /></span>
-                    <span className="text-base text-[#1E293B] dark:text-white">Common Pickers</span>
-                    <ChevronRight className="ml-auto w-4 h-4 text-[#94A3B8]" />
-                  </button>,
-                );
-              }
-              COMMON_SECTIONS.forEach((sec) =>
-                sec.types.forEach((t, j) => {
-                  const o = optionByType.get(t);
-                  if (o) pushNode(o, j === 0 ? sec.title : null, false);
-                }),
-              );
-              COMMON_ASSETS_SECTION.types.forEach((t, j) => {
-                const o = optionByType.get(t);
-                if (o) pushNode(o, j === 0 ? COMMON_ASSETS_SECTION.title : null, false);
-              });
-              return rows;
-            })()
+        ) : pickerSections ? (
+          // Family-grouped tab body: POPULAR (media tabs), then the families
+          // this tab shows, then the collapsed Creative Controls block. Nav
+          // order mirrors sectionNavItems, so highlight and Enter line up
+          // with what is drawn.
+          pickerSections.sections.length === 0 && pickerSections.controls.length === 0 ? (
+            <div className="px-4 py-8 text-center text-[13.5px] text-[var(--npk-muted)]">
+              No nodes available here in this edition.
+            </div>
+          ) : (
+            <PickerSectionList
+              sections={pickerSections.sections}
+              controls={pickerSections.controls}
+              controlsOpen={creativeControlsOpen}
+              onToggleControls={toggleCreativeControls}
+              highlightedIndex={highlightedIndex}
+              onHover={setHighlightedIndex}
+              onSelect={handleNodeSelect}
+              badgeFor={(node) => (directMatchTypes.has(node.type) ? matchLabel : undefined)}
+            />
+          )
         ) : (
           // Categories (All tab)
           visibleCategories.map((cat, index) => (
@@ -2807,27 +2702,26 @@ export function AddNodePopup({
                 "w-full flex items-center gap-3 px-4 py-3 text-left",
                 "transition-colors",
                 index === highlightedIndex
-                  ? "bg-[#F1F5F9] dark:bg-[#2D2D2D]"
-                  : "hover:bg-[#F8FAFC] dark:hover:bg-[#252525]",
+                  ? "bg-[var(--npk-sel-bg)]"
+                  : "hover:bg-[var(--npk-hover)]",
               )}
               onMouseEnter={() => setHighlightedIndex(index)}
                 data-active={index === highlightedIndex ? "true" : undefined}
             >
               <span
                 className={cn(
-                  "text-[#64748B] dark:text-[#94A3B8]",
-                  CATEGORY_COLORS[cat.id],
+                  "text-[var(--npk-icon)]",
                 )}
               >
                 {cat.icon}
               </span>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold uppercase tracking-wider text-[#1E293B] dark:text-white">
+                <div className="text-sm font-semibold uppercase tracking-wider text-[var(--npk-t1)]">
                   {cat.label}
                 </div>
-                <div className="text-sm text-[#94A3B8]">{cat.description}</div>
+                <div className="text-sm text-[var(--npk-muted)]">{cat.description}</div>
               </div>
-              <ChevronRight className="w-4 h-4 text-[#94A3B8]" />
+              <ChevronRight className="w-4 h-4 text-[var(--npk-muted)]" />
             </button>
           ))
         )}
@@ -2835,33 +2729,39 @@ export function AddNodePopup({
       </ScrollArea>
 
       {/* Footer hint */}
-      <div className="px-4 py-2 border-t border-[#E2E8F0] dark:border-[#2D2D2D] bg-[#F8FAFC] dark:bg-[#121212]">
-        <div className="flex items-center gap-4 text-[12px] text-[#94A3B8]">
+      <div className="px-4 py-2 border-t border-[var(--npk-border)] bg-[var(--npk-footer)]">
+        <div className="flex items-center gap-4 text-[12px] text-[var(--npk-muted)]">
           <span className="flex items-center gap-1">
-            <kbd className="px-1 py-0.5 bg-white dark:bg-[#2D2D2D] rounded border border-[#E2E8F0] dark:border-[#3D3D3D]">
+            <kbd className="px-1 py-0.5 bg-[var(--npk-key)] rounded border border-[var(--npk-border)]">
               ↑↓
             </kbd>
             Navigate
           </span>
           <span className="flex items-center gap-1">
-            <kbd className="px-1 py-0.5 bg-white dark:bg-[#2D2D2D] rounded border border-[#E2E8F0] dark:border-[#3D3D3D]">
+            <kbd className="px-1 py-0.5 bg-[var(--npk-key)] rounded border border-[var(--npk-border)]">
               ↵
             </kbd>
             Select
           </span>
           {!isFiltered && (
             <span className="flex items-center gap-1">
-              <kbd className="px-1 py-0.5 bg-white dark:bg-[#2D2D2D] rounded border border-[#E2E8F0] dark:border-[#3D3D3D]">
+              <kbd className="px-1 py-0.5 bg-[var(--npk-key)] rounded border border-[var(--npk-border)]">
                 ⇥
               </kbd>
               Tabs
             </span>
           )}
           <span className="flex items-center gap-1">
-            <kbd className="px-1 py-0.5 bg-white dark:bg-[#2D2D2D] rounded border border-[#E2E8F0] dark:border-[#3D3D3D]">
+            <kbd className="px-1 py-0.5 bg-[var(--npk-key)] rounded border border-[var(--npk-border)]">
               Esc
             </kbd>
             Close
+          </span>
+          {/* Count of what is actually on screen right now — derived, never a
+              hardcoded catalog total, so it stays honest as families collapse
+              or the edition hides Cloud-only nodes. */}
+          <span className="ml-auto tabular-nums text-[var(--npk-faint)]">
+            {renderedNodeCount} {renderedNodeCount === 1 ? "node" : "nodes"}
           </span>
         </div>
       </div>

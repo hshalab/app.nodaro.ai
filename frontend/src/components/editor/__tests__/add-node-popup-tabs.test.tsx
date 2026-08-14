@@ -89,7 +89,7 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe("AddNodePopup tabs", () => {
-  it("renders the six tabs in order with Common active by default", () => {
+  it("renders the nine intent tabs in order with Common active by default", () => {
     renderPopup()
     expect(screen.getAllByRole("tab").map((t) => t.textContent)).toEqual([
       "Common",
@@ -97,52 +97,80 @@ describe("AddNodePopup tabs", () => {
       "Video",
       "Audio",
       "Models",
+      "Assets",
+      "Automate",
+      "Publish",
       "All",
     ])
     expect(tab("Common")).toHaveAttribute("aria-selected", "true")
     expect(tab("All")).toHaveAttribute("aria-selected", "false")
-    // Curated common content shows at root: lead node + Common Pickers nav row
-    expect(screen.getByText("Common Pickers")).toBeInTheDocument()
+    // Curated Common content shows at root, Text first.
     expect(screen.getByText("Generate Image")).toBeInTheDocument()
+    expect(screen.getByText("Text")).toBeInTheDocument()
   })
 
-  it("Video tab lists common video nodes first, then the rest under More", () => {
+  it("Video tab groups its nodes into families, POPULAR first", () => {
     renderPopup()
     fireEvent.click(tab("Video"))
     expect(tab("Video")).toHaveAttribute("aria-selected", "true")
     expect(localStorage.getItem(ADD_NODE_MENU_TAB_KEY)).toBe("video")
+    // Family headers replace the old flat "More" dump.
+    expect(screen.getByText("Popular")).toBeInTheDocument()
+    expect(screen.getByText("Animate & Perform")).toBeInTheDocument()
+    expect(screen.getByText("Cut & Assemble")).toBeInTheDocument()
+    expect(screen.queryByText("More")).toBeNull()
     const rows = screen.getAllByRole("button").map((b) => b.textContent ?? "")
-    const uploadVideo = rows.indexOf("Upload Video")
-    const generateVideo = rows.indexOf("Generate Video")
-    const videoToVideo = rows.indexOf("Video to Video")
-    expect(uploadVideo).toBeGreaterThanOrEqual(0)
-    expect(uploadVideo).toBeLessThan(generateVideo)
-    expect(generateVideo).toBeLessThan(videoToVideo)
-    expect(screen.getByText("More")).toBeInTheDocument()
-    // Image-only and plan-emitting nodes don't belong here
+    // The tab is a superset now: plan-emitting nodes belong to Video.
+    expect(rows).toContain("After Effects")
+    // Image-only generators still do not.
     expect(rows).not.toContain("Generate Image")
-    expect(rows).not.toContain("After Effects")
   })
 
-  it("Image and Audio tabs show their producers", () => {
+  it("Image and Audio tabs show what deals with that medium", () => {
     renderPopup()
     fireEvent.click(tab("Image"))
-    expect(screen.getByText("Upload Image")).toBeInTheDocument()
+    // POPULAR repeats Upload Image inside ADD YOUR OWN — the repeat rule.
+    expect(screen.getAllByText("Upload Image").length).toBe(2)
     expect(screen.getByText("Remove Background")).toBeInTheDocument()
+    // Consumers of an image now appear alongside its producers.
+    expect(screen.getByText("Describe Image")).toBeInTheDocument()
     expect(screen.queryByText("Generate Video")).toBeNull()
     fireEvent.click(tab("Audio"))
-    expect(screen.getByText("Text to Speech")).toBeInTheDocument()
+    expect(screen.getAllByText("Text to Speech").length).toBe(2) // POPULAR + family
     expect(screen.getByText("Generate Music")).toBeInTheDocument()
-    expect(screen.queryByText("Upload Image")).toBeNull()
+    // "Transcribe" is both a family header and a node here.
+    expect(screen.getAllByText("Transcribe").length).toBeGreaterThan(1)
+    expect(screen.queryAllByText("Upload Image")).toEqual([])
   })
 
-  it("All tab shows the root categories without COMMON and persists the choice", () => {
+  it("offers Creative Controls collapsed at the foot of a media tab", () => {
+    renderPopup()
+    fireEvent.click(tab("Image"))
+    expect(screen.getByText("Creative Controls")).toBeInTheDocument()
+    expect(screen.queryByText("Camera Motion")).toBeNull()
+    fireEvent.click(screen.getByText("Creative Controls"))
+    expect(screen.getByText("Camera Motion")).toBeInTheDocument()
+    // MUSIC & VOICE is the Audio tab's alone.
+    expect(screen.queryByText("Music Genre")).toBeNull()
+    fireEvent.click(tab("Audio"))
+    expect(screen.getByText("Music Genre")).toBeInTheDocument()
+  })
+
+  it("surfaces the formerly hidden settings nodes on the Models tab", () => {
+    renderPopup()
+    fireEvent.click(tab("Models"))
+    expect(screen.getByText("Generation Settings")).toBeInTheDocument()
+    expect(screen.getByText("Aspect Ratio")).toBeInTheDocument()
+    expect(screen.getByText("Style Guide")).toBeInTheDocument()
+  })
+
+  it("All tab lists every family under a TAB · FAMILY header", () => {
     renderPopup()
     fireEvent.click(tab("All"))
     expect(tab("All")).toHaveAttribute("aria-selected", "true")
-    expect(screen.getByText("INPUT")).toBeInTheDocument()
-    expect(screen.getByText("TRIGGERS")).toBeInTheDocument()
-    expect(screen.queryByText("COMMON")).toBeNull()
+    expect(screen.getByText("Image · Edit & Retouch")).toBeInTheDocument()
+    expect(screen.getByText("Publish · Platforms")).toBeInTheDocument()
+    expect(screen.getByText("Creative Controls · Camera")).toBeInTheDocument()
     expect(localStorage.getItem(ADD_NODE_MENU_TAB_KEY)).toBe("all")
   })
 
@@ -153,20 +181,21 @@ describe("AddNodePopup tabs", () => {
     expect(screen.getByText("Upload Video")).toBeInTheDocument()
   })
 
+  it("falls back to Common when localStorage holds a retired tab id", () => {
+    localStorage.setItem(ADD_NODE_MENU_TAB_KEY, "pickers")
+    renderPopup()
+    expect(tab("Common")).toHaveAttribute("aria-selected", "true")
+  })
+
   it("Tab key cycles forward through the modes and persists", () => {
     renderPopup()
     fireEvent.keyDown(document, { key: "Tab" })
     expect(tab("Image")).toHaveAttribute("aria-selected", "true")
     expect(localStorage.getItem(ADD_NODE_MENU_TAB_KEY)).toBe("image")
-    fireEvent.keyDown(document, { key: "Tab" })
-    expect(tab("Video")).toHaveAttribute("aria-selected", "true")
-    fireEvent.keyDown(document, { key: "Tab" })
-    fireEvent.keyDown(document, { key: "Tab" })
-    expect(tab("Models")).toHaveAttribute("aria-selected", "true")
-    fireEvent.keyDown(document, { key: "Tab" })
-    expect(tab("All")).toHaveAttribute("aria-selected", "true")
-    fireEvent.keyDown(document, { key: "Tab" })
-    expect(tab("Common")).toHaveAttribute("aria-selected", "true")
+    for (const next of ["Video", "Audio", "Models", "Assets", "Automate", "Publish", "All", "Common"]) {
+      fireEvent.keyDown(document, { key: "Tab" })
+      expect(tab(next)).toHaveAttribute("aria-selected", "true")
+    }
   })
 
   it("Shift+Tab cycles backward and wraps", () => {
@@ -174,40 +203,16 @@ describe("AddNodePopup tabs", () => {
     fireEvent.keyDown(document, { key: "Tab", shiftKey: true })
     expect(tab("All")).toHaveAttribute("aria-selected", "true")
     fireEvent.keyDown(document, { key: "Tab", shiftKey: true })
-    expect(tab("Models")).toHaveAttribute("aria-selected", "true")
+    expect(tab("Publish")).toHaveAttribute("aria-selected", "true")
   })
 
-  it("Escape returns to root from an inner category, then closes at root", () => {
+  it("Escape closes the popup from a tab root", () => {
     const { onClose } = renderPopup()
     fireEvent.click(tab("All"))
-    fireEvent.click(screen.getByText("AI"))
-    // Drilled into the AI category
-    expect(screen.getByText("Generate Script")).toBeInTheDocument()
-    fireEvent.keyDown(document, { key: "Escape" })
-    // Back at the All root — popup still open
-    expect(onClose).not.toHaveBeenCalled()
-    expect(screen.getByText("INPUT")).toBeInTheDocument()
     fireEvent.keyDown(document, { key: "Escape" })
     expect(onClose).toHaveBeenCalled()
   })
 
-  it("Escape returns from Common Pickers to the Common root", () => {
-    const { onClose } = renderPopup()
-    fireEvent.click(screen.getByText("Common Pickers"))
-    expect(screen.getByText("Camera Motion")).toBeInTheDocument()
-    fireEvent.keyDown(document, { key: "Escape" })
-    expect(onClose).not.toHaveBeenCalled()
-    expect(screen.getByText("Common Pickers")).toBeInTheDocument()
-    expect(screen.getByText("Generate Image")).toBeInTheDocument()
-  })
-
-  it("switching to Common while drilled into a category returns to the Common root", () => {
-    renderPopup()
-    fireEvent.click(tab("All"))
-    fireEvent.click(screen.getByText("AI"))
-    fireEvent.click(tab("Common"))
-    expect(screen.getByText("Common Pickers")).toBeInTheDocument()
-  })
 
   it("always opens centred in the viewport, regardless of the invocation position", () => {
     renderPopup({ position: { x: 7, y: 13 } })
@@ -231,11 +236,21 @@ describe("AddNodePopup tabs", () => {
     expect(popup.style.minHeight).toBe("")
   })
 
-  it("search on a media tab lists its own results first, then an Other section", () => {
+  it("never dead-ends: a cross-tab match lands under 'From other tabs'", () => {
+    renderPopup()
+    fireEvent.click(tab("Video"))
+    fireEvent.change(screen.getByPlaceholderText("Search nodes..."), { target: { value: "background" } })
+    // Remove Background is an Image-tab node; searching it from Video must
+    // still surface it rather than showing nothing.
+    expect(screen.getByText("From other tabs")).toBeInTheDocument()
+    const rows = screen.getAllByRole("button").map((b) => b.textContent ?? "")
+    expect(rows.some((t) => t.startsWith("Remove Background"))).toBe(true)
+  })
+
+  it("keeps this tab's own matches above the cross-tab ones", () => {
     renderPopup()
     fireEvent.click(tab("Video"))
     fireEvent.change(screen.getByPlaceholderText("Search nodes..."), { target: { value: "video" } })
-    expect(screen.getByText("Other")).toBeInTheDocument()
     const rows = screen.getAllByRole("button").map((b) => b.textContent ?? "")
     const uploadVideo = rows.findIndex((t) => t.startsWith("Upload Video"))
     const composeVideo = rows.findIndex((t) => t.startsWith("Compose Video"))
@@ -262,6 +277,49 @@ describe("AddNodePopup tabs", () => {
     expect(generateVideo).toBeLessThan(videoToVideo)
   })
 })
+
+  it("groups search hits under their family headers", () => {
+    renderPopup()
+    fireEvent.click(tab("Audio"))
+    fireEvent.change(screen.getByPlaceholderText("Search nodes..."), { target: { value: "voice" } })
+    expect(screen.getByText("Voices")).toBeInTheDocument()
+  })
+
+  it("badges each cross-tab hit with the tab it lives on", () => {
+    renderPopup()
+    fireEvent.click(tab("Video"))
+    fireEvent.change(screen.getByPlaceholderText("Search nodes..."), { target: { value: "background" } })
+    expect(screen.getByText("From other tabs")).toBeInTheDocument()
+    expect(screen.getByText("IMAGE")).toBeInTheDocument()
+  })
+
+  it("says so plainly when nothing matches anywhere", () => {
+    renderPopup()
+    fireEvent.change(screen.getByPlaceholderText("Search nodes..."), { target: { value: "zzzqqq" } })
+    expect(screen.getByText(/No node matches/)).toBeInTheDocument()
+    expect(screen.getByText(/browse every node in the All tab/)).toBeInTheDocument()
+  })
+
+  it("cycles tabs with the arrow keys the footer advertises", () => {
+    renderPopup()
+    fireEvent.keyDown(document, { key: "ArrowRight" })
+    expect(tab("Image")).toHaveAttribute("aria-selected", "true")
+    fireEvent.keyDown(document, { key: "ArrowLeft" })
+    expect(tab("Common")).toHaveAttribute("aria-selected", "true")
+  })
+
+  it("leaves the arrow keys to the list once a query is typed", () => {
+    renderPopup()
+    fireEvent.change(screen.getByPlaceholderText("Search nodes..."), { target: { value: "video" } })
+    fireEvent.keyDown(document, { key: "ArrowRight" })
+    expect(tab("Common")).toHaveAttribute("aria-selected", "true")
+  })
+
+  it("drops the Most Used category entirely", () => {
+    renderPopup()
+    fireEvent.click(tab("All"))
+    expect(screen.queryByText("MOST USED")).toBeNull()
+  })
 
 describe("AddNodePopup auto-connect", () => {
   const focusedCtx = { nodeId: "n1", nodeType: "text-prompt", focusedLabel: "Hero Prompt", sourceHandles: ["prompt"], targetHandles: ["in"] }

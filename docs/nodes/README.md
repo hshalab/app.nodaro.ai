@@ -11,8 +11,113 @@ Complete reference for all nodes available in the Nodaro.ai visual workflow edit
 
 ## Quick Reference
 
-- **Total Nodes:** 150+
-- **Categories:** 16
+- **Total Nodes:** 181 creatable from the picker
+- **Tabs:** 9  ·  **Families:** 46
+
+---
+
+## Finding a node in the editor
+
+The add-node picker (`Tab` on the canvas, or the sidebar) groups every node by what
+you are trying to do, not by which subsystem runs it. Nine tabs, each split into
+families:
+
+**Common** — a curated shortcut list. Everything in it also appears in its family below.
+
+A tab shows everything that *deals with* its medium, not only what produces it — so
+Describe Image sits on **Image**, Add Captions and 3D Title on **Video**, Transcribe on
+**Audio**. Image / Video / Audio also carry a collapsed **Creative Controls** block at
+the foot of the list.
+
+
+### Image
+
+| Family | Nodes |
+|---|---|
+| **Add Your Own** | Upload Image |
+| **Create** | Generate Image |
+| **Edit & Retouch** | Modify Image · Upscale Image · Remove Background · Generate Mask · Paint Mask · Image Collage · Extract Frame |
+| **References** | Reference Sheet · Reference Board |
+| **Understand** | Describe Image · Describe to Picker · Image Critic |
+
+### Video
+
+| Family | Nodes |
+|---|---|
+| **Add Your Own** | Upload Video |
+| **Create** | Generate Video · Generate Video Pro · Music Video |
+| **Story & Script** | Story → Video · Scene · Generate Script |
+| **Animate & Perform** | AI Avatar · Cinematic Avatar · Lip Sync · Speech to Video · Motion Transfer · Face Swap |
+| **Continue & Restyle** | Extend Video · Edit Video Pro · Retake Video · Video to Video · Relight & Switch |
+| **Cut & Assemble** | Trim Video · Combine Videos · Assemble Narrated Video · Adjust Speed · Loop Video · Fade In/Out · Composite · Compose Video · Split into Chunks · Manual Edit |
+| **Sound for Video** | Video SFX · Merge Video & Audio · Extract Audio · Remove Audio |
+| **Titles, Graphics & Captions** | 3D Title · Motion Graphics · After Effects · Lottie Overlay · Add Captions · Render Video |
+| **Format & Export** | Resize Video · Social Media Format · Upscale Video · Transcode Video |
+| **Analyze** | Video Analysis · AI Audit |
+
+### Audio
+
+| Family | Nodes |
+|---|---|
+| **Add Your Own** | Upload Audio · Reference Audio |
+| **Speech & Voiceover** | Text to Speech · Text to Dialogue |
+| **Voices** | Voice Changer · Voice Changer Pro · Voice Design · Voice Remix · Dubbing |
+| **Music** | Suno Create Music · Generate Music · Suno Lyrics · Suno Cover · Suno Extend · Suno Mashup · Suno Replace Section · Suno Add Vocals · Suno Add Instrumental · Suno Upload Extend · Suno Style Boost · Suno Convert WAV |
+| **Sound Effects** | Text to Audio |
+| **Clean & Separate** | Voice Extractor · Audio Separation · Suno Separate |
+| **Edit Audio** | Trim Audio · Combine Audio · Mix Audio · Adjust Volume · Audio FX |
+| **Transcribe** | Transcribe · Forced Alignment |
+
+### Models
+
+| Family | Nodes |
+|---|---|
+| **Generation Settings** | Provider · Aspect Ratio · Duration · Motion · Scene Count · Tone · Style Guide |
+
+### Assets
+
+| Family | Nodes |
+|---|---|
+| **Characters** | Character Asset · Create Face |
+| **Creatures** | Animal/Creature Asset |
+| **Places** | Location Asset |
+| **Objects** | Object/Props Asset |
+
+### Automate
+
+| Family | Nodes |
+|---|---|
+| **Triggers** | Schedule Trigger · Webhook Trigger · Telegram Trigger |
+| **Get Content** | Web Scrape · Video URL · Telegram Channel Feed |
+| **Text** | Text · Combine Text · Split Text · Generate Text |
+| **Lists & Batching** | List · Collect · Selector · Filter List · Sort List · Remove Duplicates · Merge Lists · Reduce |
+| **Logic & Data** | Router · Extract Field · QA Check |
+| **Workflows** | Sub-Workflow · Component · Sub-Workflow Input · Sub-Workflow Output |
+| **Canvas** | Group · Teleport Send · Teleport Receive · Preview · Sticky Note |
+
+### Publish
+
+| Family | Nodes |
+|---|---|
+| **One-Click** | Publish to Social |
+| **Platforms** | Instagram Post · TikTok Post · YouTube Upload · Facebook Post · X Post · LinkedIn Post · Telegram Post |
+| **Export** | Save to Storage · Webhook Output |
+
+### Creative Controls
+
+| Family | Nodes |
+|---|---|
+| **Subject** | Person · Animal · Vehicle · Weapon |
+| **Wardrobe & Pose** | Styling · Pose |
+| **Scene** | Setting · Era / Period · Furniture · Held Prop · Material · Backdrop · Loop Subject |
+| **Camera** | Framing · Lens · Camera / Film Stock · Exposure Settings |
+| **Light & Look** | Lighting · Color / Look · Mood · Atmosphere · Style · Photo Genre · Photographer / Artist Style · Render Quality · Aesthetic / Microtrend |
+| **Motion & Time** | Camera Motion · Temporal |
+| **Effects** | Action FX · Character FX · Composition Effects · Post-Process Effects · Transition |
+| **Music & Voice** | Music Genre · Music Mood · Instrumentation · Voice Character · Voice Delivery · Suno Voice |
+
+A family with no nodes in your edition renders nothing at all — self-hosted
+Community builds simply do not show the Cloud-only families.
 
 ---
 

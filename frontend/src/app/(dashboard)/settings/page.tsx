@@ -66,7 +66,6 @@ export default function SettingsPage() {
   const publicOutputs = settings?.publicOutputs ?? true
   const tier = settings?.tier ?? "free"
   const showRecentNodes = settings?.showRecentNodes ?? false
-  const showMostUsedNodes = settings?.showMostUsedNodes ?? false
   const variableDisplayMode = settings?.variableDisplayMode ?? "raw"
 
   useEffect(() => {
@@ -109,16 +108,6 @@ export default function SettingsPage() {
     try {
       await variableModeMutation.mutateAsync({ userId: user.id, variableDisplayMode: next })
       toast.success("Prompt variable display updated")
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to update")
-    }
-  }
-
-  async function handleToggleMostUsed(next: boolean) {
-    if (!user?.id) return
-    try {
-      await nodeMenuMutation.mutateAsync({ userId: user.id, showMostUsedNodes: next })
-      toast.success(next ? "Most Used category shown" : "Most Used category hidden")
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update")
     }
@@ -448,18 +437,6 @@ export default function SettingsPage() {
               checked={showRecentNodes}
               disabled={!user?.id}
               onCheckedChange={handleToggleRecent}
-            />
-          </div>
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex-1">
-              <label htmlFor="show-most-used" className="text-sm font-medium">Most Used</label>
-              <p className="text-xs text-muted-foreground mt-0.5">Nodes you add the most often.</p>
-            </div>
-            <Switch
-              id="show-most-used"
-              checked={showMostUsedNodes}
-              disabled={!user?.id}
-              onCheckedChange={handleToggleMostUsed}
             />
           </div>
         </div>
