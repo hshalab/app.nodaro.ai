@@ -27,22 +27,42 @@ import {
   KIE_VIDEO_MODELS,
   KIE_TEXT_TO_VIDEO_MODELS,
 } from "../kie/models.js"
+import {
+  IMAGE_EDIT_PROVIDERS,
+  LIP_SYNC_PROVIDERS,
+  MOTION_TRANSFER_PROVIDERS,
+  VIDEO_TO_VIDEO_PROVIDERS,
+  VIDEO_UPSCALE_PROVIDERS,
+} from "@nodaro/shared"
 
 export const NODARO_PROVIDER_ID = "nodaro"
 
 const nodaroInfo: ProviderInfo = {
   id: NODARO_PROVIDER_ID,
   name: "nodaro.ai",
-  capabilities: ["image-generation", "image-to-video", "text-to-video"],
+  capabilities: [
+    "image-generation",
+    "image-editing",
+    "image-to-video",
+    "text-to-video",
+    "video-to-video",
+    "motion-transfer",
+    "video-upscale",
+    "lip-sync",
+  ],
   supportedModels: {
     "image-generation": Object.keys(KIE_IMAGE_MODELS),
-    "image-editing": [],
+    // Declared from the CLOUD ROUTE's own enums rather than a KIE catalog:
+    // the cloud holds every provider key, so what it accepts is exactly what
+    // the connection can serve. A provider added to the enum is claimed here
+    // automatically instead of needing a second list kept in step.
+    "image-editing": [...IMAGE_EDIT_PROVIDERS],
     "image-to-video": Object.keys(KIE_VIDEO_MODELS),
     "text-to-video": Object.keys(KIE_TEXT_TO_VIDEO_MODELS),
-    "video-to-video": [],
-    "motion-transfer": [],
-    "video-upscale": [],
-    "lip-sync": [],
+    "video-to-video": [...VIDEO_TO_VIDEO_PROVIDERS],
+    "motion-transfer": [...MOTION_TRANSFER_PROVIDERS],
+    "video-upscale": [...VIDEO_UPSCALE_PROVIDERS],
+    "lip-sync": [...LIP_SYNC_PROVIDERS],
     "music-generation": [],
     "text-to-speech": [],
     "sound-effect": [],
