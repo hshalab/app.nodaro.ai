@@ -12,11 +12,23 @@
 import type {
   ImageToVideoProvider,
   TextToVideoProvider,
+  LipSyncProvider,
+  LipSyncOptions,
+  VideoLipSyncOptions,
+  VideoUpscaleProvider,
+  MotionTransferProvider,
+  VideoToVideoProvider,
   ProviderOptions,
   ProviderResult,
   ReconcileOpts,
 } from "../provider.interface.js"
-import { createCloudJob, waitForCloudJob, NodaroCloudError, ensureCloudReachableImageUrl, ensureCloudReachableImageUrls } from "./client.js"
+import {
+  createCloudJob,
+  waitForCloudJob,
+  NodaroCloudError,
+  ensureCloudReachableMediaUrl,
+  ensureCloudReachableMediaUrls,
+} from "./client.js"
 
 /**
  * Invert the worker's ProviderOptions.klingElements (KIE wire shape with
@@ -95,7 +107,13 @@ function extractVideoResult(
 }
 
 export class NodaroCloudVideoProvider
-  implements ImageToVideoProvider, TextToVideoProvider
+  implements
+    ImageToVideoProvider,
+    TextToVideoProvider,
+    LipSyncProvider,
+    VideoUpscaleProvider,
+    MotionTransferProvider,
+    VideoToVideoProvider
 {
   // NOTE: reconcileOpts.onTaskCreated is deliberately NOT called in either
   // method — see the rationale in ./image.ts (provider_kind is model-keyed;
@@ -113,9 +131,9 @@ export class NodaroCloudVideoProvider
   ): Promise<ProviderResult> {
     // Instance-local media can't be fetched by the cloud — re-host first.
     const [cloudImageUrl, cloudEndFrameUrl, cloudRefUrls] = await Promise.all([
-      ensureCloudReachableImageUrl(imageUrl),
-      ensureCloudReachableImageUrl(endFrameUrl),
-      ensureCloudReachableImageUrls(options?.referenceImageUrls),
+      ensureCloudReachableMediaUrl(imageUrl),
+      ensureCloudReachableMediaUrl(endFrameUrl),
+      ensureCloudReachableMediaUrls(options?.referenceImageUrls),
     ])
     const cloudOptions = options
       ? { ...options, referenceImageUrls: cloudRefUrls }
@@ -143,7 +161,7 @@ export class NodaroCloudVideoProvider
     options?: ProviderOptions,
     _reconcileOpts?: ReconcileOpts,
   ): Promise<ProviderResult> {
-    const cloudRefUrls = await ensureCloudReachableImageUrls(options?.referenceImageUrls)
+    const cloudRefUrls = await ensureCloudReachableMediaUrls(options?.referenceImageUrls)
     const cloudOptions = options
       ? { ...options, referenceImageUrls: cloudRefUrls }
       : options
@@ -158,5 +176,155 @@ export class NodaroCloudVideoProvider
     const jobId = await createCloudJob("/v1/text-to-video", body)
     const job = await waitForCloudJob(jobId, options?.onProgress)
     return extractVideoResult(job, jobId)
+  }
+
+  /**
+   * The four capabilities below all follow the i2v shape: re-host any
+   * instance-local media (the cloud's safe-fetch refuses private hosts), POST
+   * the cloud's own route, poll the job. They were previously declared as
+   * empty model lists, so a connected keyless install still fell into the
+   * router's "nothing can serve this" path even though the cloud serves all of
+   * them (verified against the live cloud with an instance token, 2026-08-14).
+   */
+  async lipSync(
+    imageUrl: string,
+    audioUrl: string,
+    prompt?: string,
+    model?: string,
+    resolution?: string,
+    audioDurationSec?: number,
+    _reconcileOpts?: ReconcileOpts,
+    options?: LipSyncOptions,
+  ): Promise<ProviderResult> {
+    const [cloudImage, cloudAudio] = await Promise.all([
+      ensureCloudReachableMediaUrl(imageUrl),
+      ensureCloudReachableMediaUrl(audioUrl),
+    ])
+    const body: Record<string, unknown> = {
+      imageUrl: cloudImage,
+      audioUrl: cloudAudio,
+      ...(prompt !== undefined ? { prompt } : {}),
+      ...(model !== undefined ? { provider: model } : {}),
+      ...(resolution !== undefined ? { resolution } : {}),
+      ...(audioDurationSec !== undefined ? { audioDurationSec } : {}),
+      ...(options?.fastMode !== undefined ? { fastMode: options.fastMode } : {}),
+      ...(options?.seed !== undefined ? { seed: options.seed } : {}),
+    }
+    const jobId = await createCloudJob("/v1/lip-sync", body)
+    return extractVideoResult(await waitForCloudJob(jobId), jobId)
+  }
+
+  async videoUpscale(
+    videoUrl: string,
+    upscaleFactor?: "1" | "2" | "4",
+    options?: ProviderOptions,
+    _reconcileOpts?: ReconcileOpts,
+  ): Promise<ProviderResult> {
+    // The router resolves the model for chain selection but does not pass it
+    // into the provider (VideoUpscaleProvider takes no model arg), so the
+    // cloud route applies its own default — the same one KIE uses.
+    const body: Record<string, unknown> = {
+      videoUrl: await ensureCloudReachableMediaUrl(videoUrl),
+      ...(upscaleFactor !== undefined ? { upscaleFactor } : {}),
+    }
+    const jobId = await createCloudJob("/v1/video-upscale", body)
+    return extractVideoResult(await waitForCloudJob(jobId), jobId)
+  }
+
+  async motionTransfer(
+    imageUrl: string,
+    videoUrl: string,
+    prompt?: string,
+    options?: ProviderOptions & {
+      characterOrientation?: "image" | "video"
+      resolution?: "480p" | "580p" | "720p" | "1080p"
+      provider?: string
+      backgroundSource?: "input_video" | "input_image"
+      negativePrompt?: string
+      videoDuration?: number
+    },
+    _reconcileOpts?: ReconcileOpts,
+  ): Promise<ProviderResult> {
+    const [cloudImage, cloudVideo] = await Promise.all([
+      ensureCloudReachableMediaUrl(imageUrl),
+      ensureCloudReachableMediaUrl(videoUrl),
+    ])
+    const body: Record<string, unknown> = {
+      imageUrl: cloudImage,
+      videoUrl: cloudVideo,
+      ...(prompt !== undefined ? { prompt } : {}),
+      ...(options?.provider !== undefined ? { provider: options.provider } : {}),
+      ...(options?.characterOrientation !== undefined
+        ? { characterOrientation: options.characterOrientation }
+        : {}),
+      ...(options?.resolution !== undefined ? { resolution: options.resolution } : {}),
+      ...(options?.backgroundSource !== undefined
+        ? { backgroundSource: options.backgroundSource }
+        : {}),
+      ...(options?.negativePrompt !== undefined ? { negativePrompt: options.negativePrompt } : {}),
+      ...(options?.videoDuration !== undefined ? { videoDuration: options.videoDuration } : {}),
+    }
+    const jobId = await createCloudJob("/v1/motion-transfer", body)
+    return extractVideoResult(await waitForCloudJob(jobId), jobId)
+  }
+
+  async videoToVideo(
+    videoUrl: string,
+    prompt?: string,
+    model?: string,
+    options?: ProviderOptions,
+    _reconcileOpts?: ReconcileOpts,
+  ): Promise<ProviderResult> {
+    const [cloudVideo, cloudRefs] = await Promise.all([
+      ensureCloudReachableMediaUrl(videoUrl),
+      ensureCloudReachableMediaUrls(options?.referenceImageUrls),
+    ])
+    // sharedVideoBody re-emits options.referenceImageUrls, so it must be given
+    // the RE-HOSTED options — passing the originals would have shipped local
+    // URLs to the cloud alongside the uploaded ones.
+    const cloudOptions = options ? { ...options, referenceImageUrls: cloudRefs } : options
+    const body: Record<string, unknown> = {
+      videoUrl: cloudVideo,
+      ...(prompt !== undefined ? { prompt } : {}),
+      ...(model !== undefined ? { provider: model } : {}),
+      ...(cloudRefs?.length ? { referenceImageUrl: cloudRefs[0] } : {}),
+      ...sharedVideoBody(cloudOptions),
+    }
+    const jobId = await createCloudJob("/v1/video-to-video", body)
+    return extractVideoResult(await waitForCloudJob(jobId), jobId)
+  }
+
+  /**
+   * Video-input lip-sync. The router calls this instead of `lipSync` when the
+   * source is a clip, and throws "does not implement video lip-sync" if a
+   * provider lacks it — so without this method a connected instance failed on
+   * exactly the nodes the connection was supposed to cover.
+   */
+  async lipSyncVideo(
+    videoUrl: string,
+    audioUrl: string,
+    opts: VideoLipSyncOptions,
+    model?: string,
+    audioDurationSec?: number,
+    _reconcileOpts?: ReconcileOpts,
+  ): Promise<ProviderResult> {
+    const [cloudVideo, cloudAudio] = await Promise.all([
+      ensureCloudReachableMediaUrl(videoUrl),
+      ensureCloudReachableMediaUrl(audioUrl),
+    ])
+    const body: Record<string, unknown> = {
+      videoUrl: cloudVideo,
+      audioUrl: cloudAudio,
+      ...(model !== undefined ? { provider: model } : {}),
+      ...(audioDurationSec !== undefined ? { audioDurationSec } : {}),
+      ...(opts?.mode !== undefined ? { mode: opts.mode } : {}),
+      ...(opts?.separateVocal !== undefined ? { separateVocal: opts.separateVocal } : {}),
+      ...(opts?.openScenedet !== undefined ? { openScenedet: opts.openScenedet } : {}),
+      ...(opts?.alignAudio !== undefined ? { alignAudio: opts.alignAudio } : {}),
+      ...(opts?.alignAudioReverse !== undefined ? { alignAudioReverse: opts.alignAudioReverse } : {}),
+      ...(opts?.templStartSeconds !== undefined ? { templStartSeconds: opts.templStartSeconds } : {}),
+    }
+    const jobId = await createCloudJob("/v1/lip-sync", body)
+    return extractVideoResult(await waitForCloudJob(jobId), jobId)
   }
 }

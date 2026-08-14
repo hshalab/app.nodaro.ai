@@ -12,8 +12,10 @@ describe("add-node-menu-tab preference", () => {
     localStorage.clear()
   })
 
-  it("defines the six tabs in display order", () => {
-    expect(ADD_NODE_MENU_TABS).toEqual(["common", "image", "video", "audio", "models", "all"])
+  it("defines the nine intent tabs in display order, All last", () => {
+    expect(ADD_NODE_MENU_TABS).toEqual([
+      "common", "image", "video", "audio", "models", "assets", "automate", "publish", "all",
+    ])
   })
 
   it("defaults to 'common' when nothing is stored", () => {
@@ -37,13 +39,17 @@ describe("add-node-menu-tab preference", () => {
     expect(nextAddNodeMenuTab("image")).toBe("video")
     expect(nextAddNodeMenuTab("video")).toBe("audio")
     expect(nextAddNodeMenuTab("audio")).toBe("models")
-    expect(nextAddNodeMenuTab("models")).toBe("all")
+    expect(nextAddNodeMenuTab("models")).toBe("assets")
+    expect(nextAddNodeMenuTab("assets")).toBe("automate")
+    expect(nextAddNodeMenuTab("automate")).toBe("publish")
+    expect(nextAddNodeMenuTab("publish")).toBe("all")
     expect(nextAddNodeMenuTab("all")).toBe("common")
   })
 
   it("nextAddNodeMenuTab cycles backward with dir=-1 and wraps", () => {
     expect(nextAddNodeMenuTab("common", -1)).toBe("all")
-    expect(nextAddNodeMenuTab("all", -1)).toBe("models")
+    expect(nextAddNodeMenuTab("all", -1)).toBe("publish")
+    expect(nextAddNodeMenuTab("assets", -1)).toBe("models")
     expect(nextAddNodeMenuTab("models", -1)).toBe("audio")
     expect(nextAddNodeMenuTab("video", -1)).toBe("image")
   })

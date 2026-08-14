@@ -15,6 +15,7 @@ import { useReactFlow } from "@xyflow/react"
 import { cn } from "@/lib/utils"
 import { hasCredits } from "@/lib/edition"
 import { CLOUD_ONLY_NODE_TYPES } from "@/lib/cloud-only-nodes"
+import { familyLabel } from "@/lib/node-families"
 import { clusterByGroup } from "@/lib/cluster-by-group"
 import { categoryRank } from "@/lib/node-category-order"
 const UnifiedAssetLibraryButton = lazy(() => import("./unified-asset-library").then(m => ({ default: m.UnifiedAssetLibraryButton })))
@@ -299,7 +300,7 @@ function NodeList({ onAdd }: { readonly onAdd: (type: SceneNodeType) => void }) 
                     <>
                       {index > 0 && <div className="border-t border-muted-foreground/10 mx-1 mt-1.5 mb-0.5" />}
                       <div className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-medium px-2.5 pt-2 pb-1">
-                        {node.group}
+                        {familyLabel(node.group)}
                       </div>
                     </>
                   )}

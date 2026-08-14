@@ -28,7 +28,25 @@ const rowCn = (active: boolean) =>
 // Pure series → variants browser. Model SEARCH lives in the add-node popup now
 // (it unifies model hits with node hits per tab); this component only renders the
 // no-query browse view and is unmounted while a search is active.
-export function ModelsTab({ onSelectModel }: { onSelectModel: (s: ModelSelection) => void }) {
+/** Rows the parent renders under the model tree (Generation Settings). The tab
+ *  owns the keyboard, so it has to hand the arrows on rather than clamp at the
+ *  end of its own list — otherwise those rows are mouse-only, which is a defect
+ *  in a keyboard palette. */
+export interface ModelsTabTrailing {
+  readonly count: number
+  /** Index into the trailing rows, or null while the model tree has focus. */
+  readonly highlighted: number | null
+  readonly onHighlight: (index: number | null) => void
+  readonly onEnter: (index: number) => void
+}
+
+export function ModelsTab({
+  onSelectModel,
+  trailing,
+}: {
+  onSelectModel: (s: ModelSelection) => void
+  trailing?: ModelsTabTrailing
+}) {
   const tree = useMemo(() => buildModelTree(), [])
   const [openSeries, setOpenSeries] = useState<string | null>(null)
   const [highlighted, setHighlighted] = useState(0)
@@ -46,14 +64,32 @@ export function ModelsTab({ onSelectModel }: { onSelectModel: (s: ModelSelection
   // so the popup's node-list Arrow/Enter handler does not also fire. Escape is left
   // to the popup (closes it). ArrowLeft backs out of a drilled line.
   useEffect(() => {
+    // One continuous index across the tree and any trailing rows: 0..count-1
+    // is the tree, count..count+trailing-1 is the parent's block.
+    const trailingCount = trailing?.count ?? 0
+    const total = count + trailingCount
+    const inTrailing = trailing?.highlighted != null
+    const cursor = inTrailing ? count + (trailing?.highlighted ?? 0) : highlighted
+
+    const moveTo = (next: number) => {
+      const clamped = Math.max(0, Math.min(next, total - 1))
+      if (clamped >= count) {
+        trailing?.onHighlight(clamped - count)
+      } else {
+        trailing?.onHighlight(null)
+        setHighlighted(clamped)
+      }
+    }
+
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "ArrowDown") {
-        e.preventDefault(); e.stopPropagation(); setHighlighted((i) => (count ? Math.min(i + 1, count - 1) : 0))
+        e.preventDefault(); e.stopPropagation(); moveTo(cursor + 1)
       } else if (e.key === "ArrowUp") {
-        e.preventDefault(); e.stopPropagation(); setHighlighted((i) => Math.max(i - 1, 0))
+        e.preventDefault(); e.stopPropagation(); moveTo(cursor - 1)
       } else if (e.key === "Enter") {
         e.preventDefault(); e.stopPropagation()
-        if (mode === "lines") { const l = tree[highlighted]; if (l) setOpenSeries(l.series) }
+        if (inTrailing) { trailing?.onEnter(trailing.highlighted ?? 0) }
+        else if (mode === "lines") { const l = tree[highlighted]; if (l) setOpenSeries(l.series) }
         else { const v = variants[highlighted]; if (v) pick(v) }
       } else if (e.key === "ArrowLeft" && openSeries) {
         e.preventDefault(); e.stopPropagation(); setOpenSeries(null)
@@ -61,7 +97,7 @@ export function ModelsTab({ onSelectModel }: { onSelectModel: (s: ModelSelection
     }
     document.addEventListener("keydown", onKey, true)
     return () => document.removeEventListener("keydown", onKey, true)
-  }, [mode, count, highlighted, openSeries, tree, variants])
+  }, [mode, count, highlighted, openSeries, tree, variants, trailing])
 
   if (mode !== "lines") {
     return (
@@ -78,7 +114,7 @@ export function ModelsTab({ onSelectModel }: { onSelectModel: (s: ModelSelection
         <div className="py-1">
           {variants.length === 0
             ? <div className="px-4 py-8 text-center text-base text-[#94A3B8]">No models found</div>
-            : variants.map((m, i) => <VariantRow key={m.id} v={m} active={i === highlighted} onHover={() => setHighlighted(i)} onPick={pick} />)}
+            : variants.map((m, i) => <VariantRow key={m.id} v={m} active={trailing?.highlighted == null && i === highlighted} onHover={() => { trailing?.onHighlight(null); setHighlighted(i) }} onPick={pick} />)}
         </div>
       </div>
     )
@@ -87,7 +123,7 @@ export function ModelsTab({ onSelectModel }: { onSelectModel: (s: ModelSelection
   return (
     <div className="py-1">
       {tree.map((l, i) => (
-        <button key={l.series} type="button" onClick={() => setOpenSeries(l.series)} onMouseEnter={() => setHighlighted(i)} className={rowCn(i === highlighted)}>
+        <button key={l.series} type="button" onClick={() => setOpenSeries(l.series)} onMouseEnter={() => { trailing?.onHighlight(null); setHighlighted(i) }} className={rowCn(trailing?.highlighted == null && i === highlighted)}>
           <span className="text-[#94A3B8]"><Folder className="h-[19px] w-[19px]" /></span>
           <div className="flex-1 min-w-0">
             <div className="text-base font-medium text-[#1E293B] dark:text-white truncate">{l.series}</div>

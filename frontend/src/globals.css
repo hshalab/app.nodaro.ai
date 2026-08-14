@@ -1758,3 +1758,84 @@ html, body {
   --tps-inset: rgba(24, 24, 27, 0.3);
   --tps-input-border: #3f3f46;
 }
+
+/* ============================================================
+   Node picker ("What do you want to do?") — --npk-* tokens.
+   Every colour the add-node popup paints comes from here, so the
+   picker components stay hex-free (guarded by
+   add-node-popup-theme.test.ts) and both themes are edited in one
+   place. Light values live on :root, dark overrides follow; .dark
+   sits on the same element as :root, so source order decides.
+   ============================================================ */
+:root {
+  --npk-surface: #ffffff;
+  --npk-footer: #fafafb;
+  --npk-border: #e3e3e8;
+  --npk-field: #f5f5f7;
+  --npk-hover: #f2f2f4;
+  --npk-tab-active: #f6eef2;
+  --npk-chip: rgba(0, 0, 0, 0.05);
+  --npk-key: #f0f0f2;
+  --npk-t1: #16171a;
+  --npk-t2: #3f4046;
+  --npk-dim: #75767d;
+  --npk-muted: #8b8c93;
+  --npk-faint: #a3a4ab;
+  --npk-icon: #82838a;
+  --npk-icon-control: #a1a2a9;
+  --npk-accent: #f0246f;
+  --npk-sel-bg: rgba(240, 36, 111, 0.09);
+  --npk-sel-ring: rgba(240, 36, 111, 0.4);
+  --npk-cc-bg: rgba(0, 0, 0, 0.02);
+  --npk-focus-glow: 0 0 0 3px rgba(240, 36, 111, 0.12);
+  --npk-shadow: 0 18px 48px rgba(20, 20, 30, 0.14);
+  --npk-scroll: rgba(128, 128, 136, 0.35);
+  --npk-scroll-hover: rgba(128, 128, 136, 0.55);
+  /* Status hues. Same value in both themes unless overridden below. */
+  --npk-match: #4ade80;
+  --npk-badge-text: #475569;
+  --npk-chip-fallback: #a78bfa;
+}
+
+.dark {
+  --npk-surface: #141518;
+  --npk-footer: #131417;
+  --npk-border: #26272b;
+  --npk-field: #191a1e;
+  --npk-hover: #1c1d21;
+  --npk-tab-active: #1f2025;
+  --npk-chip: rgba(255, 255, 255, 0.045);
+  --npk-key: #202125;
+  --npk-t1: #f4f4f5;
+  --npk-t2: #c8c9ce;
+  --npk-dim: #6b6c72;
+  --npk-muted: #63646b;
+  --npk-faint: #4d4e55;
+  --npk-icon: #7d7e85;
+  --npk-icon-control: #5b5c63;
+  --npk-accent: #f0246f;
+  --npk-sel-bg: rgba(240, 36, 111, 0.12);
+  --npk-sel-ring: rgba(240, 36, 111, 0.45);
+  --npk-cc-bg: rgba(255, 255, 255, 0.02);
+  --npk-focus-glow: 0 0 0 3px rgba(240, 36, 111, 0.16);
+  --npk-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+  --npk-match: #4ade80;
+  --npk-badge-text: #cbd5e1;
+  --npk-chip-fallback: #a78bfa;
+}
+
+/* Thin scrollbar for the picker list, both themes. */
+.npk-scroll::-webkit-scrollbar { width: 8px; }
+.npk-scroll::-webkit-scrollbar-track { background: transparent; }
+.npk-scroll::-webkit-scrollbar-thumb {
+  background: var(--npk-scroll);
+  border-radius: 4px;
+}
+.npk-scroll::-webkit-scrollbar-thumb:hover { background: var(--npk-scroll-hover); }
+.npk-scroll { scrollbar-width: thin; scrollbar-color: var(--npk-scroll) transparent; }
+
+/* Horizontal tab strip: scrolls, never wraps, no visible scrollbar. */
+.npk-tabs { scrollbar-width: none; -ms-overflow-style: none; }
+.npk-tabs::-webkit-scrollbar { display: none; }
+
+

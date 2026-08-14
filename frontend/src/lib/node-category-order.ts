@@ -9,12 +9,12 @@
  * per-entity categories Character/Face/Object/Location — both are slotted here.
  */
 export const CATEGORY_ORDER: readonly string[] = [
-  // Popup-only virtual/quick-access categories (Recent/Most Used, #2698) stay
-  // at the top. Keep these strings in sync with VIRTUAL_CATEGORY_IDS in
-  // add-node-popup.tsx. The sidebar has no such categories, so these are no-ops
-  // there. ("Common" is no longer a category — it's the popup's Common tab.)
+  // Popup-only virtual/quick-access category. Keep this string in sync with
+  // VIRTUAL_CATEGORY_IDS in add-node-popup.tsx. The sidebar has no such
+  // category, so it is a no-op there. ("Common" is no longer a category — it's
+  // the popup's Common tab, and "Most Used" was removed with the picker
+  // redesign.)
   "Recent",
-  "Most Used",
   // The All-tab root order (user-specified; pinned by
   // lib/__tests__/node-category-order.test.ts):
   "Input",

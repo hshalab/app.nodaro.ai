@@ -9,11 +9,18 @@
  */
 
 import type {
+  ImageEditingProvider,
   ImageGenerationProvider,
   ProviderResult,
   ReconcileOpts,
 } from "../provider.interface.js"
-import { createCloudJob, waitForCloudJob, NodaroCloudError, ensureCloudReachableImageUrls } from "./client.js"
+import {
+  createCloudJob,
+  waitForCloudJob,
+  NodaroCloudError,
+  ensureCloudReachableMediaUrl,
+  ensureCloudReachableMediaUrls,
+} from "./client.js"
 
 /**
  * The worker handler (workers/handlers/image-ai.ts) hands providers KIE-style
@@ -48,7 +55,32 @@ function mapExtraParams(
   )
 }
 
-export class NodaroCloudImageProvider implements ImageGenerationProvider {
+
+/** Read the finalized image URL(s) out of a completed cloud job. Shared by
+ *  generateImage and editImage — both cloud routes answer the same shape. */
+function extractImageResult(
+  job: { output_data?: Record<string, unknown> | null },
+  jobId: string,
+): ProviderResult {
+  const output = (job.output_data ?? {}) as { imageUrl?: unknown; imageUrls?: unknown }
+  const url = typeof output.imageUrl === "string" ? output.imageUrl : undefined
+  if (!url) {
+    throw new NodaroCloudError(
+      `nodaro.ai: image job ${jobId} completed but returned no imageUrl`,
+    )
+  }
+  // Multi-variant results land as output_data.imageUrls with the primary at
+  // index 0 (workers/shared.ts buildImageOutputData) — the rest are extras.
+  const allUrls = Array.isArray(output.imageUrls)
+    ? output.imageUrls.filter((u): u is string => typeof u === "string")
+    : []
+  const extraUrls = allUrls.slice(1)
+  return { url, ...(extraUrls.length ? { extraUrls } : {}), cost: null }
+}
+
+export class NodaroCloudImageProvider
+  implements ImageGenerationProvider, ImageEditingProvider
+{
   async generateImage(
     prompt: string,
     referenceImageUrls?: string[],
@@ -63,7 +95,7 @@ export class NodaroCloudImageProvider implements ImageGenerationProvider {
     // foreign id — force-failing a job still running on the cloud. Until a
     // dedicated "nodaro" ProviderKind exists, a worker crash mid-poll re-runs
     // the handler from scratch (a second cloud job) — accepted Phase 4a cost.
-    const cloudRefUrls = await ensureCloudReachableImageUrls(referenceImageUrls)
+    const cloudRefUrls = await ensureCloudReachableMediaUrls(referenceImageUrls)
     const body: Record<string, unknown> = {
       prompt,
       ...(model !== undefined ? { provider: model } : {}),
@@ -74,27 +106,34 @@ export class NodaroCloudImageProvider implements ImageGenerationProvider {
     const jobId = await createCloudJob("/v1/generate-image", body)
     const job = await waitForCloudJob(jobId)
 
-    const output = (job.output_data ?? {}) as {
-      imageUrl?: unknown
-      imageUrls?: unknown
-    }
-    const url = typeof output.imageUrl === "string" ? output.imageUrl : undefined
-    if (!url) {
-      throw new NodaroCloudError(
-        `nodaro.ai: image job ${jobId} completed but returned no imageUrl`,
-      )
-    }
-    // Multi-variant results land as output_data.imageUrls with the primary at
-    // index 0 (workers/shared.ts buildImageOutputData) — the rest are extras.
-    const allUrls = Array.isArray(output.imageUrls)
-      ? output.imageUrls.filter((u): u is string => typeof u === "string")
-      : []
-    const extraUrls = allUrls.slice(1)
+    return extractImageResult(job, jobId)
+  }
 
-    return {
-      url,
-      ...(extraUrls.length ? { extraUrls } : {}),
-      cost: null,
+  /**
+   * Image editing through the connection.
+   *
+   * The cloud's POST /v1/edit-image serves the whole IMAGE_EDIT_PROVIDERS set
+   * (it holds every provider key), so a keyless instance gets upscale-image,
+   * remove-background and nano-banana-edit for free once connected. The
+   * instance previously declared `"image-editing": []`, which sent all three
+   * into the router's "nothing can serve this" path.
+   */
+  async editImage(
+    imageUrl: string,
+    prompt?: string,
+    model?: string,
+    extraParams?: Record<string, unknown>,
+    _reconcileOpts?: ReconcileOpts,
+  ): Promise<ProviderResult> {
+    const cloudImageUrl = await ensureCloudReachableMediaUrl(imageUrl)
+    const body: Record<string, unknown> = {
+      imageUrl: cloudImageUrl,
+      ...(prompt !== undefined ? { prompt } : {}),
+      ...(model !== undefined ? { provider: model } : {}),
+      ...mapExtraParams(extraParams),
     }
+    const jobId = await createCloudJob("/v1/edit-image", body)
+    const job = await waitForCloudJob(jobId)
+    return extractImageResult(job, jobId)
   }
 }

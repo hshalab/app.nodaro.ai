@@ -38,9 +38,9 @@ import {
   COMMON_NODE_TYPES,
   searchNodeOptions,
   searchNodeOptionsSectioned,
-  mediaTabNodeOptions,
 } from "../add-node-popup"
 import { clusterByGroup } from "@/lib/cluster-by-group"
+import { CREATIVE_CONTROL_FAMILY_IDS } from "@/lib/node-families"
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -147,9 +147,9 @@ describe("NODE_OPTIONS", () => {
     expect(assetTypes).not.toContain("scene")
   })
 
-  it("sound pickers live under the Pickers category, Sound section", () => {
+  it("sound pickers live under the Music & Voice creative-control family", () => {
     const soundPickers = NODE_OPTIONS
-      .filter((o) => o.category === "Pickers" && o.group === "Sound")
+      .filter((o) => o.category === "Pickers" && o.group === "cc-music-voice")
       .map((o) => o.type)
     expect(soundPickers).toContain("music-genre")
     expect(soundPickers).toContain("music-mood")
@@ -158,17 +158,17 @@ describe("NODE_OPTIONS", () => {
     expect(soundPickers).toContain("voice-delivery")
   })
 
-  it("Pickers is a single root category with the 5 picker sections", () => {
+  it("Pickers is a single root category whose nodes are all creative controls", () => {
     // The old Camera/Look/Subject/Object/Sound root categories were collapsed
-    // into one "Pickers" root, each becoming a `group` section.
+    // into one "Pickers" root; the picker redesign then re-cut them into the
+    // eight Creative Controls sub-families that expand at the bottom of the
+    // Image / Video / Audio tabs.
     expect(CATEGORIES.map((c) => c.id)).toContain("Pickers")
     expect(CATEGORIES.map((c) => c.id)).not.toContain("Camera")
     const pickerGroups = new Set(
       NODE_OPTIONS.filter((o) => o.category === "Pickers").map((o) => o.group),
     )
-    expect(pickerGroups).toEqual(
-      new Set(["Camera", "Look", "Subject", "Object", "Sound"]),
-    )
+    expect(pickerGroups).toEqual(new Set(CREATIVE_CONTROL_FAMILY_IDS))
   })
 
   it("every label is non-empty and under 30 characters", () => {
@@ -282,10 +282,7 @@ describe("Common/All tabs", () => {
   })
 
   it("CATEGORIES (minus opt-in virtuals) follows the requested All-tab order", () => {
-    const virtuals = new Set<string>([
-      VIRTUAL_CATEGORY_IDS.recent,
-      VIRTUAL_CATEGORY_IDS.mostUsed,
-    ])
+    const virtuals = new Set<string>([VIRTUAL_CATEGORY_IDS.recent])
     const realIds = CATEGORIES.map((c) => c.id).filter((id) => !virtuals.has(id))
     expect(realIds).toEqual([
       "Input",
@@ -319,83 +316,6 @@ describe("Common/All tabs", () => {
 // VIDEO/AUDIO_PRODUCER_TYPES — the same sets driving canvas handle validation
 // and backend output routing). Within a tab, the curated COMMON members come
 // first (in Common-tab order), then the remaining producers in catalog order.
-
-describe("mediaTabNodeOptions", () => {
-  it("image tab: common block first (curated order), producers only", () => {
-    const { common, rest } = mediaTabNodeOptions(NODE_OPTIONS, "image")
-    expect(common.map((o) => o.type)).toEqual([
-      "upload-image",
-      "generate-image",
-      "upscale-image",
-    ])
-    const restTypes = rest.map((o) => o.type)
-    expect(restTypes).toEqual([
-      "modify-image",
-      "remove-background",
-      "generate-mask",
-      // paint-mask emits the hand-painted mask PNG — an image producer
-      // (IMAGE_PRODUCER_TYPES), listed in NODE_OPTIONS pool order.
-      "paint-mask",
-      "reference-sheet",
-      // reference-board is an image producer (emits a composited board image),
-      // so it surfaces as an image-input candidate — see IMAGE_PRODUCER_TYPES.
-      "reference-board",
-      // image-collage composites N images → one image; it's an image producer
-      // (IMAGE_PRODUCER_TYPES), surfacing here in NODE_OPTIONS pool order.
-      "image-collage",
-      "extract-frame",
-    ])
-  })
-
-  it("video tab: common block first (curated order)", () => {
-    const { common } = mediaTabNodeOptions(NODE_OPTIONS, "video")
-    expect(common.map((o) => o.type)).toEqual([
-      "upload-video",
-      "generate-video",
-      "extend-video",
-      "motion-transfer",
-      "lip-sync",
-      "combine-videos",
-      "merge-video-audio",
-    ])
-  })
-
-  it("video tab rest: video producers only — no plan-emitting Video Production nodes", () => {
-    const { common, rest } = mediaTabNodeOptions(NODE_OPTIONS, "video")
-    const all = [...common, ...rest].map((o) => o.type)
-    for (const t of ["video-to-video", "youtube-video", "speech-to-video", "face-swap", "render-video"]) {
-      expect(all, `expected video tab to contain ${t}`).toContain(t)
-    }
-    // Plan producers emit "plan-ready" markers, not video URLs.
-    for (const t of ["after-effects", "lottie-overlay", "3d-title", "motion-graphics", "composite", "video-composer", "extract-frame", "generate-image"]) {
-      expect(all, `expected video tab to exclude ${t}`).not.toContain(t)
-    }
-    // Common members never repeat in the rest block.
-    expect(rest.map((o) => o.type)).not.toContain("generate-video")
-  })
-
-  it("audio tab: common block first, then remaining audio producers", () => {
-    const { common, rest } = mediaTabNodeOptions(NODE_OPTIONS, "audio")
-    expect(common.map((o) => o.type)).toEqual([
-      "text-to-speech",
-      "voice-changer",
-      "suno-generate",
-    ])
-    const restTypes = rest.map((o) => o.type)
-    for (const t of ["upload-audio", "text-to-audio", "generate-music", "dubbing", "trim-audio", "extract-audio"]) {
-      expect(restTypes, `expected audio tab rest to contain ${t}`).toContain(t)
-    }
-    for (const t of ["lip-sync", "forced-alignment", "text-prompt", "voice-changer"]) {
-      expect(restTypes, `expected audio tab rest to exclude ${t}`).not.toContain(t)
-    }
-  })
-
-  it("respects the given pool (admin/compat filtering upstream)", () => {
-    const poolWithoutUpload = NODE_OPTIONS.filter((o) => o.type !== "upload-image")
-    const { common } = mediaTabNodeOptions(poolWithoutUpload, "image")
-    expect(common.map((o) => o.type)).toEqual(["generate-image", "upscale-image"])
-  })
-})
 
 describe("searchNodeOptions", () => {
   it("matches by label, type, category, and keywords", () => {
@@ -450,22 +370,23 @@ describe("searchNodeOptions", () => {
 // The All tab (and the edge-drop compatibility view) stays flat.
 
 describe("searchNodeOptionsSectioned", () => {
-  it("on a media tab, splits matches into own producers first, then other", () => {
+  it("counts everything the tab renders as 'own', not just its producers", () => {
     const { own, other } = searchNodeOptionsSectioned(NODE_OPTIONS, "video", "video")
     const ownTypes = own.map((o) => o.type)
     expect(ownTypes).toContain("generate-video")
     expect(ownTypes).toContain("upload-video")
-    // Common video producers lead the own block
-    expect(own[0].type).toBe("upload-video")
+    // The tab is a "deals with video" superset now, so the plan-emitting nodes
+    // it displays are own matches — they are visible on this very tab, and
+    // filing them under "From other tabs" would send the user hunting.
+    expect(ownTypes).toContain("video-composer") // Compose Video
+    expect(ownTypes).toContain("generative-pipeline") // Story → Video
     const otherTypes = other.map((o) => o.type)
-    expect(otherTypes).toContain("video-composer") // "Compose Video" — plan producer, not a video producer
-    expect(otherTypes).toContain("generative-pipeline") // "Story → Video"
     expect(otherTypes).not.toContain("generate-video")
     // No overlap between the sections
     expect(ownTypes.filter((t) => otherTypes.includes(t))).toEqual([])
   })
 
-  it("on the common tab, own = common matches, other = the rest", () => {
+  it("on the common tab, own = the curated Common nodes, other = the rest", () => {
     const { own, other } = searchNodeOptionsSectioned(NODE_OPTIONS, "video", "common")
     expect(own.length).toBeGreaterThan(0)
     expect(own.every((o) => COMMON_NODE_TYPES.has(o.type))).toBe(true)

@@ -66,8 +66,13 @@ const KIE_ONLY_CAPABILITIES: ReadonlySet<ProviderCapability> = new Set([
  */
 const NODARO_CONNECT_CAPABILITIES: ReadonlySet<ProviderCapability> = new Set([
   "image-generation",
+  "image-editing",
   "image-to-video",
   "text-to-video",
+  "video-to-video",
+  "motion-transfer",
+  "video-upscale",
+  "lip-sync",
 ])
 
 // ─── Public API ───────────────────────────────────────────────────

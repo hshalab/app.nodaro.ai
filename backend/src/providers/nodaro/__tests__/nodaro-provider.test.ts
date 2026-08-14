@@ -304,19 +304,35 @@ describe("registration + chain extension when connected", () => {
 
     const info = providerRegistry.getProviderInfo("nodaro")
     expect(info).not.toBeNull()
+    // EXPANDED 2026-08-14: the connection used to serve three capabilities and
+    // everything else told the user to get their own key — the opposite of
+    // "one connection, every model". The cloud already accepted all of these
+    // from an instance token (probed live), so the gap was purely this
+    // declaration plus the provider methods.
     expect(info!.capabilities).toEqual([
       "image-generation",
+      "image-editing",
       "image-to-video",
       "text-to-video",
+      "video-to-video",
+      "motion-transfer",
+      "video-upscale",
+      "lip-sync",
     ])
-    // supportedModels mirrors the KIE lists for the three capabilities.
     expect(providerRegistry.supportsModel("nodaro", "image-generation", "nano-banana")).toBe(true)
     expect(providerRegistry.supportsModel("nodaro", "image-to-video", "kling-3.0")).toBe(true)
     expect(providerRegistry.supportsModel("nodaro", "text-to-video", "kling")).toBe(true)
-    expect(providerRegistry.supportsModel("nodaro", "lip-sync", "kling-avatar")).toBe(false)
+    // Newly covered — these were the "needs your own API key" wall.
+    expect(providerRegistry.supportsModel("nodaro", "lip-sync", "kling-avatar")).toBe(true)
+    expect(providerRegistry.supportsModel("nodaro", "image-editing", "nano-banana-edit")).toBe(true)
+    expect(providerRegistry.supportsModel("nodaro", "video-upscale", "topaz")).toBe(true)
+    // Still NOT claimed: audio and LLM go through direct handlers that bypass
+    // the registry, so declaring them here would be a lie until those are
+    // routed (see the hardening backlog).
+    expect(providerRegistry.supportsModel("nodaro", "text-to-speech", "elevenlabs-v3")).toBe(false)
   })
 
-  it("appends nodaro at the END of the three connect-capability chains only", async () => {
+  it("appends nodaro at the END of every connect capability, never in front", async () => {
     expect((await buildRoutingDecision("image-generation", "flux")).providerChain).toEqual([
       "kie",
       "replicate",
@@ -330,9 +346,64 @@ describe("registration + chain extension when connected", () => {
       "kie",
       "nodaro",
     ])
-    // KIE-only capabilities stay untouched — never extended, never replaced.
     expect((await buildRoutingDecision("lip-sync", "kling-avatar")).providerChain).toEqual([
       "kie",
+      "nodaro",
     ])
+    expect((await buildRoutingDecision("image-editing", "nano-banana-edit")).providerChain).toEqual([
+      "kie",
+      "nodaro",
+    ])
+    // A capability the connection does NOT serve stays untouched — local keys
+    // first everywhere, and nothing claims what it can't do.
+    expect((await buildRoutingDecision("music-generation", "suno")).providerChain).toEqual([
+      "kie",
+    ])
+  })
+})
+
+describe("media re-hosting is narrow on purpose (SSRF containment)", () => {
+  beforeEach(() => {
+    vi.resetModules()
+    vi.restoreAllMocks()
+  })
+
+  it("refuses to read a private host that isn't our own storage", async () => {
+    vi.doMock("../../../lib/config.js", () => ({
+      config: {
+        R2_PUBLIC_URL: "http://localhost:3000/storage/nodaro-assets",
+        PUBLIC_URL: "http://localhost:3000",
+        R2_PUBLIC_FALLBACK_DOMAIN: "",
+      },
+    }))
+    vi.doMock("../../../lib/nodaro-connect.js", () => ({
+      getNodaroConnection: async () => ({ accessToken: "ndr_app_test" }),
+      nodaroCloudBase: () => "https://cloud.example",
+      nodaroCloudFetch: vi.fn(),
+    }))
+    const fetchSpy = vi.spyOn(globalThis, "fetch")
+    const { ensureCloudReachableMediaUrl } = await import("../client.js")
+
+    // Cloud metadata service: private, therefore "unreachable by the cloud",
+    // and previously that alone was enough for us to fetch it and publish the
+    // bytes to a public URL.
+    await expect(
+      ensureCloudReachableMediaUrl("http://169.254.169.254/latest/meta-data/iam/"),
+    ).rejects.toThrow(/doesn't own|can't reach/)
+    await expect(ensureCloudReachableMediaUrl("http://192.168.1.50/secret.png")).rejects.toThrow()
+    // Nothing was read at all — the refusal happens before any network call.
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it("leaves public URLs completely alone", async () => {
+    vi.doMock("../../../lib/config.js", () => ({
+      config: { R2_PUBLIC_URL: "", PUBLIC_URL: "", R2_PUBLIC_FALLBACK_DOMAIN: "" },
+    }))
+    const fetchSpy = vi.spyOn(globalThis, "fetch")
+    const { ensureCloudReachableMediaUrl } = await import("../client.js")
+    await expect(ensureCloudReachableMediaUrl("https://picsum.photos/200")).resolves.toBe(
+      "https://picsum.photos/200",
+    )
+    expect(fetchSpy).not.toHaveBeenCalled()
   })
 })
