@@ -95,7 +95,9 @@ const RegenerateSceneBodySchema = z.object({
 function gateEdition(reply: FastifyReply): boolean {
   if (!hasCredits()) {
     void reply.status(403).send({
-      error: { code: "edition_required", required_edition: "cloud" },
+      // Without a message the frontend's throwApiError falls through to a
+      // bare "Failed to X" with no explanation (community grind, 2026-08-14).
+      error: { code: "edition_required", required_edition: "cloud", message: "This feature runs on Nodaro Cloud only \u2014 it isn't available on a self-hosted install." },
     })
     return false
   }

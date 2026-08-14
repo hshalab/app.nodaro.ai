@@ -64,10 +64,12 @@ describe("apify client", () => {
     expect(vi.mocked(ApifyClient)).toHaveBeenCalledTimes(1)
   })
 
-  it("getApifyClient throws when token is not configured", async () => {
+  it("getApifyClient throws the shared missing-key guidance when the token is unset", async () => {
     // No process.env.APIFY_API_TOKEN set (afterEach clears it)
     const { getApifyClient } = await import("../client.js")
-    expect(() => getApifyClient()).toThrow(/not configured/i)
+    // Shared missing-key phrasing (providers/provider-keys.ts) — names the
+    // env var, where to get it, and the nodaro.ai coverage gap.
+    expect(() => getApifyClient()).toThrow(/APIFY_API_TOKEN/)
   })
 })
 

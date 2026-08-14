@@ -24,6 +24,23 @@ import type { ProviderUsed, RoutingDecision } from "../config.js"
 
 // Self-heal probe must be deterministic and instant in tests — never a real
 // DB read (it hung the no-provider-supports-the-model case for 5s+).
+// Provider keys drive the "why did nothing serve this" message; pin them so
+// the assertion doesn't depend on whichever keys the runner's .env happens to
+// hold (it read GEMINI_API_KEY as the only unset one on a dev machine).
+vi.mock("../../lib/config.js", () => ({
+  config: {
+    REPLICATE_API_TOKEN: "r8_test",
+    KIE_API_KEY: "kie_test",
+    ELEVENLABS_API_KEY: "el_test",
+    ANTHROPIC_API_KEY: "an_test",
+    GEMINI_API_KEY: "gm_test",
+    FAL_KEY: "fal_test",
+    HEYGEN_API_KEY: "hg_test",
+    BEEBLE_API_KEY: "bb_test",
+    APIFY_API_TOKEN: "ap_test",
+  },
+}))
+
 vi.mock("../nodaro/index.js", () => ({
   NODARO_PROVIDER_ID: "nodaro",
   registerNodaroCloudProviderIfConnected: vi.fn(async () => false),

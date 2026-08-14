@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react"
+import { hasCredits } from "@/lib/edition"
 import { useNavigate, useParams } from "react-router-dom"
 import { PIPELINE_PINNABLE_IMAGE_MODELS, PIPELINE_PINNABLE_VIDEO_MODELS, getFeaturedEntities, estimateFilmCredits } from "@nodaro/shared"
 import { STYLE_PRESETS, getStylePreset } from "@nodaro/prompts"
@@ -1446,6 +1447,10 @@ function PipelineSession({ pipelineId }: { pipelineId: string }) {
   // Account Gen-Credits shown in the top bar — refreshed every 30s.
   const [credits, setCredits] = useState<number | null>(null)
   useEffect(() => {
+    // No credits system in this edition — /v1/user/credits isn't registered,
+    // so this polled a 404 every 30s for the life of the page while the top
+    // bar sat on "—" (community grind, 2026-08-13).
+    if (!hasCredits()) return
     let cancelled = false
     const load = async () => {
       const uid = await getCurrentUserId()

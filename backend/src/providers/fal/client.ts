@@ -23,6 +23,7 @@
  */
 
 import { fal } from "@fal-ai/client"
+import { requireProviderKey } from "../provider-keys.js"
 import { config } from "../../lib/config.js"
 import { fireOnTaskCreated } from "../../lib/reconcile/fire-on-task-created.js"
 import type { ReconcileOpts } from "../provider.interface.js"
@@ -38,6 +39,7 @@ const MAX_POLLS = 600
 let configured = false
 function ensureConfigured(): void {
   if (configured) return
+  requireProviderKey(config.FAL_KEY, "FAL_KEY")
   fal.config({ credentials: config.FAL_KEY })
   configured = true
 }

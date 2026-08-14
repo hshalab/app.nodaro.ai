@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from "react"
+import { hasCredits } from "@/lib/edition"
 import { createPortal } from "react-dom"
 import { Puzzle, X, Heart, Coins, Sparkles, FileText } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -89,10 +90,12 @@ export function ComponentPreviewModal({
               <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground flex-wrap">
                 <span className="truncate">by {creatorLabel}</span>
                 <span>·</span>
+                {hasCredits() && (
                 <span className="flex items-center gap-0.5">
                   <Coins className="w-3 h-3" />
                   {card.estimatedCredits} CR
                 </span>
+                )}
                 <span>·</span>
                 <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium", categoryColor)}>
                   {categoryLabel}

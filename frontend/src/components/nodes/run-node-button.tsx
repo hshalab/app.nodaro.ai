@@ -177,8 +177,8 @@ export function RunNodeButton({ nodeId, credits, isRunning, onRun, runFromHere }
           <AlertDialogTitle>Discard this run?</AlertDialogTitle>
           <AlertDialogDescription>
             In-progress jobs usually finish in the background and land in My Library
-            (without appearing on the canvas). If a job can&apos;t be completed, its
-            credits are refunded automatically.
+            (without appearing on the canvas).
+            {hasCredits() && " If a job can't be completed, its credits are refunded automatically."}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">

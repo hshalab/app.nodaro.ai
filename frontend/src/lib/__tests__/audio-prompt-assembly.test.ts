@@ -133,12 +133,22 @@ describe("assembleAudioPrompt", () => {
     expect(out).toBe("lofi chill")
   })
 
-  it("(e3) text-to-speech returns directText only when textSource is 'direct'", () => {
+  it("(e3) text-to-speech prefers directText, and falls back to it when nothing is wired", () => {
+    // CONTRACT CHANGED 2026-08-14. This used to assert that a non-"direct"
+    // textSource returns "" even with text present. That is what shipped, and
+    // it produced: text visible in the node, run fails with "no text found"
+    // (founder hit it live). textSource defaults to "connected" on every new
+    // node, so any writer that saved text without flipping it — and every
+    // import / MCP write / template — landed in that state.
+    //
+    // The gate is now a PREFERENCE: "connected" still wins when something IS
+    // wired (asserted below and in prompt-gate.test.ts), but with nothing
+    // connected the typed text is used rather than discarded.
     const direct = consumer("text-to-speech", { textSource: "direct", directText: "Hello world" })
     expect(assembleAudioPrompt("text-to-speech", { node: direct, nodes: [direct], edges: [], refMap: NO_REFS })).toBe("Hello world")
 
-    const wired = consumer("text-to-speech", { textSource: "input", directText: "ignored" })
-    expect(assembleAudioPrompt("text-to-speech", { node: wired, nodes: [wired], edges: [], refMap: NO_REFS })).toBe("")
+    const notWired = consumer("text-to-speech", { textSource: "connected", directText: "typed earlier" })
+    expect(assembleAudioPrompt("text-to-speech", { node: notWired, nodes: [notWired], edges: [], refMap: NO_REFS })).toBe("typed earlier")
   })
 
   it("resolves {Var} refs in the typed prompt via refMap", () => {

@@ -94,7 +94,18 @@ export function computeNodePrompt(
   let typed: ReadonlyArray<string | undefined>
   if (nodeType === "text-to-speech") {
     // data.text is a phantom field on TTS; only directText (gated) is real.
-    typed = data.textSource === "direct" ? [data.directText as string | undefined] : []
+    //
+    // The gate is a PREFERENCE, not a lock: when textSource is "connected" we
+    // still fall back to typed text if nothing is wired. Writers flip the gate
+    // (PromptFieldSpec.promptGate), but data reaches nodes from places no
+    // writer touches — workflows saved before that fix, JSON imports, MCP
+    // writes, templates — and there the text sat visible in the node while the
+    // run failed with "no text found" (founder, 2026-08-14). Coerce rather
+    // than reject, same principle as normalizeModelInput.
+    typed =
+      data.textSource === "direct" || !present(wired)
+        ? [data.directText as string | undefined]
+        : []
   } else {
     const fields = NODE_PROMPT_CANDIDATE_FIELDS[nodeType] ?? ["prompt"]
     typed = fields.map((f) => data[f] as string | undefined)

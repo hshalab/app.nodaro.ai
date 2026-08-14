@@ -1,4 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify"
+import { hasCredits } from "../lib/config.js"
+import { findCloudOnlyNodeTypes, cloudOnlyRejectionMessage } from "../lib/cloud-only-nodes.js"
 import { z } from "zod"
 import { stripExportContent, stripTransientRuntimeData, validateSubWorkflowRoutes, type WorkflowExport } from "@nodaro/shared"
 import { supabase } from "../lib/supabase.js"
@@ -397,6 +399,17 @@ export async function workflowRoutes(app: FastifyInstance) {
 
     if (body.nodes && !checkSubWorkflowShape(reply, body.nodes)) return
 
+    // Import / template / SDK writes never pass through the node pickers, so
+    // this is where a Cloud-only node would otherwise slip into an edition
+    // that can't run it.
+    if (!hasCredits()) {
+      const cloudOnly = findCloudOnlyNodeTypes(body.nodes as ReadonlyArray<{ type?: unknown }> | undefined)
+      if (cloudOnly.length > 0) {
+        return validationError(reply, cloudOnlyRejectionMessage(cloudOnly))
+      }
+    }
+
+
     if (body.nodes && body.edges) {
       body.edges = migrateGenerateImageHandles(
         body.nodes as unknown as ReadonlyArray<{ id: string; type?: string }>,
@@ -544,6 +557,17 @@ export async function workflowRoutes(app: FastifyInstance) {
     if (!body) return
 
     if (body.nodes && !checkSubWorkflowShape(reply, body.nodes)) return
+
+    // Import / template / SDK writes never pass through the node pickers, so
+    // this is where a Cloud-only node would otherwise slip into an edition
+    // that can't run it.
+    if (!hasCredits()) {
+      const cloudOnly = findCloudOnlyNodeTypes(body.nodes as ReadonlyArray<{ type?: unknown }> | undefined)
+      if (cloudOnly.length > 0) {
+        return validationError(reply, cloudOnlyRejectionMessage(cloudOnly))
+      }
+    }
+
 
     // Classify the row's origin. An unregistered slug is rejected here rather
     // than persisted — see clientAppExists.
@@ -695,6 +719,16 @@ export async function workflowRoutes(app: FastifyInstance) {
 
     const body = parseWith(reply, updateWorkflowBody, req.body, "Invalid request")
     if (!body) return
+
+    // Import / template / SDK writes never pass through the node pickers, so
+    // this is where a Cloud-only node would otherwise slip into an edition
+    // that can't run it.
+    if (!hasCredits()) {
+      const cloudOnly = findCloudOnlyNodeTypes(body.nodes as ReadonlyArray<{ type?: unknown }> | undefined)
+      if (cloudOnly.length > 0) {
+        return validationError(reply, cloudOnlyRejectionMessage(cloudOnly))
+      }
+    }
 
     if (body.delta) {
       // Mutually exclusive with full-body fields — a mixed request is
@@ -1028,6 +1062,16 @@ export async function workflowRoutes(app: FastifyInstance) {
 
     const body = parseWith(reply, createSubWorkflowBody, req.body ?? {}, "Invalid request")
     if (!body) return
+
+    // Import / template / SDK writes never pass through the node pickers, so
+    // this is where a Cloud-only node would otherwise slip into an edition
+    // that can't run it.
+    if (!hasCredits()) {
+      const cloudOnly = findCloudOnlyNodeTypes((body as { nodes?: unknown }).nodes as ReadonlyArray<{ type?: unknown }> | undefined)
+      if (cloudOnly.length > 0) {
+        return validationError(reply, cloudOnlyRejectionMessage(cloudOnly))
+      }
+    }
 
     // 1. Verify caller owns the parent + grab its project_id
     const { data: parent, error: parentErr } = await supabase

@@ -10,6 +10,7 @@
  */
 
 import { config } from "../../lib/config.js"
+import { requireProviderKey } from "../provider-keys.js"
 import type { RawHeygenErrorBody } from "./types.js"
 
 export const HEYGEN_BASE_URL = "https://api.heygen.com"
@@ -62,6 +63,10 @@ export class HeygenError extends Error {
  *   `{ error: { code, message } }` (HeyGen's mixed-status error pattern).
  */
 export async function heygenFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  // isHeygenConfigured() only ever reached the catalog, so generation sent
+  // `X-Api-Key: ""` and surfaced a raw HeyGen 401 after burning the retry
+  // budget (community grind, 2026-08-13). Guard the fetch itself.
+  requireProviderKey(config.HEYGEN_API_KEY, "HEYGEN_API_KEY")
   const url = path.startsWith("http") ? path : `${HEYGEN_BASE_URL}${path}`
 
   const headers: Record<string, string> = {

@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify"
 import { z } from "zod"
 import { supabase } from "../lib/supabase.js"
+import { hasCredits } from "../lib/config.js"
 import { SYSTEM_PROMPT_TEMPLATES } from "../config/prompt-templates.js"
 import { invalidateUserPreferences } from "../lib/mcp/user-preferences.js"
 import { formatZodError } from "../lib/zod-error.js"
@@ -218,8 +219,11 @@ export async function userSettingsRoutes(app: FastifyInstance) {
       return reply.status(404).send({ error: "Profile not found" })
     }
 
-    // Only Standard+ tiers can disable public outputs
-    if (publicOutputs === false && !PRIVATE_MODE_TIERS.has(profile.tier ?? "free")) {
+    // Only Standard+ tiers can disable public outputs — a Cloud pricing lever.
+    // Self-hosted editions have no tier to buy and the gallery is the
+    // operator's own instance, so the restriction doesn't apply there
+    // (community grind, 2026-08-13).
+    if (hasCredits() && publicOutputs === false && !PRIVATE_MODE_TIERS.has(profile.tier ?? "free")) {
       return reply.status(403).send({
         error: "Private mode is available on Standard plan and above",
       })

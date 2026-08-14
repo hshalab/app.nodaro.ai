@@ -9,11 +9,20 @@ import Replicate from "replicate"
 import { config } from "../../lib/config.js"
 import { fireOnTaskCreated } from "../../lib/reconcile/fire-on-task-created.js"
 import type { ReconcileOpts } from "../provider.interface.js"
+import { guardProviderClient, requireProviderKey } from "../provider-keys.js"
 
-// Singleton Replicate client
-export const replicate = new Replicate({
-  auth: config.REPLICATE_API_TOKEN,
-})
+// Singleton Replicate client.
+//
+// Guarded at the boundary on purpose: a dozen modules import this singleton
+// and call it directly (audio/*, replicate/sfx.ts, ltx-video.ts, the audio and
+// video worker handlers...), bypassing runReplicatePrediction. Without the
+// guard a keyless self-host got a raw "401 Unauthorized" from api.replicate.com
+// with no hint about what to do — and every new call site would inherit that.
+export const replicate = guardProviderClient(
+  new Replicate({ auth: config.REPLICATE_API_TOKEN }),
+  "REPLICATE_API_TOKEN",
+  () => config.REPLICATE_API_TOKEN,
+)
 
 /**
  * Helper to extract a URL from Replicate's various output formats.
@@ -129,11 +138,7 @@ export async function runReplicatePrediction(opts: {
   // lip-sync, ...) that bypass the registry, so key-aware registration can't
   // protect them — without this guard the call dies as a raw Replicate 401
   // (founder hit it live on face-swap, 2026-08-15).
-  if (!config.REPLICATE_API_TOKEN) {
-    throw new Error(
-      `${opts.label} needs a Replicate API key on this install \u2014 set REPLICATE_API_TOKEN in the .env next to docker-compose.community.yml (see Install health \u2192 Provider keys). This node isn't covered by the nodaro.ai connection yet.`,
-    )
-  }
+  requireProviderKey(config.REPLICATE_API_TOKEN, "REPLICATE_API_TOKEN", opts.label)
   const createOptions =
     opts.version !== undefined
       ? { version: opts.version, input: opts.input }

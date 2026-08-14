@@ -1,4 +1,5 @@
 import { config } from "../../lib/config.js"
+import { requireProviderKey } from "../provider-keys.js"
 import { safeFetch } from "../../lib/safe-fetch.js"
 
 export const ELEVENLABS_BASE_URL = "https://api.elevenlabs.io"
@@ -6,7 +7,7 @@ export const ELEVENLABS_BASE_URL = "https://api.elevenlabs.io"
 export function getElevenLabsApiKey(): string {
   const apiKey = config.ELEVENLABS_API_KEY
   if (!apiKey) {
-    throw new Error("ELEVENLABS_API_KEY is not configured")
+    requireProviderKey(apiKey, "ELEVENLABS_API_KEY")
   }
   return apiKey
 }

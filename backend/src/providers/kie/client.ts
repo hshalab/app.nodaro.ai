@@ -9,7 +9,8 @@
  * Auth: Bearer token (KIE_API_KEY)
  */
 
-import { config } from "../../lib/config.js"
+import { config, hasCredits } from "../../lib/config.js"
+import { requireProviderKey, MissingProviderKeyError } from "../provider-keys.js"
 import { isWorkerDraining, DrainAbortError } from "../../lib/worker-drain.js"
 import { throwIfJobCancelled } from "../../lib/job-cancellation.js"
 import { fireOnTaskCreated } from "../../lib/reconcile/fire-on-task-created.js"
@@ -42,11 +43,7 @@ export const MAX_POLL_ATTEMPTS_LIP_SYNC_LONG = 360
  *  (suno, special models, ...) that bypass the registry — a raw KIE 401 told
  *  the operator nothing about WHERE the key goes. */
 export function requireKieKey(label: string): void {
-  if (!config.KIE_API_KEY) {
-    throw new Error(
-      `${label} needs a KIE.ai API key on this install \u2014 set KIE_API_KEY in the .env next to docker-compose.community.yml (see Install health \u2192 Provider keys). This node isn't covered by the nodaro.ai connection yet.`,
-    )
-  }
+  requireProviderKey(config.KIE_API_KEY, "KIE_API_KEY", label)
 }
 
 export class KieError extends Error {
@@ -122,8 +119,13 @@ export function createSanitizedError(
     lowerMsg.includes("not configured") ||
     lowerMsg.includes("api_key")
   ) {
-    sanitizedMessage =
-      "Service is not properly configured. Please contact support."
+    // "Contact support" is a SaaS answer. On a self-host the operator IS
+    // support, and the fix is a key in their own .env — so say that instead
+    // (community grind, 2026-08-13). Cloud keeps the original wording, where a
+    // missing key really is ours to fix.
+    sanitizedMessage = hasCredits()
+      ? "Service is not properly configured. Please contact support."
+      : new MissingProviderKeyError("KIE_API_KEY").message
   } else if (
     lowerMsg.includes("rate limit") ||
     lowerMsg.includes("quota") ||

@@ -568,7 +568,7 @@ export function ComponentMarketplaceModal({ open, onOpenChange, onSelect, varian
                   )}
                   <div className="flex items-center gap-3 mb-3 text-xs text-muted-foreground">
                     <span>{comp.totalRunCount ?? 0} runs</span>
-                    <span>{comp.estimatedCredits ?? 0} CR/run</span>
+                    {hasCredits() && <span>{comp.estimatedCredits ?? 0} CR/run</span>}
                     {(comp.favoriteCount ?? 0) > 0 && <span>{comp.favoriteCount} favs</span>}
                   </div>
                   <div className="flex items-center gap-1.5 flex-wrap">

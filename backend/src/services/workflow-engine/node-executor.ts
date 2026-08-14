@@ -365,6 +365,15 @@ export async function executeNode(
   // leaf: it returns the existing pipeline_id (if any) without triggering work.
   // Mirrors the frontend execute-node.ts no-op behavior for Phase 1A.
   if (node.type === "generative-pipeline") {
+    // Returning an empty output marked the run GREEN while nothing ran, and
+    // downstream nodes consumed `{}` as if it were real (community grind,
+    // 2026-08-13). The pipeline lane is Cloud-only, so on other editions this
+    // is a hard, explained failure instead of a silent pass.
+    if (!hasCredits()) {
+      throw new Error(
+        "Generative Pipeline runs on Nodaro Cloud only \u2014 this workflow can't execute it on a self-hosted install. Remove the node, or run the workflow on nodaro.ai.",
+      )
+    }
     return { output: {} }
   }
 

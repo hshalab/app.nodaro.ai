@@ -10,6 +10,7 @@
  */
 
 import { config } from "../../lib/config.js"
+import { requireProviderKey } from "../provider-keys.js"
 
 const BASE_URL = "https://api.beeble.ai"
 
@@ -57,6 +58,9 @@ export class BeebleError extends Error {
  *   OR on a response whose body contains `{ error: { code, message } }`.
  */
 export async function beebleFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  // isBeebleConfigured() had no callers at all — requests went out with an
+  // empty x-api-key and came back as a raw "Beeble request failed (401)".
+  requireProviderKey(config.BEEBLE_API_KEY, "BEEBLE_API_KEY")
   const res = await fetch(`${BASE_URL}${path}`, {
     ...init,
     headers: {

@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState, useCallback, useEffect, Suspense, memo } from "react"
+import { hasCredits } from "@/lib/edition"
 import { lazyWithRetry } from "@/lib/lazy-with-retry"
 import { ImageIcon } from "lucide-react"
 import { Input } from "@/components/ui/input"
@@ -1957,9 +1958,12 @@ export function VideoUpscaleConfig({ data, onUpdate, sources, fieldMappings, onM
         >
           <SelectTrigger aria-label="Provider"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="topaz">{`Topaz factor-based (${getCachedCredits("topaz-video") ?? 19} CR)`}</SelectItem>
-            <SelectItem value="veo-1080p">{`VEO 1080p (${getCachedCredits("veo-1080p") ?? 2} CR)`}</SelectItem>
-            <SelectItem value="veo-4k">{`VEO 4K (${getCachedCredits("veo-4k") ?? 38} CR)`}</SelectItem>
+            {/* The credit cache is never populated without billing, so the
+                hardcoded fallbacks below rendered as real prices on a
+                self-host (community grind, 2026-08-13). */}
+            <SelectItem value="topaz">{`Topaz factor-based${hasCredits() ? ` (${getCachedCredits("topaz-video") ?? 19} CR)` : ""}`}</SelectItem>
+            <SelectItem value="veo-1080p">{`VEO 1080p${hasCredits() ? ` (${getCachedCredits("veo-1080p") ?? 2} CR)` : ""}`}</SelectItem>
+            <SelectItem value="veo-4k">{`VEO 4K${hasCredits() ? ` (${getCachedCredits("veo-4k") ?? 38} CR)` : ""}`}</SelectItem>
           </SelectContent>
         </Select>
       </MappableField>

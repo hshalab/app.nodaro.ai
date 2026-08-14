@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, memo } from "react"
+import { hasCredits } from "@/lib/edition"
 import { Link } from "react-router-dom"
 import {
   HardDrive,
@@ -329,7 +330,11 @@ export default function LibraryPage() {
         </div>
       </div>
 
-      {/* Storage Summary */}
+      {/* Storage Summary — quotas are a billing feature; without it the query
+          never runs and this rendered "0 B / 0 B · 0% used", with an
+          upgrade-for-more-space CTA one config change from surfacing
+          (community grind, 2026-08-13). */}
+      {hasCredits() && (
       <section className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 space-y-4">
         <div className="flex items-center gap-3">
           <HardDrive className="h-5 w-5 text-[#ff0073]" />
@@ -369,6 +374,7 @@ export default function LibraryPage() {
           </div>
         )}
       </section>
+      )}
 
       {/* Filter Tabs + Actions */}
       <div className="flex items-center justify-between gap-4">

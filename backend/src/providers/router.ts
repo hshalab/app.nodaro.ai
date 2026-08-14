@@ -44,6 +44,8 @@ import {
   registerNodaroCloudProviderIfConnected,
   NODARO_PROVIDER_ID,
 } from "./nodaro/index.js"
+import { describeEmptyCapability } from "./provider-keys.js"
+import { config } from "../lib/config.js"
 
 // ─── Result type ──────────────────────────────────────────────────
 
@@ -130,8 +132,25 @@ async function routeAndExecute(
     result = await walkChainAndExecute(capability, model, operation, executor, decision)
   }
   if (result === null) {
+    // Say WHY nothing served it — a missing key reads very differently from an
+    // unknown model, and a self-hoster can only act on the first.
     throw new Error(
-      `Model "${model}" is not supported for ${capability} by any registered provider`
+      describeEmptyCapability(
+        capability,
+        model,
+        {
+          REPLICATE_API_TOKEN: config.REPLICATE_API_TOKEN,
+          KIE_API_KEY: config.KIE_API_KEY,
+          ELEVENLABS_API_KEY: config.ELEVENLABS_API_KEY,
+          ANTHROPIC_API_KEY: config.ANTHROPIC_API_KEY,
+          GEMINI_API_KEY: config.GEMINI_API_KEY,
+          FAL_KEY: config.FAL_KEY,
+          HEYGEN_API_KEY: config.HEYGEN_API_KEY,
+          BEEBLE_API_KEY: config.BEEBLE_API_KEY,
+          APIFY_API_TOKEN: config.APIFY_API_TOKEN,
+        },
+        providerRegistry.getProvider(NODARO_PROVIDER_ID) !== null,
+      ),
     )
   }
   return result

@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest"
+import { appBaseUrl } from "../../deployment-urls.js"
 import { buildSingleJobWidget } from "../widgets/single-job.js"
 
 // Regression guard for the stuck-card recovery path. The single-job widget
@@ -15,7 +16,7 @@ describe("single-job widget stuck-card recovery", () => {
       expect(html).toContain("sawToolResult")
       expect(html).toContain("15000")
       expect(html).toContain("Open Nodaro library")
-      expect(html).toContain("https://app.nodaro.ai/gallery")
+      expect(html).toContain(`${appBaseUrl()}/gallery`)
     })
 
     it(`${kind}: recovery is gated so it never fires once a result/url exists`, () => {

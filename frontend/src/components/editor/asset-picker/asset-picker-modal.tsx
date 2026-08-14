@@ -17,6 +17,7 @@
  * so pick == replace == fully-populated for all four entity types.
  */
 import { useMemo, useState } from "react"
+import { isMultiUser } from "@/lib/edition"
 import { useQuery, useInfiniteQuery, useQueryClient } from "@tanstack/react-query"
 import { Loader2, Check, Search, UserCircle, Package, PawPrint, MapPin, Globe, FolderOpen, Trash2 } from "lucide-react"
 import { toast } from "sonner"
@@ -230,9 +231,13 @@ export function AssetPickerModal({
               <TabsTrigger value="library" className="flex-1 gap-1.5">
                 <FolderOpen className="h-3.5 w-3.5" /> My Library
               </TabsTrigger>
-              <TabsTrigger value="gallery" className="flex-1 gap-1.5">
-                <Globe className="h-3.5 w-3.5" /> Public Gallery
-              </TabsTrigger>
+              {/* /v1/community/browse is isMultiUser()-gated; the tab was
+                  clickable on a single-user self-host and always empty. */}
+              {isMultiUser() && (
+                <TabsTrigger value="gallery" className="flex-1 gap-1.5">
+                  <Globe className="h-3.5 w-3.5" /> Public Gallery
+                </TabsTrigger>
+              )}
             </TabsList>
 
             <TabsContent value="library" className="mt-3">

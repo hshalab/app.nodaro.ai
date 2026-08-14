@@ -43,6 +43,13 @@ export interface PromptFieldSpec {
    *  prompt node must consciously choose — compile error if omitted. The set of
    *  `inline: true` types is guarded in `prompt-fields.test.ts`. */
   readonly inline: boolean
+  /** Some nodes only READ their prompt field when a sibling discriminator
+   *  selects it — TTS keeps `directText` but resolves it only while
+   *  `textSource === "direct"`, defaulting to `"connected"`. Writing the text
+   *  without flipping the discriminator saved the value and then failed with
+   *  "no text found" (founder hit it live, 2026-08-14). Declare the pair here
+   *  and every writer flips it automatically. */
+  readonly promptGate?: { readonly field: string; readonly value: string }
 }
 
 export const NODE_PROMPT_FIELDS: Readonly<Record<string, PromptFieldSpec>> = {
@@ -80,7 +87,7 @@ export const NODE_PROMPT_FIELDS: Readonly<Record<string, PromptFieldSpec>> = {
   "image-to-text": { prompt: "customPrompt", promptLabel: "Question", media: "text", inline: false },
   "llm-chat": { prompt: "userInput", promptLabel: "Prompt", media: "text", inline: false },
   // ── Speech / voice ──
-  "text-to-speech": { prompt: "directText", promptLabel: "Text", media: "audio", inline: true },
+  "text-to-speech": { prompt: "directText", promptLabel: "Text", media: "audio", inline: true, promptGate: { field: "textSource", value: "direct" } },
   "voice-design": { prompt: "voiceDescription", promptLabel: "Voice description", media: "audio", inline: true },
   "voice-remix": { prompt: "voiceDescription", promptLabel: "Voice description", media: "audio", inline: true },
   "lip-sync": { prompt: "prompt", media: "audio", inline: true },

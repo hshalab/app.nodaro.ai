@@ -9,6 +9,7 @@
 
 import type Anthropic from "@anthropic-ai/sdk"
 import { config } from "./config.js"
+import { describeEmptyCapability } from "../providers/provider-keys.js"
 import { getLlmModel, LLM_FEATURE_DEFAULTS, effectiveReasoningEffort } from "@nodaro/shared"
 import type { LlmModelDef, LlmFeature, LlmReasoningEffort } from "@nodaro/shared"
 import { calculateLlmCost, type LlmServingLane } from "./pricing/llm-cost.js"
@@ -220,8 +221,25 @@ export async function llmComplete(req: LlmRequest): Promise<LlmResponse> {
     return callKie(model, req)
   }
 
+  // Same phrasing as every other provider gap, so a self-hoster reads one
+  // sentence shape everywhere instead of three (community grind, 2026-08-13).
   throw new Error(
-    `No LLM provider available for model ${model.id} (need KIE_API_KEY, ANTHROPIC_API_KEY or GEMINI_API_KEY)`,
+    describeEmptyCapability(
+      "LLM nodes",
+      model.id,
+      {
+        REPLICATE_API_TOKEN: config.REPLICATE_API_TOKEN,
+        KIE_API_KEY: config.KIE_API_KEY,
+        ELEVENLABS_API_KEY: config.ELEVENLABS_API_KEY,
+        ANTHROPIC_API_KEY: config.ANTHROPIC_API_KEY,
+        GEMINI_API_KEY: config.GEMINI_API_KEY,
+        FAL_KEY: config.FAL_KEY,
+        HEYGEN_API_KEY: config.HEYGEN_API_KEY,
+        BEEBLE_API_KEY: config.BEEBLE_API_KEY,
+        APIFY_API_TOKEN: config.APIFY_API_TOKEN,
+      },
+      false,
+    ),
   )
 }
 

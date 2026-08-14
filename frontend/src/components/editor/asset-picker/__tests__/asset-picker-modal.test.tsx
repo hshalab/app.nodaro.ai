@@ -3,6 +3,15 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 
+// The Public Gallery tab is isMultiUser()-gated (single-user installs have no
+// /v1/community/browse, so the tab was clickable and permanently empty). These
+// cases exercise that tab, so pin the edition instead of inheriting whatever
+// VITE_EDITION the runner happens to have — it passed locally and failed in CI.
+vi.mock("@/lib/edition", async (orig) => ({
+  ...(await orig<Record<string, unknown>>()),
+  isMultiUser: () => true,
+}))
+
 const bindSpy = vi.fn().mockResolvedValue(true)
 vi.mock("@/lib/entity-node-data", () => ({
   bindEntityNodeFromLibrary: (...a: unknown[]) => bindSpy(...a),

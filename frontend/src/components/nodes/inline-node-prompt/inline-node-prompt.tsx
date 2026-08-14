@@ -83,6 +83,11 @@ export function InlineNodePrompt({ nodeId, onFocusChange, affordancesVisible = f
   // fieldMapping for it (inline edit overrides an upstream-driven prompt).
   function writeField(value: string) {
     const patch: Record<string, unknown> = { [promptField]: value }
+    // Same gate flip as the modal — typing here selects this field as the
+    // source (see PromptFieldSpec.promptGate).
+    if (fields?.promptGate) {
+      patch[fields.promptGate.field] = fields.promptGate.value
+    }
     const fm = data.fieldMappings as FieldMappings | undefined
     if (fm && fm[promptField]) {
       patch.fieldMappings = Object.fromEntries(Object.entries(fm).filter(([k]) => k !== promptField))

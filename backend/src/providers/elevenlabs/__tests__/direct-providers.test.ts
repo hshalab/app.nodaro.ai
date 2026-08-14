@@ -117,7 +117,7 @@ describe("client — getElevenLabsApiKey", () => {
     expect(getElevenLabsApiKey()).toBe("test-eleven-key")
   })
 
-  it("throws when ELEVENLABS_API_KEY is not configured", async () => {
+  it("throws the shared missing-key guidance when ELEVENLABS_API_KEY is unset", async () => {
     vi.resetModules()
     vi.doMock("@/lib/config.js", () => ({
       config: { ELEVENLABS_API_KEY: undefined, EDITION: "cloud" },
@@ -129,7 +129,7 @@ describe("client — getElevenLabsApiKey", () => {
     }))
     const mod = await import("../client.js")
     expect(() => mod.getElevenLabsApiKey()).toThrow(
-      /ELEVENLABS_API_KEY is not configured/,
+      /ELEVENLABS_API_KEY.*nodaro\.ai connection/s,
     )
     vi.doUnmock("@/lib/config.js")
   })

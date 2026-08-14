@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/hooks/use-auth"
-import { hasAdmin } from "@/lib/edition"
+import { hasAdmin, hasCredits} from "@/lib/edition"
 import { toast } from "sonner"
 import { Link } from "react-router-dom"
 import {
@@ -279,7 +279,11 @@ export default function SettingsPage() {
 
   const hasTextTemplateChanges = JSON.stringify(textTemplates) !== JSON.stringify(savedTextTemplates)
 
-  const canToggle = PRIVATE_MODE_TIERS.has(tier)
+  // Tier gating is a Cloud monetisation lever. On a self-host there is no
+  // tier to buy and the gallery is the operator's own — locking their outputs
+  // public with an "upgrade to Standard" tooltip is nonsense (community grind,
+  // 2026-08-13).
+  const canToggle = !hasCredits() || PRIVATE_MODE_TIERS.has(tier)
 
   if (authLoading || settingsLoading) {
     return (
