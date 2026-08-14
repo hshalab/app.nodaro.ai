@@ -1,3 +1,4 @@
+import { hasCredits } from "@/lib/edition"
 import { aspectRatioOptionsByKind, resolutionOptionsByKind, qualityOptionsByKind, durationsByMode, creditRangesAll, modelsWithFeature, isFlux2Model, isGvpSupportedProvider, isSeedance2Provider, GVP_SUPPORTED_PROVIDERS, VIDEO_GEN_COLLAPSED_T2V_IDS, type LabeledOption } from "@nodaro/shared"
 import { STYLES } from "@nodaro/prompts"
 import type { ImageGenProvider, ImageI2IProvider, ImageToVideoProvider, LipSyncProvider, MotionTransferProviderType, TextToVideoProvider, VideoGenProvider, VideoToVideoProvider } from "@nodaro/shared"
@@ -244,6 +245,12 @@ export const MODEL_CREDIT_RANGES: Record<string, { min: number; max: number }> =
  *  `credits` is the resolved value from the `useModelCredits` hook — passed in
  *  because this is a plain function, not a component. */
 export function formatCreditBadge(value: string, credits: number): string | undefined {
+  // Editions without credits must show no price at all. This has to come
+  // FIRST: MODEL_CREDIT_RANGES is a static derivation of MODEL_CATALOG, so the
+  // range branch below returns before any zero-cost check can suppress it —
+  // which is how every model dropdown in a community build ended up quoting
+  // credits (found in the 2026-08-13 community grind).
+  if (!hasCredits()) return undefined
   const range = MODEL_CREDIT_RANGES[value]
   if (range) return `${range.min}-${range.max} CR`
   if (credits > 0) return `${credits} CR`

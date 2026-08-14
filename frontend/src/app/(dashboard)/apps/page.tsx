@@ -733,7 +733,7 @@ function MyAppCard({
       {/* Stats row */}
       <div className="flex items-center gap-4 mb-3 text-xs text-muted-foreground">
         <span>{app.runCount ?? app.totalRunCount ?? 0} runs</span>
-        {app.monetizationEnabled ? (
+        {app.monetizationEnabled && hasCredits() ? (
           <span className="text-xs text-muted-foreground">
             Base: {app.baseEstimatedCredits ?? 0} CR | Total: {app.estimatedCredits ?? 0} CR
           </span>

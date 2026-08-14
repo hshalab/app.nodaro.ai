@@ -1,7 +1,7 @@
 import { createBrowserRouter, Navigate, type RouteObject } from "react-router-dom"
 import { Suspense } from "react"
 import { lazyWithRetry as lazy } from "@/lib/lazy-with-retry"
-import { hasAdmin, isCloud, isMultiUser } from "@/lib/edition"
+import { hasAdmin, hasCredits, isCloud, isMultiUser } from "@/lib/edition"
 
 // Error handling
 import RouteErrorBoundary from "@/components/route-error-boundary"
@@ -176,12 +176,18 @@ export const router = createBrowserRouter([
     element: <SuspenseWrapper><GalleryPage /></SuspenseWrapper>,
     errorElement: <RouteErrorBoundary />,
   },
-  {
-    // Public, no-auth return page for embedded Stripe Checkout (new-tab flow).
-    path: "/checkout-complete",
-    element: <SuspenseWrapper><CheckoutCompletePage /></SuspenseWrapper>,
-    errorElement: <RouteErrorBoundary />,
-  },
+  // Public, no-auth return page for embedded Stripe Checkout (new-tab flow).
+  // Only reachable by returning from Stripe, which never happens without
+  // billing — and the page talks about plans and credits.
+  ...(hasCredits()
+    ? [
+        {
+          path: "/checkout-complete",
+          element: <SuspenseWrapper><CheckoutCompletePage /></SuspenseWrapper>,
+          errorElement: <RouteErrorBoundary />,
+        } as RouteObject,
+      ]
+    : []),
   {
     path: "/present/:shareToken",
     element: <SuspenseWrapper><PresentPage /></SuspenseWrapper>,

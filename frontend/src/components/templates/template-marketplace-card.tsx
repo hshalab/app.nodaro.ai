@@ -1,4 +1,5 @@
 import { Heart, Copy, Sparkles, Coins, Layers } from "lucide-react"
+import { hasCredits } from "@/lib/edition"
 import { PreviewVideo } from "@/components/ui/preview-video"
 import { CachedImage } from "@/components/ui/cached-image"
 import { cn } from "@/lib/utils"
@@ -97,10 +98,12 @@ export function TemplateMarketplaceCard({
 
         {/* Credits + clones + favorites + node count */}
         <div className="flex items-center gap-3 text-xs text-white/70">
+          {hasCredits() && (
           <span className="flex items-center gap-1">
             <Coins className="h-3 w-3" />
             {template.estimatedCredits} CR
           </span>
+          )}
           <span className="flex items-center gap-1">
             <Copy className="h-3 w-3" />
             {formatCount(template.cloneCount)}

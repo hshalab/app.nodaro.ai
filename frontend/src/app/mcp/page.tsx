@@ -1,11 +1,18 @@
 import { useEffect, useRef, useState } from "react"
+import { isCloud } from "@/lib/edition"
 import { Link } from "react-router-dom"
 import { Check, Copy } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { NodaroLogo } from "@/components/nodaro-logo"
 import { ThemeToggle } from "@/components/theme-toggle"
 
-const MCP_URL = "https://mcp.nodaro.ai/mcp"
+// Cloud serves MCP from its own subdomain; a self-host serves it from the
+// instance the user is already looking at. Handing a self-hoster the cloud URL
+// pointed their agent at our SaaS instead of their server (community grind,
+// 2026-08-13).
+const MCP_URL = isCloud()
+  ? "https://mcp.nodaro.ai/mcp"
+  : `${window.location.origin}/mcp`
 
 export default function McpPage() {
   const [copied, setCopied] = useState(false)
@@ -64,7 +71,7 @@ export default function McpPage() {
         </p>
 
         <a
-          href="/docs/mcp"
+          href="https://nodaroai.github.io/app.nodaro.ai/mcp/"
           className="mt-8 inline-block underline text-sm"
         >
           Read the docs →

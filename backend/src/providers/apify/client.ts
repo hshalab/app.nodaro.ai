@@ -1,5 +1,6 @@
 import { ApifyClient } from "apify-client"
 import { config } from "../../lib/config.js"
+import { requireProviderKey } from "../provider-keys.js"
 
 /**
  * Do not construct directly — always throw via sanitizeApifyError()
@@ -53,9 +54,7 @@ let client: ApifyClient | null = null
 
 export function getApifyClient(): ApifyClient {
   if (client) return client
-  if (!config.APIFY_API_TOKEN) {
-    throw new Error("APIFY_API_TOKEN is not configured")
-  }
+  requireProviderKey(config.APIFY_API_TOKEN, "APIFY_API_TOKEN")
   client = new ApifyClient({ token: config.APIFY_API_TOKEN })
   return client
 }

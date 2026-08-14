@@ -300,6 +300,11 @@ export function PromptQuickEditModal() {
 
   function writeField(field: string, value: string) {
     const patch: Record<string, unknown> = { [field]: value }
+    // Typing into a gated prompt field implies choosing it as the source —
+    // otherwise the value is stored and never read (see PromptFieldSpec.promptGate).
+    if (fields?.promptGate && field === fields.prompt) {
+      patch[fields.promptGate.field] = fields.promptGate.value
+    }
     const fm = data.fieldMappings as FieldMappings | undefined
     if (fm && fm[field]) {
       patch.fieldMappings = Object.fromEntries(Object.entries(fm).filter(([k]) => k !== field))

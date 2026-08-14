@@ -1206,6 +1206,9 @@ export function WorkflowEditor({ projectId, workflowId }: WorkflowEditorProps) {
                 </span>
               )}
             </button>
+            {/* Its query is hasCredits()-gated, so without billing this tab
+                shows "No Executions Yet" forever, even after dozens of runs. */}
+            {hasCredits() && (
             <button
               type="button"
               onClick={() => setActiveTab("cost")}
@@ -1218,6 +1221,7 @@ export function WorkflowEditor({ projectId, workflowId }: WorkflowEditorProps) {
               <DollarSign className="w-4 h-4" />
               Cost
             </button>
+            )}
           </div>
         </div>
 

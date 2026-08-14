@@ -1,4 +1,5 @@
 import { config } from "../../lib/config.js"
+import { requireProviderKey } from "../provider-keys.js"
 
 const ELEVENLABS_BASE_URL = "https://api.elevenlabs.io"
 
@@ -149,7 +150,7 @@ export async function directElevenLabsTTS(
 ): Promise<Buffer> {
   const apiKey = config.ELEVENLABS_API_KEY
   if (!apiKey) {
-    throw new Error("ELEVENLABS_API_KEY is not configured")
+    requireProviderKey(apiKey, "ELEVENLABS_API_KEY")
   }
 
   const isV3 = provider === "elevenlabs-v3"

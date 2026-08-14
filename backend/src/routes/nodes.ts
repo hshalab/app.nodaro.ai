@@ -1,4 +1,6 @@
 import type { FastifyInstance } from "fastify"
+import { hasCredits } from "../lib/config.js"
+import { CLOUD_ONLY_NODE_TYPES } from "../lib/cloud-only-nodes.js"
 import { z } from "zod"
 import { getEnrichedRegistry, findNode } from "../lib/node-registry.js"
 
@@ -39,7 +41,12 @@ const typeParams = z.object({ type: z.string().min(1) })
 
 export async function nodesRoutes(app: FastifyInstance) {
   app.get("/v1/nodes", async (_req, reply) => {
-    const data = getEnrichedRegistry()
+    // Editions without the Cloud plugin lane must not advertise nodes they
+    // cannot execute — this is the discovery contract the SDK, CLI and MCP
+    // agents build against.
+    const data = getEnrichedRegistry().filter(
+      (n) => hasCredits() || !CLOUD_ONLY_NODE_TYPES.has(n.type),
+    )
     return reply
       .header("Cache-Control", "public, max-age=300")
       .send({ data })
@@ -49,6 +56,12 @@ export async function nodesRoutes(app: FastifyInstance) {
     const parsed = typeParams.safeParse(req.params)
     if (!parsed.success) {
       return reply.status(400).send({ error: { code: "validation_error", message: "Invalid type" } })
+    }
+    // Same reason as the list route: don't describe a node this edition can't run.
+    if (!hasCredits() && CLOUD_ONLY_NODE_TYPES.has(parsed.data.type)) {
+      return reply.status(404).send({
+        error: { code: "not_found", message: `Node type not found: ${parsed.data.type}` },
+      })
     }
     const node = findNode(parsed.data.type)
     if (!node) {

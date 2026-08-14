@@ -28,7 +28,7 @@ import { sendInternalError } from "../lib/http-errors.js"
 function gateEdition(reply: FastifyReply): boolean {
   if (!hasCredits()) {
     void reply.status(403).send({
-      error: { code: "edition_required", required_edition: "cloud" },
+      error: { code: "edition_required", required_edition: "cloud", message: "This feature runs on Nodaro Cloud only \u2014 it isn't available on a self-hosted install." },
     })
     return false
   }

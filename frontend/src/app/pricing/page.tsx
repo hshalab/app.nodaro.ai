@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react"
+import { hasCredits } from "@/lib/edition"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { useAuth } from "@/hooks/use-auth"
 import {
@@ -60,6 +61,23 @@ function SectionHeaderRow({ dotColor, labelColor, label, note, margin }: Section
 }
 
 export default function PricingPage() {
+  // Editions without billing have nothing to sell here — and the ?plan=
+  // effect below auto-starts a Stripe checkout with no click, which 404s on a
+  // self-host and surfaces as a bare "Not Found" toast (community grind,
+  // 2026-08-13). Every other billing surface self-gates the same way.
+  if (!hasCredits()) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-2 text-center">
+        <h1 className="text-xl font-semibold">Plans aren't part of this edition</h1>
+        <p className="max-w-md text-sm text-muted-foreground">
+          This is a self-hosted Nodaro install — there is no subscription to buy.
+          To generate with our models, connect nodaro.ai from Integrations, or add
+          your own provider API keys.
+        </p>
+      </div>
+    )
+  }
+
   const { user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const [loadingTier, setLoadingTier] = useState<string | null>(null)

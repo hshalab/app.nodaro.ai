@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
+import { hasCredits } from "@/lib/edition"
 import { createPortal } from "react-dom"
 import {
   ReactFlow,
@@ -241,10 +242,12 @@ export function TemplatePreviewModal({
                 <Layers className="h-3.5 w-3.5" />
                 {template.nodeCount} nodes
               </span>
+              {hasCredits() && (
               <span className="flex items-center gap-1">
                 <Coins className="h-3.5 w-3.5" />
                 {template.estimatedCredits} CR
               </span>
+              )}
               <span className="flex items-center gap-1">
                 <Copy className="h-3.5 w-3.5" />
                 {formatCount(template.cloneCount)}

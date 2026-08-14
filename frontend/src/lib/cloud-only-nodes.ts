@@ -22,4 +22,10 @@ export const CLOUD_ONLY_NODE_TYPES: ReadonlySet<string> = new Set([
   // /v1/video-audit), so it is Cloud-only for the same reason — born that way,
   // never available on community/business.
   "video-audit",
+  // The Generative Pipeline canvas node drives POST /v1/pipelines, whose every
+  // handler is edition-gated (routes/pipelines.ts gateEdition) and whose worker
+  // only starts on Cloud. It was addable on community and 403'd on launch
+  // (community grind, 2026-08-13). The MCP side was already gated; the canvas
+  // node was missed.
+  "generative-pipeline",
 ])

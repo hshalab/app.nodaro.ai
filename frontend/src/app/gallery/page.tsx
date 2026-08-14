@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo, memo } from "react"
+import { isMultiUser } from "@/lib/edition"
 import { Link, useLocation } from "react-router-dom"
 import { ArrowLeft, ChevronLeft, ChevronRight, Download, Maximize2, Minimize2, X, Image as ImageIcon, Video, Music, Loader2, Play, Copy, Check, Flag, Trash2, Heart } from "lucide-react"
 import { NodaroLogo } from "@/components/nodaro-logo"
@@ -283,13 +284,18 @@ const GalleryGridCard = memo(function GalleryGridCard({
             <Heart className={cn("h-3.5 w-3.5", isFavorited ? "text-[#ff0073] fill-[#ff0073]" : "text-white")} />
           </button>
         )}
-        <button
-          onClick={(e) => onReport(item, e)}
-          className="rounded-full bg-black/50 p-1.5 hover:bg-black/70 transition-colors"
-          title="Report"
-        >
-          <Flag className="h-3.5 w-3.5 text-white" />
-        </button>
+        {/* Reports are reviewed in the admin panel, which single-user
+            editions don't have — the POST succeeded and said "Thank you!"
+            while nothing could ever look at it (community grind, 2026-08-14). */}
+        {isMultiUser() && (
+          <button
+            onClick={(e) => onReport(item, e)}
+            className="rounded-full bg-black/50 p-1.5 hover:bg-black/70 transition-colors"
+            title="Report"
+          >
+            <Flag className="h-3.5 w-3.5 text-white" />
+          </button>
+        )}
         {isAdmin && (
           <button
             onClick={(e) => onDelete(item, e)}

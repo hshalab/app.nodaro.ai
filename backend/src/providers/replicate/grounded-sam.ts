@@ -20,7 +20,7 @@
  *         is the inverted mask). See pickMaskFromOutput.
  */
 
-import Replicate from "replicate"
+import { replicate } from "./client.js"
 import type { ReconcileOpts } from "../provider.interface.js"
 import { extractUrl } from "./client.js"
 import { fireOnTaskCreated } from "../../lib/reconcile/fire-on-task-created.js"
@@ -89,13 +89,11 @@ export async function runGroundedSam(
   imageUrl: string,
   textPrompt: string,
   boxThreshold: number,
-  apiToken: string,
+  _apiToken: string, // unused: the shared client reads (and guards) the token itself
   reconcileOpts?: ReconcileOpts,
 ): Promise<string> {
   console.log(`[Replicate:groundedSam] image=${imageUrl.slice(0, 60)}...`)
   console.log(`[Replicate:groundedSam] prompt="${textPrompt}" boxThreshold=${boxThreshold}`)
-
-  const replicate = new Replicate({ auth: apiToken })
 
   // Decomposed from `replicate.run(...)` into `predictions.create` +
   // `replicate.wait` so we can fire onTaskCreated with prediction.id before

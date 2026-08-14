@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
+import { describe, it, expect, vi, beforeEach } from "vitest"
 
 /**
  * appBaseUrl/mcpBaseUrl are env-driven with the Nodaro Cloud domains as
@@ -8,32 +8,28 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
  * `${base}/path` interpolation can't emit `//`.
  */
 
-const ENV_KEYS = ["PUBLIC_URL", "MCP_PUBLIC_URL"] as const
-const ORIGINAL: Record<string, string | undefined> = {}
+// Drive the module through a mocked `config`, NOT process.env: config parses
+// the environment once at import, so a developer whose backend/.env sets
+// PUBLIC_URL saw these fail locally while CI (clean env) passed — a test that
+// only fails on your machine teaches people to ignore failures.
+const env = { PUBLIC_URL: "", MCP_PUBLIC_URL: "" }
+vi.mock("../config.js", () => ({ config: env }))
 
 beforeEach(() => {
-  for (const k of ENV_KEYS) ORIGINAL[k] = process.env[k]
+  env.PUBLIC_URL = ""
+  env.MCP_PUBLIC_URL = ""
   vi.resetModules()
-})
-
-afterEach(() => {
-  for (const k of ENV_KEYS) {
-    if (ORIGINAL[k] === undefined) delete process.env[k]
-    else process.env[k] = ORIGINAL[k]
-  }
 })
 
 describe("appBaseUrl / mcpBaseUrl", () => {
   it("falls back to the Nodaro Cloud domains when env is unset", async () => {
-    delete process.env.PUBLIC_URL
-    delete process.env.MCP_PUBLIC_URL
     const { appBaseUrl, mcpBaseUrl } = await import("../deployment-urls.js")
     expect(appBaseUrl()).toBe("https://app.nodaro.ai")
     expect(mcpBaseUrl()).toBe("https://mcp.nodaro.ai")
   })
 
   it("PUBLIC_URL overrides app links; the MCP host is NOT derived from PUBLIC_URL", async () => {
-    process.env.PUBLIC_URL = "https://nodaro.example.com"
+    env.PUBLIC_URL = "https://nodaro.example.com"
     delete process.env.MCP_PUBLIC_URL
     const { appBaseUrl, mcpBaseUrl } = await import("../deployment-urls.js")
     expect(appBaseUrl()).toBe("https://nodaro.example.com")
@@ -41,8 +37,8 @@ describe("appBaseUrl / mcpBaseUrl", () => {
   })
 
   it("MCP_PUBLIC_URL overrides the MCP host; trailing slashes are stripped", async () => {
-    process.env.PUBLIC_URL = "https://nodaro.example.com/"
-    process.env.MCP_PUBLIC_URL = "https://mcp.nodaro.example.com//"
+    env.PUBLIC_URL = "https://nodaro.example.com/"
+    env.MCP_PUBLIC_URL = "https://mcp.nodaro.example.com//"
     const { appBaseUrl, mcpBaseUrl } = await import("../deployment-urls.js")
     expect(appBaseUrl()).toBe("https://nodaro.example.com")
     expect(mcpBaseUrl()).toBe("https://mcp.nodaro.example.com")

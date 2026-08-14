@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { hasCredits } from "@/lib/edition"
 import { useLocation, useNavigate, Outlet } from "react-router-dom"
 import { Loader2 } from "lucide-react"
 import { AppSidebar, MobileHeader } from "@/components/layout/app-sidebar"
@@ -40,6 +41,12 @@ export default function DashboardLayout() {
 
   // After OAuth login, check for a pending plan selection and redirect to pricing
   useEffect(() => {
+    // Nothing to buy without billing — a leftover key would navigate to a
+    // page this edition doesn't serve.
+    if (!hasCredits()) {
+      localStorage.removeItem("nodaro_pending_plan")
+      return
+    }
     const pendingPlan = localStorage.getItem("nodaro_pending_plan")
     if (pendingPlan) {
       localStorage.removeItem("nodaro_pending_plan")

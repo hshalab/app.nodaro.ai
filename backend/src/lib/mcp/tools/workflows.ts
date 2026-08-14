@@ -1,4 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
+import { hasCredits } from "../../config.js"
+import { findCloudOnlyNodeTypes, cloudOnlyRejectionMessage } from "../../cloud-only-nodes.js"
 import { z } from "zod"
 import type { FastifyInstance } from "fastify"
 import { stripExportContent, stripTransientRuntimeData, normalizeNodeModelParams, describeNodeAdjustments, type GenericNode, type WorkflowExport } from "@nodaro/shared"
@@ -17,6 +19,15 @@ import {
   workflowExportSchema,
 } from "../../workflow-assets.js"
 import { migrateGenerateImageHandles } from "../../generate-image-handle-migration.js"
+
+
+/** Refuse Cloud-only node types on editions that can't run them — an
+ *  agent-authored workflow never passes through the node pickers. */
+function cloudOnlyGuard(nodes: unknown): string | null {
+  if (hasCredits()) return null
+  const found = findCloudOnlyNodeTypes(nodes as ReadonlyArray<{ type?: unknown }> | undefined)
+  return found.length > 0 ? cloudOnlyRejectionMessage(found) : null
+}
 
 const readGate: ToolGate = { required: ["workflows:read"] }
 const writeGate: ToolGate = { required: ["workflows:write"] }
@@ -241,6 +252,9 @@ export function registerWorkflows({
       },
       async (args) => {
         const mcpProjectId = await ensureMcpProject(session)
+        const cloudOnlyErr = cloudOnlyGuard(args.nodes)
+        if (cloudOnlyErr) return err(cloudOnlyErr)
+
         const { data, error } = await supabase
           .from("workflows")
           .insert({
@@ -348,6 +362,8 @@ export function registerWorkflows({
         if (hasNodes !== hasEdges) {
           return err("Provide both `nodes` and `edges` together, or neither.")
         }
+        const cloudOnlyUpdateErr = cloudOnlyGuard(args.nodes)
+        if (cloudOnlyUpdateErr) return err(cloudOnlyUpdateErr)
         if (!hasNodes && args.settings === undefined && args.thumbnail_url === undefined) {
           return err(
             "Nothing to update — provide nodes+edges, settings, and/or thumbnail_url.",
